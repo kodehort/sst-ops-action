@@ -166,6 +166,77 @@ Stage: staging
 Duration: 90s
 `;
 
+// Enhanced remove outputs for comprehensive testing
+export const SST_REMOVE_COMPLETE_OUTPUT = `
+SST Remove
+App: complex-app
+Stage: production
+
+✓ All resources removed
+| Deleted         Function      complex-app-production-auth-handler
+| Deleted         Database      complex-app-production-users-db
+| Deleted         Api           complex-app-production-api
+| Deleted         Website       complex-app-production-web
+| Deleted         Topic         complex-app-production-notifications
+| Deleted         Queue         complex-app-production-jobs
+
+Monthly savings: $245.80
+
+↗  Permalink https://console.sst.dev/complex-app/production/removals/abc123
+
+Duration: 180s
+`;
+
+export const SST_REMOVE_FAILED_OUTPUT = `
+SST Remove
+App: failed-app
+Stage: staging
+
+✗  Remove failed
+| Deleted         Website       failed-app-staging-web
+! Function       failed-app-staging-handler could not be removed: still referenced by API
+! Database       failed-app-staging-db could not be removed: contains data, manual intervention required
+! Api            failed-app-staging-api could not be removed: external dependencies
+
+Error: Remove operation failed - 3 resources could not be removed
+
+Duration: 45s
+`;
+
+export const SST_REMOVE_TIMEOUT_OUTPUT = `
+SST Remove
+App: timeout-app
+Stage: staging
+
+⚠  Remove operation timed out
+| Deleted         Website       timeout-app-staging-web
+| Deleted         Function      timeout-app-staging-handler
+! Database       timeout-app-staging-db removal timed out after 300s
+
+Partial cleanup completed
+Manual intervention may be required
+
+Duration: 300s
+`;
+
+export const SST_REMOVE_EMPTY_STACK_OUTPUT = `
+SST Remove
+App: empty-app
+Stage: staging
+
+No resources to remove
+Stack is already empty or does not exist
+
+Duration: 5s
+`;
+
+export const SST_REMOVE_MALFORMED_OUTPUT = `
+SST Remove started...
+Invalid removal format
+Cannot parse resource status
+Unknown error occurred
+`;
+
 export const MALFORMED_OUTPUT = `
 This is not a valid SST output
 Random text without patterns
@@ -193,4 +264,21 @@ ${Array.from({ length: 30 }, (_, i) => `~ Api            large-app-production-ap
 ${Array.from({ length: 20 }, (_, i) => `- Website        large-app-production-site-${i + 1}`).join('\n')}
 
 100 changes planned
+`;
+
+// Large remove output for performance testing
+export const SST_REMOVE_LARGE_OUTPUT = `
+SST Remove
+App: large-app
+Stage: development
+
+✓ All resources removed
+${Array.from({ length: 50 }, (_, i) => `| Deleted         Function      large-app-development-func-${i + 1}`).join('\n')}
+${Array.from({ length: 30 }, (_, i) => `| Deleted         Api           large-app-development-api-${i + 1}`).join('\n')}
+${Array.from({ length: 20 }, (_, i) => `| Deleted         Website       large-app-development-site-${i + 1}`).join('\n')}
+
+Monthly savings: $1,250.75
+
+100 resources removed
+Duration: 240s
 `;
