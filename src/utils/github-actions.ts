@@ -4,6 +4,7 @@
  */
 
 import * as core from '@actions/core';
+import { OutputFormatter } from '../outputs/formatter.js';
 import type { OperationResult } from '../types/index.js';
 import {
   type ActionInputs,
@@ -52,62 +53,46 @@ export function getActionInputs(): ActionInputs {
 
 /**
  * Set all GitHub Actions outputs from an operation result
+ * Uses OutputFormatter for consistent formatting and validation
  */
 export function setActionOutputs(result: OperationResult): void {
-  // Required outputs (always set)
-  core.setOutput('success', String(result.success));
-  core.setOutput('operation', result.operation);
-  core.setOutput('stage', result.stage);
-  core.setOutput('completion_status', result.completionStatus);
+  try {
+    // Use OutputFormatter for consistent formatting
+    const standardizedOutputs = OutputFormatter.formatForGitHubActions(result);
 
-  // Common optional outputs
-  core.setOutput('app', result.app || '');
-  core.setOutput('permalink', result.permalink || '');
-  core.setOutput('truncated', String(result.truncated));
-  core.setOutput(
-    'resource_changes',
-    String(('resourceChanges' in result ? result.resourceChanges : 0) || 0)
-  );
+    // Validate outputs before setting
+    OutputFormatter.validateOutputs(standardizedOutputs);
 
-  // Operation-specific outputs
-  switch (result.operation) {
-    case 'deploy':
-      if ('urls' in result) {
-        core.setOutput('urls', JSON.stringify(result.urls || []));
-      }
-      if ('resources' in result) {
-        core.setOutput('resources', JSON.stringify(result.resources || []));
-      }
-      break;
+    // Ensure operation-specific consistency
+    OutputFormatter.validateOperationConsistency(
+      standardizedOutputs,
+      result.operation
+    );
 
-    case 'diff':
-      if ('changeSummary' in result) {
-        core.setOutput('diff_summary', result.changeSummary || '');
-      }
-      if ('plannedChanges' in result) {
-        core.setOutput('planned_changes', String(result.plannedChanges || 0));
-      }
-      break;
+    // Set all outputs using GitHub Actions core
+    for (const [key, value] of Object.entries(standardizedOutputs)) {
+      core.setOutput(key, value);
+    }
 
-    case 'remove':
-      if ('resourcesRemoved' in result) {
-        core.setOutput(
-          'resources_removed',
-          String(result.resourcesRemoved || 0)
-        );
-      }
-      if ('removedResources' in result) {
-        core.setOutput(
-          'removed_resources',
-          JSON.stringify(result.removedResources || [])
-        );
-      }
-      break;
-  }
+    // Log successful output formatting for debugging
+    core.debug(
+      `Successfully formatted and set ${Object.keys(standardizedOutputs).length} outputs`
+    );
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Unknown output formatting error';
+    core.error(`Failed to format outputs: ${errorMessage}`);
 
-  // Set error output if operation failed
-  if (!result.success && result.error) {
-    core.setOutput('error', result.error);
+    // Fallback: set minimal required outputs to prevent workflow failure
+    core.setOutput('success', String(result.success));
+    core.setOutput('operation', result.operation);
+    core.setOutput('stage', result.stage);
+    core.setOutput('completion_status', result.completionStatus);
+    core.setOutput('error', result.error || errorMessage);
+
+    throw error;
   }
 }
 
@@ -303,7 +288,10 @@ export function validateGitHubActionsEnvironment(): void {
 
   // Check Node.js version
   const nodeVersion = process.version;
-  const majorVersion = Number.parseInt(nodeVersion.slice(1).split('.')[0], 10);
+  const majorVersion = Number.parseInt(
+    nodeVersion.slice(1).split('.')[0] || '0',
+    10
+  );
 
   if (majorVersion < 20) {
     throw new Error(

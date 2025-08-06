@@ -79,13 +79,13 @@ describe('DeployParser', () => {
 
       // Check mixed resource statuses
       expect(result.resources).toHaveLength(3);
-      expect(result.resources[0].status).toBe('created');
-      expect(result.resources[1].status).toBe('updated');
-      expect(result.resources[2].status).toBe('unchanged'); // Failed mapped to unchanged for now
+      expect(result.resources?.[0]?.status).toBe('created');
+      expect(result.resources?.[1]?.status).toBe('updated');
+      expect(result.resources?.[2]?.status).toBe('unchanged'); // Failed mapped to unchanged for now
 
       // Only successful URLs should be included
       expect(result.urls).toHaveLength(1);
-      expect(result.urls[0].name).toBe('Router');
+      expect(result.urls?.[0]?.name).toBe('Router');
     });
 
     it('should parse failed deployment output', () => {
@@ -100,9 +100,9 @@ describe('DeployParser', () => {
 
       // Should still capture resource information even on failure
       expect(result.resources).toHaveLength(3);
-      expect(result.resources[0].status).toBe('created');
-      expect(result.resources[1].status).toBe('unchanged'); // Failed mapped to unchanged
-      expect(result.resources[2].status).toBe('unchanged');
+      expect(result.resources?.[0]?.status).toBe('created');
+      expect(result.resources?.[1]?.status).toBe('unchanged'); // Failed mapped to unchanged
+      expect(result.resources?.[2]?.status).toBe('unchanged');
 
       // No URLs on failed deployment
       expect(result.urls).toHaveLength(0);
@@ -182,7 +182,7 @@ Router: https://api.test.com
 
       const apiResources = result.resources.filter((r) => r.type === 'Api');
       expect(apiResources).toHaveLength(1);
-      expect(apiResources[0].status).toBe('updated');
+      expect(apiResources?.[0]?.status).toBe('updated');
     });
 
     it('should handle various URL types correctly', () => {

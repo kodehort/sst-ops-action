@@ -48,7 +48,7 @@ describe('RemoveOperation', () => {
 Monthly cost savings: $67.80`,
       stderr: '',
       exitCode: 0,
-      executionTime: 8000,
+      duration: 8000,
     };
 
     const mockRemoveResult = {
@@ -144,7 +144,7 @@ Monthly cost savings: $67.80`,
 ⚠ 2 of 3 resources removed successfully`,
       stderr: '',
       exitCode: 0,
-      executionTime: 6000,
+      duration: 6000,
     };
 
     const mockRemoveResult = {
@@ -217,7 +217,7 @@ Monthly cost savings: $67.80`,
       stdout: '',
       stderr: 'Error: Unable to connect to AWS. Check your credentials.',
       exitCode: 1,
-      executionTime: 2000,
+      duration: 2000,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -257,7 +257,7 @@ Monthly cost savings: $67.80`,
       stdout: 'Malformed output that cannot be parsed',
       stderr: '',
       exitCode: 0,
-      executionTime: 3000,
+      duration: 3000,
     };
 
     const mockRemoveResult = {
@@ -309,7 +309,7 @@ Monthly cost savings: $67.80`,
 ✓ All resources removed`,
       stderr: '',
       exitCode: 0,
-      executionTime: 4000,
+      duration: 4000,
     };
 
     const mockRemoveResult = {

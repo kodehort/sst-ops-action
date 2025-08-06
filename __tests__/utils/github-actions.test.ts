@@ -17,6 +17,11 @@ import {
   validateGitHubActionsEnvironment,
 } from '../../src/utils/github-actions.js';
 import { ValidationError } from '../../src/utils/validation.js';
+import {
+  createMockDeployResult,
+  createMockDiffResult,
+  createMockRemoveResult,
+} from '../utils/test-types.js';
 
 // Mock @actions/core
 vi.mock('@actions/core');
@@ -126,7 +131,7 @@ describe('GitHub Actions Integration', () => {
 
       expect(() => getActionInputs()).toThrow();
 
-      const failedCall = mockedCore.setFailed.mock.calls[0][0];
+      const failedCall = vi.mocked(mockedCore.setFailed).mock.calls[0]?.[0];
       expect(failedCall).toContain('Suggestions:');
       expect(failedCall).toContain('deploy, diff, remove');
     });
@@ -185,7 +190,7 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should set all required outputs for diff operation', () => {
-      const diffResult: DiffResult = {
+      const diffResult = createMockDiffResult({
         success: true,
         operation: 'diff',
         stage: 'staging',
@@ -194,11 +199,10 @@ describe('GitHub Actions Integration', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
         plannedChanges: 2,
         changeSummary: '2 resources to be updated',
         changes: [{ type: 'Function', name: 'handler', action: 'update' }],
-      };
+      }) as DiffResult;
 
       setActionOutputs(diffResult);
 
@@ -211,7 +215,7 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should set all required outputs for remove operation', () => {
-      const removeResult: RemoveResult = {
+      const removeResult = createMockRemoveResult({
         success: true,
         operation: 'remove',
         stage: 'staging',
@@ -220,12 +224,11 @@ describe('GitHub Actions Integration', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 2,
         resourcesRemoved: 2,
         removedResources: [
           { type: 'Function', name: 'handler', status: 'removed' },
         ],
-      };
+      }) as RemoveResult;
 
       setActionOutputs(removeResult);
 
@@ -241,10 +244,11 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should handle missing optional values', () => {
-      const minimalResult: DeployResult = {
+      const minimalResult = createMockDeployResult({
         success: false,
         operation: 'deploy',
         stage: 'test',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 1,
         truncated: false,
@@ -253,7 +257,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 0,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       setActionOutputs(minimalResult);
 
@@ -350,10 +354,11 @@ describe('GitHub Actions Integration', () => {
 
   describe('logOperationComplete', () => {
     it('should log successful operation completion', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: true,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 0,
         truncated: false,
@@ -362,7 +367,7 @@ describe('GitHub Actions Integration', () => {
         urls: [{ name: 'api', url: 'https://api.example.com', type: 'api' }],
         resources: [],
         permalink: 'https://console.sst.dev/test/staging',
-      };
+      }) as DeployResult;
 
       logOperationComplete(result);
 
@@ -375,10 +380,11 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should log failed operation', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: false,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 1,
         truncated: false,
@@ -387,7 +393,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 0,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       logOperationComplete(result);
 
@@ -398,10 +404,11 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should warn about truncated output', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: true,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 0,
         truncated: true,
@@ -409,7 +416,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 1,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       logOperationComplete(result);
 
@@ -421,10 +428,11 @@ describe('GitHub Actions Integration', () => {
 
   describe('handleOperationFailure', () => {
     it('should set failed status when failOnError is true', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: false,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 1,
         truncated: false,
@@ -433,7 +441,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 0,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       handleOperationFailure(result, true);
 
@@ -443,10 +451,11 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should warn when failOnError is false', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: false,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 1,
         truncated: false,
@@ -455,7 +464,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 0,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       handleOperationFailure(result, false);
 
@@ -504,7 +513,7 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should create summary for diff operation', () => {
-      const result: DiffResult = {
+      const result = createMockDiffResult({
         success: true,
         operation: 'diff',
         stage: 'staging',
@@ -513,11 +522,10 @@ describe('GitHub Actions Integration', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
         plannedChanges: 3,
         changeSummary: '2 to create, 1 to update',
         changes: [],
-      };
+      }) as DiffResult;
 
       createActionSummary(result);
 
@@ -530,10 +538,11 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should create summary for failed operation with error', () => {
-      const result: DeployResult = {
+      const result = createMockDeployResult({
         success: false,
         operation: 'deploy',
         stage: 'staging',
+        app: 'test-app',
         rawOutput: 'output',
         exitCode: 1,
         truncated: true,
@@ -542,7 +551,7 @@ describe('GitHub Actions Integration', () => {
         resourceChanges: 0,
         urls: [],
         resources: [],
-      };
+      }) as DeployResult;
 
       createActionSummary(result);
 

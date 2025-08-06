@@ -2,19 +2,24 @@
 #   parallel: true
 #   commands:
 #     format:
-#       glob: "*.{ts,js,json,yml,yaml}"
-#       run: bun run format
-#       stage_fixed: true
+#       glob: "**/*.{ts,js,json,yml,yaml,md}"
+#       run: bun run format:check
+#       stage_fixed: false
 #     lint:
-#       glob: "*.{ts,js}"
-#       run: bun run lint
+#       glob: "**/*.{ts,js}"
+#       run: bun run quality:lint
+#       stage_fixed: false
 #     typecheck:
-#       glob: "*.{ts}"
-#       run: bun run typecheck
+#       glob: "**/*.ts"
+#       run: bun run quality:typecheck
+#       stage_fixed: false
+
 # pre-push:
-#   parallel: true
+#   parallel: false
 #   commands:
+#     quality-gates:
+#       run: bun run quality:check
 #     test:
-#       run: bun test
+#       run: bun run test
 #     build:
 #       run: bun run build

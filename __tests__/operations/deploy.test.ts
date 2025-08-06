@@ -1,6 +1,7 @@
 /**
  * Test suite for DeployOperation
  * Tests deploy operation execution with SST CLI integration and GitHub integration
+ * Covers all deployment scenarios: success, partial, failure
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +10,10 @@ import { DeployOperation } from '../../src/operations/deploy';
 import { DeployParser } from '../../src/parsers/deploy-parser';
 import type { DeployResult, OperationOptions } from '../../src/types';
 import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
+import {
+  SST_DEPLOY_FAILURE_OUTPUT,
+  SST_DEPLOY_PARTIAL_OUTPUT,
+} from '../fixtures/sst-outputs';
 
 describe('DeployOperation', () => {
   let deployOperation: DeployOperation;
@@ -82,13 +87,13 @@ describe('DeployOperation', () => {
         .mockReturnValue(mockDeployResult);
 
       // Mock CLI execution
-      (mockSSTExecutor.executeSST as any).mockResolvedValue(mockCLIResult);
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(mockCLIResult);
 
       // Mock GitHub integration
-      (mockGitHubClient.createOrUpdateComment as any).mockResolvedValue(
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
         undefined
       );
-      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
         undefined
       );
 
@@ -135,7 +140,7 @@ describe('DeployOperation', () => {
     it('should handle CLI execution failure', async () => {
       const cliError = new Error('SST command failed');
 
-      (mockSSTExecutor.executeSST as any).mockRejectedValue(cliError);
+      vi.mocked(mockSSTExecutor.executeSST).mockRejectedValue(cliError);
 
       await expect(
         deployOperation.execute(mockOperationOptions)
@@ -143,21 +148,199 @@ describe('DeployOperation', () => {
     });
 
     it('should handle GitHub integration failures gracefully', async () => {
-      const mockParse = vi
+      const _mockParse = vi
         .spyOn(DeployParser.prototype, 'parse')
         .mockReturnValue(mockDeployResult);
 
-      (mockSSTExecutor.executeSST as any).mockResolvedValue(mockCLIResult);
-      (mockGitHubClient.createOrUpdateComment as any).mockRejectedValue(
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(mockCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockRejectedValue(
         new Error('GitHub API error')
       );
-      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
         undefined
       );
 
       // Should still return result despite GitHub integration failure
       const result = await deployOperation.execute(mockOperationOptions);
       expect(result).toEqual(mockDeployResult);
+    });
+
+    it('should handle partial deployment scenario', async () => {
+      const partialCLIResult: SSTCommandResult = {
+        output: SST_DEPLOY_PARTIAL_OUTPUT,
+        exitCode: 0,
+        duration: 120_000,
+        command: 'sst deploy --stage staging',
+        truncated: false,
+        stdout: SST_DEPLOY_PARTIAL_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'staging',
+        operation: 'deploy',
+      };
+
+      const partialDeployResult: DeployResult = {
+        success: true,
+        operation: 'deploy',
+        stage: 'staging',
+        app: 'my-sst-app',
+        rawOutput: SST_DEPLOY_PARTIAL_OUTPUT,
+        exitCode: 0,
+        truncated: false,
+        completionStatus: 'partial',
+        resourceChanges: 2,
+        urls: [
+          {
+            name: 'Router',
+            url: 'https://api.staging.example.com',
+            type: 'api',
+          },
+        ],
+        resources: [
+          {
+            type: 'Function',
+            name: 'my-sst-app-staging-handler',
+            status: 'created',
+          },
+          { type: 'Api', name: 'my-sst-app-staging-api', status: 'updated' },
+        ],
+        permalink:
+          'https://console.sst.dev/my-sst-app/staging/deployments/def456',
+      };
+
+      // Mock parser to return partial result
+      const _mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(partialDeployResult);
+
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(partialCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
+        undefined
+      );
+
+      const result = await deployOperation.execute(mockOperationOptions);
+
+      expect(result).toEqual(partialDeployResult);
+      expect(result.completionStatus).toBe('partial');
+      expect(result.resourceChanges).toBe(2);
+    });
+
+    it('should handle deployment failure scenario', async () => {
+      const failureCLIResult: SSTCommandResult = {
+        output: SST_DEPLOY_FAILURE_OUTPUT,
+        exitCode: 1,
+        duration: 30_000,
+        command: 'sst deploy --stage staging',
+        truncated: false,
+        stdout: SST_DEPLOY_FAILURE_OUTPUT,
+        stderr: 'Deployment failed due to permission errors',
+        success: false,
+        stage: 'staging',
+        operation: 'deploy',
+      };
+
+      const failureDeployResult: DeployResult = {
+        success: false,
+        operation: 'deploy',
+        stage: 'staging',
+        app: 'my-sst-app',
+        rawOutput: SST_DEPLOY_FAILURE_OUTPUT,
+        exitCode: 1,
+        truncated: false,
+        completionStatus: 'failed',
+        resourceChanges: 1,
+        urls: [],
+        resources: [
+          {
+            type: 'Function',
+            name: 'my-sst-app-staging-handler',
+            status: 'created',
+          },
+        ],
+        permalink:
+          'https://console.sst.dev/my-sst-app/staging/deployments/ghi789',
+        error: 'Deployment failed due to permission errors',
+      };
+
+      // Mock parser to return failure result
+      const _mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(failureDeployResult);
+
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(failureCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
+        undefined
+      );
+
+      const result = await deployOperation.execute(mockOperationOptions);
+
+      expect(result).toEqual(failureDeployResult);
+      expect(result.success).toBe(false);
+      expect(result.completionStatus).toBe('failed');
+      expect(result.error).toBe('Deployment failed due to permission errors');
+    });
+
+    it('should handle different comment modes correctly', async () => {
+      const _mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(mockDeployResult);
+
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(mockCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
+        undefined
+      );
+
+      // Test with 'always' comment mode
+      const alwaysOptions = {
+        ...mockOperationOptions,
+        commentMode: 'always' as const,
+      };
+      await deployOperation.execute(alwaysOptions);
+
+      expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
+        mockDeployResult,
+        'always'
+      );
+    });
+
+    it('should handle large outputs and truncation', async () => {
+      const largeCLIResult: SSTCommandResult = {
+        ...mockCLIResult,
+        truncated: true,
+        output: `${mockCLIResult.output}... output truncated`,
+      };
+
+      const truncatedDeployResult: DeployResult = {
+        ...mockDeployResult,
+        truncated: true,
+        rawOutput: largeCLIResult.output,
+      };
+
+      const _mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(truncatedDeployResult);
+
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(largeCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
+        undefined
+      );
+
+      const result = await deployOperation.execute(mockOperationOptions);
+
+      expect(result.truncated).toBe(true);
+      expect(result.rawOutput).toContain('output truncated');
     });
   });
 
@@ -183,6 +366,48 @@ describe('DeployOperation', () => {
 
       expect(env.SST_TOKEN).toBe('');
       expect(env.NODE_ENV).toBe('production');
+    });
+  });
+
+  describe('migration compatibility', () => {
+    it('should maintain same interface as composite action for seamless migration', async () => {
+      // Verify that the operation interface matches what composite actions expect
+      expect(deployOperation).toHaveProperty('execute');
+      expect(deployOperation).toHaveProperty('buildEnvironment');
+
+      // Verify execute method signature
+      expect(typeof deployOperation.execute).toBe('function');
+      expect(deployOperation.execute.length).toBe(1); // Takes one parameter (options)
+
+      // Mock successful execution
+      const _mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(mockDeployResult);
+
+      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(mockCLIResult);
+      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
+        undefined
+      );
+
+      // Execute with minimal options (as composite actions might)
+      const minimalOptions: OperationOptions = {
+        stage: 'staging',
+      };
+
+      const result = await deployOperation.execute(minimalOptions);
+
+      // Verify result structure matches expected format for migration compatibility
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('operation', 'deploy');
+      expect(result).toHaveProperty('stage', 'staging');
+      expect(result).toHaveProperty('app');
+      expect(result).toHaveProperty('resourceChanges');
+      expect(result).toHaveProperty('urls');
+      expect(result).toHaveProperty('resources');
+      expect(result).toHaveProperty('completionStatus');
     });
   });
 });

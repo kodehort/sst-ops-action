@@ -70,7 +70,7 @@ export class RemoveOperation {
       );
 
       // Use the execution time from the CLI result
-      const executionTime = cliResult.executionTime;
+      const executionTime = cliResult.duration;
 
       // Handle CLI execution failure
       if (!cliResult.success) {
@@ -109,7 +109,7 @@ export class RemoveOperation {
       }
 
       // Cast to enhanced result and add computed properties
-      const removeResult = basicRemoveResult as EnhancedRemoveResult;
+      const removeResult = basicRemoveResult as unknown as EnhancedRemoveResult;
       removeResult.costSavings = this.extractCostSavings(cliResult.stdout);
       removeResult.summary = this.generateSummary(removeResult);
       removeResult.executionTime = executionTime;
@@ -172,10 +172,10 @@ export class RemoveOperation {
     for (const pattern of costPatterns) {
       const match = output.match(pattern);
       if (match) {
-        const amount = Number.parseFloat(match[1].replace(/,/g, ''));
+        const amount = Number.parseFloat((match[1] || '0').replace(/,/g, ''));
         return {
           monthly: amount,
-          formatted: `Monthly cost savings: $${match[1]}`,
+          formatted: `Monthly cost savings: $${match[1] || '0'}`,
         };
       }
     }
@@ -207,9 +207,7 @@ export class RemoveOperation {
       const comment = this.formatPRComment(removeResult);
       await this.githubClient.postPRComment(comment, 'remove');
       return true;
-    } catch (error) {
-      // GitHub integration failure should not fail the entire operation
-      console.warn('Failed to post PR comment:', error);
+    } catch (_error) {
       return false;
     }
   }

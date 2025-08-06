@@ -139,6 +139,10 @@ export function parseActionInputs(
     if (error instanceof z.ZodError && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
       const issue = error.issues[0]; // Focus on first error for clarity
+      if (!issue) {
+        throw error;
+      }
+
       const fieldName = issue.path.length > 0 ? issue.path[0] : 'unknown';
       const suggestions = generateSuggestions(String(fieldName), issue);
 
@@ -175,7 +179,7 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
 
     case 'token':
       return [
-        'Use a valid GitHub token (e.g., `${{ secrets.GITHUB_TOKEN }}`)',
+        `Use a valid GitHub token (e.g., \`${'$'}{{ secrets.GITHUB_TOKEN }}\`)`,
         'GitHub personal access tokens start with "ghp_"',
         'GitHub App tokens start with "github_pat_"',
         'Use "fake-token" only for testing',
@@ -223,6 +227,10 @@ export function validateInput<T>(
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
       const issue = error.issues[0];
+      if (!issue) {
+        throw error;
+      }
+
       const suggestions = generateSuggestions(fieldName, issue);
 
       throw new ValidationError(issue.message, fieldName, value, suggestions);
@@ -318,7 +326,9 @@ export function validateWithContext(
           'Production deployments require a real GitHub token',
           'token',
           inputs.token,
-          ['Use `${{ secrets.GITHUB_TOKEN }}` or a valid personal access token']
+          [
+            `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or a valid personal access token`,
+          ]
         );
       }
       break;

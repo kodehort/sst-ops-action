@@ -80,7 +80,7 @@ export class DiffOperation {
       );
 
       // Use the execution time from the CLI result
-      const executionTime = cliResult.executionTime;
+      const executionTime = cliResult.duration;
 
       // Handle CLI execution failure
       if (!cliResult.success) {
@@ -118,7 +118,7 @@ export class DiffOperation {
       }
 
       // Cast to enhanced result (our implementation has these properties)
-      const diffResult = basicDiffResult as EnhancedDiffResult;
+      const diffResult = basicDiffResult as unknown as EnhancedDiffResult;
       diffResult.hasChanges = diffResult.plannedChanges > 0;
       diffResult.breakingChanges = this.detectBreakingChanges(
         diffResult.changeSummary
@@ -181,9 +181,7 @@ export class DiffOperation {
       const comment = this.formatPRComment(diffResult);
       await this.githubClient.postPRComment(comment, 'diff');
       return true;
-    } catch (error) {
-      // GitHub integration failure should not fail the entire operation
-      console.warn('Failed to post PR comment:', error);
+    } catch (_error) {
       return false;
     }
   }

@@ -266,7 +266,8 @@ describe('Error Handling', () => {
 
       createErrorSummary(error, 'deploy', context);
 
-      const summaryCall = mockedCore.summary.addRaw.mock.calls[0][0];
+      const summaryCall = vi.mocked(mockedCore.summary.addRaw).mock
+        .calls[0]?.[0];
 
       expect(summaryCall).toContain('❌ SST Deploy Failed');
       expect(summaryCall).toContain('🟠 Severity | MEDIUM');
@@ -288,7 +289,8 @@ describe('Error Handling', () => {
 
       createErrorSummary(error, 'deploy');
 
-      const summaryCall = mockedCore.summary.addRaw.mock.calls[0][0];
+      const summaryCall = vi.mocked(mockedCore.summary.addRaw).mock
+        .calls[0]?.[0];
 
       expect(summaryCall).toContain('🚨 Severity | CRITICAL');
       expect(summaryCall).toContain('🏷️ Category | system');
@@ -309,7 +311,8 @@ describe('Error Handling', () => {
       operations.forEach((operation) => {
         createErrorSummary(new Error('Test'), operation);
 
-        const summaryCall = mockedCore.summary.addRaw.mock.calls[0][0];
+        const summaryCall = vi.mocked(mockedCore.summary.addRaw).mock
+          .calls[0]?.[0];
         const expectedTitle = `❌ SST ${operation.charAt(0).toUpperCase() + operation.slice(1)} Failed`;
         expect(summaryCall).toContain(expectedTitle);
 

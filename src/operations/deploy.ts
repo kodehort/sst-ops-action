@@ -26,35 +26,30 @@ export class DeployOperation {
    * @returns Parsed deployment result with resource and URL information
    */
   async execute(options: OperationOptions): Promise<DeployResult> {
-    try {
-      // Execute SST CLI command
-      const cliResult = await this.sstExecutor.executeSST(
-        'deploy',
-        options.stage,
-        {
-          env: this.buildEnvironment(options),
-          timeout: this.defaultTimeout,
-          maxOutputSize: options.maxOutputSize,
-        }
-      );
+    // Execute SST CLI command
+    const cliResult = await this.sstExecutor.executeSST(
+      'deploy',
+      options.stage,
+      {
+        env: this.buildEnvironment(options),
+        timeout: this.defaultTimeout,
+        maxOutputSize: options.maxOutputSize,
+      }
+    );
 
-      // Parse CLI output using DeployParser
-      const parser = new DeployParser();
-      const result = parser.parse(
-        cliResult.output,
-        options.stage,
-        cliResult.exitCode,
-        options.maxOutputSize
-      );
+    // Parse CLI output using DeployParser
+    const parser = new DeployParser();
+    const result = parser.parse(
+      cliResult.output,
+      options.stage,
+      cliResult.exitCode,
+      options.maxOutputSize
+    );
 
-      // Perform GitHub integration in parallel (non-blocking)
-      await this.performGitHubIntegration(result, options);
+    // Perform GitHub integration in parallel (non-blocking)
+    await this.performGitHubIntegration(result, options);
 
-      return result;
-    } catch (error) {
-      // Re-throw CLI and parsing errors
-      throw error;
-    }
+    return result;
   }
 
   /**
@@ -64,7 +59,7 @@ export class DeployOperation {
    */
   buildEnvironment(options: OperationOptions): Record<string, string> {
     return {
-      SST_TOKEN: options.token,
+      SST_TOKEN: options.token || '',
       NODE_ENV: 'production',
       CI: 'true',
       GITHUB_ACTIONS: 'true',
@@ -86,19 +81,13 @@ export class DeployOperation {
     // Create PR comment (if enabled)
     integrationPromises.push(
       this.githubClient
-        .createOrUpdateComment(result, options.commentMode)
-        .catch((error) => {
-          // Log but don't fail the operation
-          console.error('Failed to create GitHub comment:', error.message);
-        })
+        .createOrUpdateComment(result, options.commentMode || 'never')
+        .catch((_error) => {})
     );
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result).catch((error) => {
-        // Log but don't fail the operation
-        console.error('Failed to create workflow summary:', error.message);
-      })
+      this.githubClient.createWorkflowSummary(result).catch((_error) => {})
     );
 
     // Wait for all GitHub integration tasks to complete

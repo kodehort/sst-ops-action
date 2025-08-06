@@ -1,7 +1,7 @@
 import { beforeEach, vi } from 'vitest';
 
 // Make vi available globally
-globalThis.vi = vi;
+(globalThis as any).vi = vi;
 
 // Mock GitHub Actions core and github modules for tests
 vi.mock('@actions/core', () => ({
@@ -42,14 +42,26 @@ vi.mock('@actions/artifact', () => ({
   create: vi.fn(),
 }));
 
+vi.mock('@actions/io', () => ({
+  mkdirP: vi.fn(),
+}));
+
 vi.mock('node:fs/promises', () => ({
   writeFile: vi.fn(),
   mkdir: vi.fn(),
 }));
 
 vi.mock('node:os', () => ({
-  tmpdir: () => '/tmp',
+  tmpdir: vi.fn(() => '/tmp'),
 }));
+
+vi.mock('node:path', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:path')>();
+  return {
+    ...actual,
+    join: vi.fn((...paths: string[]) => paths.join('/')),
+  };
+});
 
 // Clean up between tests
 beforeEach(() => {

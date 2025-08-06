@@ -181,13 +181,13 @@ export class OperationFormatter {
 
 | Property | Value |
 |----------|-------|
-| Changes Detected | ${result.diffSummary ? 'Yes' : 'No'} |
+| Changes Detected | ${result.changeSummary ? 'Yes' : 'No'} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
-    if (result.diffSummary) {
+    if (result.changeSummary) {
       summary += `\n\n### 📋 Changes Summary
 
-${result.diffSummary}`;
+${result.changeSummary}`;
     } else {
       summary += `\n\n### ✅ No Changes
 
@@ -205,7 +205,7 @@ No infrastructure changes detected for this operation.`;
 
 | Property | Value |
 |----------|-------|
-| Resources Removed | ${result.resourceChanges || 0} |
+| Resources Removed | ${result.resourcesRemoved || 0} |
 | Cleanup Status | ${result.completionStatus} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
@@ -268,7 +268,7 @@ All resources have been successfully removed.`;
         this.config.maxResourcesToShow
       );
       for (const resource of resourcesToShow) {
-        section += `\n| \`${resource.name}\` | ${this.formatResourceAction(resource.action)} | ${resource.type} |`;
+        section += `\n| \`${resource.name}\` | ${this.formatResourceAction(resource.status)} | ${resource.type} |`;
       }
 
       if (result.resources.length > this.config.maxResourcesToShow) {
@@ -304,11 +304,11 @@ All resources have been successfully removed.`;
   private formatDiffChangesSection(result: DiffResult): string {
     let section = '### 🔍 Infrastructure Changes Preview';
 
-    if (result.diffSummary) {
-      section += `\n\n${result.diffSummary}`;
+    if (result.changeSummary) {
+      section += `\n\n${result.changeSummary}`;
 
       // Add warning for breaking changes if detected
-      if (this.hasBreakingChanges(result.diffSummary)) {
+      if (this.hasBreakingChanges(result.changeSummary)) {
         section +=
           '\n\n⚠️ **Warning**: This diff may contain breaking changes. Please review carefully.';
       }
@@ -329,12 +329,12 @@ All resources have been successfully removed.`;
     switch (result.completionStatus) {
       case 'complete':
         section += `\n\n✅ **All resources successfully removed**
-- Resources cleaned up: ${result.resourceChanges || 0}
+- Resources cleaned up: ${result.resourcesRemoved || 0}
 - No remaining resources`;
         break;
       case 'partial':
         section += `\n\n⚠️ **Partial cleanup completed**
-- Resources cleaned up: ${result.resourceChanges || 0}
+- Resources cleaned up: ${result.resourcesRemoved || 0}
 - Some resources may still exist
 - Check logs for details on stuck resources`;
         break;
@@ -346,7 +346,7 @@ All resources have been successfully removed.`;
         break;
       default:
         section += `\n\n**Status:** ${result.completionStatus}
-- Resources affected: ${result.resourceChanges || 0}`;
+- Resources affected: ${result.resourcesRemoved || 0}`;
     }
 
     return section;

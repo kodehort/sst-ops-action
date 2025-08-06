@@ -1,90 +1,78 @@
-/**
- * Remove Operation Parser
- * Parses SST remove command output to extract resource cleanup and cost savings
- *
- * Supports parsing of:
- * - Removed resources with status tracking
- * - Partial cleanup scenarios and stuck resources
- * - Cost savings information
- * - Cleanup completion status
- */
-
 import type { RemoveResult } from '../types/operations';
 import { BaseParser } from './base-parser';
 
+/**
+ * Parser for SST remove operation outputs
+ * Extracts resource removal information and tracks success/failure status
+ */
 export class RemoveParser extends BaseParser<RemoveResult> {
   /**
-   * Remove-specific regex patterns for parsing SST remove output
+   * Remove-specific regex patterns for parsing resource removals
    */
   private readonly removePatterns = {
-    // Resource removal patterns - handle various formats
-    RESOURCE_DELETED: /^\|\s+Deleted\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    RESOURCE_FAILED: /^!\s+(\w+)\s+(.+?)\s+could not be removed:\s+(.+)$/,
-    RESOURCE_FAILED_ALT: /^!\s+(\w+)\s+(.+?)\s+removal failed:\s+(.+)$/,
-    RESOURCE_TIMEOUT: /^!\s+(\w+)\s+(.+?)\s+removal timed out/,
+    // Resource removal patterns
+    REMOVED_RESOURCE: /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+    FAILED_RESOURCE: /^×\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+    SKIPPED_RESOURCE: /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
 
-    // Completion status patterns
-    ALL_REMOVED: /^✓\s+All resources removed$/m,
-    PARTIAL_REMOVAL:
-      /^⚠\s+.*removal.*completed|.*resources could not be removed/im,
-    REMOVAL_FAILED: /^✗\s+Remove failed$/m,
-    REMOVE_TIMEOUT: /Remove operation timed out/,
+    // Status indicators
+    COMPLETE: /^✓\s+Complete$/m,
+    PARTIAL_COMPLETION: /^⚠\s+Partial completion$/m,
+    FAILED: /^×\s+Failed$/m,
 
-    // Special cases
-    NO_RESOURCES: /No resources to remove|Stack is already empty/,
-    EMPTY_STACK: /Stack.*does not exist/,
-
-    // Cost patterns
-    MONTHLY_SAVINGS: /Monthly savings:\s+\$([0-9,.]+)/,
+    // Resource count patterns
+    RESOURCES_REMOVED_COUNT:
+      /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?$/m,
+    NO_RESOURCES: /^No resources to remove$/m,
+    RESOURCES_SUMMARY:
+      /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?(?:,\s+(\d+)\s+skipped)?$/m,
 
     // Error patterns
-    REMOVE_ERROR: /^Error:\s*(.+)$/m,
-    REMOVAL_FAILED_MSG: /Remove operation failed/,
+    ERROR_MESSAGE: /^Error:\s*(.+)$/m,
+    REMOVE_FAILED: /Unable to connect|Permission denied|Error removing/i,
+    TIMEOUT_MESSAGE: /timeout|timed out/i,
   };
 
   /**
-   * Parse SST remove output into structured result
+   * Parse SST remove output and extract resource removal information
    */
-  parse(
-    output: string,
-    stage: string,
-    exitCode: number,
-    maxSize?: number
-  ): RemoveResult {
-    // Handle output truncation if size limit specified
-    const truncated = maxSize ? output.length > maxSize : false;
-    const processedOutput =
-      maxSize && output.length > maxSize
-        ? output.substring(0, maxSize)
-        : output;
-
-    // Parse common information using base parser
+  parse(output: string, stage: string, exitCode: number): RemoveResult {
+    // Handle null/undefined input gracefully
+    const processedOutput = this.cleanText(output || '');
     const lines = processedOutput.split('\n');
+
+    // Parse common information from base parser
     const commonInfo = this.parseCommonInfo(lines);
+
+    // Determine success based on exit code and error patterns
+    const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
     // Parse remove-specific information
     const removedResources = this.parseRemovedResources(processedOutput);
-    const completionStatus = this.parseCompletionStatus(
+    const resourcesRemoved = removedResources.filter(
+      (r) => r.status === 'removed'
+    ).length;
+    const completionStatus = this.determineCompletionStatus(
       processedOutput,
-      exitCode
+      exitCode,
+      removedResources
     );
-    const error = this.parseErrorMessage(processedOutput);
 
-    // Determine success based on exit code (primary) and patterns (secondary)
-    const success = this.isSuccessfulOperation(processedOutput, exitCode);
-
+    // Build result with all required properties
     const result: RemoveResult = {
+      // Base operation result properties
       success,
       operation: 'remove',
       stage,
-      app: commonInfo.app || '',
-      rawOutput: processedOutput,
       exitCode,
-      truncated,
-      ...(error && { error }),
-      completionStatus: completionStatus || (success ? 'complete' : 'failed'),
-      ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
-      resourcesRemoved: removedResources.length,
+      app: commonInfo.app || 'unknown-app',
+      rawOutput: processedOutput,
+      permalink: commonInfo.permalink || '',
+      completionStatus,
+      truncated: false,
+
+      // Remove-specific properties
+      resourcesRemoved,
       removedResources,
     };
 
@@ -92,7 +80,7 @@ export class RemoveParser extends BaseParser<RemoveResult> {
   }
 
   /**
-   * Parse removed resources from removal output
+   * Parse removed/failed/skipped resources from remove output
    */
   private parseRemovedResources(output: string): Array<{
     type: string;
@@ -109,107 +97,111 @@ export class RemoveParser extends BaseParser<RemoveResult> {
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // Try to match different resource patterns
-      let match: RegExpMatchArray | null;
-      let status: 'removed' | 'failed' | 'skipped';
-
-      if ((match = trimmedLine.match(this.removePatterns.RESOURCE_DELETED))) {
-        status = 'removed';
-        if (match?.[1] && match?.[2]) {
-          resources.push({
-            type: match[1].trim(),
-            name: match[2].trim(),
-            status,
-          });
-        }
-      } else if (
-        (match = trimmedLine.match(this.removePatterns.RESOURCE_FAILED)) ||
-        (match = trimmedLine.match(this.removePatterns.RESOURCE_FAILED_ALT)) ||
-        (match = trimmedLine.match(this.removePatterns.RESOURCE_TIMEOUT))
-      ) {
-        status = 'failed';
-        if (match?.[1] && match?.[2]) {
-          resources.push({
-            type: match[1].trim(),
-            name: match[2].trim(),
-            status,
-          });
-        }
+      // Check for successfully removed resource (-)
+      const removedMatch = trimmedLine.match(
+        this.removePatterns.REMOVED_RESOURCE
+      );
+      if (removedMatch?.[1] && removedMatch[2]) {
+        const resource = {
+          type: removedMatch[1] || 'unknown',
+          name: removedMatch[2] || 'unknown',
+          status: 'removed' as const,
+        };
+        resources.push(resource);
+        continue;
       }
-      // Note: 'skipped' status could be added for resources that were intentionally skipped
+
+      // Check for failed resource (×)
+      const failedMatch = trimmedLine.match(
+        this.removePatterns.FAILED_RESOURCE
+      );
+      if (failedMatch?.[1] && failedMatch[2]) {
+        const resource = {
+          type: failedMatch[1] || 'unknown',
+          name: failedMatch[2] || 'unknown',
+          status: 'failed' as const,
+        };
+        resources.push(resource);
+        continue;
+      }
+
+      // Check for skipped resource (~)
+      const skippedMatch = trimmedLine.match(
+        this.removePatterns.SKIPPED_RESOURCE
+      );
+      if (skippedMatch?.[1] && skippedMatch[2]) {
+        const resource = {
+          type: skippedMatch[1] || 'unknown',
+          name: skippedMatch[2] || 'unknown',
+          status: 'skipped' as const,
+        };
+        resources.push(resource);
+      }
     }
 
     return resources;
   }
 
   /**
-   * Parse completion status from removal output
+   * Determine completion status based on output patterns and resources
    */
-  private parseCompletionStatus(
+  private determineCompletionStatus(
     output: string,
-    exitCode: number
-  ): 'complete' | 'partial' | 'failed' | undefined {
-    // Priority 1: Exit code - non-zero exit code always indicates failure
+    exitCode: number,
+    removedResources: Array<{ status: 'removed' | 'failed' | 'skipped' }>
+  ): 'complete' | 'partial' | 'failed' {
+    // Check for explicit completion status indicators
+    if (this.removePatterns.COMPLETE.test(output)) {
+      return 'complete';
+    }
+    if (this.removePatterns.PARTIAL_COMPLETION.test(output)) {
+      return 'partial';
+    }
+    if (this.removePatterns.FAILED.test(output)) {
+      return 'failed';
+    }
+
+    // Determine status based on exit code and resource outcomes
     if (exitCode !== 0) {
-      return 'failed';
+      // Non-zero exit code indicates failure
+      return removedResources.length > 0 ? 'partial' : 'failed';
     }
 
-    // Priority 2: Explicit status patterns
-    if (this.removePatterns.ALL_REMOVED.test(output)) {
-      return 'complete';
+    // Zero exit code - check resource status distribution
+    const failed = removedResources.filter((r) => r.status === 'failed');
+    const removed = removedResources.filter((r) => r.status === 'removed');
+
+    if (failed.length > 0) {
+      return 'partial'; // Some resources failed to remove
     }
 
-    if (this.removePatterns.REMOVAL_FAILED.test(output)) {
-      return 'failed';
+    if (removed.length > 0 || removedResources.length === 0) {
+      return 'complete'; // All resources removed successfully or no resources to remove
     }
 
-    // Check for no resources case
-    if (
-      this.removePatterns.NO_RESOURCES.test(output) ||
-      this.removePatterns.EMPTY_STACK.test(output)
-    ) {
-      return 'complete';
-    }
-
-    // Priority 3: Partial patterns (only if exit code is 0)
-    if (this.removePatterns.PARTIAL_REMOVAL.test(output)) {
-      return 'partial';
-    }
-
-    if (this.removePatterns.REMOVE_TIMEOUT.test(output)) {
-      return 'partial';
-    }
-
-    // Priority 4: Resource-level failures (only if exit code is 0)
-    const lines = output.split('\n');
-    const hasFailedResources = lines.some(
-      (line) =>
-        this.removePatterns.RESOURCE_FAILED.test(line.trim()) ||
-        this.removePatterns.RESOURCE_FAILED_ALT.test(line.trim()) ||
-        this.removePatterns.RESOURCE_TIMEOUT.test(line.trim())
-    );
-
-    if (hasFailedResources) {
-      return 'partial';
-    }
-
-    return; // Let base parser determine
+    return 'complete'; // Default to complete for successful operations
   }
 
   /**
-   * Parse error messages from failed removals
+   * Override base success determination for remove-specific logic
    */
-  private parseErrorMessage(output: string): string | undefined {
-    const errorMatch = output.match(this.removePatterns.REMOVE_ERROR);
-    if (errorMatch?.[1]) {
-      return errorMatch[1].trim();
+  protected isSuccessfulOperation(output: string, exitCode: number): boolean {
+    // Primary indicator: exit code
+    if (exitCode !== 0) {
+      return false;
     }
 
-    // Look for removal failure pattern
-    if (this.removePatterns.REMOVAL_FAILED_MSG.test(output)) {
-      return 'Remove operation failed';
+    // Check for remove-specific error patterns
+    if (this.removePatterns.REMOVE_FAILED.test(output)) {
+      return false;
     }
 
-    return;
+    // Check for general error patterns from base parser
+    if (this.removePatterns.ERROR_MESSAGE.test(output)) {
+      return false;
+    }
+
+    // Remove operations with "No resources to remove" are still successful
+    return true;
   }
 }

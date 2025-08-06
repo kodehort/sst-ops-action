@@ -1,6 +1,8 @@
 # SST Operations Action
 
-A unified GitHub Action for SST operations: deploy, diff, and remove.
+A unified, standalone GitHub Action for SST operations: deploy, diff, and remove.
+
+> **Migration Notice:** This action consolidates functionality from multiple composite actions previously maintained in a monorepo. It provides the same functionality with improved maintainability and reusability as a standalone, distributable GitHub Action.
 
 ## Quick Start
 
