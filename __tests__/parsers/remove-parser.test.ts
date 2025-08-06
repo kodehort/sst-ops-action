@@ -6,16 +6,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RemoveParser } from '../../src/parsers/remove-parser';
 import {
-  SST_REMOVE_SUCCESS_OUTPUT,
-  SST_REMOVE_PARTIAL_OUTPUT,
-  SST_REMOVE_COMPLETE_OUTPUT,
-  SST_REMOVE_FAILED_OUTPUT,
-  SST_REMOVE_TIMEOUT_OUTPUT,
-  SST_REMOVE_EMPTY_STACK_OUTPUT,
-  SST_REMOVE_MALFORMED_OUTPUT,
-  SST_REMOVE_LARGE_OUTPUT,
   EMPTY_OUTPUT,
   INCOMPLETE_OUTPUT,
+  SST_REMOVE_COMPLETE_OUTPUT,
+  SST_REMOVE_EMPTY_STACK_OUTPUT,
+  SST_REMOVE_FAILED_OUTPUT,
+  SST_REMOVE_LARGE_OUTPUT,
+  SST_REMOVE_MALFORMED_OUTPUT,
+  SST_REMOVE_PARTIAL_OUTPUT,
+  SST_REMOVE_SUCCESS_OUTPUT,
+  SST_REMOVE_TIMEOUT_OUTPUT,
 } from '../fixtures/sst-outputs';
 
 describe('RemoveParser', () => {
@@ -96,14 +96,18 @@ describe('RemoveParser', () => {
       expect(result.stage).toBe('production');
       expect(result.resourcesRemoved).toBe(6);
       expect(result.removedResources).toHaveLength(6);
-      expect(result.permalink).toBe('https://console.sst.dev/complex-app/production/removals/abc123');
+      expect(result.permalink).toBe(
+        'https://console.sst.dev/complex-app/production/removals/abc123'
+      );
 
       // Verify all resources were removed successfully
-      const allRemoved = result.removedResources.every(r => r.status === 'removed');
+      const allRemoved = result.removedResources.every(
+        (r) => r.status === 'removed'
+      );
       expect(allRemoved).toBe(true);
 
       // Check specific resource types
-      const resourceTypes = result.removedResources.map(r => r.type);
+      const resourceTypes = result.removedResources.map((r) => r.type);
       expect(resourceTypes).toContain('Function');
       expect(resourceTypes).toContain('Database');
       expect(resourceTypes).toContain('Api');
@@ -122,9 +126,13 @@ describe('RemoveParser', () => {
       expect(result.resourcesRemoved).toBe(4); // Total resources processed
 
       // Check mixed resource statuses
-      const removedCount = result.removedResources.filter(r => r.status === 'removed').length;
-      const failedCount = result.removedResources.filter(r => r.status === 'failed').length;
-      
+      const removedCount = result.removedResources.filter(
+        (r) => r.status === 'removed'
+      ).length;
+      const failedCount = result.removedResources.filter(
+        (r) => r.status === 'failed'
+      ).length;
+
       expect(removedCount).toBe(1); // Website was deleted
       expect(failedCount).toBe(3); // Function, Database, Api failed
     });
@@ -137,7 +145,9 @@ describe('RemoveParser', () => {
       expect(result.resourcesRemoved).toBe(3);
 
       // Check that timeout is handled as failed status
-      const timedOutResource = result.removedResources.find(r => r.name.includes('db'));
+      const timedOutResource = result.removedResources.find((r) =>
+        r.name.includes('db')
+      );
       expect(timedOutResource?.status).toBe('failed');
     });
 
@@ -184,7 +194,12 @@ describe('RemoveParser', () => {
     });
 
     it('should properly set truncated flag based on output size', () => {
-      const result = parser.parse(SST_REMOVE_COMPLETE_OUTPUT, 'staging', 0, 500); // max size 500 bytes
+      const result = parser.parse(
+        SST_REMOVE_COMPLETE_OUTPUT,
+        'staging',
+        0,
+        500
+      ); // max size 500 bytes
 
       expect(result.truncated).toBe(true);
       expect(result.rawOutput.length).toBeLessThanOrEqual(500);
@@ -198,16 +213,24 @@ describe('RemoveParser', () => {
       expect(result.removedResources).toHaveLength(100);
 
       // Verify resource type distribution
-      const functionCount = result.removedResources.filter(r => r.type === 'Function').length;
-      const apiCount = result.removedResources.filter(r => r.type === 'Api').length;
-      const websiteCount = result.removedResources.filter(r => r.type === 'Website').length;
+      const functionCount = result.removedResources.filter(
+        (r) => r.type === 'Function'
+      ).length;
+      const apiCount = result.removedResources.filter(
+        (r) => r.type === 'Api'
+      ).length;
+      const websiteCount = result.removedResources.filter(
+        (r) => r.type === 'Website'
+      ).length;
 
       expect(functionCount).toBe(50);
       expect(apiCount).toBe(30);
       expect(websiteCount).toBe(20);
 
       // All should be successfully removed
-      const allRemoved = result.removedResources.every(r => r.status === 'removed');
+      const allRemoved = result.removedResources.every(
+        (r) => r.status === 'removed'
+      );
       expect(allRemoved).toBe(true);
     });
 
@@ -231,14 +254,18 @@ Stage: test
       expect(result.removedResources).toHaveLength(3);
 
       // Check that details are not included in name (simplified parsing)
-      const authFunction = result.removedResources.find(r => r.name.includes('auth'));
+      const authFunction = result.removedResources.find((r) =>
+        r.name.includes('auth')
+      );
       expect(authFunction).toEqual({
         type: 'Function',
         name: 'details-app-test-auth',
         status: 'removed',
       });
 
-      const failedApi = result.removedResources.find(r => r.name.includes('api'));
+      const failedApi = result.removedResources.find((r) =>
+        r.name.includes('api')
+      );
       expect(failedApi?.status).toBe('failed');
     });
   });
@@ -246,13 +273,17 @@ Stage: test
   describe('error handling', () => {
     it('should not throw on invalid removal patterns', () => {
       expect(() => {
-        const result = parser.parse('Invalid removal format with special chars: $#@!', 'staging', 0);
+        const result = parser.parse(
+          'Invalid removal format with special chars: $#@!',
+          'staging',
+          0
+        );
         expect(result.resourcesRemoved).toBe(0);
       }).not.toThrow();
     });
 
     it('should handle very long removal outputs', () => {
-      const longOutput = `${'A'.repeat(100000)}\nSST Remove\nApp: test-app\n\n✓ All resources removed\n| Deleted Function test-function\n\n1 resources removed`;
+      const longOutput = `${'A'.repeat(100_000)}\nSST Remove\nApp: test-app\n\n✓ All resources removed\n| Deleted Function test-function\n\n1 resources removed`;
       expect(() => {
         const result = parser.parse(longOutput, 'staging', 0);
         expect(result.app).toBe('test-app');
@@ -261,7 +292,8 @@ Stage: test
     });
 
     it('should handle output with unusual line endings', () => {
-      const windowsOutput = 'SST Remove\r\nApp: test-app\r\n\r\n✓ All resources removed\r\n| Deleted Function test-func\r\n\r\n1 resources removed\r\n';
+      const windowsOutput =
+        'SST Remove\r\nApp: test-app\r\n\r\n✓ All resources removed\r\n| Deleted Function test-func\r\n\r\n1 resources removed\r\n';
       const result = parser.parse(windowsOutput, 'staging', 0);
       expect(result.app).toBe('test-app');
       expect(result.resourcesRemoved).toBe(1);
@@ -286,10 +318,14 @@ Warning: 2 resources could not be removed
       expect(result.success).toBe(true);
       expect(result.completionStatus).toBe('partial');
       expect(result.resourcesRemoved).toBe(4);
-      
-      const removedCount = result.removedResources.filter(r => r.status === 'removed').length;
-      const failedCount = result.removedResources.filter(r => r.status === 'failed').length;
-      
+
+      const removedCount = result.removedResources.filter(
+        (r) => r.status === 'removed'
+      ).length;
+      const failedCount = result.removedResources.filter(
+        (r) => r.status === 'failed'
+      ).length;
+
       expect(removedCount).toBe(2);
       expect(failedCount).toBe(2);
     });
@@ -298,21 +334,21 @@ Warning: 2 resources could not be removed
   describe('performance', () => {
     it('should parse large removals efficiently', () => {
       const startTime = Date.now();
-      
+
       parser.parse(SST_REMOVE_LARGE_OUTPUT, 'staging', 0);
-      
+
       const duration = Date.now() - startTime;
       expect(duration).toBeLessThan(1000); // Should complete in under 1 second
     });
 
     it('should handle repeated parsing efficiently', () => {
       const startTime = Date.now();
-      
+
       // Parse same removal 100 times
       for (let i = 0; i < 100; i++) {
         parser.parse(SST_REMOVE_COMPLETE_OUTPUT, 'staging', 0);
       }
-      
+
       const duration = Date.now() - startTime;
       expect(duration).toBeLessThan(2000); // Should complete all in under 2 seconds
     });

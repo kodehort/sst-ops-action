@@ -1,7 +1,7 @@
 /**
  * Remove Operation Parser
  * Parses SST remove command output to extract resource cleanup and cost savings
- * 
+ *
  * Supports parsing of:
  * - Removed resources with status tracking
  * - Partial cleanup scenarios and stuck resources
@@ -25,7 +25,8 @@ export class RemoveParser extends BaseParser<RemoveResult> {
 
     // Completion status patterns
     ALL_REMOVED: /^✓\s+All resources removed$/m,
-    PARTIAL_REMOVAL: /^⚠\s+.*removal.*completed|.*resources could not be removed/im,
+    PARTIAL_REMOVAL:
+      /^⚠\s+.*removal.*completed|.*resources could not be removed/im,
     REMOVAL_FAILED: /^✗\s+Remove failed$/m,
     REMOVE_TIMEOUT: /Remove operation timed out/,
 
@@ -63,7 +64,10 @@ export class RemoveParser extends BaseParser<RemoveResult> {
 
     // Parse remove-specific information
     const removedResources = this.parseRemovedResources(processedOutput);
-    const completionStatus = this.parseCompletionStatus(processedOutput, exitCode);
+    const completionStatus = this.parseCompletionStatus(
+      processedOutput,
+      exitCode
+    );
     const error = this.parseErrorMessage(processedOutput);
 
     // Determine success based on exit code (primary) and patterns (secondary)
@@ -141,7 +145,10 @@ export class RemoveParser extends BaseParser<RemoveResult> {
   /**
    * Parse completion status from removal output
    */
-  private parseCompletionStatus(output: string, exitCode: number): 'complete' | 'partial' | 'failed' | undefined {
+  private parseCompletionStatus(
+    output: string,
+    exitCode: number
+  ): 'complete' | 'partial' | 'failed' | undefined {
     // Priority 1: Exit code - non-zero exit code always indicates failure
     if (exitCode !== 0) {
       return 'failed';
@@ -151,13 +158,16 @@ export class RemoveParser extends BaseParser<RemoveResult> {
     if (this.removePatterns.ALL_REMOVED.test(output)) {
       return 'complete';
     }
-    
+
     if (this.removePatterns.REMOVAL_FAILED.test(output)) {
       return 'failed';
     }
 
     // Check for no resources case
-    if (this.removePatterns.NO_RESOURCES.test(output) || this.removePatterns.EMPTY_STACK.test(output)) {
+    if (
+      this.removePatterns.NO_RESOURCES.test(output) ||
+      this.removePatterns.EMPTY_STACK.test(output)
+    ) {
       return 'complete';
     }
 
@@ -172,17 +182,18 @@ export class RemoveParser extends BaseParser<RemoveResult> {
 
     // Priority 4: Resource-level failures (only if exit code is 0)
     const lines = output.split('\n');
-    const hasFailedResources = lines.some(line => 
-      this.removePatterns.RESOURCE_FAILED.test(line.trim()) ||
-      this.removePatterns.RESOURCE_FAILED_ALT.test(line.trim()) ||
-      this.removePatterns.RESOURCE_TIMEOUT.test(line.trim())
+    const hasFailedResources = lines.some(
+      (line) =>
+        this.removePatterns.RESOURCE_FAILED.test(line.trim()) ||
+        this.removePatterns.RESOURCE_FAILED_ALT.test(line.trim()) ||
+        this.removePatterns.RESOURCE_TIMEOUT.test(line.trim())
     );
 
     if (hasFailedResources) {
       return 'partial';
     }
 
-    return undefined; // Let base parser determine
+    return; // Let base parser determine
   }
 
   /**
@@ -199,6 +210,6 @@ export class RemoveParser extends BaseParser<RemoveResult> {
       return 'Remove operation failed';
     }
 
-    return undefined;
+    return;
   }
 }

@@ -61,6 +61,7 @@ export class ProcessManager extends EventEmitter<ProcessManagerEvents> {
     string,
     { process: ChildProcess; metadata: ProcessMetadata }
   >();
+  private processIdCounter = 0;
 
   /**
    * Register a new process for management

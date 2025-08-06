@@ -6,15 +6,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DiffParser } from '../../src/parsers/diff-parser';
 import {
-  SST_DIFF_OUTPUT,
-  SST_DIFF_NO_CHANGES_OUTPUT,
-  SST_DIFF_COMPLEX_OUTPUT,
-  SST_DIFF_BREAKING_OUTPUT,
-  SST_DIFF_COSMETIC_OUTPUT,
-  SST_DIFF_MALFORMED_OUTPUT,
-  SST_DIFF_LARGE_OUTPUT,
   EMPTY_OUTPUT,
   INCOMPLETE_OUTPUT,
+  SST_DIFF_BREAKING_OUTPUT,
+  SST_DIFF_COMPLEX_OUTPUT,
+  SST_DIFF_COSMETIC_OUTPUT,
+  SST_DIFF_LARGE_OUTPUT,
+  SST_DIFF_MALFORMED_OUTPUT,
+  SST_DIFF_NO_CHANGES_OUTPUT,
+  SST_DIFF_OUTPUT,
 } from '../fixtures/sst-outputs';
 
 describe('DiffParser', () => {
@@ -83,19 +83,23 @@ describe('DiffParser', () => {
       expect(result.stage).toBe('production');
       expect(result.plannedChanges).toBe(6);
       expect(result.changes).toHaveLength(6);
-      expect(result.permalink).toBe('https://console.sst.dev/my-complex-app/production/diffs/xyz789');
+      expect(result.permalink).toBe(
+        'https://console.sst.dev/my-complex-app/production/diffs/xyz789'
+      );
 
       // Check for different change types
-      const createChanges = result.changes.filter(c => c.action === 'create');
-      const updateChanges = result.changes.filter(c => c.action === 'update');
-      const deleteChanges = result.changes.filter(c => c.action === 'delete');
+      const createChanges = result.changes.filter((c) => c.action === 'create');
+      const updateChanges = result.changes.filter((c) => c.action === 'update');
+      const deleteChanges = result.changes.filter((c) => c.action === 'delete');
 
       expect(createChanges).toHaveLength(2);
       expect(updateChanges).toHaveLength(2);
       expect(deleteChanges).toHaveLength(2);
 
       // Verify database creation with details
-      const dbCreate = result.changes.find(c => c.type === 'Database' && c.action === 'create');
+      const dbCreate = result.changes.find(
+        (c) => c.type === 'Database' && c.action === 'create'
+      );
       expect(dbCreate).toEqual({
         type: 'Database',
         name: 'my-complex-app-production-users-db',
@@ -119,7 +123,7 @@ describe('DiffParser', () => {
       expect(result.changeSummary).toContain('Cost: -$25.00');
 
       // Verify runtime change detection
-      const runtimeChange = result.changes.find(c => c.type === 'Function');
+      const runtimeChange = result.changes.find((c) => c.type === 'Function');
       expect(runtimeChange).toEqual({
         type: 'Function',
         name: 'breaking-app-staging-handler',
@@ -192,9 +196,9 @@ describe('DiffParser', () => {
       expect(result.changes).toHaveLength(100);
 
       // Verify change type distribution
-      const createChanges = result.changes.filter(c => c.action === 'create');
-      const updateChanges = result.changes.filter(c => c.action === 'update');
-      const deleteChanges = result.changes.filter(c => c.action === 'delete');
+      const createChanges = result.changes.filter((c) => c.action === 'create');
+      const updateChanges = result.changes.filter((c) => c.action === 'update');
+      const deleteChanges = result.changes.filter((c) => c.action === 'delete');
 
       expect(createChanges).toHaveLength(50);
       expect(updateChanges).toHaveLength(30);
@@ -241,13 +245,17 @@ Stage: test
   describe('error handling', () => {
     it('should not throw on invalid diff patterns', () => {
       expect(() => {
-        const result = parser.parse('Invalid diff format with special chars: $#@!', 'staging', 0);
+        const result = parser.parse(
+          'Invalid diff format with special chars: $#@!',
+          'staging',
+          0
+        );
         expect(result.plannedChanges).toBe(0);
       }).not.toThrow();
     });
 
     it('should handle very long diff outputs', () => {
-      const longOutput = `${'A'.repeat(100000)}\nSST Diff\nApp: test-app\n\n+ Function test-function\n\n1 changes planned`;
+      const longOutput = `${'A'.repeat(100_000)}\nSST Diff\nApp: test-app\n\n+ Function test-function\n\n1 changes planned`;
       expect(() => {
         const result = parser.parse(longOutput, 'staging', 0);
         expect(result.app).toBe('test-app');
@@ -256,7 +264,8 @@ Stage: test
     });
 
     it('should handle output with unusual line endings', () => {
-      const windowsOutput = 'SST Diff\r\nApp: test-app\r\n\r\n+ Function test-func\r\n\r\n1 changes planned\r\n';
+      const windowsOutput =
+        'SST Diff\r\nApp: test-app\r\n\r\n+ Function test-func\r\n\r\n1 changes planned\r\n';
       const result = parser.parse(windowsOutput, 'staging', 0);
       expect(result.app).toBe('test-app');
       expect(result.plannedChanges).toBe(1);
@@ -266,21 +275,21 @@ Stage: test
   describe('performance', () => {
     it('should parse large diffs efficiently', () => {
       const startTime = Date.now();
-      
+
       parser.parse(SST_DIFF_LARGE_OUTPUT, 'staging', 0);
-      
+
       const duration = Date.now() - startTime;
       expect(duration).toBeLessThan(1000); // Should complete in under 1 second
     });
 
     it('should handle repeated parsing efficiently', () => {
       const startTime = Date.now();
-      
+
       // Parse same diff 100 times
       for (let i = 0; i < 100; i++) {
         parser.parse(SST_DIFF_COMPLEX_OUTPUT, 'staging', 0);
       }
-      
+
       const duration = Date.now() - startTime;
       expect(duration).toBeLessThan(2000); // Should complete all in under 2 seconds
     });

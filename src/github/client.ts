@@ -58,9 +58,38 @@ export class GitHubClient {
     backoffFactor: 2,
   };
 
-  constructor() {
-    this.octokit = github.getOctokit(token);
+  constructor(token?: string) {
+    const githubToken = token || core.getInput('github-token') || process.env.GITHUB_TOKEN;
+    if (!githubToken) {
+      throw new Error('GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable.');
+    }
+    this.octokit = github.getOctokit(githubToken);
     this.context = github.context;
+  }
+
+  /**
+   * Post a PR comment (simplified interface for operations)
+   */
+  async postPRComment(comment: string, operationType: string): Promise<void> {
+    if (!this.context.payload.pull_request) {
+      core.debug('Not in PR context, skipping comment creation');
+      return;
+    }
+
+    const commentWithMarker = `<!-- sst-${operationType} -->\n${comment}`;
+    
+    try {
+      await this.withRateLimit(async () => {
+        await this.octokit.rest.issues.createComment({
+          ...this.context.repo,
+          issue_number: this.context.payload.pull_request?.number,
+          body: commentWithMarker,
+        });
+      });
+      core.info(`Successfully posted ${operationType} PR comment`);
+    } catch (error) {
+      throw new Error(`GitHub API error: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -291,8 +320,8 @@ export class GitHubClient {
   private formatDiffContent(result: DiffResult): string {
     let content = '### Infrastructure Changes Preview';
 
-    if (result.diffSummary) {
-      content += `\n\n${result.diffSummary}`;
+    if (result.changeSummary) {
+      content += `\n\n${result.changeSummary}`;
     } else {
       content += '\n\nNo changes detected.';
     }
@@ -306,7 +335,7 @@ export class GitHubClient {
   private formatRemoveContent(result: RemoveResult): string {
     let content = `### Resource Cleanup
 
-**Resources Removed:** ${result.resourceChanges || 0}`;
+**Resources Removed:** ${result.resourcesRemoved || 0}`;
 
     if (result.completionStatus === 'partial') {
       content +=
