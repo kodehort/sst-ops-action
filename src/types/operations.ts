@@ -11,10 +11,11 @@ export type CompletionStatus = 'complete' | 'partial' | 'failed';
 
 export interface OperationOptions {
   stage: string;
-  token: string;
-  commentMode: CommentMode;
-  failOnError: boolean;
-  maxOutputSize: number;
+  token?: string;
+  commentMode?: CommentMode;
+  failOnError?: boolean;
+  maxOutputSize?: number;
+  environment?: Record<string, string>;
 }
 
 export interface BaseOperationResult {

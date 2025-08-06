@@ -47,6 +47,7 @@ export type {
   SSTRemoveOutput,
   SSTResource,
   SSTResourceTypes,
+  SSTUrl,
   SSTValidationResult,
   SSTWebsite,
 } from './sst.js';

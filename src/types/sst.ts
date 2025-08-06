@@ -69,6 +69,12 @@ export interface SSTDatabase extends SSTResource {
   };
 }
 
+export interface SSTUrl {
+  name: string;
+  url: string;
+  type: 'api' | 'web' | 'function' | 'other';
+}
+
 export type SSTResourceTypes =
   | SSTFunction
   | SSTApi
@@ -148,6 +154,7 @@ export interface SSTCommandResult {
   stdout: string;
   stderr: string;
   duration: number;
+  executionTime: number;
   command: string[];
   workingDirectory: string;
   environment: Record<string, string>;

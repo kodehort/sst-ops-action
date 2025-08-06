@@ -3,18 +3,18 @@
  * Handles SST deploy command execution with resource tracking and GitHub integration
  */
 
-import type { DeployResult, OperationOptions } from '../types';
+import type { GitHubClient } from '../github/client';
 import { DeployParser } from '../parsers/deploy-parser';
-import { GitHubClient } from '../github/client';
-import { SSTCLIExecutor } from '../utils/cli';
+import type { DeployResult, OperationOptions } from '../types';
+import type { SSTCLIExecutor } from '../utils/cli';
 
 /**
  * Deploy operation handler for SST deployments
  * Combines CLI execution, output parsing, and GitHub integration
  */
 export class DeployOperation {
-  private readonly defaultTimeout = 900000; // 15 minutes
-  
+  private readonly defaultTimeout = 900_000; // 15 minutes
+
   constructor(
     private readonly sstExecutor: SSTCLIExecutor,
     private readonly githubClient: GitHubClient
@@ -28,11 +28,15 @@ export class DeployOperation {
   async execute(options: OperationOptions): Promise<DeployResult> {
     try {
       // Execute SST CLI command
-      const cliResult = await this.sstExecutor.executeSST('deploy', options.stage, {
-        env: this.buildEnvironment(options),
-        timeout: this.defaultTimeout,
-        maxOutputSize: options.maxOutputSize,
-      });
+      const cliResult = await this.sstExecutor.executeSST(
+        'deploy',
+        options.stage,
+        {
+          env: this.buildEnvironment(options),
+          timeout: this.defaultTimeout,
+          maxOutputSize: options.maxOutputSize,
+        }
+      );
 
       // Parse CLI output using DeployParser
       const parser = new DeployParser();
@@ -81,8 +85,9 @@ export class DeployOperation {
 
     // Create PR comment (if enabled)
     integrationPromises.push(
-      this.githubClient.createOrUpdateComment(result, options.commentMode)
-        .catch(error => {
+      this.githubClient
+        .createOrUpdateComment(result, options.commentMode)
+        .catch((error) => {
           // Log but don't fail the operation
           console.error('Failed to create GitHub comment:', error.message);
         })
@@ -90,11 +95,10 @@ export class DeployOperation {
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result)
-        .catch(error => {
-          // Log but don't fail the operation
-          console.error('Failed to create workflow summary:', error.message);
-        })
+      this.githubClient.createWorkflowSummary(result).catch((error) => {
+        // Log but don't fail the operation
+        console.error('Failed to create workflow summary:', error.message);
+      })
     );
 
     // Wait for all GitHub integration tasks to complete

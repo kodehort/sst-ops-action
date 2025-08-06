@@ -4,12 +4,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { GitHubClient } from '../../src/github/client';
 import { DeployOperation } from '../../src/operations/deploy';
 import { DeployParser } from '../../src/parsers/deploy-parser';
-import { GitHubClient } from '../../src/github/client';  
-import { SSTCLIExecutor } from '../../src/utils/cli';
-import type { OperationOptions, DeployResult } from '../../src/types';
-import type { SSTCommandResult } from '../../src/utils/cli';
+import type { DeployResult, OperationOptions } from '../../src/types';
+import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
 
 describe('DeployOperation', () => {
   let deployOperation: DeployOperation;
@@ -21,13 +20,13 @@ describe('DeployOperation', () => {
     token: 'ghp_test_token',
     commentMode: 'on-success',
     failOnError: true,
-    maxOutputSize: 50000,
+    maxOutputSize: 50_000,
   };
 
   const mockCLIResult: SSTCommandResult = {
     output: 'SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n',
     exitCode: 0,
-    duration: 45000,
+    duration: 45_000,
     command: 'sst deploy --stage staging',
     truncated: false,
     stdout: 'SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n',
@@ -78,39 +77,49 @@ describe('DeployOperation', () => {
   describe('execute', () => {
     it('should execute successful deployment with complete workflow', async () => {
       // Mock the parser
-      const mockParse = vi.spyOn(DeployParser.prototype, 'parse').mockReturnValue(mockDeployResult);
-      
+      const mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(mockDeployResult);
+
       // Mock CLI execution
       (mockSSTExecutor.executeSST as any).mockResolvedValue(mockCLIResult);
-      
+
       // Mock GitHub integration
-      (mockGitHubClient.createOrUpdateComment as any).mockResolvedValue(undefined);
-      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(undefined);
+      (mockGitHubClient.createOrUpdateComment as any).mockResolvedValue(
+        undefined
+      );
+      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(
+        undefined
+      );
 
       // Act
       const result = await deployOperation.execute(mockOperationOptions);
 
       // Assert
       expect(result).toEqual(mockDeployResult);
-      
+
       // Verify CLI execution
-      expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith('deploy', 'staging', {
-        env: expect.objectContaining({
-          SST_TOKEN: 'ghp_test_token',
-          NODE_ENV: 'production',
-          CI: 'true',
-          GITHUB_ACTIONS: 'true',
-        }),
-        timeout: 900000,
-        maxOutputSize: 50000,
-      });
+      expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith(
+        'deploy',
+        'staging',
+        {
+          env: expect.objectContaining({
+            SST_TOKEN: 'ghp_test_token',
+            NODE_ENV: 'production',
+            CI: 'true',
+            GITHUB_ACTIONS: 'true',
+          }),
+          timeout: 900_000,
+          maxOutputSize: 50_000,
+        }
+      );
 
       // Verify parsing
       expect(mockParse).toHaveBeenCalledWith(
         mockCLIResult.output,
         'staging',
         0,
-        50000
+        50_000
       );
 
       // Verify GitHub integration
@@ -118,25 +127,33 @@ describe('DeployOperation', () => {
         mockDeployResult,
         'on-success'
       );
-      expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(mockDeployResult);
+      expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
+        mockDeployResult
+      );
     });
 
     it('should handle CLI execution failure', async () => {
       const cliError = new Error('SST command failed');
-      
+
       (mockSSTExecutor.executeSST as any).mockRejectedValue(cliError);
 
-      await expect(deployOperation.execute(mockOperationOptions)).rejects.toThrow(
-        'SST command failed'
-      );
+      await expect(
+        deployOperation.execute(mockOperationOptions)
+      ).rejects.toThrow('SST command failed');
     });
 
     it('should handle GitHub integration failures gracefully', async () => {
-      const mockParse = vi.spyOn(DeployParser.prototype, 'parse').mockReturnValue(mockDeployResult);
-      
+      const mockParse = vi
+        .spyOn(DeployParser.prototype, 'parse')
+        .mockReturnValue(mockDeployResult);
+
       (mockSSTExecutor.executeSST as any).mockResolvedValue(mockCLIResult);
-      (mockGitHubClient.createOrUpdateComment as any).mockRejectedValue(new Error('GitHub API error'));
-      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(undefined);
+      (mockGitHubClient.createOrUpdateComment as any).mockRejectedValue(
+        new Error('GitHub API error')
+      );
+      (mockGitHubClient.createWorkflowSummary as any).mockResolvedValue(
+        undefined
+      );
 
       // Should still return result despite GitHub integration failure
       const result = await deployOperation.execute(mockOperationOptions);

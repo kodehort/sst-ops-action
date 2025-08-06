@@ -59,7 +59,7 @@ async function buildBundle(options: BuildOptions = {}): Promise<void> {
     const result = await Bun.build({
       entrypoints: [MAIN_ENTRY],
       outdir: DIST_DIR,
-      target: target as any,
+      target: 'node',
       format,
       minify,
       sourcemap: sourcemap ? 'external' : false,
@@ -136,6 +136,7 @@ async function validateBundle(bundlePath: string = MAIN_OUTPUT): Promise<void> {
         bundleContent.includes('exports.')
       )
     ) {
+      console.warn('Bundle may not have proper CommonJS exports. GitHub Actions requires CommonJS format.');
     }
 
     // Test syntax by attempting to parse
@@ -197,12 +198,16 @@ async function main(): Promise<void> {
     // Metadata
     await generateBuildInfo();
 
-    const _duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`✅ Build completed successfully in ${duration}s`);
   } catch (error) {
     if (error instanceof BuildError) {
+      console.error(`❌ Build failed: ${error.message}`);
       if (error.code) {
+        console.error(`   Error code: ${error.code}`);
       }
     } else {
+      console.error(`❌ Unexpected error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     process.exit(1);

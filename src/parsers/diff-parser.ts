@@ -1,13 +1,13 @@
 /**
  * Diff Operation Parser
  * Parses SST diff command output to extract planned changes and impact analysis
- * 
+ *
  * Supports parsing of:
  * - Planned resource changes (create/update/delete)
  * - Cost implications and impact analysis
  * - Breaking change detection
  * - Change summaries and counts
- * 
+ *
  * Supports parsing of:
  * - Planned resource changes (create/update/delete)
  * - Cost implications and impact analysis
@@ -35,7 +35,8 @@ export class DiffParser extends BaseParser<DiffResult> {
     // Impact and cost patterns
     BREAKING_CHANGES: /Breaking changes detected|Impact:\s+Breaking/i,
     COSMETIC_CHANGES: /Impact:\s+Cosmetic|No functional changes/i,
-    COST_CHANGE: /Monthly:\s+\$([0-9,.]+)\s+→\s+\$([0-9,.]+)\s+\(([+-]\$[0-9,.]+)\)/,
+    COST_CHANGE:
+      /Monthly:\s+\$([0-9,.]+)\s+→\s+\$([0-9,.]+)\s+\(([+-]\$[0-9,.]+)\)/,
 
     // Error patterns
     DIFF_FAILED: /Error parsing changes|Diff parsing failed/,
@@ -118,9 +119,13 @@ export class DiffParser extends BaseParser<DiffResult> {
 
       if ((match = trimmedLine.match(this.diffPatterns.PLANNED_CREATE))) {
         action = 'create';
-      } else if ((match = trimmedLine.match(this.diffPatterns.PLANNED_UPDATE))) {
+      } else if (
+        (match = trimmedLine.match(this.diffPatterns.PLANNED_UPDATE))
+      ) {
         action = 'update';
-      } else if ((match = trimmedLine.match(this.diffPatterns.PLANNED_DELETE))) {
+      } else if (
+        (match = trimmedLine.match(this.diffPatterns.PLANNED_DELETE))
+      ) {
         action = 'delete';
       } else {
         continue; // No match, skip this line
@@ -166,17 +171,17 @@ export class DiffParser extends BaseParser<DiffResult> {
     }
 
     // Count changes by type
-    const createCount = changes.filter(c => c.action === 'create').length;
-    const updateCount = changes.filter(c => c.action === 'update').length;
-    const deleteCount = changes.filter(c => c.action === 'delete').length;
+    const createCount = changes.filter((c) => c.action === 'create').length;
+    const updateCount = changes.filter((c) => c.action === 'update').length;
+    const deleteCount = changes.filter((c) => c.action === 'delete').length;
 
     let summary = `${changes.length} changes planned: `;
     const parts: string[] = [];
-    
+
     if (createCount > 0) parts.push(`${createCount} created`);
     if (updateCount > 0) parts.push(`${updateCount} updated`);
     if (deleteCount > 0) parts.push(`${deleteCount} deleted`);
-    
+
     summary += parts.join(', ');
 
     // Add impact assessment
