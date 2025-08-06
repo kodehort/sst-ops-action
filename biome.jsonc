@@ -1,0 +1,40 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "extends": ["ultracite"],
+  "files": {
+    "includes": [
+      "**/*",
+      "!**/_generated/**/*",
+      "!**/*.gen.*",
+      "!**/sst-env.d.ts",
+      "!.github/**/*.ts"
+    ]
+  },
+  "javascript": {
+    "globals": ["aws", "sst", "$app", "$config", "$resolve"]
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case", "camelCase", "PascalCase"]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    }
+  ]
+}
