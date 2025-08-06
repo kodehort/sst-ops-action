@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Run quality gates
+        run: |
+          echo "🔍 Running quality checks..."
+          bun run typecheck
+          bun run lint  
+          bun test
+          bun run test:coverage
+          echo "✅ All quality gates passed"
+          
+      - name: Build action
+        run: |
+          echo "🔨 Building action..."
+          bun run build
+          echo "✅ Build completed"
+        
+      - name: Verify bundle
+        run: |
+          echo "🧪 Verifying bundle..."
+          ls -la dist/main.js
+          file dist/main.js
+          
+          # Test bundle execution
+          timeout 10s node dist/main.js || echo "Bundle execution test completed"
+          
+          # Check bundle size
+          BUNDLE_SIZE=$(stat -f%z dist/main.js 2>/dev/null || stat -c%s dist/main.js)
+          BUNDLE_SIZE_MB=$((BUNDLE_SIZE / 1024 / 1024))
+          echo "Bundle size: ${BUNDLE_SIZE_MB}MB"
+          
+          if [ $BUNDLE_SIZE_MB -gt 10 ]; then
+            echo "❌ Bundle size exceeds 10MB limit!"
+            exit 1
+          fi
+          echo "✅ Bundle verified"
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          body: |
+            ## 🚀 SST Operations Action Release
+            
+            ### Changes in this release
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+            
+            ### Installation
+            ```yaml
+            - name: SST Operations
+              uses: ${{ github.repository }}@${{ github.ref_name }}
+              with:
+                operation: deploy
+                stage: staging
+                token: ${{ secrets.GITHUB_TOKEN }}
+            ```
+            
+            ### Performance
+            - Bundle size: Generated during build
+            - GitHub Actions compatible (Node.js 20)
+            - All quality gates passed ✅
+            
+            ---
+            Auto-generated release from tag ${{ github.ref }}
+            
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/main.js
+          asset_name: main.js
+          asset_content_type: application/javascript

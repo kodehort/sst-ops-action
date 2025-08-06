@@ -1,0 +1,57 @@
+name: 'SST Operations'
+description: 'A unified GitHub Action for SST operations: deploy, diff, and remove'
+author: 'Kodehort'
+
+branding:
+  icon: 'cloud'
+  color: 'orange'
+
+inputs:
+  operation:
+    description: 'SST operation to perform (deploy, diff, remove)'
+    required: false
+    default: 'deploy'
+  token:
+    description: 'GitHub token for authentication'
+    required: true
+  stage:
+    description: 'SST stage to operate on'
+    required: true
+  comment-mode:
+    description: 'When to post PR comments (always, on-success, on-failure, never)'
+    required: false
+    default: 'on-success'
+  fail-on-error:
+    description: 'Whether to fail the action when SST operation fails'
+    required: false
+    default: 'true'
+  max-output-size:
+    description: 'Maximum output size before truncation (bytes)'
+    required: false
+    default: '50000'
+
+outputs:
+  success:
+    description: 'Whether SST operation completed successfully'
+  operation:
+    description: 'The operation that was performed'
+  stage:
+    description: 'The stage that was operated on'
+  resource_changes:
+    description: 'Number of resource changes made (deploy/remove only)'
+  urls:
+    description: 'JSON array of deployed URLs (deploy only)'
+  app:
+    description: 'The SST app name'
+  completion_status:
+    description: 'Operation completion status (complete, partial, failed)'
+  permalink:
+    description: 'SST Console permalink for operation details'
+  truncated:
+    description: 'Whether the operation output was truncated'
+  diff_summary:
+    description: 'Summary of planned changes (diff only)'
+
+runs:
+  using: 'node20'
+  main: 'dist/main.js'
