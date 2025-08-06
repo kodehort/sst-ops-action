@@ -175,7 +175,7 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
 
     case 'token':
       return [
-        'Use a valid GitHub token (e.g., `${{ secrets.GITHUB_TOKEN }}`)','
+        'Use a valid GitHub token (e.g., `${{ secrets.GITHUB_TOKEN }}`)',
         'GitHub personal access tokens start with "ghp_"',
         'GitHub App tokens start with "github_pat_"',
         'Use "fake-token" only for testing',

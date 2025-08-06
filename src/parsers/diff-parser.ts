@@ -1,6 +1,18 @@
 /**
  * Diff Operation Parser
  * Parses SST diff command output to extract planned changes and impact analysis
+ * 
+ * Supports parsing of:
+ * - Planned resource changes (create/update/delete)
+ * - Cost implications and impact analysis
+ * - Breaking change detection
+ * - Change summaries and counts
+ * 
+ * Supports parsing of:
+ * - Planned resource changes (create/update/delete)
+ * - Cost implications and impact analysis
+ * - Breaking change detection
+ * - Change summaries and counts
  */
 
 import type { DiffResult } from '../types/operations';
