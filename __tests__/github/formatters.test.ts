@@ -8,9 +8,17 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-  SSTResource,
   SSTUrl,
 } from '../../src/types/index.js';
+import {
+  createMockDeployResource,
+  createMockDeployResult,
+  createMockDiffChange,
+  createMockDiffResult,
+  createMockResourceBatch,
+  createMockSSTUrl,
+  createMockUrlBatch,
+} from '../utils/test-types.js';
 
 describe('OperationFormatter', () => {
   let formatter: OperationFormatter;
@@ -21,30 +29,37 @@ describe('OperationFormatter', () => {
 
   describe('formatOperationComment', () => {
     it('should format deploy comment correctly', () => {
-      const deployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
+      const deployResult = createMockDeployResult({
         stage: 'production',
         app: 'my-app',
         rawOutput: 'Deploy completed successfully',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
         resourceChanges: 5,
         urls: [
-          { type: 'Web', url: 'https://my-app.com' },
-          { type: 'API', url: 'https://api.my-app.com' },
+          createMockSSTUrl({
+            name: 'app',
+            type: 'web',
+            url: 'https://my-app.com',
+          }),
+          createMockSSTUrl({
+            name: 'api',
+            type: 'api',
+            url: 'https://api.my-app.com',
+          }),
         ],
         resources: [
-          {
+          createMockDeployResource({
             name: 'MyFunction',
             type: 'AWS::Lambda::Function',
-            action: 'created',
-          },
-          { name: 'MyTable', type: 'AWS::DynamoDB::Table', action: 'updated' },
+            status: 'created',
+          }),
+          createMockDeployResource({
+            name: 'MyTable',
+            type: 'AWS::DynamoDB::Table',
+            status: 'updated',
+          }),
         ],
         permalink: 'https://console.sst.dev/my-app/production',
-      };
+      }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
 
@@ -84,19 +99,18 @@ describe('OperationFormatter', () => {
     });
 
     it('should format diff comment correctly', () => {
-      const diffResult: DiffResult = {
-        success: true,
-        operation: 'diff',
+      const diffResult = createMockDiffResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Diff completed',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: 'Plan: 3 to add, 2 to change, 1 to destroy',
-      };
+        plannedChanges: 6,
+        changeSummary: 'Plan: 3 to add, 2 to change, 1 to destroy',
+        changes: [
+          { type: 'Lambda', name: 'Function1', action: 'create' },
+          { type: 'S3', name: 'Bucket1', action: 'update' },
+          { type: 'DynamoDB', name: 'Table1', action: 'delete' },
+        ],
+      }) as DiffResult;
 
       const comment = formatter.formatOperationComment(diffResult);
 
@@ -115,9 +129,9 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: '',
+        plannedChanges: 0,
+        changeSummary: '',
+        changes: [],
       };
 
       const comment = formatter.formatOperationComment(diffResult);
@@ -127,19 +141,25 @@ describe('OperationFormatter', () => {
     });
 
     it('should format diff comment with breaking changes warning', () => {
-      const diffResult: DiffResult = {
-        success: true,
-        operation: 'diff',
+      const diffResult = createMockDiffResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Diff with breaking changes',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: 'Plan: 1 to add, 1 to destroy (force-new-resource)',
-      };
+        plannedChanges: 2,
+        changeSummary: 'Plan: 1 to add, 1 to destroy (force-new-resource)',
+        changes: [
+          createMockDiffChange({
+            type: 'Lambda',
+            name: 'Function1',
+            action: 'create',
+          }),
+          createMockDiffChange({
+            type: 'S3',
+            name: 'Bucket1',
+            action: 'delete',
+          }),
+        ],
+      }) as DiffResult;
 
       const comment = formatter.formatOperationComment(diffResult);
 
@@ -158,8 +178,8 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 8,
-        urls: [],
+        resourcesRemoved: 8,
+        removedResources: [],
       };
 
       const comment = formatter.formatOperationComment(removeResult);
@@ -180,8 +200,11 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'partial',
-        resourceChanges: 5,
-        urls: [],
+        resourcesRemoved: 5,
+        removedResources: [
+          { type: 'Lambda', name: 'Function1', status: 'removed' },
+          { type: 'S3', name: 'Bucket1', status: 'failed' },
+        ],
       };
 
       const comment = formatter.formatOperationComment(removeResult);
@@ -223,8 +246,8 @@ describe('OperationFormatter', () => {
         completionStatus: 'complete',
         resourceChanges: 7,
         urls: [
-          { type: 'Web', url: 'https://my-app.com' },
-          { type: 'API', url: 'https://api.my-app.com' },
+          { name: 'app', type: 'web', url: 'https://my-app.com' },
+          { name: 'api', type: 'api', url: 'https://api.my-app.com' },
         ],
         resources: [],
       };
@@ -245,7 +268,8 @@ describe('OperationFormatter', () => {
 
     it('should format deploy summary with many URLs', () => {
       const urls: SSTUrl[] = Array.from({ length: 15 }, (_, i) => ({
-        type: `Service${i}`,
+        name: `Service${i}`,
+        type: 'api' as const,
         url: `https://service${i}.example.com`,
       }));
 
@@ -279,9 +303,13 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: '3 resources to create, 2 to update, 1 to destroy',
+        plannedChanges: 6,
+        changeSummary: '3 resources to create, 2 to update, 1 to destroy',
+        changes: [
+          { type: 'Lambda', name: 'Function1', action: 'create' },
+          { type: 'S3', name: 'Bucket1', action: 'update' },
+          { type: 'DynamoDB', name: 'Table1', action: 'delete' },
+        ],
       };
 
       const summary = formatter.formatOperationSummary(diffResult);
@@ -304,9 +332,9 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: '',
+        plannedChanges: 0,
+        changeSummary: '',
+        changes: [],
       };
 
       const summary = formatter.formatOperationSummary(diffResult);
@@ -326,8 +354,11 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 10,
-        urls: [],
+        resourcesRemoved: 10,
+        removedResources: [
+          { type: 'Lambda', name: 'Function1', status: 'removed' },
+          { type: 'S3', name: 'Bucket1', status: 'removed' },
+        ],
       };
 
       const summary = formatter.formatOperationSummary(removeResult);
@@ -349,8 +380,11 @@ describe('OperationFormatter', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'partial',
-        resourceChanges: 5,
-        urls: [],
+        resourcesRemoved: 5,
+        removedResources: [
+          { type: 'Lambda', name: 'Function1', status: 'removed' },
+          { type: 'S3', name: 'Bucket1', status: 'failed' },
+        ],
       };
 
       const summary = formatter.formatOperationSummary(removeResult);
@@ -395,32 +429,34 @@ describe('OperationFormatter', () => {
 
   describe('resource formatting', () => {
     it('should format resource actions with appropriate icons', () => {
-      const deployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
+      const deployResult = createMockDeployResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Deploy completed',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
         resourceChanges: 4,
-        urls: [],
         resources: [
-          {
+          createMockDeployResource({
             name: 'Function1',
             type: 'AWS::Lambda::Function',
-            action: 'created',
-          },
-          {
+            status: 'created',
+          }),
+          createMockDeployResource({
             name: 'Function2',
             type: 'AWS::Lambda::Function',
-            action: 'updated',
-          },
-          { name: 'Table1', type: 'AWS::DynamoDB::Table', action: 'deleted' },
-          { name: 'Bucket1', type: 'AWS::S3::Bucket', action: 'unchanged' },
+            status: 'updated',
+          }),
+          createMockDeployResource({
+            name: 'Table1',
+            type: 'AWS::DynamoDB::Table',
+            status: 'updated',
+          }),
+          createMockDeployResource({
+            name: 'Bucket1',
+            type: 'AWS::S3::Bucket',
+            status: 'unchanged',
+          }),
         ],
-      };
+      }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
 
@@ -431,25 +467,16 @@ describe('OperationFormatter', () => {
     });
 
     it('should limit displayed resources', () => {
-      const resources: SSTResource[] = Array.from({ length: 25 }, (_, i) => ({
-        name: `Resource${i}`,
-        type: 'AWS::Lambda::Function',
-        action: 'created',
-      }));
-
-      const deployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
+      const deployResult = createMockDeployResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Deploy completed',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
         resourceChanges: 25,
-        urls: [],
-        resources,
-      };
+        resources: createMockResourceBatch(25, {
+          type: 'AWS::Lambda::Function',
+          status: 'created',
+        }),
+      }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
 
@@ -461,24 +488,13 @@ describe('OperationFormatter', () => {
     it('should respect custom maxUrlsToShow configuration', () => {
       const customFormatter = createFormatter({ maxUrlsToShow: 3 });
 
-      const urls: SSTUrl[] = Array.from({ length: 7 }, (_, i) => ({
-        type: `Service${i}`,
-        url: `https://service${i}.example.com`,
-      }));
-
-      const deployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
+      const deployResult = createMockDeployResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Deploy completed',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
         resourceChanges: 7,
-        urls,
-        resources: [],
-      };
+        urls: createMockUrlBatch(7),
+      }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
 
@@ -488,25 +504,17 @@ describe('OperationFormatter', () => {
     it('should respect custom maxResourcesToShow configuration', () => {
       const customFormatter = createFormatter({ maxResourcesToShow: 5 });
 
-      const resources: SSTResource[] = Array.from({ length: 12 }, (_, i) => ({
-        name: `Resource${i}`,
-        type: 'AWS::Lambda::Function',
-        action: 'created',
-      }));
-
-      const deployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
+      const deployResult = createMockDeployResult({
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Deploy completed',
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'complete',
         resourceChanges: 12,
         urls: [],
-        resources,
-      };
+        resources: createMockResourceBatch(12, {
+          type: 'AWS::Lambda::Function',
+          status: 'created',
+        }),
+      }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
 

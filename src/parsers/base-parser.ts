@@ -14,7 +14,7 @@ export abstract class BaseParser<T extends BaseOperationResult> {
     STAGE_INFO: /^Stage:\s+(.+)$/m,
 
     // Permalink for SST console
-    PERMALINK: /^↗\s+Permalink\s+(https?:\/\/.+)$/m,
+    PERMALINK: /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m,
 
     // Completion status patterns
     COMPLETION_SUCCESS: /^✓\s+Complete\s*$/m,

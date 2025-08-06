@@ -31,7 +31,7 @@ describe('Action Metadata (action.yml)', () => {
     it('should use Node.js 20 runtime', () => {
       expect(actionMetadata.runs).toEqual({
         using: 'node20',
-        main: 'dist/main.js',
+        main: 'dist/index.cjs',
       });
     });
   });
@@ -166,7 +166,7 @@ describe('Action Metadata (action.yml)', () => {
       expect(actionMetadata.runs).toBeDefined();
       const runs = actionMetadata.runs as Record<string, unknown>;
       expect(runs.using).toBe('node20');
-      expect(runs.main).toBe('dist/main.js');
+      expect(runs.main).toBe('dist/index.cjs');
     });
 
     it('should have string descriptions for all inputs', () => {

@@ -1,22 +1,20 @@
-/**
- * Test suite for RemoveParser
- * Tests parsing of SST remove command outputs focusing on resource cleanup
- */
-
-import { beforeEach, describe, expect, it } from 'vitest';
-import { RemoveParser } from '../../src/parsers/remove-parser';
 import {
-  EMPTY_OUTPUT,
-  INCOMPLETE_OUTPUT,
-  SST_REMOVE_COMPLETE_OUTPUT,
-  SST_REMOVE_EMPTY_STACK_OUTPUT,
-  SST_REMOVE_FAILED_OUTPUT,
+  SST_REMOVE_COMPLEX_OUTPUT,
+  SST_REMOVE_EMPTY_OUTPUT,
+  SST_REMOVE_ERROR_OUTPUT,
+  SST_REMOVE_INCOMPLETE_OUTPUT,
   SST_REMOVE_LARGE_OUTPUT,
   SST_REMOVE_MALFORMED_OUTPUT,
+  SST_REMOVE_MIXED_RESOURCES_OUTPUT,
+  SST_REMOVE_NO_RESOURCES_OUTPUT,
+  SST_REMOVE_ONLY_FAILURES_OUTPUT,
   SST_REMOVE_PARTIAL_OUTPUT,
+  SST_REMOVE_SKIPPED_OUTPUT,
   SST_REMOVE_SUCCESS_OUTPUT,
   SST_REMOVE_TIMEOUT_OUTPUT,
-} from '../fixtures/sst-outputs';
+} from '@tests/fixtures/sst-remove-outputs';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { RemoveParser } from '@/parsers/remove-parser';
 
 describe('RemoveParser', () => {
   let parser: RemoveParser;
@@ -26,24 +24,23 @@ describe('RemoveParser', () => {
   });
 
   describe('parse', () => {
-    it('should parse successful removal output', () => {
+    it('should parse basic remove output with successful removals', () => {
       const result = parser.parse(SST_REMOVE_SUCCESS_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('remove');
       expect(result.stage).toBe('staging');
       expect(result.app).toBe('my-sst-app');
-      expect(result.exitCode).toBe(0);
-      expect(result.truncated).toBe(false);
-
-      // Check removed resources count
+      expect(result.permalink).toBe(
+        'https://console.sst.dev/my-sst-app/staging/removes/abc123'
+      );
       expect(result.resourcesRemoved).toBe(3);
       expect(result.removedResources).toHaveLength(3);
 
-      // Verify specific removed resources
+      // Verify parsed resources
       expect(result.removedResources[0]).toEqual({
-        type: 'Website',
-        name: 'my-sst-app-staging-web',
+        type: 'Function',
+        name: 'my-sst-app-staging-handler',
         status: 'removed',
       });
       expect(result.removedResources[1]).toEqual({
@@ -52,305 +49,336 @@ describe('RemoveParser', () => {
         status: 'removed',
       });
       expect(result.removedResources[2]).toEqual({
-        type: 'Function',
-        name: 'my-sst-app-staging-handler',
+        type: 'Website',
+        name: 'my-sst-app-staging-site',
         status: 'removed',
       });
+    });
 
+    it('should handle no resources to remove scenario', () => {
+      const result = parser.parse(SST_REMOVE_NO_RESOURCES_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('staging');
+      expect(result.app).toBe('my-sst-app');
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.removedResources).toHaveLength(0);
       expect(result.completionStatus).toBe('complete');
     });
 
-    it('should parse partial removal output with failed resources', () => {
-      const result = parser.parse(SST_REMOVE_PARTIAL_OUTPUT, 'staging', 0);
+    it('should parse partial removal with failures', () => {
+      const result = parser.parse(SST_REMOVE_PARTIAL_OUTPUT, 'production', 0);
 
-      expect(result.success).toBe(true); // Exit code 0 = success even if partial
+      expect(result.success).toBe(true); // Exit code 0 means overall success
       expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('production');
       expect(result.app).toBe('my-sst-app');
+      expect(result.resourcesRemoved).toBe(2); // Only successful removals counted
+      expect(result.removedResources).toHaveLength(3); // All attempted resources tracked
       expect(result.completionStatus).toBe('partial');
-      expect(result.resourcesRemoved).toBe(3); // Total resources processed
 
-      // Check mixed resource statuses
-      expect(result.removedResources).toHaveLength(3);
-      expect(result.removedResources[0]).toEqual({
-        type: 'Website',
-        name: 'my-sst-app-staging-web',
-        status: 'removed',
-      });
-      expect(result.removedResources[1]).toEqual({
-        type: 'Function',
-        name: 'my-sst-app-staging-handler',
-        status: 'removed',
-      });
-      expect(result.removedResources[2]).toEqual({
+      // Check successful removals
+      const successful = result.removedResources.filter(
+        (r) => r.status === 'removed'
+      );
+      expect(successful).toHaveLength(2);
+
+      // Check failed removal
+      const failed = result.removedResources.filter(
+        (r) => r.status === 'failed'
+      );
+      expect(failed).toHaveLength(1);
+      expect(failed[0]).toEqual({
         type: 'Api',
-        name: 'my-sst-app-staging-api',
+        name: 'my-sst-app-production-api',
         status: 'failed',
       });
     });
 
-    it('should parse complete removal with cost savings and permalink', () => {
-      const result = parser.parse(SST_REMOVE_COMPLETE_OUTPUT, 'production', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.app).toBe('complex-app');
-      expect(result.stage).toBe('production');
-      expect(result.resourcesRemoved).toBe(6);
-      expect(result.removedResources).toHaveLength(6);
-      expect(result.permalink).toBe(
-        'https://console.sst.dev/complex-app/production/removals/abc123'
-      );
-
-      // Verify all resources were removed successfully
-      const allRemoved = result.removedResources.every(
-        (r) => r.status === 'removed'
-      );
-      expect(allRemoved).toBe(true);
-
-      // Check specific resource types
-      const resourceTypes = result.removedResources.map((r) => r.type);
-      expect(resourceTypes).toContain('Function');
-      expect(resourceTypes).toContain('Database');
-      expect(resourceTypes).toContain('Api');
-      expect(resourceTypes).toContain('Website');
-      expect(resourceTypes).toContain('Topic');
-      expect(resourceTypes).toContain('Queue');
-    });
-
-    it('should handle failed removal with non-zero exit code', () => {
-      const result = parser.parse(SST_REMOVE_FAILED_OUTPUT, 'staging', 1);
+    it('should handle complete failure scenarios', () => {
+      const result = parser.parse(SST_REMOVE_ERROR_OUTPUT, 'staging', 1);
 
       expect(result.success).toBe(false);
-      expect(result.exitCode).toBe(1);
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('staging');
+      expect(result.app).toBe('error-app');
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.removedResources).toHaveLength(0);
       expect(result.completionStatus).toBe('failed');
-      expect(result.error).toContain('Remove operation failed');
-      expect(result.resourcesRemoved).toBe(4); // Total resources processed
-
-      // Check mixed resource statuses
-      const removedCount = result.removedResources.filter(
-        (r) => r.status === 'removed'
-      ).length;
-      const failedCount = result.removedResources.filter(
-        (r) => r.status === 'failed'
-      ).length;
-
-      expect(removedCount).toBe(1); // Website was deleted
-      expect(failedCount).toBe(3); // Function, Database, Api failed
     });
 
-    it('should handle timeout scenarios', () => {
-      const result = parser.parse(SST_REMOVE_TIMEOUT_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true); // Exit code 0
-      expect(result.completionStatus).toBe('partial');
-      expect(result.resourcesRemoved).toBe(3);
-
-      // Check that timeout is handled as failed status
-      const timedOutResource = result.removedResources.find((r) =>
-        r.name.includes('db')
-      );
-      expect(timedOutResource?.status).toBe('failed');
-    });
-
-    it('should handle empty stack scenario', () => {
-      const result = parser.parse(SST_REMOVE_EMPTY_STACK_OUTPUT, 'staging', 0);
+    it('should parse complex removal with mixed outcomes', () => {
+      const result = parser.parse(SST_REMOVE_COMPLEX_OUTPUT, 'production', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('remove');
-      expect(result.app).toBe('empty-app');
+      expect(result.stage).toBe('production');
+      expect(result.app).toBe('complex-app');
+      expect(result.resourcesRemoved).toBe(8);
+      expect(result.removedResources).toHaveLength(9);
+      expect(result.completionStatus).toBe('partial');
+
+      // Check resource types
+      const types = result.removedResources.map((r) => r.type);
+      expect(types).toContain('Function');
+      expect(types).toContain('Database');
+      expect(types).toContain('Topic');
+      expect(types).toContain('Queue');
+      expect(types).toContain('Api');
+      expect(types).toContain('Website');
+
+      // Check statuses
+      const statuses = result.removedResources.map((r) => r.status);
+      expect(statuses.filter((s) => s === 'removed')).toHaveLength(8);
+      expect(statuses.filter((s) => s === 'failed')).toHaveLength(1);
+    });
+
+    it('should handle large remove outputs efficiently', () => {
+      const startTime = Date.now();
+      const result = parser.parse(SST_REMOVE_LARGE_OUTPUT, 'production', 0);
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(1000); // Should parse in under 1 second
+      expect(result.success).toBe(true);
+      expect(result.resourcesRemoved).toBe(45);
+      expect(result.removedResources).toHaveLength(50); // 45 removed + 5 failed
+      expect(result.completionStatus).toBe('partial');
+
+      // Verify distribution
+      const removed = result.removedResources.filter(
+        (r) => r.status === 'removed'
+      );
+      const failed = result.removedResources.filter(
+        (r) => r.status === 'failed'
+      );
+      expect(removed).toHaveLength(45);
+      expect(failed).toHaveLength(5);
+    });
+
+    it('should handle mixed resource types with details', () => {
+      const result = parser.parse(
+        SST_REMOVE_MIXED_RESOURCES_OUTPUT,
+        'development',
+        0
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.resourcesRemoved).toBe(7);
+      expect(result.removedResources).toHaveLength(8);
+      expect(result.completionStatus).toBe('partial');
+
+      // Should have all different resource types
+      const uniqueTypes = [
+        ...new Set(result.removedResources.map((r) => r.type)),
+      ];
+      expect(uniqueTypes).toContain('Function');
+      expect(uniqueTypes).toContain('Database');
+      expect(uniqueTypes).toContain('Topic');
+      expect(uniqueTypes).toContain('Queue');
+      expect(uniqueTypes).toContain('Api');
+      expect(uniqueTypes).toContain('Website');
+      expect(uniqueTypes).toContain('Bucket');
+
+      // Check for failed resource
+      const failedResource = result.removedResources.find(
+        (r) => r.status === 'failed'
+      );
+      expect(failedResource).toEqual({
+        type: 'Api',
+        name: 'mixed-app-dev-graphql-api',
+        status: 'failed',
+      });
+    });
+
+    it('should handle only failures scenario', () => {
+      const result = parser.parse(
+        SST_REMOVE_ONLY_FAILURES_OUTPUT,
+        'staging',
+        1
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.removedResources).toHaveLength(3);
+      expect(result.completionStatus).toBe('failed');
+      expect(result.removedResources.every((r) => r.status === 'failed')).toBe(
+        true
+      );
+    });
+
+    it('should handle skipped resources', () => {
+      const result = parser.parse(SST_REMOVE_SKIPPED_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.resourcesRemoved).toBe(2);
+      expect(result.removedResources).toHaveLength(3);
+      expect(result.completionStatus).toBe('complete');
+
+      // Check for skipped resource
+      const skippedResource = result.removedResources.find(
+        (r) => r.status === 'skipped'
+      );
+      expect(skippedResource).toEqual({
+        type: 'Database',
+        name: 'skipped-app-staging-db',
+        status: 'skipped',
+      });
+    });
+
+    it('should handle timeout scenarios', () => {
+      const result = parser.parse(SST_REMOVE_TIMEOUT_OUTPUT, 'production', 1);
+
+      expect(result.success).toBe(false);
+      expect(result.resourcesRemoved).toBe(1);
+      expect(result.removedResources).toHaveLength(2);
+      expect(result.completionStatus).toBe('partial');
+
+      const failedResource = result.removedResources.find(
+        (r) => r.status === 'failed'
+      );
+      expect(failedResource?.name).toBe('timeout-app-production-api');
+    });
+
+    it('should handle malformed output gracefully', () => {
+      const result = parser.parse(SST_REMOVE_MALFORMED_OUTPUT, 'staging', 1);
+
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('staging');
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.removedResources).toHaveLength(0);
+      expect(result.completionStatus).toBe('failed');
+    });
+
+    it('should handle empty output', () => {
+      const result = parser.parse(SST_REMOVE_EMPTY_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true); // Exit code 0 = success
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('staging');
       expect(result.resourcesRemoved).toBe(0);
       expect(result.removedResources).toHaveLength(0);
       expect(result.completionStatus).toBe('complete');
     });
 
-    it('should handle malformed removal output gracefully', () => {
-      const result = parser.parse(SST_REMOVE_MALFORMED_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true); // Exit code 0 = success
-      expect(result.operation).toBe('remove');
-      expect(result.stage).toBe('staging');
-      expect(result.app).toBe(''); // No app found in malformed output
-      expect(result.resourcesRemoved).toBe(0);
-      expect(result.removedResources).toHaveLength(0);
-    });
-
-    it('should handle failed removal with non-zero exit code properly', () => {
-      const result = parser.parse(SST_REMOVE_MALFORMED_OUTPUT, 'staging', 1);
-
-      expect(result.success).toBe(false);
-      expect(result.exitCode).toBe(1);
-      expect(result.completionStatus).toBe('failed');
-      expect(result.resourcesRemoved).toBe(0);
-    });
-
-    it('should handle empty output', () => {
-      const result = parser.parse(EMPTY_OUTPUT, 'staging', 0);
+    it('should handle incomplete output', () => {
+      const result = parser.parse(SST_REMOVE_INCOMPLETE_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('remove');
-      expect(result.stage).toBe('staging');
-      expect(result.app).toBe('');
-      expect(result.resourcesRemoved).toBe(0);
-      expect(result.removedResources).toHaveLength(0);
+      expect(result.app).toBe('incomplete-app');
+      expect(result.resourcesRemoved).toBe(1);
+      expect(result.removedResources).toHaveLength(1);
+      expect(result.removedResources?.[0]?.status).toBe('removed');
     });
 
-    it('should properly set truncated flag based on output size', () => {
-      const result = parser.parse(
-        SST_REMOVE_COMPLETE_OUTPUT,
-        'staging',
-        0,
-        500
-      ); // max size 500 bytes
+    it('should provide consistent result structure', () => {
+      const result = parser.parse(SST_REMOVE_SUCCESS_OUTPUT, 'staging', 0);
 
-      expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBeLessThanOrEqual(500);
+      // All RemoveResult properties should be present
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('operation');
+      expect(result).toHaveProperty('stage');
+      expect(result).toHaveProperty('exitCode');
+      expect(result).toHaveProperty('resourcesRemoved');
+      expect(result).toHaveProperty('removedResources');
+      expect(result).toHaveProperty('app');
+      expect(result).toHaveProperty('rawOutput');
+      expect(result).toHaveProperty('permalink');
+      expect(result).toHaveProperty('completionStatus');
+      expect(result).toHaveProperty('truncated');
+
+      // Remove-specific defaults
+      expect(result.truncated).toBe(false);
+      expect(Array.isArray(result.removedResources)).toBe(true);
     });
+  });
 
-    it('should count removed resources correctly in large removal', () => {
-      const result = parser.parse(SST_REMOVE_LARGE_OUTPUT, 'development', 0);
+  describe('edge cases and performance', () => {
+    it('should handle very large outputs without memory issues', () => {
+      // Create a very large remove output
+      const largeResources = Array.from(
+        { length: 1000 },
+        (_, i) => `- Function        large-app-test-func-${i + 1}`
+      ).join('\n');
 
-      expect(result.success).toBe(true);
-      expect(result.resourcesRemoved).toBe(100);
-      expect(result.removedResources).toHaveLength(100);
-
-      // Verify resource type distribution
-      const functionCount = result.removedResources.filter(
-        (r) => r.type === 'Function'
-      ).length;
-      const apiCount = result.removedResources.filter(
-        (r) => r.type === 'Api'
-      ).length;
-      const websiteCount = result.removedResources.filter(
-        (r) => r.type === 'Website'
-      ).length;
-
-      expect(functionCount).toBe(50);
-      expect(apiCount).toBe(30);
-      expect(websiteCount).toBe(20);
-
-      // All should be successfully removed
-      const allRemoved = result.removedResources.every(
-        (r) => r.status === 'removed'
-      );
-      expect(allRemoved).toBe(true);
-    });
-
-    it('should extract resource details from removal lines', () => {
-      const detailsOutput = `
+      const largeOutput = `
 SST Remove
-App: details-app
+App: performance-test-app
 Stage: test
 
-✓ All resources removed
-| Deleted         Function      details-app-test-auth (Node.js runtime)
-| Deleted         Database      details-app-test-users-db (PostgreSQL)
-! Api            details-app-test-api could not be removed: external references
+${largeResources}
 
-3 resources processed
+✓ Complete
+
+1000 resources removed
+
+Permalink: https://console.sst.dev/performance-test-app/test/removes/perf123
 `;
 
-      const result = parser.parse(detailsOutput, 'test', 0);
+      const startTime = Date.now();
+      const result = parser.parse(largeOutput, 'test', 0);
+      const duration = Date.now() - startTime;
 
+      expect(duration).toBeLessThan(2000); // Should complete within 2 seconds
+      expect(result.success).toBe(true);
+      expect(result.resourcesRemoved).toBe(1000);
+      expect(result.removedResources).toHaveLength(1000);
+    });
+
+    it('should handle unicode characters in resource names', () => {
+      const unicodeOutput = `
+SST Remove
+App: unicode-app
+Stage: test
+
+- Function        unicode-app-test-函数-handler
+× Database        unicode-app-test-数据库 (failed: not empty)
+- Api             unicode-app-test-api-配置
+
+⚠ Partial completion
+
+2 resources removed, 1 failed
+
+Permalink: https://console.sst.dev/unicode-app/test/removes/uni123
+`;
+
+      const result = parser.parse(unicodeOutput, 'test', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.removedResources).toHaveLength(3);
+      expect(result.removedResources?.[0]?.name).toBe(
+        'unicode-app-test-函数-handler'
+      );
+      expect(result.removedResources?.[1]?.name).toBe(
+        'unicode-app-test-数据库'
+      );
+      expect(result.removedResources?.[2]?.name).toBe(
+        'unicode-app-test-api-配置'
+      );
+    });
+
+    it('should handle mixed line endings', () => {
+      const mixedLineEndings = SST_REMOVE_SUCCESS_OUTPUT.replace(/\n/g, '\r\n');
+
+      const result = parser.parse(mixedLineEndings, 'staging', 0);
+
+      expect(result.success).toBe(true);
       expect(result.resourcesRemoved).toBe(3);
       expect(result.removedResources).toHaveLength(3);
-
-      // Check that details are not included in name (simplified parsing)
-      const authFunction = result.removedResources.find((r) =>
-        r.name.includes('auth')
-      );
-      expect(authFunction).toEqual({
-        type: 'Function',
-        name: 'details-app-test-auth',
-        status: 'removed',
-      });
-
-      const failedApi = result.removedResources.find((r) =>
-        r.name.includes('api')
-      );
-      expect(failedApi?.status).toBe('failed');
     });
-  });
 
-  describe('error handling', () => {
-    it('should not throw on invalid removal patterns', () => {
+    it('should be null-safe with undefined inputs', () => {
       expect(() => {
-        const result = parser.parse(
-          'Invalid removal format with special chars: $#@!',
-          'staging',
-          0
-        );
-        expect(result.resourcesRemoved).toBe(0);
+        // @ts-expect-error - testing runtime behavior
+        parser.parse(null, 'staging', 0);
       }).not.toThrow();
-    });
 
-    it('should handle very long removal outputs', () => {
-      const longOutput = `${'A'.repeat(100_000)}\nSST Remove\nApp: test-app\n\n✓ All resources removed\n| Deleted Function test-function\n\n1 resources removed`;
       expect(() => {
-        const result = parser.parse(longOutput, 'staging', 0);
-        expect(result.app).toBe('test-app');
-        expect(result.resourcesRemoved).toBe(1);
+        // @ts-expect-error - testing runtime behavior
+        parser.parse(undefined, 'staging', 0);
       }).not.toThrow();
-    });
-
-    it('should handle output with unusual line endings', () => {
-      const windowsOutput =
-        'SST Remove\r\nApp: test-app\r\n\r\n✓ All resources removed\r\n| Deleted Function test-func\r\n\r\n1 resources removed\r\n';
-      const result = parser.parse(windowsOutput, 'staging', 0);
-      expect(result.app).toBe('test-app');
-      expect(result.resourcesRemoved).toBe(1);
-    });
-
-    it('should handle mixed success and failure patterns', () => {
-      const mixedOutput = `
-SST Remove
-App: mixed-app
-Stage: staging
-
-⚠ Partial removal completed
-| Deleted         Website       mixed-app-staging-web
-| Deleted         Function      mixed-app-staging-handler
-! Database       mixed-app-staging-db could not be removed: active connections
-! Queue          mixed-app-staging-jobs removal failed: permission denied
-
-Warning: 2 resources could not be removed
-`;
-
-      const result = parser.parse(mixedOutput, 'staging', 0);
-      expect(result.success).toBe(true);
-      expect(result.completionStatus).toBe('partial');
-      expect(result.resourcesRemoved).toBe(4);
-
-      const removedCount = result.removedResources.filter(
-        (r) => r.status === 'removed'
-      ).length;
-      const failedCount = result.removedResources.filter(
-        (r) => r.status === 'failed'
-      ).length;
-
-      expect(removedCount).toBe(2);
-      expect(failedCount).toBe(2);
-    });
-  });
-
-  describe('performance', () => {
-    it('should parse large removals efficiently', () => {
-      const startTime = Date.now();
-
-      parser.parse(SST_REMOVE_LARGE_OUTPUT, 'staging', 0);
-
-      const duration = Date.now() - startTime;
-      expect(duration).toBeLessThan(1000); // Should complete in under 1 second
-    });
-
-    it('should handle repeated parsing efficiently', () => {
-      const startTime = Date.now();
-
-      // Parse same removal 100 times
-      for (let i = 0; i < 100; i++) {
-        parser.parse(SST_REMOVE_COMPLETE_OUTPUT, 'staging', 0);
-      }
-
-      const duration = Date.now() - startTime;
-      expect(duration).toBeLessThan(2000); // Should complete all in under 2 seconds
     });
   });
 });

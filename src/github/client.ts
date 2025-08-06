@@ -3,12 +3,13 @@
  * Handles operation-specific formatting and proper error recovery
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import * as artifact from '@actions/artifact';
+import { DefaultArtifactClient } from '@actions/artifact';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import * as io from '@actions/io';
 import type {
   BaseOperationResult,
   CommentMode,
@@ -59,9 +60,12 @@ export class GitHubClient {
   };
 
   constructor(token?: string) {
-    const githubToken = token || core.getInput('github-token') || process.env.GITHUB_TOKEN;
+    const githubToken =
+      token || core.getInput('github-token') || process.env.GITHUB_TOKEN;
     if (!githubToken) {
-      throw new Error('GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable.');
+      throw new Error(
+        'GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable.'
+      );
     }
     this.octokit = github.getOctokit(githubToken);
     this.context = github.context;
@@ -77,18 +81,20 @@ export class GitHubClient {
     }
 
     const commentWithMarker = `<!-- sst-${operationType} -->\n${comment}`;
-    
+
     try {
       await this.withRateLimit(async () => {
         await this.octokit.rest.issues.createComment({
           ...this.context.repo,
-          issue_number: this.context.payload.pull_request?.number,
+          issue_number: this.context.payload.pull_request?.number || 0,
           body: commentWithMarker,
         });
       });
       core.info(`Successfully posted ${operationType} PR comment`);
     } catch (error) {
-      throw new Error(`GitHub API error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `GitHub API error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -174,7 +180,7 @@ export class GitHubClient {
 
     try {
       const tempDir = join(tmpdir(), 'sst-artifacts');
-      await mkdir(tempDir, { recursive: true });
+      await io.mkdirP(tempDir);
 
       // Create result file
       const resultFile = join(tempDir, 'result.json');
@@ -205,19 +211,20 @@ export class GitHubClient {
       );
 
       // Upload artifacts
-      const artifactClient = artifact.create();
+      const artifactClient = new DefaultArtifactClient();
       const uploadResponse = await artifactClient.uploadArtifact(
         artifactOptions.name,
         [resultFile, outputFile, metadataFile],
         tempDir,
-        {
-          retentionDays: artifactOptions.retentionDays,
-          compressionLevel: artifactOptions.compressionLevel,
-        }
+        artifactOptions.retentionDays !== undefined
+          ? {
+              retentionDays: artifactOptions.retentionDays,
+            }
+          : {}
       );
 
       core.info(
-        `Uploaded artifact: ${uploadResponse.artifactName} (${uploadResponse.size} bytes)`
+        `Uploaded artifact: ${artifactOptions.name} (${uploadResponse.size} bytes)`
       );
     } catch (error) {
       core.warning(
@@ -444,7 +451,7 @@ export class GitHubClient {
     await this.withRateLimit(async () => {
       await this.octokit.rest.issues.createComment({
         ...this.context.repo,
-        issue_number: this.context.payload.pull_request?.number,
+        issue_number: this.context.payload.pull_request?.number || 0,
         body,
       });
     });
@@ -469,7 +476,7 @@ export class GitHubClient {
       // Find existing comment
       const comments = await this.octokit.rest.issues.listComments({
         ...this.context.repo,
-        issue_number: this.context.payload.pull_request?.number,
+        issue_number: this.context.payload.pull_request?.number || 0,
       });
 
       const existingComment = comments.data.find((comment) =>
@@ -487,7 +494,7 @@ export class GitHubClient {
         // Create new comment
         await this.octokit.rest.issues.createComment({
           ...this.context.repo,
-          issue_number: this.context.payload.pull_request?.number,
+          issue_number: this.context.payload.pull_request?.number || 0,
           body: commentWithMarker,
         });
       }

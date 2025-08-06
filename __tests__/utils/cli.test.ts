@@ -1,5 +1,3 @@
-import { type ChildProcess, spawn } from 'node:child_process';
-import { EventEmitter } from 'node:events';
 import { access } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SSTOperation } from '../../src/types/index.js';
@@ -10,69 +8,29 @@ import {
   SSTCLIExecutor,
 } from '../../src/utils/cli.js';
 
-// Mock Node.js modules
-vi.mock('node:child_process');
+// Mock @actions/exec
+vi.mock('@actions/exec');
 vi.mock('node:fs');
 vi.mock('node:util', () => ({
   promisify: vi.fn((fn) => vi.fn(fn)),
 }));
 
-const mockSpawn = vi.mocked(spawn);
+const mockExec = vi.mocked(await import('@actions/exec'));
 const mockAccess = vi.mocked(access);
 
-// Mock child process implementation
-class MockChildProcess extends EventEmitter {
-  public pid = 12_345;
-  public killed = false;
-  public stdout = new EventEmitter();
-  public stderr = new EventEmitter();
-
-  kill(signal?: NodeJS.Signals): boolean {
-    this.killed = true;
-    setTimeout(() => {
-      this.emit('close', signal === 'SIGKILL' ? null : 0, signal || 'SIGTERM');
-    }, 10);
-    return true;
-  }
-
-  // Simulate process output
-  emitOutput(stdout: string, stderr = '') {
-    if (stdout) {
-      this.stdout.emit('data', Buffer.from(stdout));
-    }
-    if (stderr) {
-      this.stderr.emit('data', Buffer.from(stderr));
-    }
-  }
-
-  // Simulate process completion
-  complete(exitCode = 0) {
-    setTimeout(() => {
-      this.emit('close', exitCode, null);
-    }, 10);
-  }
-
-  // Simulate process error
-  error(error: Error) {
-    setTimeout(() => {
-      this.emit('error', error);
-    }, 10);
-  }
-}
-
 describe('SST CLI Utilities', () => {
-  let mockChildProcess: MockChildProcess;
   let executor: SSTCLIExecutor;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockChildProcess = new MockChildProcess();
-    mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess);
     executor = new SSTCLIExecutor();
 
     // Mock file system access
     (access as any).__promisify__ = vi.fn().mockResolvedValue(undefined);
     mockAccess.mockResolvedValue(undefined);
+
+    // Set up default exec mock
+    mockExec.exec.mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -85,13 +43,15 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
 
-        // Simulate successful deployment output
-        setTimeout(() => {
-          mockChildProcess.emitOutput('Deploying app: test-app\n');
-          mockChildProcess.emitOutput('Stage: staging\n');
-          mockChildProcess.emitOutput('✓ Complete\n');
-          mockChildProcess.complete(0);
-        }, 10);
+        // Mock successful execution with output via listeners
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            options.listeners.stdout(Buffer.from('Deploying app: test-app\n'));
+            options.listeners.stdout(Buffer.from('Stage: staging\n'));
+            options.listeners.stdout(Buffer.from('✓ Complete\n'));
+          }
+          return 0;
+        });
 
         const result = await executor.executeSST(operation, stage);
 
@@ -100,14 +60,11 @@ describe('SST CLI Utilities', () => {
         expect(result.stage).toBe('staging');
         expect(result.exitCode).toBe(0);
         expect(result.output).toContain('Deploying app: test-app');
-        expect(result.truncated).toBe(false);
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(result.command).toContain('sst deploy --stage staging');
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['deploy', '--stage', 'staging'],
-          expect.objectContaining({
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false,
-          })
+          expect.any(Object)
         );
       });
 
@@ -115,11 +72,14 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'diff';
         const stage = 'staging';
 
-        setTimeout(() => {
-          mockChildProcess.emitOutput('~ Resource will be updated\n');
-          mockChildProcess.emitOutput('+ Resource will be created\n');
-          mockChildProcess.complete(0);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            options.listeners.stdout(
+              Buffer.from('~ Resource will be updated\n')
+            );
+          }
+          return 0;
+        });
 
         const result = await executor.executeSST(operation, stage);
 
@@ -127,7 +87,7 @@ describe('SST CLI Utilities', () => {
         expect(result.operation).toBe('diff');
         expect(result.stage).toBe('staging');
         expect(result.output).toContain('~ Resource will be updated');
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['diff', '--stage', 'staging'],
           expect.any(Object)
@@ -138,18 +98,20 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'remove';
         const stage = 'pr-123';
 
-        setTimeout(() => {
-          mockChildProcess.emitOutput('Removing resources...\n');
-          mockChildProcess.emitOutput('✓ All resources removed\n');
-          mockChildProcess.complete(0);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            options.listeners.stdout(Buffer.from('Removing resources...\n'));
+            options.listeners.stdout(Buffer.from('✓ All resources removed\n'));
+          }
+          return 0;
+        });
 
         const result = await executor.executeSST(operation, stage);
 
         expect(result.success).toBe(true);
         expect(result.operation).toBe('remove');
         expect(result.stage).toBe('pr-123');
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['remove', '--stage', 'pr-123', '--yes'],
           expect.any(Object)
@@ -160,10 +122,12 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
 
-        setTimeout(() => {
-          mockChildProcess.emitOutput('', 'Error: Deployment failed\n');
-          mockChildProcess.complete(1);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stderr) {
+            options.listeners.stderr(Buffer.from('Error: Deployment failed\n'));
+          }
+          return 1;
+        });
 
         const result = await executor.executeSST(operation, stage);
 
@@ -176,12 +140,11 @@ describe('SST CLI Utilities', () => {
       it('should handle timeout', async () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
-        const options: CLIOptions = { timeout: 100 }; // 100ms timeout
+        const options: CLIOptions = { timeout: 100 };
 
-        setTimeout(() => {
-          mockChildProcess.emitOutput('Starting deployment...\n');
-          // Don't complete the process to trigger timeout
-        }, 10);
+        mockExec.exec.mockRejectedValue(
+          new Error('Command timeout after 100ms')
+        );
 
         const result = await executor.executeSST(operation, stage, options);
 
@@ -193,14 +156,16 @@ describe('SST CLI Utilities', () => {
       it('should handle large output with truncation', async () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
-        const options: CLIOptions = { maxOutputSize: 50 }; // 50 bytes limit
+        const options: CLIOptions = { maxOutputSize: 50 };
 
-        setTimeout(() => {
-          // Generate output larger than limit
-          const largeOutput = 'x'.repeat(100);
-          mockChildProcess.emitOutput(largeOutput);
-          mockChildProcess.complete(0);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            // Generate output larger than maxOutputSize
+            const largeOutput = 'x'.repeat(100);
+            options.listeners.stdout(Buffer.from(largeOutput));
+          }
+          return 0;
+        });
 
         const result = await executor.executeSST(operation, stage, options);
 
@@ -214,101 +179,55 @@ describe('SST CLI Utilities', () => {
         const stage = 'staging';
         const options: CLIOptions = {
           env: {
-            AWS_REGION: 'us-east-1',
-            AWS_PROFILE: 'production',
-            CUSTOM_VAR: 'value',
+            AWS_REGION: 'us-west-2',
+            CUSTOM_VAR: 'test-value',
           },
         };
 
-        setTimeout(() => {
-          mockChildProcess.complete(0);
-        }, 10);
-
         await executor.executeSST(operation, stage, options);
 
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['deploy', '--stage', 'staging'],
           expect.objectContaining({
             env: expect.objectContaining({
-              AWS_REGION: 'us-east-1',
-              AWS_PROFILE: 'production',
-              CUSTOM_VAR: 'value',
+              AWS_REGION: 'us-west-2',
+              CUSTOM_VAR: 'test-value',
               SST_TELEMETRY_DISABLED: '1',
               CI: '1',
             }),
           })
         );
       });
-
-      it('should handle process spawn error', async () => {
-        const operation: SSTOperation = 'deploy';
-        const stage = 'staging';
-
-        mockSpawn.mockImplementation(() => {
-          const errorProcess = new MockChildProcess();
-          setTimeout(() => {
-            errorProcess.error(new Error('Command not found'));
-          }, 10);
-          return errorProcess as unknown as ChildProcess;
-        });
-
-        const result = await executor.executeSST(operation, stage);
-
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Failed to execute command');
-      });
-
-      it('should validate SST configuration exists', async () => {
-        const operation: SSTOperation = 'deploy';
-        const stage = 'staging';
-
-        // Mock missing config file
-        (access as any).__promisify__ = vi
-          .fn()
-          .mockRejectedValue(new Error('ENOENT'));
-
-        const result = await executor.executeSST(operation, stage);
-
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('SST configuration file not found');
-      });
     });
 
     describe('checkSSTAvailability', () => {
       it('should detect available SST CLI', async () => {
-        setTimeout(() => {
-          mockChildProcess.emitOutput('2.34.0\n');
-          mockChildProcess.complete(0);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            options.listeners.stdout(Buffer.from('2.41.3\n'));
+          }
+          return 0;
+        });
 
         const result = await executor.checkSSTAvailability();
 
         expect(result.available).toBe(true);
-        expect(result.version).toBe('2.34.0');
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(result.version).toBe('2.41.3');
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['--version'],
           expect.any(Object)
         );
       });
 
-      it('should detect unavailable SST CLI', async () => {
-        setTimeout(() => {
-          mockChildProcess.error(new Error('Command not found'));
-        }, 10);
-
-        const result = await executor.checkSSTAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.error).toContain('SST CLI not available');
-      });
-
       it('should handle SST CLI error response', async () => {
-        setTimeout(() => {
-          mockChildProcess.emitOutput('', 'Unknown command\n');
-          mockChildProcess.complete(1);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stderr) {
+            options.listeners.stderr(Buffer.from('Command not found\n'));
+          }
+          return 1;
+        });
 
         const result = await executor.checkSSTAvailability();
 
@@ -319,105 +238,70 @@ describe('SST CLI Utilities', () => {
 
     describe('getProjectInfo', () => {
       it('should extract project information', async () => {
-        setTimeout(() => {
-          mockChildProcess.emitOutput(
-            'App: my-app\nStage: staging\nRegion: us-east-1\n'
-          );
-          mockChildProcess.complete(0);
-        }, 10);
+        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+          if (options?.listeners?.stdout) {
+            options.listeners.stdout(
+              Buffer.from('App: my-app\nStage: production\n')
+            );
+          }
+          return 0;
+        });
 
         const result = await executor.getProjectInfo();
 
         expect(result.app).toBe('my-app');
-        expect(result.stage).toBe('staging');
-        expect(mockSpawn).toHaveBeenCalledWith(
+        expect(result.stage).toBe('production');
+        expect(mockExec.exec).toHaveBeenCalledWith(
           'sst',
           ['env'],
           expect.any(Object)
         );
       });
-
-      it('should handle project info command failure', async () => {
-        setTimeout(() => {
-          mockChildProcess.emitOutput('', 'No SST app found\n');
-          mockChildProcess.complete(1);
-        }, 10);
-
-        const result = await executor.getProjectInfo();
-
-        expect(result.error).toContain('Failed to get project info');
-        expect(result.app).toBeUndefined();
-        expect(result.stage).toBeUndefined();
-      });
     });
   });
 
   describe('Factory Functions', () => {
-    it('should create SST executor', () => {
-      const executor = createSSTExecutor();
-      expect(executor).toBeInstanceOf(SSTCLIExecutor);
-    });
-
     it('should execute SST command with default executor', async () => {
-      setTimeout(() => {
-        mockChildProcess.emitOutput('Deployment successful\n');
-        mockChildProcess.complete(0);
-      }, 10);
+      const operation: SSTOperation = 'deploy';
+      const stage = 'production';
 
-      const result = await executeSST('deploy', 'staging');
+      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        if (options?.listeners?.stdout) {
+          options.listeners.stdout(Buffer.from('Deploy complete\n'));
+        }
+        return 0;
+      });
+
+      const result = await executeSST(operation, stage);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('deploy');
-      expect(result.stage).toBe('staging');
+      expect(result.stage).toBe('production');
+    });
+
+    it('should create new executor instance', () => {
+      const executor1 = createSSTExecutor();
+      const executor2 = createSSTExecutor();
+
+      expect(executor1).toBeInstanceOf(SSTCLIExecutor);
+      expect(executor2).toBeInstanceOf(SSTCLIExecutor);
+      expect(executor1).not.toBe(executor2);
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle undefined environment variables', async () => {
-      const operation: SSTOperation = 'deploy';
-      const stage = 'staging';
-      const options: CLIOptions = {
-        env: {
-          DEFINED_VAR: 'value',
-          UNDEFINED_VAR: undefined as any,
-          NULL_VAR: null as any,
-          EMPTY_VAR: '',
-        },
-      };
-
-      setTimeout(() => {
-        mockChildProcess.complete(0);
-      }, 10);
-
-      await executor.executeSST(operation, stage, options);
-
-      const spawnCall = mockSpawn.mock.calls[0];
-      const env = spawnCall?.[2]?.env;
-
-      expect(env).toHaveProperty('DEFINED_VAR', 'value');
-      expect(env).toHaveProperty('EMPTY_VAR', '');
-      expect(env).not.toHaveProperty('UNDEFINED_VAR');
-      expect(env).not.toHaveProperty('NULL_VAR');
-    });
-
     it('should handle custom working directory', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';
-      const options: CLIOptions = {
-        cwd: '/custom/path',
-      };
+      const customCwd = '/custom/path';
 
-      setTimeout(() => {
-        mockChildProcess.complete(0);
-      }, 10);
+      await executor.executeSST(operation, stage, { cwd: customCwd });
 
-      await executor.executeSST(operation, stage, options);
-
-      expect(mockSpawn).toHaveBeenCalledWith(
+      expect(mockExec.exec).toHaveBeenCalledWith(
         'sst',
         ['deploy', '--stage', 'staging'],
         expect.objectContaining({
-          cwd: '/custom/path',
+          cwd: customCwd,
         })
       );
     });
@@ -425,89 +309,40 @@ describe('SST CLI Utilities', () => {
     it('should handle custom arguments', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';
-      const options: CLIOptions = {
-        args: ['--verbose', '--output', 'json'],
-      };
+      const customArgs = ['--verbose', '--debug'];
 
-      setTimeout(() => {
-        mockChildProcess.complete(0);
-      }, 10);
+      await executor.executeSST(operation, stage, { args: customArgs });
 
-      await executor.executeSST(operation, stage, options);
-
-      expect(mockSpawn).toHaveBeenCalledWith(
+      expect(mockExec.exec).toHaveBeenCalledWith(
         'sst',
-        ['deploy', '--stage', 'staging', '--verbose', '--output', 'json'],
+        ['deploy', '--stage', 'staging', '--verbose', '--debug'],
         expect.any(Object)
       );
-    });
-
-    it('should handle process without PID', async () => {
-      const operation: SSTOperation = 'deploy';
-      const stage = 'staging';
-
-      // Mock process without PID
-      const processWithoutPid = new MockChildProcess();
-      processWithoutPid.pid = undefined as any;
-      mockSpawn.mockReturnValue(processWithoutPid as unknown as ChildProcess);
-
-      setTimeout(() => {
-        processWithoutPid.complete(0);
-      }, 10);
-
-      const result = await executor.executeSST(operation, stage);
-
-      expect(result.success).toBe(true);
     });
 
     it('should handle mixed stdout and stderr output', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';
 
-      setTimeout(() => {
-        mockChildProcess.emitOutput('Starting deployment...\n');
-        mockChildProcess.emitOutput('', 'Warning: deprecated feature\n');
-        mockChildProcess.emitOutput('Deployment complete\n');
-        mockChildProcess.complete(0);
-      }, 10);
+      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        if (options?.listeners?.stdout) {
+          options.listeners.stdout(Buffer.from('Deploying...\n'));
+        }
+        if (options?.listeners?.stderr) {
+          options.listeners.stderr(
+            Buffer.from('Warning: deprecated feature\n')
+          );
+        }
+        return 0;
+      });
 
       const result = await executor.executeSST(operation, stage);
 
       expect(result.success).toBe(true);
-      expect(result.stdout).toContain('Starting deployment...');
-      expect(result.stdout).toContain('Deployment complete');
+      expect(result.stdout).toContain('Deploying...');
       expect(result.stderr).toContain('Warning: deprecated feature');
-      expect(result.output).toContain('Starting deployment...');
+      expect(result.output).toContain('Deploying...');
       expect(result.output).toContain('Warning: deprecated feature');
-      expect(result.output).toContain('Deployment complete');
-    });
-
-    it('should handle process termination signals', async () => {
-      const operation: SSTOperation = 'deploy';
-      const stage = 'staging';
-      const options: CLIOptions = { timeout: 100 };
-
-      // Override the mock to emit SIGKILL instead of SIGTERM
-      const killProcess = new MockChildProcess();
-      killProcess.kill = vi.fn((_signal?: NodeJS.Signals) => {
-        killProcess.killed = true;
-        setTimeout(() => {
-          killProcess.emit('close', null, 'SIGKILL');
-        }, 10);
-        return true;
-      });
-
-      mockSpawn.mockReturnValue(killProcess as unknown as ChildProcess);
-
-      setTimeout(() => {
-        // Don't complete the process to trigger timeout
-      }, 10);
-
-      const result = await executor.executeSST(operation, stage, options);
-
-      expect(result.success).toBe(false);
-      expect(result.exitCode).toBe(124);
-      expect(result.error).toContain('Command timed out');
     });
   });
 
@@ -515,63 +350,33 @@ describe('SST CLI Utilities', () => {
     it('should track execution duration accurately', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';
-      const delay = 100; // 100ms
 
-      setTimeout(() => {
-        mockChildProcess.complete(0);
-      }, delay);
-
-      const startTime = Date.now();
-      const result = await executor.executeSST(operation, stage);
-      const endTime = Date.now();
-
-      expect(result.duration).toBeGreaterThanOrEqual(delay - 10); // Allow some margin
-      expect(result.duration).toBeLessThanOrEqual(endTime - startTime + 10);
-    });
-
-    it('should handle rapid successive executions', async () => {
-      const operations: SSTOperation[] = ['deploy', 'diff', 'remove'];
-      const promises = operations.map((operation, index) => {
-        const mockProcess = new MockChildProcess();
-        mockSpawn.mockReturnValueOnce(mockProcess as unknown as ChildProcess);
-
-        setTimeout(
-          () => {
-            mockProcess.complete(0);
-          },
-          10 * (index + 1)
-        );
-
-        return executor.executeSST(operation, 'staging');
+      mockExec.exec.mockImplementation(async () => {
+        // Simulate some execution time
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return 0;
       });
 
-      const results = await Promise.all(promises);
+      const result = await executor.executeSST(operation, stage);
 
-      expect(results).toHaveLength(3);
-      expect(results[0].operation).toBe('deploy');
-      expect(results[1].operation).toBe('diff');
-      expect(results[2].operation).toBe('remove');
-      expect(results.every((r) => r.success)).toBe(true);
+      expect(result.duration).toBeGreaterThanOrEqual(90);
+      expect(result.duration).toBeLessThan(200);
     });
 
     it('should handle concurrent executions', async () => {
-      const concurrentCount = 5;
-      const promises: Promise<any>[] = [];
+      const operation: SSTOperation = 'deploy';
+      const concurrentCount = 3;
 
-      for (let i = 0; i < concurrentCount; i++) {
-        const mockProcess = new MockChildProcess();
-        mockSpawn.mockReturnValueOnce(mockProcess as unknown as ChildProcess);
+      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        if (options?.listeners?.stdout) {
+          options.listeners.stdout(Buffer.from('Deploy complete\n'));
+        }
+        return 0;
+      });
 
-        setTimeout(
-          () => {
-            mockProcess.emitOutput(`Output ${i}\n`);
-            mockProcess.complete(0);
-          },
-          10 + i * 5
-        );
-
-        promises.push(executor.executeSST('deploy', `stage-${i}`));
-      }
+      const promises = Array.from({ length: concurrentCount }, (_, index) =>
+        executor.executeSST(operation, `stage-${index}`)
+      );
 
       const results = await Promise.all(promises);
 

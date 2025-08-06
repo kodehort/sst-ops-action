@@ -47,7 +47,7 @@ describe('DiffOperation', () => {
 Monthly: $45.50 → $67.80 (+$22.30)`,
       stderr: '',
       exitCode: 0,
-      executionTime: 5000,
+      duration: 5000,
     };
 
     const mockDiffResult = {
@@ -156,7 +156,7 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
       stdout: 'No changes detected.',
       stderr: '',
       exitCode: 0,
-      executionTime: 2000,
+      duration: 2000,
     };
 
     const mockDiffResult = {
@@ -217,7 +217,7 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 Breaking changes detected. Please review carefully.`,
       stderr: '',
       exitCode: 0,
-      executionTime: 3000,
+      duration: 3000,
     };
 
     const mockDiffResult = {
@@ -267,7 +267,7 @@ Breaking changes detected. Please review carefully.`,
       stdout: '',
       stderr: 'Authentication failed: Invalid SST token',
       exitCode: 1,
-      executionTime: 1000,
+      duration: 1000,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -309,7 +309,7 @@ Breaking changes detected. Please review carefully.`,
 + Function MyFunction`,
       stderr: '',
       exitCode: 0,
-      executionTime: 3000,
+      duration: 3000,
     };
 
     const mockDiffResult = {

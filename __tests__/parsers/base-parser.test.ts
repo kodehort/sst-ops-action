@@ -18,6 +18,7 @@ const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
 const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
 const DURATION_PATTERN = /^Duration:\s+(\d+)s$/m;
 const SECTION_SPLIT_PATTERN = /\n\n+/;
+const LINE_ENDING_PATTERN = /\r?\n/;
 
 // Mock implementation for testing the abstract base parser
 class TestParser {
@@ -40,11 +41,10 @@ class TestParser {
       stage,
       exitCode,
       app: commonInfo.app || '',
-      completionStatus: commonInfo.completionStatus || 'unknown',
+      completionStatus: commonInfo.completionStatus || 'failed',
       permalink: commonInfo.permalink || '',
       truncated: false,
-      resourceChanges: 0,
-      urls: [],
+      rawOutput: output,
     };
   }
 
@@ -54,13 +54,13 @@ class TestParser {
 
     // Extract app name
     const appMatch = fullOutput.match(this.patterns.APP_INFO);
-    if (appMatch) {
+    if (appMatch?.[1]) {
       result.app = appMatch[1].trim();
     }
 
     // Extract permalink
     const permalinkMatch = fullOutput.match(this.patterns.PERMALINK);
-    if (permalinkMatch) {
+    if (permalinkMatch?.[1]) {
       result.permalink = permalinkMatch[1].trim();
     }
 
@@ -72,7 +72,7 @@ class TestParser {
     } else if (this.patterns.COMPLETION_FAILED.test(fullOutput)) {
       result.completionStatus = 'failed';
     } else {
-      result.completionStatus = 'unknown';
+      result.completionStatus = 'failed';
     }
 
     return result;
@@ -87,11 +87,11 @@ class TestParser {
   }
 
   // Test utilities - expose protected methods for testing
-  public testParseCommonInfo(lines: string[]): Partial<BaseOperationResult> {
+  testParseCommonInfo(lines: string[]): Partial<BaseOperationResult> {
     return this.parseCommonInfo(lines);
   }
 
-  public testSplitIntoSections(output: string): string[] {
+  testSplitIntoSections(output: string): string[] {
     return this.splitIntoSections(output);
   }
 }
@@ -143,7 +143,7 @@ describe('BaseParser', () => {
 
     it('should handle unknown completion status for malformed output', () => {
       const result = parser.testParseCommonInfo(MALFORMED_OUTPUT.split('\n'));
-      expect(result.completionStatus).toBe('unknown');
+      expect(result.completionStatus).toBe('failed');
     });
 
     it('should handle missing app name gracefully', () => {
@@ -222,7 +222,7 @@ describe('BaseParser', () => {
     it('should handle malformed output without throwing', () => {
       expect(() => {
         const result = parser.parse(MALFORMED_OUTPUT, 'staging', 1);
-        expect(result.completionStatus).toBe('unknown');
+        expect(result.completionStatus).toBe('failed');
         expect(result.success).toBe(false);
       }).not.toThrow();
     });
@@ -230,7 +230,7 @@ describe('BaseParser', () => {
     it('should handle empty output without throwing', () => {
       expect(() => {
         const result = parser.parse(EMPTY_OUTPUT, 'staging', 1);
-        expect(result.completionStatus).toBe('unknown');
+        expect(result.completionStatus).toBe('failed');
         expect(result.success).toBe(false);
       }).not.toThrow();
     });
@@ -261,7 +261,9 @@ describe('BaseParser', () => {
 
     it('should handle output with unusual line endings', () => {
       const windowsOutput = 'App: test-app\r\n✓ Complete\r\n';
-      const result = parser.testParseCommonInfo(windowsOutput.split(/\r?\n/));
+      const result = parser.testParseCommonInfo(
+        windowsOutput.split(LINE_ENDING_PATTERN)
+      );
       expect(result.app).toBe('test-app');
       expect(result.completionStatus).toBe('complete');
     });

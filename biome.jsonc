@@ -1,37 +1,39 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.1.3/schema.json",
   "extends": ["ultracite"],
   "files": {
-    "includes": [
-      "**/*",
-      "!**/_generated/**/*",
-      "!**/*.gen.*",
-      "!**/sst-env.d.ts",
-      "!.github/**/*.ts"
-    ]
+    "includes": ["**/*", "!dist/**/*", "!coverage/**/*", "!node_modules/**/*"]
   },
-  "javascript": {
-    "globals": ["aws", "sst", "$app", "$config", "$resolve"]
+  "formatter": {
+    "enabled": true
   },
   "linter": {
-    "rules": {
-      "style": {
-        "useFilenamingConvention": {
-          "level": "error",
-          "options": {
-            "filenameCases": ["kebab-case", "camelCase", "PascalCase"]
-          }
-        }
-      }
-    }
+    "enabled": true
   },
   "overrides": [
     {
-      "includes": ["**/*.astro"],
+      "includes": ["**/*.ts"],
       "linter": {
         "rules": {
-          "correctness": {
-            "noUnusedImports": "off"
+          "style": {
+            "useTemplate": "off"
+          },
+          "performance": {
+            "noNamespaceImport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["__tests__/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "performance": {
+            "noDelete": "off",
+            "useTopLevelRegex": "off"
           }
         }
       }

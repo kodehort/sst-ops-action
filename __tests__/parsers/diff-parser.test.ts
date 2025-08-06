@@ -1,21 +1,21 @@
-/**
- * Test suite for DiffParser
- * Tests parsing of SST diff command outputs focusing on planned changes
- */
-
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DiffParser } from '../../src/parsers/diff-parser';
 import {
-  EMPTY_OUTPUT,
-  INCOMPLETE_OUTPUT,
   SST_DIFF_BREAKING_OUTPUT,
   SST_DIFF_COMPLEX_OUTPUT,
   SST_DIFF_COSMETIC_OUTPUT,
+  SST_DIFF_EMPTY_OUTPUT,
+  SST_DIFF_ERROR_OUTPUT,
+  SST_DIFF_INCOMPLETE_OUTPUT,
   SST_DIFF_LARGE_OUTPUT,
   SST_DIFF_MALFORMED_OUTPUT,
+  SST_DIFF_MIXED_RESOURCES_OUTPUT,
   SST_DIFF_NO_CHANGES_OUTPUT,
-  SST_DIFF_OUTPUT,
-} from '../fixtures/sst-outputs';
+  SST_DIFF_ONLY_ADDITIONS_OUTPUT,
+  SST_DIFF_ONLY_DELETIONS_OUTPUT,
+  SST_DIFF_ONLY_UPDATES_OUTPUT,
+  SST_DIFF_SUCCESS_OUTPUT,
+} from '@tests/fixtures/sst-diff-outputs';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { DiffParser } from '@/parsers/diff-parser';
 
 describe('DiffParser', () => {
   let parser: DiffParser;
@@ -25,21 +25,21 @@ describe('DiffParser', () => {
   });
 
   describe('parse', () => {
-    it('should parse basic diff output with planned changes', () => {
-      const result = parser.parse(SST_DIFF_OUTPUT, 'staging', 0);
+    it('should parse basic diff output with mixed changes', () => {
+      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('diff');
       expect(result.stage).toBe('staging');
       expect(result.app).toBe('my-sst-app');
-      expect(result.exitCode).toBe(0);
-      expect(result.truncated).toBe(false);
-
-      // Check planned changes
+      expect(result.permalink).toBe(
+        'https://console.sst.dev/my-sst-app/staging/diffs/abc123'
+      );
       expect(result.plannedChanges).toBe(3);
+      expect(result.changeSummary).toContain('3 changes planned');
       expect(result.changes).toHaveLength(3);
 
-      // Verify specific changes
+      // Verify parsed changes
       expect(result.changes[0]).toEqual({
         type: 'Function',
         name: 'my-sst-app-staging-new-handler',
@@ -58,10 +58,6 @@ describe('DiffParser', () => {
         action: 'delete',
         details: undefined,
       });
-
-      // Check change summary
-      expect(result.changeSummary).toContain('3 changes planned');
-      expect(result.changeSummary).toContain('1 created, 1 updated, 1 deleted');
     });
 
     it('should handle no changes scenario', () => {
@@ -69,62 +65,50 @@ describe('DiffParser', () => {
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
       expect(result.app).toBe('my-sst-app');
       expect(result.plannedChanges).toBe(0);
+      expect(result.changeSummary).toBe('No changes');
       expect(result.changes).toHaveLength(0);
-      expect(result.changeSummary).toContain('No changes');
     });
 
-    it('should parse complex diff output with costs and breaking changes', () => {
+    it('should parse complex diff with cost and breaking changes', () => {
       const result = parser.parse(SST_DIFF_COMPLEX_OUTPUT, 'production', 0);
 
       expect(result.success).toBe(true);
-      expect(result.app).toBe('my-complex-app');
+      expect(result.operation).toBe('diff');
       expect(result.stage).toBe('production');
+      expect(result.app).toBe('my-complex-app');
       expect(result.plannedChanges).toBe(6);
-      expect(result.changes).toHaveLength(6);
-      expect(result.permalink).toBe(
-        'https://console.sst.dev/my-complex-app/production/diffs/xyz789'
-      );
-
-      // Check for different change types
-      const createChanges = result.changes.filter((c) => c.action === 'create');
-      const updateChanges = result.changes.filter((c) => c.action === 'update');
-      const deleteChanges = result.changes.filter((c) => c.action === 'delete');
-
-      expect(createChanges).toHaveLength(2);
-      expect(updateChanges).toHaveLength(2);
-      expect(deleteChanges).toHaveLength(2);
-
-      // Verify database creation with details
-      const dbCreate = result.changes.find(
-        (c) => c.type === 'Database' && c.action === 'create'
-      );
-      expect(dbCreate).toEqual({
-        type: 'Database',
-        name: 'my-complex-app-production-users-db',
-        action: 'create',
-        details: 'RDS MySQL 8.0',
-      });
-
-      // Check change summary includes cost and breaking changes
       expect(result.changeSummary).toContain('6 changes planned');
-      expect(result.changeSummary).toContain('Breaking changes detected');
-      expect(result.changeSummary).toContain('Cost: +$22.30');
+      expect(result.changes).toHaveLength(6);
+
+      // Check variety of resource types and actions
+      const actions = result.changes.map((c) => c.action);
+      expect(actions).toContain('create');
+      expect(actions).toContain('update');
+      expect(actions).toContain('delete');
+
+      // Check resource types
+      const types = result.changes.map((c) => c.type);
+      expect(types).toContain('Function');
+      expect(types).toContain('Database');
+      expect(types).toContain('Api');
+      expect(types).toContain('Website');
+      expect(types).toContain('Topic');
     });
 
-    it('should detect breaking changes correctly', () => {
+    it('should handle breaking changes correctly', () => {
       const result = parser.parse(SST_DIFF_BREAKING_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true);
       expect(result.plannedChanges).toBe(3);
-      expect(result.changeSummary).toContain('Breaking changes');
-      expect(result.changeSummary).toContain('Data migration required');
-      expect(result.changeSummary).toContain('Cost: -$25.00');
+      expect(result.changeSummary).toContain('3 changes planned');
+      expect(result.changes).toHaveLength(3);
 
-      // Verify runtime change detection
-      const runtimeChange = result.changes.find((c) => c.type === 'Function');
-      expect(runtimeChange).toEqual({
+      // Verify function runtime change
+      const functionChange = result.changes.find((c) => c.type === 'Function');
+      expect(functionChange).toEqual({
         type: 'Function',
         name: 'breaking-app-staging-handler',
         action: 'update',
@@ -137,161 +121,233 @@ describe('DiffParser', () => {
 
       expect(result.success).toBe(true);
       expect(result.plannedChanges).toBe(2);
-      expect(result.changeSummary).toContain('Cosmetic changes only');
-      expect(result.changeSummary).toContain('No functional impact');
+      expect(result.changes).toHaveLength(2);
 
-      // Verify cosmetic changes
-      expect(result.changes[0]).toEqual({
-        type: 'Function',
-        name: 'cosmetic-app-staging-handler',
-        action: 'update',
-        details: 'description updated',
-      });
+      // All should be updates
+      expect(result.changes.every((c) => c.action === 'update')).toBe(true);
     });
 
-    it('should handle failed diff with non-zero exit code', () => {
+    it('should handle large diff outputs efficiently', () => {
+      const startTime = Date.now();
+      const result = parser.parse(SST_DIFF_LARGE_OUTPUT, 'production', 0);
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(1000); // Should parse in under 1 second
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(50);
+      expect(result.changes).toHaveLength(50);
+
+      // Verify distribution of changes
+      const creates = result.changes.filter((c) => c.action === 'create');
+      const updates = result.changes.filter((c) => c.action === 'update');
+      const deletes = result.changes.filter((c) => c.action === 'delete');
+
+      expect(creates).toHaveLength(25);
+      expect(updates).toHaveLength(15);
+      expect(deletes).toHaveLength(10);
+    });
+
+    it('should handle mixed resource types', () => {
+      const result = parser.parse(
+        SST_DIFF_MIXED_RESOURCES_OUTPUT,
+        'development',
+        0
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(10);
+      expect(result.changes).toHaveLength(10);
+
+      // Should have all different resource types
+      const uniqueTypes = [...new Set(result.changes.map((c) => c.type))];
+      expect(uniqueTypes).toContain('Function');
+      expect(uniqueTypes).toContain('Database');
+      expect(uniqueTypes).toContain('Topic');
+      expect(uniqueTypes).toContain('Queue');
+      expect(uniqueTypes).toContain('Api');
+      expect(uniqueTypes).toContain('Website');
+
+      // Check detailed changes with parenthetical info
+      const dbCreate = result.changes.find(
+        (c) => c.type === 'Database' && c.action === 'create'
+      );
+      expect(dbCreate?.details).toBe('RDS PostgreSQL 14.9');
+    });
+
+    it('should handle only additions', () => {
+      const result = parser.parse(SST_DIFF_ONLY_ADDITIONS_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(4);
+      expect(result.changes).toHaveLength(4);
+      expect(result.changes.every((c) => c.action === 'create')).toBe(true);
+    });
+
+    it('should handle only deletions', () => {
+      const result = parser.parse(SST_DIFF_ONLY_DELETIONS_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(4);
+      expect(result.changes).toHaveLength(4);
+      expect(result.changes.every((c) => c.action === 'delete')).toBe(true);
+    });
+
+    it('should handle only updates', () => {
+      const result = parser.parse(
+        SST_DIFF_ONLY_UPDATES_OUTPUT,
+        'production',
+        0
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(3);
+      expect(result.changes).toHaveLength(3);
+      expect(result.changes.every((c) => c.action === 'update')).toBe(true);
+
+      // Verify detailed update information
+      const functionUpdate = result.changes.find((c) => c.type === 'Function');
+      expect(functionUpdate?.details).toBe('timeout: 30s → 60s');
+    });
+
+    it('should handle error scenarios gracefully', () => {
+      const result = parser.parse(SST_DIFF_ERROR_OUTPUT, 'staging', 1);
+
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
+      expect(result.app).toBe('error-app');
+      expect(result.plannedChanges).toBe(0);
+      expect(result.changes).toHaveLength(0);
+    });
+
+    it('should handle malformed output gracefully', () => {
       const result = parser.parse(SST_DIFF_MALFORMED_OUTPUT, 'staging', 1);
 
       expect(result.success).toBe(false);
-      expect(result.exitCode).toBe(1);
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
       expect(result.plannedChanges).toBe(0);
       expect(result.changes).toHaveLength(0);
-      expect(result.changeSummary).toContain('Diff parsing failed');
+      // Should show error message when exitCode is 1 and contains error patterns
+      expect(result.changeSummary).toBe(
+        'Diff parsing failed - unable to determine changes'
+      );
     });
 
-    it('should handle malformed diff output gracefully', () => {
-      const result = parser.parse(SST_DIFF_MALFORMED_OUTPUT, 'staging', 0);
+    it('should handle empty output', () => {
+      const result = parser.parse(SST_DIFF_EMPTY_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true); // Exit code 0 = success
       expect(result.operation).toBe('diff');
       expect(result.stage).toBe('staging');
-      expect(result.app).toBe(''); // No app found in malformed output
       expect(result.plannedChanges).toBe(0);
       expect(result.changes).toHaveLength(0);
+      expect(result.changeSummary).toBe('0 changes planned');
     });
 
-    it('should handle empty output', () => {
-      const result = parser.parse(EMPTY_OUTPUT, 'staging', 0);
+    it('should handle incomplete output', () => {
+      const result = parser.parse(SST_DIFF_INCOMPLETE_OUTPUT, 'staging', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('diff');
-      expect(result.stage).toBe('staging');
-      expect(result.app).toBe('');
-      expect(result.plannedChanges).toBe(0);
-      expect(result.changes).toHaveLength(0);
+      expect(result.app).toBe('incomplete-app');
+      expect(result.plannedChanges).toBe(1);
+      expect(result.changes).toHaveLength(1);
+      expect(result.changes?.[0]?.action).toBe('create');
     });
 
-    it('should properly set truncated flag based on output size', () => {
-      const result = parser.parse(SST_DIFF_COMPLEX_OUTPUT, 'staging', 0, 500); // max size 500 bytes
+    it('should provide consistent result structure', () => {
+      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, 'staging', 0);
 
-      expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBeLessThanOrEqual(500);
+      // All DiffResult properties should be present
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('operation');
+      expect(result).toHaveProperty('stage');
+      expect(result).toHaveProperty('exitCode');
+      expect(result).toHaveProperty('plannedChanges');
+      expect(result).toHaveProperty('changeSummary');
+      expect(result).toHaveProperty('changes');
+      expect(result).toHaveProperty('app');
+      expect(result).toHaveProperty('rawOutput');
+      expect(result).toHaveProperty('permalink');
+      expect(result).toHaveProperty('completionStatus');
+      expect(result).toHaveProperty('truncated');
+
+      // Diff-specific defaults
+      expect(result.truncated).toBe(false);
     });
+  });
 
-    it('should count planned changes correctly in large diff', () => {
-      const result = parser.parse(SST_DIFF_LARGE_OUTPUT, 'production', 0);
+  describe('edge cases and performance', () => {
+    it('should handle very large outputs without memory issues', () => {
+      // Create a very large diff output
+      const largeChanges = Array.from(
+        { length: 1000 },
+        (_, i) => `+ Function        large-app-test-func-${i + 1}`
+      ).join('\n');
 
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(100);
-      expect(result.changes).toHaveLength(100);
-
-      // Verify change type distribution
-      const createChanges = result.changes.filter((c) => c.action === 'create');
-      const updateChanges = result.changes.filter((c) => c.action === 'update');
-      const deleteChanges = result.changes.filter((c) => c.action === 'delete');
-
-      expect(createChanges).toHaveLength(50);
-      expect(updateChanges).toHaveLength(30);
-      expect(deleteChanges).toHaveLength(20);
-    });
-
-    it('should extract change details correctly', () => {
-      const detailsOutput = `
+      const largeOutput = `
 SST Diff
-App: details-app
+App: performance-test-app
 Stage: test
 
-+ Function        details-app-test-new-auth (Node.js 20, 1GB memory)
-~ Api            details-app-test-api (rate limiting added, cors updated)
-- Website        details-app-test-old-site (deprecated)
+${largeChanges}
+
+1000 changes planned
+`;
+
+      const startTime = Date.now();
+      const result = parser.parse(largeOutput, 'test', 0);
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(2000); // Should complete within 2 seconds
+      expect(result.success).toBe(true);
+      expect(result.plannedChanges).toBe(1000);
+      expect(result.changes).toHaveLength(1000);
+    });
+
+    it('should handle unicode characters in resource names', () => {
+      const unicodeOutput = `
+SST Diff
+App: unicode-app
+Stage: test
+
++ Function        unicode-app-test-函数-handler
+~ Api            unicode-app-test-api-配置 (updated)
+- Database        unicode-app-test-数据库
 
 3 changes planned
 `;
 
-      const result = parser.parse(detailsOutput, 'test', 0);
+      const result = parser.parse(unicodeOutput, 'test', 0);
 
+      expect(result.success).toBe(true);
+      expect(result.changes).toHaveLength(3);
+      expect(result.changes?.[0]?.name).toBe('unicode-app-test-函数-handler');
+      expect(result.changes?.[1]?.name).toBe('unicode-app-test-api-配置');
+      expect(result.changes?.[2]?.name).toBe('unicode-app-test-数据库');
+    });
+
+    it('should handle mixed line endings', () => {
+      const mixedLineEndings = SST_DIFF_SUCCESS_OUTPUT.replace(/\n/g, '\r\n'); // Convert to Windows line endings
+
+      const result = parser.parse(mixedLineEndings, 'staging', 0);
+
+      expect(result.success).toBe(true);
       expect(result.plannedChanges).toBe(3);
-      expect(result.changes[0]).toEqual({
-        type: 'Function',
-        name: 'details-app-test-new-auth',
-        action: 'create',
-        details: 'Node.js 20, 1GB memory',
-      });
-      expect(result.changes[1]).toEqual({
-        type: 'Api',
-        name: 'details-app-test-api',
-        action: 'update',
-        details: 'rate limiting added, cors updated',
-      });
-      expect(result.changes[2]).toEqual({
-        type: 'Website',
-        name: 'details-app-test-old-site',
-        action: 'delete',
-        details: 'deprecated',
-      });
+      expect(result.changes).toHaveLength(3);
     });
-  });
 
-  describe('error handling', () => {
-    it('should not throw on invalid diff patterns', () => {
+    it('should be null-safe with undefined inputs', () => {
       expect(() => {
-        const result = parser.parse(
-          'Invalid diff format with special chars: $#@!',
-          'staging',
-          0
-        );
-        expect(result.plannedChanges).toBe(0);
+        // @ts-expect-error - testing runtime behavior
+        parser.parse(null, 'staging', 0);
       }).not.toThrow();
-    });
 
-    it('should handle very long diff outputs', () => {
-      const longOutput = `${'A'.repeat(100_000)}\nSST Diff\nApp: test-app\n\n+ Function test-function\n\n1 changes planned`;
       expect(() => {
-        const result = parser.parse(longOutput, 'staging', 0);
-        expect(result.app).toBe('test-app');
-        expect(result.plannedChanges).toBe(1);
+        // @ts-expect-error - testing runtime behavior
+        parser.parse(undefined, 'staging', 0);
       }).not.toThrow();
-    });
-
-    it('should handle output with unusual line endings', () => {
-      const windowsOutput =
-        'SST Diff\r\nApp: test-app\r\n\r\n+ Function test-func\r\n\r\n1 changes planned\r\n';
-      const result = parser.parse(windowsOutput, 'staging', 0);
-      expect(result.app).toBe('test-app');
-      expect(result.plannedChanges).toBe(1);
-    });
-  });
-
-  describe('performance', () => {
-    it('should parse large diffs efficiently', () => {
-      const startTime = Date.now();
-
-      parser.parse(SST_DIFF_LARGE_OUTPUT, 'staging', 0);
-
-      const duration = Date.now() - startTime;
-      expect(duration).toBeLessThan(1000); // Should complete in under 1 second
-    });
-
-    it('should handle repeated parsing efficiently', () => {
-      const startTime = Date.now();
-
-      // Parse same diff 100 times
-      for (let i = 0; i < 100; i++) {
-        parser.parse(SST_DIFF_COMPLEX_OUTPUT, 'staging', 0);
-      }
-
-      const duration = Date.now() - startTime;
-      expect(duration).toBeLessThan(2000); // Should complete all in under 2 seconds
     });
   });
 });

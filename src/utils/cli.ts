@@ -3,10 +3,10 @@
  * Provides reliable SST CLI command execution for all operation types
  */
 
-import { type ChildProcess, spawn } from 'node:child_process';
 import { access, constants } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import * as exec from '@actions/exec';
 import type { SSTOperation } from '../types/index.js';
 
 const accessAsync = promisify(access);
@@ -192,114 +192,97 @@ export class SSTCLIExecutor {
   ): Promise<CLIResult> {
     const startTime = Date.now();
 
-    return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    let truncated = false;
+    let exitCode = 0;
+
+    try {
       const env = this.buildEnvironment(options.env);
       const cwd = options.cwd || process.cwd();
 
-      // Spawn the process
-      const childProcess: ChildProcess = spawn(command[0]!, command.slice(1), {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env,
+      // Create a timeout promise if timeout is specified
+      const execPromise = exec.exec(command[0]!, command.slice(1), {
         cwd,
-        shell: false,
+        env,
+        ignoreReturnCode: true,
+        listeners: {
+          stdout: (data: Buffer) => {
+            const chunk = data.toString();
+            if (stdout.length + chunk.length > options.maxOutputSize) {
+              stdout += chunk.substring(
+                0,
+                options.maxOutputSize - stdout.length
+              );
+              truncated = true;
+            } else {
+              stdout += chunk;
+            }
+          },
+          stderr: (data: Buffer) => {
+            const chunk = data.toString();
+            if (stderr.length + chunk.length > options.maxOutputSize) {
+              stderr += chunk.substring(
+                0,
+                options.maxOutputSize - stderr.length
+              );
+              truncated = true;
+            } else {
+              stderr += chunk;
+            }
+          },
+        },
       });
 
-      let stdout = '';
-      let stderr = '';
-      let truncated = false;
-      let timeoutId: NodeJS.Timeout | null = null;
-
-      // Set up timeout
-      timeoutId = setTimeout(() => {
-        childProcess.kill('SIGTERM');
-        // Force kill after 5 seconds if process doesn't terminate
-        setTimeout(() => {
-          if (!childProcess.killed) {
-            childProcess.kill('SIGKILL');
-          }
-        }, 5000);
-      }, options.timeout);
-
-      // Capture stdout
-      if (childProcess.stdout) {
-        childProcess.stdout.on('data', (data: Buffer) => {
-          const chunk = data.toString();
-          if (stdout.length + chunk.length > options.maxOutputSize) {
-            stdout += chunk.substring(0, options.maxOutputSize - stdout.length);
-            truncated = true;
-          } else {
-            stdout += chunk;
-          }
+      if (options.timeout) {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Command timeout after ${options.timeout}ms`));
+          }, options.timeout);
         });
+
+        exitCode = await Promise.race([execPromise, timeoutPromise]);
+      } else {
+        exitCode = await execPromise;
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // Check if it's a timeout error
+      if (errorMessage.includes('timeout')) {
+        return {
+          output: `${stdout}${stderr}\nCommand timed out after ${options.timeout}ms`,
+          stdout,
+          stderr: `${stderr}\nCommand timed out after ${options.timeout}ms`,
+          exitCode: 124, // Timeout exit code
+          duration,
+          command: command.join(' '),
+          error: `Command timed out after ${options.timeout}ms`,
+          truncated,
+        };
       }
 
-      // Capture stderr
-      if (childProcess.stderr) {
-        childProcess.stderr.on('data', (data: Buffer) => {
-          const chunk = data.toString();
-          if (stderr.length + chunk.length > options.maxOutputSize) {
-            stderr += chunk.substring(0, options.maxOutputSize - stderr.length);
-            truncated = true;
-          } else {
-            stderr += chunk;
-          }
-        });
-      }
+      throw new Error(`Failed to execute command: ${errorMessage}`);
+    }
 
-      // Handle process completion
-      childProcess.on(
-        'close',
-        (code: number | null, signal: NodeJS.Signals | null) => {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
+    const duration = Date.now() - startTime;
+    const output = stdout + stderr;
 
-          const duration = Date.now() - startTime;
-          const exitCode = code || 0;
-          const output = stdout + stderr;
-
-          // Handle timeout
-          if (signal === 'SIGTERM' || signal === 'SIGKILL') {
-            const timeoutError = `Command timed out after ${options.timeout}ms`;
-            resolve({
-              output: `${output}\n${timeoutError}`,
-              stdout,
-              stderr: `${stderr}\n${timeoutError}`,
-              exitCode: 124, // Timeout exit code
-              duration,
-              command: command.join(' '),
-              error: timeoutError,
-              truncated,
-            });
-            return;
-          }
-
-          resolve({
-            output,
-            stdout,
-            stderr,
-            exitCode,
-            duration,
-            command: command.join(' '),
-            error:
-              exitCode !== 0
-                ? `Command failed with exit code ${exitCode}`
-                : undefined,
-            truncated,
-          });
-        }
-      );
-
-      // Handle process errors
-      childProcess.on('error', (error) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-
-        const _duration = Date.now() - startTime;
-        reject(new Error(`Failed to execute command: ${error.message}`));
-      });
-    });
+    return {
+      output,
+      stdout,
+      stderr,
+      exitCode,
+      duration,
+      command: command.join(' '),
+      error:
+        exitCode !== 0
+          ? `Command failed with exit code ${exitCode}`
+          : undefined,
+      truncated,
+    };
   }
 
   /**
@@ -420,10 +403,16 @@ export class SSTCLIExecutor {
 
         for (const line of lines) {
           if (line.includes('App:')) {
-            info.app = line.split(':')[1]?.trim();
+            const appValue = line.split(':')[1]?.trim();
+            if (appValue) {
+              info.app = appValue;
+            }
           }
           if (line.includes('Stage:')) {
-            info.stage = line.split(':')[1]?.trim();
+            const stageValue = line.split(':')[1]?.trim();
+            if (stageValue) {
+              info.stage = stageValue;
+            }
           }
         }
 

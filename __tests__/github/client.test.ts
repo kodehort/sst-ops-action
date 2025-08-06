@@ -9,6 +9,10 @@ import type {
   DiffResult,
   RemoveResult,
 } from '../../src/types/index.js';
+import {
+  createMockDeployResult,
+  createMockSSTUrl,
+} from '../utils/test-types.js';
 
 // Additional mocks are handled in setup file
 
@@ -76,23 +80,25 @@ describe('GitHubClient', () => {
   });
 
   describe('createOrUpdateComment', () => {
-    const mockDeployResult: DeployResult = {
-      success: true,
-      operation: 'deploy',
+    const mockDeployResult = createMockDeployResult({
       stage: 'staging',
       app: 'test-app',
       rawOutput: 'Deploy successful',
-      exitCode: 0,
-      truncated: false,
-      completionStatus: 'complete',
       resourceChanges: 3,
       urls: [
-        { type: 'Web', url: 'https://app.example.com' },
-        { type: 'API', url: 'https://api.example.com' },
+        createMockSSTUrl({
+          name: 'app',
+          type: 'web',
+          url: 'https://app.example.com',
+        }),
+        createMockSSTUrl({
+          name: 'api',
+          type: 'api',
+          url: 'https://api.example.com',
+        }),
       ],
-      resources: [],
       permalink: 'https://console.sst.dev/test-app/staging',
-    };
+    }) as DeployResult;
 
     it('should create comment when comment mode is "always"', async () => {
       await client.createOrUpdateComment(mockDeployResult, 'always');
@@ -196,9 +202,9 @@ describe('GitHubClient', () => {
       exitCode: 0,
       truncated: false,
       completionStatus: 'complete',
-      resourceChanges: 0,
-      urls: [],
-      diffSummary: 'No infrastructure changes detected',
+      plannedChanges: 0,
+      changeSummary: 'No infrastructure changes detected',
+      changes: [],
     };
 
     it('should create workflow summary for successful operation', async () => {
@@ -251,8 +257,8 @@ describe('GitHubClient', () => {
       exitCode: 0,
       truncated: false,
       completionStatus: 'complete',
-      resourceChanges: 5,
-      urls: [],
+      resourcesRemoved: 5,
+      removedResources: [],
     };
 
     it('should upload artifacts successfully', async () => {
@@ -388,8 +394,8 @@ describe('GitHubClient', () => {
         completionStatus: 'complete',
         resourceChanges: 5,
         urls: [
-          { type: 'Web', url: 'https://my-app.com' },
-          { type: 'API', url: 'https://api.my-app.com' },
+          { name: 'app', type: 'web', url: 'https://my-app.com' },
+          { name: 'api', type: 'api', url: 'https://api.my-app.com' },
         ],
         resources: [],
         permalink: 'https://console.sst.dev/my-app/production',
@@ -398,7 +404,7 @@ describe('GitHubClient', () => {
       await client.createOrUpdateComment(deployResult, 'always');
 
       const commentBody =
-        mockOctokit.rest.issues.createComment.mock.calls[0][0].body;
+        mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('DEPLOY SUCCESS');
       expect(commentBody).toContain('**Stage:** `production`');
       expect(commentBody).toContain('**App:** `my-app`');
@@ -420,15 +426,18 @@ describe('GitHubClient', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 0,
-        urls: [],
-        diffSummary: '3 resources to create, 2 to update',
+        plannedChanges: 5,
+        changeSummary: '3 resources to create, 2 to update',
+        changes: [
+          { type: 'Lambda', name: 'Function1', action: 'create' },
+          { type: 'S3', name: 'Bucket1', action: 'update' },
+        ],
       };
 
       await client.createOrUpdateComment(diffResult, 'always');
 
       const commentBody =
-        mockOctokit.rest.issues.createComment.mock.calls[0][0].body;
+        mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('SST DIFF SUCCESS');
       expect(commentBody).toContain('3 resources to create, 2 to update');
     });
@@ -443,14 +452,17 @@ describe('GitHubClient', () => {
         exitCode: 0,
         truncated: false,
         completionStatus: 'complete',
-        resourceChanges: 8,
-        urls: [],
+        resourcesRemoved: 8,
+        removedResources: [
+          { type: 'Lambda', name: 'TestFunction', status: 'removed' },
+          { type: 'S3', name: 'TestBucket', status: 'removed' },
+        ],
       };
 
       await client.createOrUpdateComment(removeResult, 'always');
 
       const commentBody =
-        mockOctokit.rest.issues.createComment.mock.calls[0][0].body;
+        mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('SST REMOVE SUCCESS');
       expect(commentBody).toContain('Resources Removed: 8');
       expect(commentBody).toContain('All resources successfully removed');
