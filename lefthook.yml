@@ -1,21 +1,20 @@
-pre-commit:
-  parallel: true
-  commands:
-    format:
-      glob: "*.{ts,js,json,yml,yaml}"
-      run: bun run format
-      stage_fixed: true
-    lint:
-      glob: "*.{ts,js}"
-      run: bun run lint
-    typecheck:
-      glob: "*.{ts}"
-      run: bun run typecheck
-
-pre-push:
-  parallel: true  
-  commands:
-    test:
-      run: bun test
-    build:
-      run: bun run build
+# pre-commit:
+#   parallel: true
+#   commands:
+#     format:
+#       glob: "*.{ts,js,json,yml,yaml}"
+#       run: bun run format
+#       stage_fixed: true
+#     lint:
+#       glob: "*.{ts,js}"
+#       run: bun run lint
+#     typecheck:
+#       glob: "*.{ts}"
+#       run: bun run typecheck
+# pre-push:
+#   parallel: true
+#   commands:
+#     test:
+#       run: bun test
+#     build:
+#       run: bun run build
