@@ -1,344 +1,432 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubClient } from '../../src/github/client';
+/**
+ * Tests for RemoveOperation
+ * Validates remove operation execution, parsing, and GitHub integration
+ */
+
+import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 import { RemoveOperation } from '../../src/operations/remove';
-import type { RemoveParser } from '../../src/parsers/remove-parser';
-import type { OperationOptions } from '../../src/types';
-import type { SSTCLIExecutor } from '../../src/utils/cli';
-
-// Mock the dependencies
-const mockSSTExecutor = {
-  executeSST: vi.fn(),
-};
-
-const mockGitHubClient = {
-  postPRComment: vi.fn(),
-};
-
-const mockRemoveParser = {
-  parse: vi.fn(),
-};
+import type { GitHubClient } from '../../src/github/client';
+import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
+import type { OperationOptions, RemoveResult } from '../../src/types';
+import {
+  SST_REMOVE_SUCCESS_OUTPUT,
+  SST_REMOVE_NO_RESOURCES_OUTPUT,
+  SST_REMOVE_PARTIAL_OUTPUT,
+  SST_REMOVE_ERROR_OUTPUT,
+  SST_REMOVE_COMPLEX_OUTPUT,
+  SST_REMOVE_MALFORMED_OUTPUT,
+} from '../fixtures/sst-remove-outputs';
 
 describe('RemoveOperation', () => {
   let removeOperation: RemoveOperation;
+  let mockSSTExecutor: SSTCLIExecutor;
+  let mockGitHubClient: GitHubClient;
+
+  const defaultOptions: OperationOptions = {
+    stage: 'test-stage',
+    token: 'fake-token',
+    commentMode: 'on-success',
+    failOnError: true,
+    maxOutputSize: 50000,
+  };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    removeOperation = new RemoveOperation(
-      mockSSTExecutor as any as SSTCLIExecutor,
-      mockGitHubClient as any as GitHubClient,
-      mockRemoveParser as any as RemoveParser
-    );
+    // Mock SST CLI Executor
+    mockSSTExecutor = {
+      executeSST: vi.fn(),
+    } as unknown as SSTCLIExecutor;
+
+    // Mock GitHub Client
+    mockGitHubClient = {
+      createOrUpdateComment: vi.fn().mockResolvedValue(undefined),
+      createWorkflowSummary: vi.fn().mockResolvedValue(undefined),
+    } as unknown as GitHubClient;
+
+    removeOperation = new RemoveOperation(mockSSTExecutor, mockGitHubClient);
   });
 
-  it('should execute remove operation successfully with resources removed', async () => {
-    const options: OperationOptions = {
-      stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
-      maxOutputSize: 1_000_000,
-    };
+  describe('execute', () => {
+    it('should handle successful removal', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_SUCCESS_OUTPUT,
+        exitCode: 0,
+        duration: 30000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_SUCCESS_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
 
-    const mockSSTResult = {
-      success: true,
-      stdout: `Removing resources...
-| Deleted Function MyFunction
-| Deleted Bucket MyBucket
-| Deleted Database OldDatabase
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
 
-✓ All resources removed
-Monthly cost savings: $67.80`,
-      stderr: '',
-      exitCode: 0,
-      duration: 8000,
-    };
-
-    const mockRemoveResult = {
-      success: true,
-      operation: 'remove' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
-      exitCode: 0,
-      truncated: false,
-      completionStatus: 'complete' as const,
-      resourcesRemoved: 3,
-      removedResources: [
-        { type: 'Function', name: 'MyFunction', status: 'removed' as const },
-        { type: 'Bucket', name: 'MyBucket', status: 'removed' as const },
-        { type: 'Database', name: 'OldDatabase', status: 'removed' as const },
-      ],
-    };
-
-    mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
-    mockRemoveParser.parse.mockReturnValue(mockRemoveResult);
-    mockGitHubClient.postPRComment.mockResolvedValue({ success: true });
-
-    const result = await removeOperation.execute(options);
-
-    expect(result).toEqual({
-      success: true,
-      stage: 'staging',
-      resourcesRemoved: 3,
-      removedResources: [
-        {
-          resourceType: 'Function',
-          resourceName: 'MyFunction',
-          status: 'removed',
-        },
-        { resourceType: 'Bucket', resourceName: 'MyBucket', status: 'removed' },
-        {
-          resourceType: 'Database',
-          resourceName: 'OldDatabase',
-          status: 'removed',
-        },
-      ],
-      completionStatus: 'complete',
-      costSavings: {
-        monthly: 67.8,
-        formatted: 'Monthly cost savings: $67.80',
-      },
-      summary:
-        'Successfully removed 3 resources from staging. Monthly savings: $67.80',
-      prCommentPosted: true,
-      executionTime: 8000,
-      metadata: {
-        cliExitCode: 0,
-        parsingSuccess: true,
-        githubIntegration: true,
-      },
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('test-stage');
+      expect(result.resourcesRemoved).toBe(3);
+      expect(result.completionStatus).toBe('complete');
+      expect(result.app).toBe('my-sst-app');
+      expect(result.permalink).toContain('console.sst.dev');
+      expect(result.removedResources).toHaveLength(3);
+      expect(result.removedResources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'Function',
+            name: 'my-sst-app-staging-handler',
+            status: 'removed',
+          }),
+        ])
+      );
     });
 
-    expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith(
-      'remove',
-      'staging',
-      {
-        env: { SST_TOKEN: 'test-token', NODE_ENV: 'production', CI: 'true' },
-        timeout: 900_000, // 15 minutes
-        maxOutputSize: 1_000_000,
-      }
-    );
+    it('should handle no resources to remove', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_NO_RESOURCES_OUTPUT,
+        exitCode: 0,
+        duration: 5000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_NO_RESOURCES_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
 
-    expect(mockRemoveParser.parse).toHaveBeenCalledWith(
-      mockSSTResult.stdout,
-      'staging',
-      0
-    );
-    expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
-      expect.stringContaining('Resources Successfully Removed'),
-      'remove'
-    );
-  });
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
 
-  it('should handle partial removal with some failures', async () => {
-    const options: OperationOptions = {
-      stage: 'production',
-      environment: { SST_TOKEN: 'test-token' },
-    };
-
-    const mockSSTResult = {
-      success: true,
-      stdout: `Removing resources...
-| Deleted Function MyFunction
-| Deleted Bucket MyBucket
-! Database OldDatabase could not be removed: Resource in use
-
-⚠ 2 of 3 resources removed successfully`,
-      stderr: '',
-      exitCode: 0,
-      duration: 6000,
-    };
-
-    const mockRemoveResult = {
-      success: true,
-      operation: 'remove' as const,
-      stage: 'production',
-      app: 'test-app',
-      rawOutput: 'test output',
-      exitCode: 0,
-      truncated: false,
-      completionStatus: 'partial' as const,
-      resourcesRemoved: 2,
-      removedResources: [
-        { type: 'Function', name: 'MyFunction', status: 'removed' as const },
-        { type: 'Bucket', name: 'MyBucket', status: 'removed' as const },
-        { type: 'Database', name: 'OldDatabase', status: 'failed' as const },
-      ],
-    };
-
-    mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
-    mockRemoveParser.parse.mockReturnValue(mockRemoveResult);
-    mockGitHubClient.postPRComment.mockResolvedValue({ success: true });
-
-    const result = await removeOperation.execute(options);
-
-    expect(result).toEqual({
-      success: true,
-      stage: 'production',
-      resourcesRemoved: 2,
-      removedResources: [
-        {
-          resourceType: 'Function',
-          resourceName: 'MyFunction',
-          status: 'removed',
-        },
-        { resourceType: 'Bucket', resourceName: 'MyBucket', status: 'removed' },
-        {
-          resourceType: 'Database',
-          resourceName: 'OldDatabase',
-          status: 'failed',
-        },
-      ],
-      completionStatus: 'partial',
-      costSavings: null,
-      summary:
-        'Partially removed 2 of 3 resources from production. Some resources could not be removed.',
-      prCommentPosted: true,
-      executionTime: 6000,
-      metadata: {
-        cliExitCode: 0,
-        parsingSuccess: true,
-        githubIntegration: true,
-      },
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('remove');
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.completionStatus).toBe('complete');
+      expect(result.removedResources).toHaveLength(0);
     });
 
-    expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
-      expect.stringContaining('⚠️ **Partial Resource Removal**'),
-      'remove'
-    );
-  });
+    it('should handle partial removal with failures', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_PARTIAL_OUTPUT,
+        exitCode: 0,
+        duration: 45000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_PARTIAL_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
 
-  it('should handle complete removal failure', async () => {
-    const options: OperationOptions = {
-      stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
-    };
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
 
-    const mockSSTResult = {
-      success: false,
-      stdout: '',
-      stderr: 'Error: Unable to connect to AWS. Check your credentials.',
-      exitCode: 1,
-      duration: 2000,
-    };
-
-    mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
-
-    const result = await removeOperation.execute(options);
-
-    expect(result).toEqual({
-      success: false,
-      stage: 'staging',
-      resourcesRemoved: 0,
-      removedResources: [],
-      completionStatus: 'failed',
-      costSavings: null,
-      summary: 'Failed to execute SST remove command',
-      prCommentPosted: false,
-      executionTime: 2000,
-      error: 'Error: Unable to connect to AWS. Check your credentials.',
-      metadata: {
-        cliExitCode: 1,
-        parsingSuccess: false,
-        githubIntegration: false,
-      },
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('remove');
+      expect(result.resourcesRemoved).toBe(2);
+      expect(result.completionStatus).toBe('partial');
+      expect(result.removedResources).toHaveLength(3);
+      expect(result.removedResources.filter(r => r.status === 'removed')).toHaveLength(2);
+      expect(result.removedResources.filter(r => r.status === 'failed')).toHaveLength(1);
     });
 
-    expect(mockRemoveParser.parse).not.toHaveBeenCalled();
-    expect(mockGitHubClient.postPRComment).not.toHaveBeenCalled();
-  });
+    it('should handle removal failure', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_ERROR_OUTPUT,
+        exitCode: 1,
+        duration: 10000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_ERROR_OUTPUT,
+        stderr: '',
+        success: false,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
 
-  it('should handle parsing failure', async () => {
-    const options: OperationOptions = {
-      stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
-    };
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
 
-    const mockSSTResult = {
-      success: true,
-      stdout: 'Malformed output that cannot be parsed',
-      stderr: '',
-      exitCode: 0,
-      duration: 3000,
-    };
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('remove');
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.completionStatus).toBe('failed');
+      expect(result.exitCode).toBe(1);
+    });
 
-    const mockRemoveResult = {
-      success: false,
-      operation: 'remove' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
-      exitCode: 0,
-      truncated: false,
-      completionStatus: 'failed' as const,
-      resourcesRemoved: 0,
-      removedResources: [],
-    };
+    it('should handle complex removal scenarios', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_COMPLEX_OUTPUT,
+        exitCode: 0,
+        duration: 120000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_COMPLEX_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
 
-    mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
-    mockRemoveParser.parse.mockReturnValue(mockRemoveResult);
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
 
-    const result = await removeOperation.execute(options);
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('remove');
+      expect(result.resourcesRemoved).toBe(8);
+      expect(result.completionStatus).toBe('partial');
+      expect(result.removedResources).toHaveLength(9);
+      expect(result.removedResources.filter(r => r.status === 'removed')).toHaveLength(8);
+      expect(result.removedResources.filter(r => r.status === 'failed')).toHaveLength(1);
+    });
 
-    expect(result).toEqual({
-      success: false,
-      stage: 'staging',
-      resourcesRemoved: 0,
-      removedResources: [],
-      completionStatus: 'failed',
-      costSavings: null,
-      summary: 'Failed to parse SST remove output',
-      prCommentPosted: false,
-      executionTime: 3000,
-      error: 'Failed to parse SST remove output',
-      metadata: {
-        cliExitCode: 0,
-        parsingSuccess: false,
-        githubIntegration: false,
-      },
+    it('should handle malformed output gracefully', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_MALFORMED_OUTPUT,
+        exitCode: 1,
+        duration: 5000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_MALFORMED_OUTPUT,
+        stderr: '',
+        success: false,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+
+      // Act
+      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('remove');
+      expect(result.stage).toBe('test-stage');
+      expect(result.removedResources).toBeDefined();
+      expect(result.resourcesRemoved).toBeDefined();
+      expect(result.completionStatus).toBeDefined();
     });
   });
 
-  it('should handle GitHub API failure gracefully', async () => {
-    const options: OperationOptions = {
-      stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
-    };
+  describe('buildEnvironment', () => {
+    it('should build environment variables for remove operation', () => {
+      // Act
+      const env = removeOperation.buildEnvironment(defaultOptions);
 
-    const mockSSTResult = {
-      success: true,
-      stdout: `| Deleted Function MyFunction
-✓ All resources removed`,
-      stderr: '',
-      exitCode: 0,
-      duration: 4000,
-    };
+      // Assert
+      expect(env).toEqual({
+        SST_TOKEN: 'fake-token',
+        NODE_ENV: 'production',
+        CI: 'true',
+        GITHUB_ACTIONS: 'true',
+        SST_REMOVE_CONFIRM: 'true',
+      });
+    });
 
-    const mockRemoveResult = {
-      success: true,
-      operation: 'remove' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
-      exitCode: 0,
-      truncated: false,
-      completionStatus: 'complete' as const,
-      resourcesRemoved: 1,
-      removedResources: [
-        { type: 'Function', name: 'MyFunction', status: 'removed' as const },
-      ],
-    };
+    it('should handle missing token', () => {
+      // Arrange
+      const optionsWithoutToken = { ...defaultOptions };
+      delete optionsWithoutToken.token;
 
-    mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
-    mockRemoveParser.parse.mockReturnValue(mockRemoveResult);
-    mockGitHubClient.postPRComment.mockRejectedValue(
-      new Error('GitHub API rate limit exceeded')
-    );
+      // Act
+      const env = removeOperation.buildEnvironment(optionsWithoutToken);
 
-    const result = await removeOperation.execute(options);
+      // Assert
+      expect(env.SST_TOKEN).toBe('');
+      expect(env.SST_REMOVE_CONFIRM).toBe('true');
+    });
+  });
 
-    expect(result.success).toBe(true);
-    expect(result.resourcesRemoved).toBe(1);
-    expect(result.prCommentPosted).toBe(false);
-    expect(result.metadata.githubIntegration).toBe(false);
-    expect(result.completionStatus).toBe('complete');
+  describe('GitHub integration', () => {
+    it('should perform GitHub integration tasks', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_SUCCESS_OUTPUT,
+        exitCode: 0,
+        duration: 30000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_SUCCESS_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+
+      // Act
+      await removeOperation.execute(defaultOptions);
+
+      // Assert
+      expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'remove',
+          success: true,
+        }),
+        'on-success'
+      );
+      expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'remove',
+          success: true,
+        })
+      );
+    });
+
+    it('should handle GitHub integration errors gracefully', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_SUCCESS_OUTPUT,
+        exitCode: 0,
+        duration: 30000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_SUCCESS_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+      
+      (mockGitHubClient.createOrUpdateComment as MockedFunction<typeof mockGitHubClient.createOrUpdateComment>)
+        .mockRejectedValueOnce(new Error('GitHub API error'));
+      (mockGitHubClient.createWorkflowSummary as MockedFunction<typeof mockGitHubClient.createWorkflowSummary>)
+        .mockRejectedValueOnce(new Error('Summary error'));
+
+      // Act & Assert - Should not throw
+      const result = await removeOperation.execute(defaultOptions);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('CLI execution configuration', () => {
+    it('should execute SST CLI with correct parameters', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_SUCCESS_OUTPUT,
+        exitCode: 0,
+        duration: 30000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_SUCCESS_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+
+      // Act
+      await removeOperation.execute(defaultOptions);
+
+      // Assert
+      expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith(
+        'remove',
+        'test-stage',
+        expect.objectContaining({
+          env: expect.objectContaining({
+            SST_TOKEN: 'fake-token',
+            SST_REMOVE_CONFIRM: 'true',
+          }),
+          timeout: 900_000, // 15 minutes
+          maxOutputSize: 50000,
+        })
+      );
+    });
+
+    it('should use default timeout for remove operations', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: SST_REMOVE_SUCCESS_OUTPUT,
+        exitCode: 0,
+        duration: 30000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: SST_REMOVE_SUCCESS_OUTPUT,
+        stderr: '',
+        success: true,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+
+      // Act
+      await removeOperation.execute(defaultOptions);
+
+      // Assert
+      expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith(
+        'remove',
+        'test-stage',
+        expect.objectContaining({
+          timeout: 900_000, // 15 minutes
+        })
+      );
+    });
+  });
+
+  describe('edge cases and error handling', () => {
+    it('should handle CLI execution errors', async () => {
+      // Arrange
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockRejectedValueOnce(new Error('CLI execution failed'));
+
+      // Act & Assert
+      await expect(removeOperation.execute(defaultOptions)).rejects.toThrow('CLI execution failed');
+    });
+
+    it('should handle empty output', async () => {
+      // Arrange
+      const mockCLIResult: SSTCommandResult = {
+        output: '',
+        exitCode: 1,
+        duration: 5000,
+        command: 'sst remove --stage test-stage',
+        truncated: false,
+        stdout: '',
+        stderr: '',
+        success: false,
+        stage: 'test-stage',
+        operation: 'remove',
+      };
+      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
+        .mockResolvedValueOnce(mockCLIResult);
+
+      // Act
+      const result = await removeOperation.execute(defaultOptions);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.removedResources).toBeDefined();
+      expect(result.resourcesRemoved).toBe(0);
+    });
   });
 });
