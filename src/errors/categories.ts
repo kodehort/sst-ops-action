@@ -6,40 +6,46 @@
 /**
  * Comprehensive error categories for SST operations
  */
-export enum ErrorCategory {
-  CLI_EXECUTION = 'cli_execution',
-  OUTPUT_PARSING = 'output_parsing',
-  GITHUB_API = 'github_api',
-  VALIDATION = 'validation',
-  TIMEOUT = 'timeout',
-  PERMISSIONS = 'permissions',
-  NETWORK = 'network',
-  AUTHENTICATION = 'authentication',
-  RESOURCE_CONFLICT = 'resource_conflict',
-  QUOTA_EXCEEDED = 'quota_exceeded',
-  CONFIGURATION = 'configuration',
-  SYSTEM = 'system',
-}
+export const ERROR_CATEGORY_VALUES = [
+  'cli_execution',
+  'output_parsing',
+  'github_api',
+  'validation',
+  'timeout',
+  'permissions',
+  'network',
+  'authentication',
+  'resource_conflict',
+  'quota_exceeded',
+  'configuration',
+  'system'
+] as const;
+
+export type ErrorCategory = typeof ERROR_CATEGORY_VALUES[number];
 
 /**
  * Error severity levels for prioritization
  */
-export enum ErrorSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
+export const ERROR_SEVERITY_VALUES = [
+  'low',
+  'medium',
+  'high',
+  'critical'
+] as const;
+
+export type ErrorSeverity = typeof ERROR_SEVERITY_VALUES[number];
 
 /**
  * Error recovery strategies
  */
-export enum RecoveryStrategy {
-  RETRY = 'retry',
-  MANUAL_INTERVENTION = 'manual_intervention',
-  CONFIGURATION_UPDATE = 'configuration_update',
-  NOT_RECOVERABLE = 'not_recoverable',
-}
+export const RECOVERY_STRATEGY_VALUES = [
+  'retry',
+  'manual_intervention',
+  'configuration_update',
+  'not_recoverable'
+] as const;
+
+export type RecoveryStrategy = typeof RECOVERY_STRATEGY_VALUES[number];
 
 /**
  * Comprehensive error information structure
@@ -95,8 +101,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /authentication.*error/i,
       /credentials.*not.*found/i,
     ],
-    category: ErrorCategory.AUTHENTICATION,
-    severity: ErrorSeverity.HIGH,
+    category: 'authentication',
+    severity: 'high',
     getSuggestions: () => [
       'Configure AWS credentials using AWS CLI or environment variables',
       'Verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set',
@@ -105,7 +111,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+    recoveryStrategy: 'configuration_update',
   },
 
   // Permissions Errors (check before generic CLI errors)
@@ -121,8 +127,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /cloudformation.*permission/i,
       /iam.*permission/i,
     ],
-    category: ErrorCategory.PERMISSIONS,
-    severity: ErrorSeverity.HIGH,
+    category: 'permissions',
+    severity: 'high',
     getSuggestions: () => [
       'Check AWS IAM permissions for the user/role',
       'Verify GitHub token has necessary repository permissions',
@@ -131,7 +137,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+    recoveryStrategy: 'configuration_update',
   },
 
   // CLI Execution Errors (more general patterns)
@@ -141,8 +147,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /sst.*not found/i,
       /command.*sst.*not found/i,
     ],
-    category: ErrorCategory.CLI_EXECUTION,
-    severity: ErrorSeverity.CRITICAL,
+    category: 'cli_execution',
+    severity: 'critical',
     getSuggestions: () => [
       'Ensure SST CLI is installed: npm install -g @serverless-stack/cli',
       'Check that PATH environment variable includes node_modules/.bin',
@@ -151,7 +157,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: false,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+    recoveryStrategy: 'configuration_update',
   },
   {
     patterns: [
@@ -164,8 +170,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /command not found/i,
       /execution.*failed/i,
     ],
-    category: ErrorCategory.CLI_EXECUTION,
-    severity: ErrorSeverity.HIGH,
+    category: 'cli_execution',
+    severity: 'high',
     getSuggestions: (error) => {
       const suggestions = [
         'Review the SST CLI error output for specific failure details',
@@ -183,7 +189,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     },
     recoverable: true,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+    recoveryStrategy: 'manual_intervention',
   },
 
   // Output Parsing Errors
@@ -196,8 +202,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /parse.*error/i,
       /malformed.*output/i,
     ],
-    category: ErrorCategory.OUTPUT_PARSING,
-    severity: ErrorSeverity.LOW,
+    category: 'output_parsing',
+    severity: 'low',
     getSuggestions: () => [
       'Check SST CLI version compatibility with this action',
       'Verify that SST command completed successfully',
@@ -206,7 +212,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+    recoveryStrategy: 'manual_intervention',
   },
 
   // GitHub API Errors
@@ -218,8 +224,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /github.*token/i,
       /secondary.*rate.*limit/i,
     ],
-    category: ErrorCategory.GITHUB_API,
-    severity: ErrorSeverity.MEDIUM,
+    category: 'github_api',
+    severity: 'medium',
     getSuggestions: () => [
       'GitHub API rate limit exceeded - wait and retry',
       'Consider using a GitHub App token for higher rate limits',
@@ -227,14 +233,14 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: true,
-    recoveryStrategy: RecoveryStrategy.RETRY,
+    recoveryStrategy: 'retry',
   },
 
   // Timeout Errors
   {
     patterns: [/timeout/i, /timed out/i, /etimedout/i],
-    category: ErrorCategory.TIMEOUT,
-    severity: ErrorSeverity.MEDIUM,
+    category: 'timeout',
+    severity: 'medium',
     getSuggestions: () => [
       'Operation timed out - consider retrying',
       'Increase timeout values for long-running operations',
@@ -243,7 +249,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: true,
-    recoveryStrategy: RecoveryStrategy.RETRY,
+    recoveryStrategy: 'retry',
   },
 
   // Network Errors
@@ -258,8 +264,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /dns.*resolution.*failed/i,
       /connection.*failed/i,
     ],
-    category: ErrorCategory.NETWORK,
-    severity: ErrorSeverity.MEDIUM,
+    category: 'network',
+    severity: 'medium',
     getSuggestions: () => [
       'Check internet connectivity',
       'Verify DNS resolution for required services',
@@ -268,7 +274,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: true,
-    recoveryStrategy: RecoveryStrategy.RETRY,
+    recoveryStrategy: 'retry',
   },
 
   // Resource Conflicts
@@ -281,8 +287,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /conflicting.*resource/i,
       /resource.*conflict/i,
     ],
-    category: ErrorCategory.RESOURCE_CONFLICT,
-    severity: ErrorSeverity.MEDIUM,
+    category: 'resource_conflict',
+    severity: 'medium',
     getSuggestions: () => [
       'Check for existing resources with the same name',
       'Consider using different resource names or stages',
@@ -291,14 +297,14 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+    recoveryStrategy: 'configuration_update',
   },
 
   // Quota Exceeded
   {
     patterns: [/quota.*exceeded/i, /limit.*exceeded/i, /too many.*requests/i],
-    category: ErrorCategory.QUOTA_EXCEEDED,
-    severity: ErrorSeverity.HIGH,
+    category: 'quota_exceeded',
+    severity: 'high',
     getSuggestions: () => [
       'AWS service quota exceeded - request limit increase',
       'Clean up unused resources to free quota',
@@ -307,7 +313,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: true,
     retryable: true,
-    recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+    recoveryStrategy: 'manual_intervention',
   },
 
   // Configuration Errors
@@ -317,8 +323,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /invalid.*configuration/i,
       /sst\.config/i,
     ],
-    category: ErrorCategory.CONFIGURATION,
-    severity: ErrorSeverity.HIGH,
+    category: 'configuration',
+    severity: 'high',
     getSuggestions: () => [
       'Review SST configuration file (sst.config.ts/js)',
       'Check for syntax errors in configuration',
@@ -327,7 +333,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: false,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+    recoveryStrategy: 'configuration_update',
   },
 
   // System Resource Exhaustion
@@ -341,8 +347,8 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /no space left/i,
       /resource.*exhausted/i,
     ],
-    category: ErrorCategory.SYSTEM,
-    severity: ErrorSeverity.CRITICAL,
+    category: 'system',
+    severity: 'critical',
     getSuggestions: () => [
       'System resources exhausted - increase available memory or disk space',
       'Consider using a larger instance type or increasing resource limits',
@@ -351,6 +357,6 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     ],
     recoverable: false,
     retryable: false,
-    recoveryStrategy: RecoveryStrategy.NOT_RECOVERABLE,
+    recoveryStrategy: 'not_recoverable',
   },
 ];

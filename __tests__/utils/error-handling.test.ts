@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   categorizeError,
   createErrorSummary,
-  ErrorCategory,
-  ErrorSeverity,
+  type ErrorCategory,
+  type ErrorSeverity,
   handleOperationalError,
   handleValidationError,
   isRecoverableError,
@@ -47,8 +47,8 @@ describe('Error Handling', () => {
 
       const errorInfo = categorizeError(error);
 
-      expect(errorInfo.category).toBe(ErrorCategory.VALIDATION);
-      expect(errorInfo.severity).toBe(ErrorSeverity.HIGH);
+      expect(errorInfo.category).toBe('validation');
+      expect(errorInfo.severity).toBe('high');
       expect(errorInfo.message).toBe('Invalid operation');
       expect(errorInfo.suggestions).toEqual(['Use deploy, diff, or remove']);
       expect(errorInfo.recoverable).toBe(false);
@@ -66,8 +66,8 @@ describe('Error Handling', () => {
         const error = new Error(message);
         const errorInfo = categorizeError(error);
 
-        expect(errorInfo.category).toBe(ErrorCategory.AUTHENTICATION);
-        expect(errorInfo.severity).toBe(ErrorSeverity.CRITICAL);
+        expect(errorInfo.category).toBe('authentication');
+        expect(errorInfo.severity).toBe('critical');
         expect(
           errorInfo.suggestions.some((s) => s.includes('GitHub token'))
         ).toBe(true);
@@ -87,8 +87,8 @@ describe('Error Handling', () => {
         const error = new Error(message);
         const errorInfo = categorizeError(error);
 
-        expect(errorInfo.category).toBe(ErrorCategory.PERMISSION);
-        expect(errorInfo.severity).toBe(ErrorSeverity.HIGH);
+        expect(errorInfo.category).toBe('permission');
+        expect(errorInfo.severity).toBe('high');
         expect(
           errorInfo.suggestions.some((s) => s.includes('permissions'))
         ).toBe(true);
@@ -103,8 +103,8 @@ describe('Error Handling', () => {
         const error = new Error(message);
         const errorInfo = categorizeError(error);
 
-        expect(errorInfo.category).toBe(ErrorCategory.NETWORK);
-        expect(errorInfo.severity).toBe(ErrorSeverity.MEDIUM);
+        expect(errorInfo.category).toBe('network');
+        expect(errorInfo.severity).toBe('medium');
         expect(
           errorInfo.suggestions.some((s) => s.includes('connectivity'))
         ).toBe(true);
@@ -120,8 +120,8 @@ describe('Error Handling', () => {
         const error = new Error(message);
         const errorInfo = categorizeError(error);
 
-        expect(errorInfo.category).toBe(ErrorCategory.PARSING);
-        expect(errorInfo.severity).toBe(ErrorSeverity.MEDIUM);
+        expect(errorInfo.category).toBe('parsing');
+        expect(errorInfo.severity).toBe('medium');
         expect(
           errorInfo.suggestions.some((s) => s.includes('output format'))
         ).toBe(true);
@@ -141,8 +141,8 @@ describe('Error Handling', () => {
         const error = new Error(message);
         const errorInfo = categorizeError(error);
 
-        expect(errorInfo.category).toBe(ErrorCategory.SYSTEM);
-        expect(errorInfo.severity).toBe(ErrorSeverity.CRITICAL);
+        expect(errorInfo.category).toBe('system');
+        expect(errorInfo.severity).toBe('critical');
         expect(errorInfo.suggestions.some((s) => s.includes('installed'))).toBe(
           true
         );
@@ -154,8 +154,8 @@ describe('Error Handling', () => {
       const error = new Error('Something unexpected happened');
       const errorInfo = categorizeError(error);
 
-      expect(errorInfo.category).toBe(ErrorCategory.UNKNOWN);
-      expect(errorInfo.severity).toBe(ErrorSeverity.MEDIUM);
+      expect(errorInfo.category).toBe('unknown');
+      expect(errorInfo.severity).toBe('medium');
       expect(errorInfo.suggestions.length).toBeGreaterThan(0);
       expect(errorInfo.recoverable).toBe(true);
       expect(errorInfo.retryable).toBe(false);
@@ -402,7 +402,6 @@ describe('Error Handling', () => {
     it('should identify recoverable errors', () => {
       const recoverableErrors = [
         new Error('Network timeout'),
-        new Error('Parse error'),
         new Error('Unknown error'),
       ];
 
@@ -415,6 +414,7 @@ describe('Error Handling', () => {
       const nonRecoverableErrors = [
         new Error('Command not found'),
         new Error('Authentication failed'),
+        new Error('Parse error'),
         new ValidationError('Invalid input', 'field', 'value'),
       ];
 
@@ -429,14 +429,14 @@ describe('Error Handling', () => {
       const error = new Error('AUTHENTICATION Failed');
       const errorInfo = categorizeError(error);
 
-      expect(errorInfo.category).toBe(ErrorCategory.AUTHENTICATION);
+      expect(errorInfo.category).toBe('authentication');
     });
 
     it('should handle empty error messages', () => {
       const error = new Error('');
       const errorInfo = categorizeError(error);
 
-      expect(errorInfo.category).toBe(ErrorCategory.UNKNOWN);
+      expect(errorInfo.category).toBe('unknown');
       expect(errorInfo.suggestions.length).toBeGreaterThan(0);
     });
 
@@ -451,16 +451,16 @@ describe('Error Handling', () => {
       const severityTests = [
         {
           message: 'Authentication failed',
-          expectedSeverity: ErrorSeverity.CRITICAL,
+          expectedSeverity: 'critical' as const,
         },
         {
           message: 'Command not found',
-          expectedSeverity: ErrorSeverity.CRITICAL,
+          expectedSeverity: 'critical' as const,
         },
-        { message: 'Permission denied', expectedSeverity: ErrorSeverity.HIGH },
-        { message: 'Network timeout', expectedSeverity: ErrorSeverity.MEDIUM },
-        { message: 'Parse error', expectedSeverity: ErrorSeverity.MEDIUM },
-        { message: 'Unknown error', expectedSeverity: ErrorSeverity.MEDIUM },
+        { message: 'Permission denied', expectedSeverity: 'high' as const },
+        { message: 'Network timeout', expectedSeverity: 'medium' as const },
+        { message: 'Parse error', expectedSeverity: 'medium' as const },
+        { message: 'Unknown error', expectedSeverity: 'medium' as const },
       ];
 
       severityTests.forEach(({ message, expectedSeverity }) => {

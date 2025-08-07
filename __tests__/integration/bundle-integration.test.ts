@@ -4,7 +4,7 @@
  */
 
 import { execFile } from 'node:child_process';
-import { access, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { beforeEach, describe, expect, it } from 'vitest';
 

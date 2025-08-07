@@ -458,7 +458,7 @@ describe('OperationFormatter', () => {
           createMockDeployResource({
             name: 'OldFunction',
             type: 'AWS::Lambda::Function',
-            status: 'deleted',
+            status: 'unchanged',
           }),
         ],
       }) as DeployResult;

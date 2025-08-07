@@ -31,5 +31,3 @@ try {
 
 const wrapperPath = join(process.cwd(), 'dist', 'bundle-wrapper.cjs');
 writeFileSync(wrapperPath, wrapperContent, 'utf8');
-
-console.log(`✅ Bundle wrapper created: ${wrapperPath}`);

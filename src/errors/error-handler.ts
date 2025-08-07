@@ -13,9 +13,9 @@ import { ValidationError } from '../utils/validation';
 import {
   type ActionError,
   ERROR_PATTERNS,
-  ErrorCategory,
-  ErrorSeverity,
-  RecoveryStrategy,
+  type ErrorCategory,
+  type ErrorSeverity,
+  type RecoveryStrategy,
 } from './categories';
 
 /**
@@ -39,14 +39,14 @@ export class ErrorHandler {
     // Handle validation errors specially
     if (error instanceof ValidationError) {
       const result: ActionError = {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.HIGH,
+        category: 'validation',
+        severity: 'high',
         message: error.message,
         originalError: error,
         suggestions: error.suggestions,
         recoverable: false,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+        recoveryStrategy: 'configuration_update',
         context: { field: error.field, value: error.value },
       };
 
@@ -92,8 +92,8 @@ export class ErrorHandler {
 
     // Default categorization for unknown errors
     const result: ActionError = {
-      category: ErrorCategory.SYSTEM,
-      severity: ErrorSeverity.MEDIUM,
+      category: 'system',
+      severity: 'medium',
       message: error.message,
       originalError: error,
       suggestions: [
@@ -104,7 +104,7 @@ export class ErrorHandler {
       ],
       recoverable: true,
       retryable: false,
-      recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+      recoveryStrategy: 'manual_intervention',
     };
 
     if (context) {
@@ -151,10 +151,10 @@ export class ErrorHandler {
     options: OperationOptions
   ): Promise<void> {
     const severityEmoji = {
-      [ErrorSeverity.LOW]: '🟡',
-      [ErrorSeverity.MEDIUM]: '🟠',
-      [ErrorSeverity.HIGH]: '🔴',
-      [ErrorSeverity.CRITICAL]: '🚨',
+      low: '🟡',
+      medium: '🟠',
+      high: '🔴',
+      critical: '🚨',
     };
 
     // Main error log
@@ -291,17 +291,17 @@ export class ErrorHandler {
   ): Promise<void> {
     try {
       const severityEmoji = {
-        [ErrorSeverity.LOW]: '🟡',
-        [ErrorSeverity.MEDIUM]: '🟠',
-        [ErrorSeverity.HIGH]: '🔴',
-        [ErrorSeverity.CRITICAL]: '🚨',
+        low: '🟡',
+        medium: '🟠',
+        high: '🔴',
+        critical: '🚨',
       };
 
       const recoveryEmoji = {
-        [RecoveryStrategy.RETRY]: '🔄',
-        [RecoveryStrategy.MANUAL_INTERVENTION]: '🔧',
-        [RecoveryStrategy.CONFIGURATION_UPDATE]: '⚙️',
-        [RecoveryStrategy.NOT_RECOVERABLE]: '❌',
+        retry: '🔄',
+        manual_intervention: '🔧',
+        configuration_update: '⚙️',
+        not_recoverable: '❌',
       };
 
       let summary = `# ${severityEmoji[error.severity]} SST Operation Failed\n\n`;
@@ -347,19 +347,19 @@ export class ErrorHandler {
       summary += '## 🔧 Next Steps\n\n';
 
       switch (error.recoveryStrategy) {
-        case RecoveryStrategy.RETRY:
+        case 'retry':
           summary +=
             '🔄 **Retry the operation** - This error is typically temporary and may resolve on retry.\n\n';
           break;
-        case RecoveryStrategy.CONFIGURATION_UPDATE:
+        case 'configuration_update':
           summary +=
             '⚙️ **Update configuration** - Review and update your SST configuration or inputs.\n\n';
           break;
-        case RecoveryStrategy.MANUAL_INTERVENTION:
+        case 'manual_intervention':
           summary +=
             '🔧 **Manual investigation required** - Review the error details and apply the suggested solutions.\n\n';
           break;
-        case RecoveryStrategy.NOT_RECOVERABLE:
+        case 'not_recoverable':
           summary +=
             '❌ **Manual fix required** - This error requires investigation and manual resolution.\n\n';
           break;
@@ -418,8 +418,8 @@ export class ErrorHandler {
    */
   static isPartialSuccess(error: ActionError): boolean {
     return (
-      error.category === ErrorCategory.OUTPUT_PARSING ||
-      (error.recoverable && error.severity !== ErrorSeverity.CRITICAL)
+      error.category === 'output_parsing' ||
+      (error.recoverable && error.severity !== 'critical')
     );
   }
 
@@ -428,9 +428,9 @@ export class ErrorHandler {
    */
   static getExitCode(error: ActionError): number {
     switch (error.severity) {
-      case ErrorSeverity.CRITICAL:
+      case 'critical':
         return 2;
-      case ErrorSeverity.HIGH:
+      case 'high':
         return 1;
       default:
         return error.recoverable ? 0 : 1;

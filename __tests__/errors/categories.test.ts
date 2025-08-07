@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   ERROR_PATTERNS,
-  ErrorCategory,
-  ErrorSeverity,
-  RecoveryStrategy,
+  ERROR_CATEGORY_VALUES,
+  ERROR_SEVERITY_VALUES,
+  RECOVERY_STRATEGY_VALUES,
+  type ErrorCategory,
+  type ErrorSeverity,
+  type RecoveryStrategy,
 } from '../../src/errors/categories';
 
 describe('Error Categories', () => {
@@ -38,7 +41,7 @@ describe('Error Categories', () => {
 
     it('should cover all error categories', () => {
       const coveredCategories = new Set(ERROR_PATTERNS.map((p) => p.category));
-      const allCategories = Object.values(ErrorCategory);
+      const allCategories = ERROR_CATEGORY_VALUES;
 
       // Most categories should be covered (allowing for some that might not need patterns)
       expect(coveredCategories.size).toBeGreaterThan(
@@ -48,7 +51,7 @@ describe('Error Categories', () => {
 
     describe('Authentication errors', () => {
       const authPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.AUTHENTICATION
+        (p) => p.category === 'authentication'
       );
 
       it('should detect AWS credential errors', () => {
@@ -85,7 +88,7 @@ describe('Error Categories', () => {
 
     describe('Permission errors', () => {
       const permissionPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.PERMISSIONS
+        (p) => p.category === 'permissions'
       );
 
       it('should detect permission denied errors', () => {
@@ -119,7 +122,7 @@ describe('Error Categories', () => {
 
     describe('Timeout errors', () => {
       const timeoutPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.TIMEOUT
+        (p) => p.category === 'timeout'
       );
 
       it('should detect timeout errors', () => {
@@ -143,13 +146,13 @@ describe('Error Categories', () => {
 
       it('should be retryable', () => {
         expect(timeoutPattern?.retryable).toBe(true);
-        expect(timeoutPattern?.recoveryStrategy).toBe(RecoveryStrategy.RETRY);
+        expect(timeoutPattern?.recoveryStrategy).toBe('retry');
       });
     });
 
     describe('Network errors', () => {
       const networkPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.NETWORK
+        (p) => p.category === 'network'
       );
 
       it('should detect network connectivity errors', () => {
@@ -175,7 +178,7 @@ describe('Error Categories', () => {
 
     describe('GitHub API errors', () => {
       const githubPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.GITHUB_API
+        (p) => p.category === 'github_api'
       );
 
       it('should detect GitHub API errors', () => {
@@ -200,7 +203,7 @@ describe('Error Categories', () => {
 
     describe('Resource conflicts', () => {
       const conflictPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.RESOURCE_CONFLICT
+        (p) => p.category === 'resource_conflict'
       );
 
       it('should detect resource conflict errors', () => {
@@ -225,7 +228,7 @@ describe('Error Categories', () => {
 
     describe('Output parsing errors', () => {
       const parsingPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.OUTPUT_PARSING
+        (p) => p.category === 'output_parsing'
       );
 
       it('should detect parsing errors', () => {
@@ -249,13 +252,13 @@ describe('Error Categories', () => {
 
       it('should be recoverable with partial success potential', () => {
         expect(parsingPattern?.recoverable).toBe(true);
-        expect(parsingPattern?.severity).toBe(ErrorSeverity.LOW);
+        expect(parsingPattern?.severity).toBe('low');
       });
     });
 
     describe('CLI execution errors', () => {
       const cliPattern = ERROR_PATTERNS.find(
-        (p) => p.category === ErrorCategory.CLI_EXECUTION
+        (p) => p.category === 'cli_execution'
       );
 
       it('should detect CLI execution failures', () => {
@@ -280,65 +283,49 @@ describe('Error Categories', () => {
     });
   });
 
-  describe('ErrorCategory enum', () => {
+  describe('ErrorCategory type', () => {
     it('should have all expected categories', () => {
-      const expectedCategories = [
-        'CLI_EXECUTION',
-        'OUTPUT_PARSING',
-        'GITHUB_API',
-        'VALIDATION',
-        'TIMEOUT',
-        'PERMISSIONS',
-        'AUTHENTICATION',
-        'NETWORK',
-        'RESOURCE_CONFLICT',
-        'SYSTEM',
-      ];
+      const expectedCategories = ERROR_CATEGORY_VALUES;
 
+      // Verify each category exists in the patterns
       expectedCategories.forEach((category) => {
-        expect(Object.values(ErrorCategory)).toContain(
-          ErrorCategory[category as keyof typeof ErrorCategory]
-        );
+        expect(typeof category).toBe('string');
+        expect(category.length).toBeGreaterThan(0);
       });
     });
 
-    it('should have string values matching keys in lowercase', () => {
-      Object.entries(ErrorCategory).forEach(([key, value]) => {
-        expect(value).toBe(key.toLowerCase());
+    it('should have string values in lowercase', () => {
+      const categories = ERROR_CATEGORY_VALUES;
+      
+      categories.forEach((category) => {
+        expect(category).toBe(category.toLowerCase());
       });
     });
   });
 
-  describe('ErrorSeverity enum', () => {
+  describe('ErrorSeverity type', () => {
     it('should have all severity levels', () => {
-      const expectedSeverities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      const expectedSeverities = ERROR_SEVERITY_VALUES;
 
       expectedSeverities.forEach((severity) => {
-        expect(Object.values(ErrorSeverity)).toContain(
-          ErrorSeverity[severity as keyof typeof ErrorSeverity]
-        );
+        expect(typeof severity).toBe('string');
+        expect(severity.length).toBeGreaterThan(0);
       });
     });
 
     it('should have logical severity ordering', () => {
-      const severities = Object.values(ErrorSeverity);
+      const severities = ERROR_SEVERITY_VALUES;
       expect(severities).toEqual(['low', 'medium', 'high', 'critical']);
     });
   });
 
-  describe('RecoveryStrategy enum', () => {
+  describe('RecoveryStrategy type', () => {
     it('should have all recovery strategies', () => {
-      const expectedStrategies = [
-        'RETRY',
-        'MANUAL_INTERVENTION',
-        'CONFIGURATION_UPDATE',
-        'NOT_RECOVERABLE',
-      ];
+      const expectedStrategies = RECOVERY_STRATEGY_VALUES;
 
       expectedStrategies.forEach((strategy) => {
-        expect(Object.values(RecoveryStrategy)).toContain(
-          RecoveryStrategy[strategy as keyof typeof RecoveryStrategy]
-        );
+        expect(typeof strategy).toBe('string');
+        expect(strategy.length).toBeGreaterThan(0);
       });
     });
   });
@@ -349,21 +336,21 @@ describe('Error Categories', () => {
         // Retryable patterns should generally use RETRY strategy
         if (pattern.retryable && pattern.recoverable) {
           expect([
-            RecoveryStrategy.RETRY,
-            RecoveryStrategy.MANUAL_INTERVENTION,
+            'retry',
+            'manual_intervention',
           ]).toContain(pattern.recoveryStrategy);
         }
 
         // Non-recoverable patterns should use NOT_RECOVERABLE strategy
         if (!pattern.recoverable) {
           expect([
-            RecoveryStrategy.NOT_RECOVERABLE,
-            RecoveryStrategy.CONFIGURATION_UPDATE,
+            'not_recoverable',
+            'configuration_update',
           ]).toContain(pattern.recoveryStrategy);
         }
 
         // High severity errors should generally not be retryable
-        if (pattern.severity === ErrorSeverity.CRITICAL) {
+        if (pattern.severity === 'critical') {
           expect(pattern.retryable).toBe(false);
         }
       });

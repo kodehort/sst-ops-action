@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { SSTCLIExecutor, type SSTRunner } from '../../src/utils/cli';
 import type { OperationOptions } from '../../src/types';
+import { SSTCLIExecutor, type SSTRunner } from '../../src/utils/cli';
 
 describe('Configurable Runner', () => {
   describe('CLI Command Building', () => {
@@ -112,8 +112,14 @@ describe('Configurable Runner', () => {
 
   describe('Runner Validation', () => {
     it('should validate supported runners', () => {
-      const supportedRunners: SSTRunner[] = ['bun', 'npm', 'pnpm', 'yarn', 'sst'];
-      
+      const supportedRunners: SSTRunner[] = [
+        'bun',
+        'npm',
+        'pnpm',
+        'yarn',
+        'sst',
+      ];
+
       for (const runner of supportedRunners) {
         expect(['bun', 'npm', 'pnpm', 'yarn', 'sst']).toContain(runner);
       }
@@ -121,8 +127,10 @@ describe('Configurable Runner', () => {
 
     it('should throw error for unsupported runner', () => {
       const executor = new SSTCLIExecutor();
-      const buildRunnerCommand = (executor as any).buildRunnerCommand.bind(executor);
-      
+      const buildRunnerCommand = (executor as any).buildRunnerCommand.bind(
+        executor
+      );
+
       expect(() => {
         buildRunnerCommand('invalid-runner' as SSTRunner, 'deploy');
       }).toThrow('Unsupported runner: invalid-runner');
@@ -132,14 +140,37 @@ describe('Configurable Runner', () => {
   describe('Utility Commands', () => {
     it('should build utility commands for different runners', () => {
       const executor = new SSTCLIExecutor();
-      const buildUtilityCommand = (executor as any).buildUtilityCommand.bind(executor);
+      const buildUtilityCommand = (executor as any).buildUtilityCommand.bind(
+        executor
+      );
 
       // Test version command with different runners
-      expect(buildUtilityCommand('bun', ['--version'])).toEqual(['bun', 'sst', '--version']);
-      expect(buildUtilityCommand('npm', ['--version'])).toEqual(['npm', 'run', 'sst', '--', '--version']);
-      expect(buildUtilityCommand('pnpm', ['--version'])).toEqual(['pnpm', 'sst', '--version']);
-      expect(buildUtilityCommand('yarn', ['--version'])).toEqual(['yarn', 'sst', '--version']);
-      expect(buildUtilityCommand('sst', ['--version'])).toEqual(['sst', '--version']);
+      expect(buildUtilityCommand('bun', ['--version'])).toEqual([
+        'bun',
+        'sst',
+        '--version',
+      ]);
+      expect(buildUtilityCommand('npm', ['--version'])).toEqual([
+        'npm',
+        'run',
+        'sst',
+        '--',
+        '--version',
+      ]);
+      expect(buildUtilityCommand('pnpm', ['--version'])).toEqual([
+        'pnpm',
+        'sst',
+        '--version',
+      ]);
+      expect(buildUtilityCommand('yarn', ['--version'])).toEqual([
+        'yarn',
+        'sst',
+        '--version',
+      ]);
+      expect(buildUtilityCommand('sst', ['--version'])).toEqual([
+        'sst',
+        '--version',
+      ]);
     });
   });
 });

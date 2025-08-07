@@ -194,7 +194,10 @@ export class SSTCLIExecutor {
   /**
    * Build the command array with the specified runner
    */
-  private buildRunnerCommand(runner: SSTRunner, operation: SSTOperation): string[] {
+  private buildRunnerCommand(
+    runner: SSTRunner,
+    operation: SSTOperation
+  ): string[] {
     switch (runner) {
       case 'sst':
         // Direct SST binary execution
@@ -208,7 +211,9 @@ export class SSTCLIExecutor {
       case 'yarn':
         return ['yarn', 'sst', operation];
       default:
-        throw new Error(`Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`);
+        throw new Error(
+          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
+        );
     }
   }
 
@@ -229,7 +234,9 @@ export class SSTCLIExecutor {
       case 'yarn':
         return ['yarn', 'sst', ...args];
       default:
-        throw new Error(`Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`);
+        throw new Error(
+          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
+        );
     }
   }
 

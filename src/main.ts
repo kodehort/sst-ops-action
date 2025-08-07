@@ -24,7 +24,7 @@ function parseGitHubActionsInputs() {
     stage: core.getInput('stage'),
     token: core.getInput('token'),
     commentMode: core.getInput('comment-mode') || 'on-success',
-    failOnError: (core.getInput('fail-on-error') || 'true').toLowerCase() !== 'false',
+    failOnError: core.getBooleanInput('fail-on-error') ?? true,
     maxOutputSize: Number.parseInt(
       core.getInput('max-output-size') || '50000',
       10
@@ -167,7 +167,7 @@ export async function run(): Promise<void> {
       // Attempt to get operation options for error handling
       const basicOptions: OperationOptions = {
         stage: core.getInput('stage') || 'unknown',
-        failOnError: (core.getInput('fail-on-error') || 'true').toLowerCase() !== 'false',
+        failOnError: core.getBooleanInput('fail-on-error') ?? true,
       };
 
       await ErrorHandler.handleError(actionError, basicOptions);
