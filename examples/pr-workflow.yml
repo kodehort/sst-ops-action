@@ -1,0 +1,390 @@
+# Pull Request Workflow
+# 
+# This workflow demonstrates comprehensive PR automation using the SST Operations Action.
+# It shows infrastructure changes on PR creation, deploys preview environments with labels,
+# and cleans up resources when PRs are closed.
+#
+# Key Features:
+# - Automatic diff comments on PR creation/updates
+# - Optional preview environment deployment via labels
+# - Automatic cleanup on PR closure
+# - Comment-based deployment control
+
+name: PR Workflow
+
+on:
+  pull_request:
+    types: 
+      - opened
+      - synchronize
+      - reopened
+      - closed
+      - labeled
+      - unlabeled
+  issue_comment:
+    types: [created]
+
+# Required permissions for full PR integration
+permissions:
+  contents: read           # Read repository contents
+  pull-requests: write    # Create/update PR comments
+  issues: write           # Comment on issues
+  actions: write          # Upload workflow artifacts
+
+# Environment variables for SST deployment
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: us-east-1
+  SST_TELEMETRY_DISABLED: "1"
+
+jobs:
+  # Show infrastructure changes for all PRs
+  # This helps reviewers understand the impact of proposed changes
+  diff:
+    name: Infrastructure Diff
+    runs-on: ubuntu-latest
+    # Only run on PR open/update events (not close/label changes)
+    if: |
+      github.event_name == 'pull_request' && 
+      contains(fromJson('["opened", "synchronize", "reopened"]'), github.event.action)
+
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          # Checkout the PR head commit
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Show what infrastructure changes would be made
+      # This runs against the staging environment by default
+      - name: Show Infrastructure Changes
+        id: diff
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: diff
+          stage: staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Always comment with diff results for visibility
+          comment-mode: always
+          
+          # Don't fail on diff errors (infrastructure might not exist yet)
+          fail-on-error: false
+          
+          # Increase output size for detailed diff information
+          max-output-size: 100000
+
+      # Add custom analysis of the diff results
+      - name: Analyze Changes
+        if: always()
+        run: |
+          echo "## Infrastructure Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.diff.outputs.success }}" = "true" ]; then
+            CHANGES="${{ steps.diff.outputs.resource_changes }}"
+            SUMMARY="${{ steps.diff.outputs.diff_summary }}"
+            
+            echo "- **Changes Detected**: $CHANGES resources" >> $GITHUB_STEP_SUMMARY
+            echo "- **Summary**: $SUMMARY" >> $GITHUB_STEP_SUMMARY
+            
+            # Alert on large changes
+            if [ "$CHANGES" -gt "10" ]; then
+              echo "⚠️ **Large Change Alert**: This PR would modify $CHANGES resources" >> $GITHUB_STEP_SUMMARY
+              echo "Consider reviewing the changes carefully before merging." >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Check for destructive changes (implementation depends on your needs)
+            if echo "$SUMMARY" | grep -i "delete\|remove"; then
+              echo "🚨 **Destructive Changes Detected**: This PR includes resource deletions" >> $GITHUB_STEP_SUMMARY
+              echo "Please verify these changes are intentional." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Status**: Diff analysis failed" >> $GITHUB_STEP_SUMMARY
+            echo "- **Reason**: ${{ steps.diff.outputs.completion_status }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Deploy preview environments when requested via labels
+  # This allows selective deployment for testing specific PRs
+  deploy-preview:
+    name: Deploy Preview Environment
+    runs-on: ubuntu-latest
+    # Deploy when:
+    # 1. PR is labeled with 'deploy-preview'
+    # 2. PR is updated and already has the label
+    if: |
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'deploy-preview') ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy-preview') && 
+       contains(fromJson('["opened", "synchronize", "reopened"]'), github.event.action))
+
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Optional: Run tests before deployment
+      - name: Run Tests
+        run: |
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            echo "Running tests before preview deployment..."
+            npm test
+          else
+            echo "No tests defined, skipping test step"
+          fi
+
+      # Deploy to a PR-specific environment
+      # Using pr-{number} ensures each PR gets its own environment
+      - name: Deploy Preview Environment
+        id: deploy
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: pr-${{ github.event.number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Always comment with preview environment details
+          comment-mode: on-success
+          
+          # Continue workflow even if deployment fails
+          fail-on-error: false
+
+      # Create a detailed deployment comment
+      - name: Update PR with Preview Details
+        if: steps.deploy.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const urls = JSON.parse('${{ steps.deploy.outputs.urls }}');
+            const stage = '${{ steps.deploy.outputs.stage }}';
+            const app = '${{ steps.deploy.outputs.app }}';
+            const changes = '${{ steps.deploy.outputs.resource_changes }}';
+            
+            let comment = `## 🚀 Preview Environment Deployed
+            
+            **App**: ${app}  
+            **Stage**: ${stage}  
+            **Resources Changed**: ${changes}
+            `;
+            
+            if (urls.length > 0) {
+              comment += '\n**Deployed URLs**:\n';
+              urls.forEach(url => {
+                comment += `- ${url}\n`;
+              });
+            }
+            
+            if ('${{ steps.deploy.outputs.permalink }}') {
+              comment += `\n[View in SST Console](${{ steps.deploy.outputs.permalink }})`;
+            }
+            
+            comment += `\n\n> This preview environment will be automatically cleaned up when the PR is closed.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Handle deployment failures
+      - name: Handle Preview Deployment Failure
+        if: steps.deploy.outputs.success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ❌ Preview Environment Deployment Failed
+            
+            **Stage**: pr-${{ github.event.number }}  
+            **Status**: ${{ steps.deploy.outputs.completion_status }}
+            
+            The preview environment could not be deployed. Please check the workflow logs for details.
+            
+            You can retry by removing and re-adding the \`deploy-preview\` label.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Handle comment-based commands
+  # This allows users to control deployments via PR comments
+  comment-commands:
+    name: Handle Comment Commands
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'issue_comment' && 
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/deploy')
+
+    steps:
+      - name: Check Comment Permissions
+        uses: actions/github-script@v7
+        id: permission-check
+        with:
+          result-encoding: string
+          script: |
+            // Only allow repository collaborators to deploy via comments
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.actor
+              });
+              
+              const hasPermission = ['admin', 'write', 'maintain'].includes(data.permission);
+              return hasPermission ? 'true' : 'false';
+            } catch (error) {
+              console.log('Permission check failed:', error.message);
+              return 'false';
+            }
+
+      - name: React to Comment
+        if: steps.permission-check.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Add reaction to acknowledge the command
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Parse Command
+        if: steps.permission-check.outputs.result == 'true'
+        id: command
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          
+          if echo "$COMMENT" | grep -q "/deploy preview"; then
+            echo "action=deploy-preview" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "/deploy"; then
+            echo "action=deploy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add Deploy Label
+        if: steps.permission-check.outputs.result == 'true' && steps.command.outputs.action == 'deploy-preview'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['deploy-preview']
+            });
+
+  # Clean up resources when PR is closed
+  # This prevents accumulation of unused preview environments
+  cleanup:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' && 
+      github.event.action == 'closed' &&
+      contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Remove the PR-specific environment
+      - name: Remove Preview Environment
+        id: cleanup
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: remove
+          stage: pr-${{ github.event.number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Comment on successful cleanup
+          comment-mode: on-success
+          
+          # Don't fail if resources are already gone
+          fail-on-error: false
+
+      # Report cleanup results
+      - name: Report Cleanup
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ steps.cleanup.outputs.success }}';
+            const status = '${{ steps.cleanup.outputs.completion_status }}';
+            const changes = '${{ steps.cleanup.outputs.resource_changes }}';
+            
+            let comment;
+            
+            if (success === 'true') {
+              comment = `## 🧹 Preview Environment Cleaned Up
+              
+              **Stage**: pr-${{ github.event.number }}  
+              **Resources Removed**: ${changes}  
+              **Status**: ${status}
+              
+              The preview environment has been successfully cleaned up.`;
+            } else {
+              comment = `## ⚠️ Preview Environment Cleanup
+              
+              **Stage**: pr-${{ github.event.number }}  
+              **Status**: ${status}
+              
+              Some resources may not have been cleaned up automatically. 
+              Manual cleanup may be required.`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Remove the deploy label after cleanup
+      - name: Remove Deploy Label
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: 'deploy-preview'
+              });
+            } catch (error) {
+              console.log('Label may have already been removed:', error.message);
+            }

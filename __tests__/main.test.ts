@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorHandler } from '../src/errors/error-handler';
 import { ErrorCategory } from '../src/errors/categories';
+import { ErrorHandler } from '../src/errors/error-handler';
 import { run } from '../src/main';
 
 // Import modules to spy on - these will be mocked in beforeEach
@@ -13,6 +13,9 @@ describe('Main Entry Point', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
     // Mock process.env to control environment variables in tests
     process.env = {
       NODE_ENV: 'test',
@@ -20,9 +23,8 @@ describe('Main Entry Point', () => {
       GITHUB_ACTIONS: 'true',
     };
 
-    // Set up default input values (core is already mocked in setup.ts)
-    // The setup.ts already creates vi.fn() for these, so we can use them directly
-    (core.getInput as any).mockImplementation((name: string) => {
+    // Set up default input values using vi.spyOn to work with cleared mocks
+    vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
         operation: 'deploy',
         stage: 'staging',
@@ -33,7 +35,7 @@ describe('Main Entry Point', () => {
       return inputs[name] || '';
     });
 
-    (core.getBooleanInput as any).mockImplementation((name: string) => {
+    vi.spyOn(core, 'getBooleanInput').mockImplementation((name: string) => {
       if (name === 'fail-on-error') {
         return true;
       }
@@ -89,6 +91,13 @@ describe('Main Entry Point', () => {
     } as any);
 
     vi.spyOn(ErrorHandler, 'handleError').mockResolvedValue();
+
+    // Mock all core functions with spies
+    vi.spyOn(core, 'info').mockImplementation(() => {});
+    vi.spyOn(core, 'warning').mockImplementation(() => {});
+    vi.spyOn(core, 'error').mockImplementation(() => {});
+    vi.spyOn(core, 'setOutput').mockImplementation(() => {});
+    vi.spyOn(core, 'setFailed').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -112,7 +121,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -152,7 +161,7 @@ describe('Main Entry Point', () => {
     });
 
     it('should handle successful diff operation', async () => {
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'diff';
         }
@@ -180,7 +189,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -206,7 +215,7 @@ describe('Main Entry Point', () => {
     });
 
     it('should handle successful remove operation', async () => {
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'remove';
         }
@@ -232,7 +241,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -271,7 +280,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -286,7 +295,7 @@ describe('Main Entry Point', () => {
     });
 
     it('should handle operation failure with failOnError=false', async () => {
-      (core.getBooleanInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getBooleanInput').mockImplementation((name: string) => {
         if (name === 'fail-on-error') {
           return false;
         }
@@ -306,7 +315,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -324,7 +333,7 @@ describe('Main Entry Point', () => {
 
   describe('input validation', () => {
     it('should handle input validation errors', async () => {
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'invalid-operation';
         }
@@ -344,7 +353,7 @@ describe('Main Entry Point', () => {
         ['Valid operations are: deploy, diff, remove']
       );
 
-      (ErrorHandler.categorizeError as any).mockReturnValue({
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
         category: 'validation',
         severity: 'high',
         message: validationError.message,
@@ -365,7 +374,7 @@ describe('Main Entry Point', () => {
     });
 
     it('should validate required inputs', async () => {
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'stage') {
           return '';
         }
@@ -396,7 +405,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -422,7 +431,7 @@ describe('Main Entry Point', () => {
         truncated: true,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
 
@@ -444,10 +453,10 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
-      (OutputFormatter.formatForGitHubActions as any).mockImplementation(() => {
+      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockImplementation(() => {
         throw new Error('Output formatting failed');
       });
 
@@ -462,7 +471,7 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       };
 
-      (ErrorHandler.categorizeError as any).mockReturnValue(mockActionError);
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(mockActionError);
 
       await run();
 
@@ -477,7 +486,7 @@ describe('Main Entry Point', () => {
   describe('error handling', () => {
     it('should use enhanced error handling for operation failures', async () => {
       const operationError = new Error('SST CLI execution failed');
-      (operationRouter.executeOperation as any).mockRejectedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
         operationError
       );
 
@@ -492,7 +501,7 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       };
 
-      (ErrorHandler.categorizeError as any).mockReturnValue(mockActionError);
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(mockActionError);
 
       await run();
 
@@ -505,11 +514,11 @@ describe('Main Entry Point', () => {
 
     it('should handle error handler failures gracefully', async () => {
       const operationError = new Error('Operation failed');
-      (operationRouter.executeOperation as any).mockRejectedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
         operationError
       );
 
-      (ErrorHandler.categorizeError as any).mockReturnValue({
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
         category: 'system',
         severity: 'high',
         message: 'Operation failed',
@@ -520,7 +529,7 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       });
 
-      (ErrorHandler.handleError as any).mockRejectedValueOnce(
+      vi.spyOn(ErrorHandler, 'handleError').mockRejectedValueOnce(
         new Error('Error handler failed')
       );
 
@@ -538,7 +547,7 @@ describe('Main Entry Point', () => {
   describe('integration scenarios', () => {
     it('should handle end-to-end deploy workflow', async () => {
       // Simulate full deploy workflow
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
           operation: 'deploy',
           stage: 'production',
@@ -570,7 +579,7 @@ describe('Main Entry Point', () => {
       };
 
       // Override the formatter mock to return production-specific outputs
-      (OutputFormatter.formatForGitHubActions as any).mockReturnValue({
+      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockReturnValue({
         success: 'true',
         operation: 'deploy',
         stage: 'production',
@@ -589,7 +598,7 @@ describe('Main Entry Point', () => {
         removed_resources: '',
       });
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         deployResult
       );
 
@@ -655,7 +664,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      (core.getInput as any).mockImplementation((name: string) => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'remove';
         }
@@ -668,7 +677,7 @@ describe('Main Entry Point', () => {
         return '';
       });
 
-      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         partialResult
       );
 

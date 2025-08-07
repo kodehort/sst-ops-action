@@ -1,0 +1,165 @@
+# Basic Deploy Workflow
+# 
+# This workflow demonstrates the simplest possible deployment setup using the SST Operations Action.
+# It deploys to a staging environment on push to the develop branch and to production on push to main.
+#
+# Key Features:
+# - Automatic deployment based on branch
+# - Minimal configuration with sensible defaults
+# - Basic error handling and status reporting
+
+name: Basic Deploy
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Stage to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Required permissions for the action to function properly
+permissions:
+  contents: read           # Read repository contents
+  pull-requests: write    # Create/update PR comments (if applicable)
+  actions: write          # Upload workflow artifacts
+
+# Environment variables required for SST deployment
+env:
+  # AWS credentials should be stored as repository secrets
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: us-east-1
+  
+  # Disable SST telemetry for CI environments
+  SST_TELEMETRY_DISABLED: "1"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout the repository code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node.js environment
+      # SST requires Node.js 18+ for optimal performance
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Install project dependencies
+      # This step is crucial for SST to access required packages
+      - name: Install Dependencies
+        run: npm ci
+
+      # Determine deployment stage based on context
+      # - main branch -> production
+      # - develop branch -> staging  
+      # - manual dispatch -> user selection
+      - name: Determine Stage
+        id: stage
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "stage=${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            echo "stage=production" >> $GITHUB_OUTPUT
+          else
+            echo "stage=staging" >> $GITHUB_OUTPUT
+          fi
+
+      # Deploy using SST Operations Action
+      # This is the core step that handles the SST deployment
+      - name: Deploy SST Application
+        id: deploy
+        uses: kodehort/sst-operations-action@v1
+        with:
+          # Deploy operation (default, but explicit for clarity)
+          operation: deploy
+          
+          # Stage determined by previous step
+          stage: ${{ steps.stage.outputs.stage }}
+          
+          # GitHub token for API access and commenting
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Only comment on successful deployments
+          comment-mode: on-success
+          
+          # Fail the workflow if deployment fails
+          fail-on-error: true
+
+      # Report deployment results
+      # This step demonstrates how to use the action's outputs
+      - name: Report Results
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stage**: ${{ steps.deploy.outputs.stage }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **App**: ${{ steps.deploy.outputs.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Success**: ${{ steps.deploy.outputs.success }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.deploy.outputs.completion_status }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.deploy.outputs.success }}" = "true" ]; then
+            echo "- **Resources Changed**: ${{ steps.deploy.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
+            
+            # Display deployed URLs if available
+            URLS='${{ steps.deploy.outputs.urls }}'
+            if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+              echo "- **Deployed URLs**:" >> $GITHUB_STEP_SUMMARY
+              echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Include console permalink if available
+            if [ -n "${{ steps.deploy.outputs.permalink }}" ]; then
+              echo "- **Console**: ${{ steps.deploy.outputs.permalink }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Error**: Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # Optional: Run basic health checks on deployed URLs
+      # This demonstrates post-deployment validation
+      - name: Health Check
+        if: steps.deploy.outputs.success == 'true' && steps.deploy.outputs.urls != '[]'
+        run: |
+          echo "Running health checks on deployed URLs..."
+          URLS='${{ steps.deploy.outputs.urls }}'
+          
+          for url in $(echo "$URLS" | jq -r '.[]'); do
+            echo "Checking: $url"
+            
+            # Simple HTTP health check
+            if curl -f -s --max-time 30 "$url" > /dev/null; then
+              echo "✅ $url is responding"
+            else
+              echo "⚠️ $url health check failed (may not have health endpoint)"
+            fi
+          done
+
+      # Optional: Notify team on production deployments
+      # Replace with your preferred notification method
+      - name: Notify Team
+        if: steps.deploy.outputs.success == 'true' && steps.stage.outputs.stage == 'production'
+        run: |
+          echo "🚀 Production deployment successful!"
+          echo "Stage: ${{ steps.deploy.outputs.stage }}"
+          echo "App: ${{ steps.deploy.outputs.app }}"
+          echo "Resources changed: ${{ steps.deploy.outputs.resource_changes }}"
+          
+          # Add your notification logic here:
+          # - Slack webhook
+          # - Microsoft Teams
+          # - Email notification
+          # - Custom webhook

@@ -14,8 +14,6 @@ import {
   createMockSSTUrl,
 } from '../utils/test-types.js';
 
-// Additional mocks are handled in setup file
-
 // Mock GitHub API client
 const mockOctokit = {
   rest: {
@@ -26,8 +24,6 @@ const mockOctokit = {
     },
   },
 };
-
-// Mock artifact client will be handled by the mocked DefaultArtifactClient
 
 // Mock summary
 const mockSummary = {
@@ -43,20 +39,16 @@ describe('GitHubClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Setup default mock behaviors
+    mockOctokit.rest.issues.listComments.mockResolvedValue({ data: [] } as any);
 
-    // Setup GitHub mocks - github is already mocked in setup.ts
-    (github.getOctokit as any).mockReturnValue(mockOctokit as any);
-    (github as any).context = {
-      repo: { owner: 'test-owner', repo: 'test-repo' },
-      payload: {
-        pull_request: { number: 123 },
-      },
-    } as any;
-
+    // Reset github mock to return our mock octokit
+    const mockGetOctokit = github.getOctokit as any;
+    mockGetOctokit.mockReturnValue(mockOctokit);
+    
     // Setup core summary mock - core is already mocked in setup.ts
     (core as any).summary = mockSummary as any;
-
-    // Setup artifact mock - DefaultArtifactClient is already mocked in setup.ts
 
     client = new GitHubClient(mockToken);
   });
@@ -172,11 +164,17 @@ describe('GitHubClient', () => {
     });
 
     it('should skip comment creation when not in PR context', async () => {
-      (github as any).context.payload.pull_request = undefined;
+      // Temporarily modify the github context for this test
+      const originalPayload = (github as any).context.payload;
+      (github as any).context.payload = {};
 
-      await client.createOrUpdateComment(mockDeployResult, 'always');
+      const testClient = new GitHubClient(mockToken);
+      await testClient.createOrUpdateComment(mockDeployResult, 'always');
 
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+      
+      // Restore original payload
+      (github as any).context.payload = originalPayload;
     });
   });
 
@@ -268,11 +266,13 @@ describe('GitHubClient', () => {
     });
 
     it('should handle upload errors gracefully', async () => {
-      // Mock upload failure by creating a failing mock instance
-      const mockInstance = vi.mocked(DefaultArtifactClient).mock.results[0]?.value;
-      if (mockInstance) {
-        mockInstance.uploadArtifact.mockRejectedValue(new Error('Upload failed'));
-      }
+      // Create a new mock implementation that throws an error
+      const failingArtifactClient = {
+        uploadArtifact: vi.fn().mockRejectedValue(new Error('Upload failed')),
+      };
+      
+      // Mock DefaultArtifactClient to return our failing instance
+      (DefaultArtifactClient as any).mockReturnValueOnce(failingArtifactClient as any);
 
       await client.uploadArtifacts(mockRemoveResult);
 
@@ -380,7 +380,7 @@ describe('GitHubClient', () => {
       expect(commentBody).toContain('DEPLOY SUCCESS');
       expect(commentBody).toContain('**Stage:** `production`');
       expect(commentBody).toContain('**App:** `my-app`');
-      expect(commentBody).toContain('Total Changes:** 5');
+      expect(commentBody).toContain('Resource Changes:** 5');
       expect(commentBody).toContain('https://my-app.com');
       expect(commentBody).toContain('https://api.my-app.com');
       expect(commentBody).toContain(
@@ -436,7 +436,7 @@ describe('GitHubClient', () => {
       const commentBody =
         mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('SST REMOVE SUCCESS');
-      expect(commentBody).toContain('Resources Removed: 8');
+      expect(commentBody).toContain('**Resources Removed:** 8');
       expect(commentBody).toContain('All resources successfully removed');
     });
   });
