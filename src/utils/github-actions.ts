@@ -106,9 +106,9 @@ export function logValidationError(error: ValidationError): void {
 
   if (error.suggestions.length > 0) {
     core.info('Suggestions to fix this error:');
-    error.suggestions.forEach((suggestion) => {
+    for (const suggestion of error.suggestions) {
       core.info(`  • ${suggestion}`);
-    });
+    }
   }
 }
 
@@ -123,15 +123,15 @@ export function logOperationStart(inputs: ActionInputs): void {
 
   // Log additional context for debugging
   core.debug(`Max output size: ${inputs.maxOutputSize} bytes`);
-  core.debug(
-    `Token type: ${
-      inputs.token.startsWith('ghp_')
-        ? 'Personal Access Token'
-        : inputs.token.startsWith('github_pat_')
-          ? 'GitHub App Token'
-          : 'Test Token'
-    }`
-  );
+  let tokenType: string;
+  if (inputs.token.startsWith('ghp_')) {
+    tokenType = 'Personal Access Token';
+  } else if (inputs.token.startsWith('github_pat_')) {
+    tokenType = 'GitHub App Token';
+  } else {
+    tokenType = 'Test Token';
+  }
+  core.debug(`Token type: ${tokenType}`);
 }
 
 /**
@@ -188,46 +188,44 @@ export function handleOperationFailure(
 }
 
 /**
- * Create GitHub Actions summary for the operation
+ * Create basic operation summary table
  */
-export function createActionSummary(result: OperationResult): void {
+function createOperationTable(result: OperationResult): string {
   const statusEmoji = result.success ? '✅' : '❌';
   const statusColor = result.success ? '🟢' : '🔴';
-
+  
   let summary = `# ${statusEmoji} SST ${result.operation.charAt(0).toUpperCase() + result.operation.slice(1)} Operation\n\n`;
-
-  // Operation details
+  
   summary += '| Field | Value |\n';
   summary += '|-------|-------|\n';
   summary += `| ${statusColor} Status | ${result.completionStatus} |\n`;
   summary += `| 🏷️ Stage | \`${result.stage}\` |\n`;
   summary += `| 📱 App | \`${result.app || 'N/A'}\` |\n`;
   summary += `| 📊 Resource Changes | ${('resourceChanges' in result ? result.resourceChanges : 0) || 0} |\n`;
-
+  
   if (result.permalink) {
     summary += `| 🔗 Console | [View in SST Console](${result.permalink}) |\n`;
   }
-
+  
   summary += '\n';
+  return summary;
+}
 
-  // Operation-specific details
-  if (
-    result.operation === 'deploy' &&
-    'urls' in result &&
-    result.urls?.length
-  ) {
+/**
+ * Add operation-specific details to summary
+ */
+function addOperationDetails(result: OperationResult, initialSummary: string): string {
+  let summary = initialSummary;
+  
+  if (result.operation === 'deploy' && 'urls' in result && result.urls?.length) {
     summary += '## 🌐 Deployed URLs\n\n';
-    result.urls.forEach((url) => {
+    for (const url of result.urls) {
       summary += `- **${url.name}** (${url.type}): ${url.url}\n`;
-    });
+    }
     summary += '\n';
   }
 
-  if (
-    result.operation === 'diff' &&
-    'changeSummary' in result &&
-    result.changeSummary
-  ) {
+  if (result.operation === 'diff' && 'changeSummary' in result && result.changeSummary) {
     summary += '## 📋 Change Summary\n\n';
     summary += `${result.changeSummary}\n\n`;
   }
@@ -236,8 +234,16 @@ export function createActionSummary(result: OperationResult): void {
     summary += '## 🗑️ Resources Removed\n\n';
     summary += `Total resources removed: **${result.resourcesRemoved || 0}**\n\n`;
   }
+  
+  return summary;
+}
 
-  // Error details
+/**
+ * Add error and warning details to summary
+ */
+function addErrorDetails(result: OperationResult, initialSummary: string): string {
+  let summary = initialSummary;
+  
   if (!result.success && result.error) {
     summary += '## ❌ Error Details\n\n';
     summary += '```\n';
@@ -245,13 +251,21 @@ export function createActionSummary(result: OperationResult): void {
     summary += '\n```\n\n';
   }
 
-  // Truncation warning
   if (result.truncated) {
-    summary +=
-      '> ⚠️ **Note**: Output was truncated due to size limits. Check the raw output for complete details.\n\n';
+    summary += '> ⚠️ **Note**: Output was truncated due to size limits. Check the raw output for complete details.\n\n';
   }
+  
+  return summary;
+}
 
-  // Write summary
+/**
+ * Create GitHub Actions summary for the operation
+ */
+export function createActionSummary(result: OperationResult): void {
+  let summary = createOperationTable(result);
+  summary = addOperationDetails(result, summary);
+  summary = addErrorDetails(result, summary);
+  
   core.summary.addRaw(summary).write();
 }
 

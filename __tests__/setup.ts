@@ -39,7 +39,12 @@ vi.mock('@actions/github', () => ({
 }));
 
 vi.mock('@actions/artifact', () => ({
-  create: vi.fn(),
+  DefaultArtifactClient: vi.fn().mockImplementation(() => ({
+    uploadArtifact: vi.fn().mockResolvedValue({
+      artifactName: 'test-artifact',
+      size: 1024,
+    }),
+  })),
 }));
 
 vi.mock('@actions/io', () => ({
