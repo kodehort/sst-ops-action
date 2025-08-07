@@ -433,7 +433,7 @@ describe('OperationFormatter', () => {
         stage: 'staging',
         app: 'my-app',
         rawOutput: 'Deploy completed',
-        resourceChanges: 4,
+        resourceChanges: 5,
         resources: [
           createMockDeployResource({
             name: 'Function1',
@@ -454,6 +454,11 @@ describe('OperationFormatter', () => {
             name: 'Bucket1',
             type: 'AWS::S3::Bucket',
             status: 'unchanged',
+          }),
+          createMockDeployResource({
+            name: 'OldFunction',
+            type: 'AWS::Lambda::Function',
+            status: 'deleted',
           }),
         ],
       }) as DeployResult;

@@ -1,0 +1,567 @@
+# Advanced Error Handling Patterns
+# 
+# This workflow demonstrates sophisticated error handling and recovery strategies
+# when using the SST Operations Action. It includes retry logic, fallback strategies,
+# partial failure handling, and comprehensive error reporting.
+#
+# Key Features:
+# - Intelligent retry mechanisms with backoff
+# - Graceful handling of partial failures
+# - Comprehensive error classification and reporting
+# - Fallback deployment strategies
+# - Alert escalation based on failure types
+
+name: Advanced Error Handling
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      force_deployment:
+        description: 'Force deployment even after failures'
+        required: false
+        default: false
+        type: boolean
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Comprehensive permissions for error handling
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: write
+  checks: write
+
+# Environment configuration with fallbacks
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  SST_TELEMETRY_DISABLED: "1"
+  # Enable debug logging for troubleshooting
+  ACTIONS_STEP_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG || 'false' }}
+
+jobs:
+  # Pre-deployment validation to catch issues early
+  pre-deployment-validation:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    
+    outputs:
+      validation_passed: ${{ steps.validation.outputs.success }}
+      aws_accessible: ${{ steps.aws-check.outputs.accessible }}
+      sst_config_valid: ${{ steps.sst-check.outputs.valid }}
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Install dependencies with error handling
+      - name: Install Dependencies
+        id: install
+        run: |
+          echo "Installing dependencies..."
+          
+          # Retry npm install up to 3 times
+          for attempt in {1..3}; do
+            echo "Installation attempt $attempt..."
+            if npm ci; then
+              echo "Dependencies installed successfully"
+              break
+            elif [ $attempt -eq 3 ]; then
+              echo "ERROR: Failed to install dependencies after 3 attempts"
+              echo "This might indicate:"
+              echo "- Network connectivity issues"
+              echo "- Invalid package.json or package-lock.json"
+              echo "- Registry access problems"
+              exit 1
+            else
+              echo "Installation failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
+      # Validate AWS credentials and access
+      - name: Validate AWS Access
+        id: aws-check
+        continue-on-error: true
+        run: |
+          echo "Validating AWS credentials and access..."
+          
+          # Check AWS credentials are configured
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "ERROR: AWS credentials not properly configured"
+            echo "accessible=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Test AWS CLI access
+          if ! aws sts get-caller-identity >/dev/null 2>&1; then
+            echo "ERROR: Cannot authenticate with AWS"
+            echo "This might indicate:"
+            echo "- Invalid AWS credentials"
+            echo "- Network connectivity issues"
+            echo "- AWS service outage"
+            echo "accessible=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "AWS access validated successfully"
+          echo "accessible=true" >> $GITHUB_OUTPUT
+
+      # Validate SST configuration
+      - name: Validate SST Configuration
+        id: sst-check
+        continue-on-error: true
+        run: |
+          echo "Validating SST configuration..."
+          
+          # Check for SST configuration files
+          if [ ! -f "sst.config.ts" ] && [ ! -f "sst.config.js" ] && [ ! -f "sst.json" ]; then
+            echo "ERROR: No SST configuration file found"
+            echo "Expected one of: sst.config.ts, sst.config.js, or sst.json"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Test SST CLI basic functionality
+          if ! npx sst --version >/dev/null 2>&1; then
+            echo "ERROR: SST CLI not accessible or not installed"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "SST configuration validated successfully"
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+      # Overall validation summary
+      - name: Validation Summary
+        id: validation
+        run: |
+          AWS_OK="${{ steps.aws-check.outputs.accessible }}"
+          SST_OK="${{ steps.sst-check.outputs.valid }}"
+          
+          echo "## Pre-deployment Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Dependencies: ✅ Installed" >> $GITHUB_STEP_SUMMARY
+          echo "- AWS Access: $([ "$AWS_OK" = "true" ] && echo "✅ Valid" || echo "❌ Invalid")" >> $GITHUB_STEP_SUMMARY
+          echo "- SST Config: $([ "$SST_OK" = "true" ] && echo "✅ Valid" || echo "❌ Invalid")" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$AWS_OK" = "true" ] && [ "$SST_OK" = "true" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "All validations passed, ready for deployment"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "Validation failures detected, deployment will be skipped"
+            exit 1
+          fi
+
+  # Main deployment with comprehensive error handling
+  deploy-with-error-handling:
+    name: Deploy with Error Handling
+    runs-on: ubuntu-latest
+    needs: pre-deployment-validation
+    if: |
+      needs.pre-deployment-validation.outputs.validation_passed == 'true' ||
+      github.event.inputs.force_deployment == 'true'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Determine deployment parameters
+      - name: Determine Deployment Parameters
+        id: params
+        run: |
+          # Determine stage based on context
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            STAGE="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            STAGE="production"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            STAGE="staging"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            STAGE="pr-${{ github.event.number }}"
+          else
+            STAGE="staging"
+          fi
+          
+          echo "stage=$STAGE" >> $GITHUB_OUTPUT
+          echo "Deploying to stage: $STAGE"
+
+      # First deployment attempt
+      - name: Primary Deployment Attempt
+        id: deploy-primary
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: ${{ steps.params.outputs.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never  # Handle comments manually
+          fail-on-error: false  # We'll handle errors ourselves
+          max-output-size: 100000
+        continue-on-error: true
+
+      # Analyze primary deployment failure
+      - name: Analyze Primary Failure
+        id: analyze-failure
+        if: steps.deploy-primary.outputs.success != 'true'
+        run: |
+          echo "Primary deployment failed, analyzing..."
+          
+          SUCCESS="${{ steps.deploy-primary.outputs.success }}"
+          STATUS="${{ steps.deploy-primary.outputs.completion_status }}"
+          TRUNCATED="${{ steps.deploy-primary.outputs.truncated }}"
+          
+          echo "## Primary Deployment Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- Success: $SUCCESS" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- Output Truncated: $TRUNCATED" >> $GITHUB_STEP_SUMMARY
+          
+          # Classify failure type for appropriate response
+          case "$STATUS" in
+            "timeout")
+              echo "failure_type=timeout" >> $GITHUB_OUTPUT
+              echo "retry_recommended=true" >> $GITHUB_OUTPUT
+              echo "Failure type: Timeout - retry recommended"
+              ;;
+            "partial")
+              echo "failure_type=partial" >> $GITHUB_OUTPUT
+              echo "retry_recommended=true" >> $GITHUB_OUTPUT
+              echo "Failure type: Partial deployment - retry may resolve"
+              ;;
+            "failed")
+              echo "failure_type=hard_failure" >> $GITHUB_OUTPUT
+              echo "retry_recommended=false" >> $GITHUB_OUTPUT
+              echo "Failure type: Hard failure - manual intervention likely required"
+              ;;
+            *)
+              echo "failure_type=unknown" >> $GITHUB_OUTPUT
+              echo "retry_recommended=true" >> $GITHUB_OUTPUT
+              echo "Failure type: Unknown - attempting retry"
+              ;;
+          esac
+
+      # Wait before retry to allow for transient issues to resolve
+      - name: Wait Before Retry
+        if: |
+          steps.deploy-primary.outputs.success != 'true' && 
+          steps.analyze-failure.outputs.retry_recommended == 'true'
+        run: |
+          echo "Waiting 60 seconds before retry attempt..."
+          sleep 60
+
+      # Retry deployment with different strategy
+      - name: Retry Deployment
+        id: deploy-retry
+        if: |
+          steps.deploy-primary.outputs.success != 'true' && 
+          steps.analyze-failure.outputs.retry_recommended == 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: ${{ steps.params.outputs.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+          # Increase output size for better error diagnosis
+          max-output-size: 200000
+        continue-on-error: true
+
+      # Final attempt with maximum verbosity (for critical environments)
+      - name: Final Deployment Attempt
+        id: deploy-final
+        if: |
+          steps.deploy-retry.outputs.success != 'true' && 
+          steps.params.outputs.stage == 'production' &&
+          steps.analyze-failure.outputs.failure_type != 'hard_failure'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: ${{ steps.params.outputs.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+          max-output-size: 500000
+        continue-on-error: true
+
+      # Determine final deployment status
+      - name: Determine Final Status
+        id: final-status
+        run: |
+          # Check results in order of attempts
+          if [ "${{ steps.deploy-primary.outputs.success }}" = "true" ]; then
+            echo "final_success=true" >> $GITHUB_OUTPUT
+            echo "final_attempt=primary" >> $GITHUB_OUTPUT
+            echo "resource_changes=${{ steps.deploy-primary.outputs.resource_changes }}" >> $GITHUB_OUTPUT
+            echo "urls=${{ steps.deploy-primary.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "permalink=${{ steps.deploy-primary.outputs.permalink }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.deploy-retry.outputs.success }}" = "true" ]; then
+            echo "final_success=true" >> $GITHUB_OUTPUT
+            echo "final_attempt=retry" >> $GITHUB_OUTPUT
+            echo "resource_changes=${{ steps.deploy-retry.outputs.resource_changes }}" >> $GITHUB_OUTPUT
+            echo "urls=${{ steps.deploy-retry.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "permalink=${{ steps.deploy-retry.outputs.permalink }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.deploy-final.outputs.success }}" = "true" ]; then
+            echo "final_success=true" >> $GITHUB_OUTPUT
+            echo "final_attempt=final" >> $GITHUB_OUTPUT
+            echo "resource_changes=${{ steps.deploy-final.outputs.resource_changes }}" >> $GITHUB_OUTPUT
+            echo "urls=${{ steps.deploy-final.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "permalink=${{ steps.deploy-final.outputs.permalink }}" >> $GITHUB_OUTPUT
+          else
+            echo "final_success=false" >> $GITHUB_OUTPUT
+            echo "final_attempt=all_failed" >> $GITHUB_OUTPUT
+            echo "resource_changes=0" >> $GITHUB_OUTPUT
+            echo "urls=[]" >> $GITHUB_OUTPUT
+            echo "permalink=" >> $GITHUB_OUTPUT
+          fi
+
+      # Create comprehensive deployment report
+      - name: Create Deployment Report
+        if: always()
+        run: |
+          FINAL_SUCCESS="${{ steps.final-status.outputs.final_success }}"
+          FINAL_ATTEMPT="${{ steps.final-status.outputs.final_attempt }}"
+          STAGE="${{ steps.params.outputs.stage }}"
+          
+          echo "## Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "**Stage**: $STAGE" >> $GITHUB_STEP_SUMMARY
+          echo "**Final Status**: $([ "$FINAL_SUCCESS" = "true" ] && echo "✅ Success" || echo "❌ Failed")" >> $GITHUB_STEP_SUMMARY
+          echo "**Successful Attempt**: $FINAL_ATTEMPT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Attempt details
+          echo "### Attempt Details" >> $GITHUB_STEP_SUMMARY
+          echo "| Attempt | Status | Completion Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|------------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary | ${{ steps.deploy-primary.outputs.success }} | ${{ steps.deploy-primary.outputs.completion_status }} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.deploy-retry.outputs.success }}" ]; then
+            echo "| Retry | ${{ steps.deploy-retry.outputs.success }} | ${{ steps.deploy-retry.outputs.completion_status }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ steps.deploy-final.outputs.success }}" ]; then
+            echo "| Final | ${{ steps.deploy-final.outputs.success }} | ${{ steps.deploy-final.outputs.completion_status }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$FINAL_SUCCESS" = "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Deployment Results" >> $GITHUB_STEP_SUMMARY
+            echo "- **Resources Changed**: ${{ steps.final-status.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
+            
+            URLS='${{ steps.final-status.outputs.urls }}'
+            if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+              echo "- **Deployed URLs**:" >> $GITHUB_STEP_SUMMARY
+              echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ -n "${{ steps.final-status.outputs.permalink }}" ]; then
+              echo "- **Console**: ${{ steps.final-status.outputs.permalink }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      # Handle PR comments based on deployment outcome
+      - name: Update PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ steps.final-status.outputs.final_success }}' === 'true';
+            const attempt = '${{ steps.final-status.outputs.final_attempt }}';
+            const stage = '${{ steps.params.outputs.stage }}';
+            const urls = JSON.parse('${{ steps.final-status.outputs.urls }}' || '[]');
+            
+            let comment = `## ${success ? '🚀' : '❌'} Deployment ${success ? 'Successful' : 'Failed'}\n\n`;
+            comment += `**Stage**: ${stage}\n`;
+            comment += `**Final Status**: ${success ? 'Success' : 'Failed'}\n`;
+            comment += `**Successful Attempt**: ${attempt}\n\n`;
+            
+            if (success) {
+              comment += '### Deployment Details\n';
+              comment += `- **Resources Changed**: ${{ steps.final-status.outputs.resource_changes }}\n`;
+              
+              if (urls.length > 0) {
+                comment += '- **Deployed URLs**:\n';
+                urls.forEach(url => comment += `  - ${url}\n`);
+              }
+              
+              if ('${{ steps.final-status.outputs.permalink }}') {
+                comment += `- **Console**: ${{ steps.final-status.outputs.permalink }}\n`;
+              }
+              
+              if (attempt !== 'primary') {
+                comment += '\n> ⚠️ **Note**: Deployment succeeded after retry. Consider investigating the initial failure.\n';
+              }
+            } else {
+              comment += '### Failure Analysis\n';
+              comment += `- **Primary Attempt**: ${{ steps.deploy-primary.outputs.completion_status }}\n`;
+              
+              if ('${{ steps.deploy-retry.outputs.completion_status }}') {
+                comment += `- **Retry Attempt**: ${{ steps.deploy-retry.outputs.completion_status }}\n`;
+              }
+              
+              if ('${{ steps.deploy-final.outputs.completion_status }}') {
+                comment += `- **Final Attempt**: ${{ steps.deploy-final.outputs.completion_status }}\n`;
+              }
+              
+              comment += '\n> 🔧 **Next Steps**: Check the workflow logs for detailed error information.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Set final workflow status
+      - name: Set Workflow Status
+        if: steps.final-status.outputs.final_success != 'true'
+        run: |
+          echo "❌ Deployment failed after all retry attempts"
+          echo "Stage: ${{ steps.params.outputs.stage }}"
+          echo "Check the deployment report above for detailed failure analysis"
+          exit 1
+
+  # Post-deployment validation and rollback preparation
+  post-deployment-validation:
+    name: Post-deployment Validation
+    runs-on: ubuntu-latest
+    needs: deploy-with-error-handling
+    if: success()
+    
+    steps:
+      - name: Validate Deployed Application
+        id: health-check
+        continue-on-error: true
+        run: |
+          echo "Validating deployed application..."
+          
+          URLS='${{ needs.deploy-with-error-handling.outputs.urls }}'
+          
+          if [ "$URLS" = "[]" ] || [ -z "$URLS" ]; then
+            echo "No URLs to validate"
+            echo "health_check_passed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          ALL_HEALTHY=true
+          
+          for url in $(echo "$URLS" | jq -r '.[]'); do
+            echo "Checking health for: $url"
+            
+            # Try health endpoint first
+            if curl -f -s --max-time 30 "$url/health" >/dev/null 2>&1; then
+              echo "✅ $url/health is responding"
+            # Fall back to root endpoint
+            elif curl -f -s --max-time 30 "$url" >/dev/null 2>&1; then
+              echo "✅ $url is responding (no health endpoint)"
+            else
+              echo "❌ $url is not responding"
+              ALL_HEALTHY=false
+            fi
+          done
+          
+          if [ "$ALL_HEALTHY" = "true" ]; then
+            echo "All endpoints are healthy"
+            echo "health_check_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Some endpoints are not healthy"
+            echo "health_check_passed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Prepare rollback information in case issues are discovered later
+      - name: Prepare Rollback Information
+        run: |
+          echo "## Rollback Information" >> $GITHUB_STEP_SUMMARY
+          echo "If issues are discovered with this deployment:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# To rollback this deployment:" >> $GITHUB_STEP_SUMMARY
+          echo "git revert ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "git push origin ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Or trigger a manual deployment of the previous known-good commit." >> $GITHUB_STEP_SUMMARY
+
+  # Error notification and escalation
+  error-notification:
+    name: Error Notification
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-validation, deploy-with-error-handling, post-deployment-validation]
+    if: failure() || (success() && needs.post-deployment-validation.outputs.health_check_passed == 'false')
+    
+    steps:
+      - name: Classify Error Severity
+        id: classify
+        run: |
+          # Determine error severity based on stage and failure type
+          STAGE="${{ needs.deploy-with-error-handling.outputs.stage }}"
+          VALIDATION_FAILED="${{ needs.pre-deployment-validation.result }}"
+          DEPLOYMENT_FAILED="${{ needs.deploy-with-error-handling.result }}"
+          HEALTH_FAILED="${{ needs.post-deployment-validation.outputs.health_check_passed }}"
+          
+          if [ "$STAGE" = "production" ]; then
+            if [ "$DEPLOYMENT_FAILED" = "failure" ] || [ "$HEALTH_FAILED" = "false" ]; then
+              echo "severity=critical" >> $GITHUB_OUTPUT
+              echo "escalate=true" >> $GITHUB_OUTPUT
+            else
+              echo "severity=high" >> $GITHUB_OUTPUT
+              echo "escalate=false" >> $GITHUB_OUTPUT
+            fi
+          elif [ "$STAGE" = "staging" ]; then
+            echo "severity=medium" >> $GITHUB_OUTPUT
+            echo "escalate=false" >> $GITHUB_OUTPUT
+          else
+            echo "severity=low" >> $GITHUB_OUTPUT
+            echo "escalate=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Error Notification
+        run: |
+          SEVERITY="${{ steps.classify.outputs.severity }}"
+          ESCALATE="${{ steps.classify.outputs.escalate }}"
+          
+          echo "## 🚨 Deployment Error Notification"
+          echo "**Severity**: $SEVERITY"
+          echo "**Escalation Required**: $ESCALATE"
+          echo "**Workflow**: ${{ github.workflow }}"
+          echo "**Run**: ${{ github.run_id }}"
+          echo "**Commit**: ${{ github.sha }}"
+          echo "**Actor**: ${{ github.actor }}"
+          
+          # Here you would integrate with your notification system:
+          # - Slack webhooks
+          # - PagerDuty alerts
+          # - Email notifications
+          # - Microsoft Teams
+          # - Custom monitoring systems
+          
+          if [ "$ESCALATE" = "true" ]; then
+            echo "🚨 CRITICAL: Production deployment failed - immediate attention required!"
+            # Add critical escalation logic here
+          fi

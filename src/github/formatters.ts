@@ -162,7 +162,8 @@ export class OperationFormatter {
       const urlsToShow = result.urls.slice(0, this.config.maxUrlsToShow);
 
       for (const url of urlsToShow) {
-        summary += `- **${url.type}**: [${url.url}](${url.url})\n`;
+        const capitalizedType = this.formatUrlType(url.type);
+        summary += `- **${capitalizedType}**: [${url.url}](${url.url})\n`;
       }
 
       if (result.urls.length > this.config.maxUrlsToShow) {
@@ -408,6 +409,20 @@ All resources have been successfully removed.`;
         return '➖ Unchanged';
       default:
         return `${action}`;
+    }
+  }
+
+  /**
+   * Format URL type with proper capitalization
+   */
+  private formatUrlType(type: string): string {
+    switch (type.toLowerCase()) {
+      case 'api':
+        return 'API';
+      case 'web':
+        return 'Web';
+      default:
+        return type.charAt(0).toUpperCase() + type.slice(1);
     }
   }
 

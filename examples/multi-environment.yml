@@ -1,0 +1,441 @@
+# Multi-Environment Pipeline
+# 
+# This workflow demonstrates a production-grade multi-environment deployment pipeline.
+# It implements a staged deployment approach: develop → staging → production with
+# appropriate gates, approvals, and validation at each stage.
+#
+# Key Features:
+# - Automatic staging deployment from develop branch
+# - Manual approval gates for production
+# - Integration testing between stages
+# - Rollback capabilities
+# - Environment-specific configurations
+
+name: Multi-Environment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip integration tests'
+        required: false
+        default: false
+        type: boolean
+
+# Permissions required for the pipeline
+permissions:
+  contents: read           # Read repository contents
+  pull-requests: write    # Create/update PR comments
+  actions: write          # Upload workflow artifacts
+  deployments: write      # Create deployment status
+
+# Global environment variables
+env:
+  AWS_REGION: us-east-1
+  SST_TELEMETRY_DISABLED: "1"
+  NODE_VERSION: "20"
+
+jobs:
+  # Validate the application before any deployments
+  validate:
+    name: Validate Application
+    runs-on: ubuntu-latest
+    
+    outputs:
+      # Export validation results for downstream jobs
+      tests_passed: ${{ steps.tests.outcome == 'success' }}
+      build_passed: ${{ steps.build.outcome == 'success' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Run unit tests
+      - name: Run Tests
+        id: tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "Running unit tests..."
+          npm test
+          
+          # If coverage is available, enforce thresholds
+          if [ -f "coverage/lcov.info" ]; then
+            echo "Test coverage generated"
+          fi
+
+      # Build the application
+      - name: Build Application
+        id: build
+        run: |
+          echo "Building application..."
+          npm run build 2>&1 || {
+            echo "Build failed"
+            exit 1
+          }
+
+      # Optional: Security scanning
+      - name: Security Audit
+        run: |
+          echo "Running security audit..."
+          npm audit --audit-level=moderate
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    # Only run on develop branch pushes or manual staging deployments
+    if: |
+      (github.ref == 'refs/heads/develop' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.urls && fromJson(steps.deploy.outputs.urls)[0] }}
+    
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+    
+    outputs:
+      deployment_success: ${{ steps.deploy.outputs.success }}
+      deployment_urls: ${{ steps.deploy.outputs.urls }}
+      app_name: ${{ steps.deploy.outputs.app }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Show what will be deployed to staging
+      - name: Preview Staging Changes
+        id: diff
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: diff
+          stage: staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never  # Internal pipeline, no PR comments
+          fail-on-error: false
+
+      # Deploy to staging
+      - name: Deploy to Staging
+        id: deploy
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: true
+          max-output-size: 100000
+
+      # Update deployment status
+      - name: Update Deployment Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ steps.deploy.outputs.success }}' === 'true';
+            const urls = JSON.parse('${{ steps.deploy.outputs.urls || "[]" }}');
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment?.id,
+              state: success ? 'success' : 'failure',
+              environment_url: urls[0] || '',
+              description: success ? 'Staging deployment successful' : 'Staging deployment failed'
+            });
+
+  # Run integration tests against staging
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: needs.deploy-staging.outputs.deployment_success == 'true'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Run integration tests against deployed staging environment
+      - name: Run Integration Tests
+        env:
+          # Pass deployment URLs to integration tests
+          STAGING_URLS: ${{ needs.deploy-staging.outputs.deployment_urls }}
+          TEST_ENVIRONMENT: staging
+        run: |
+          echo "Running integration tests against staging environment..."
+          
+          # Extract first URL for testing
+          STAGING_URL=$(echo '${{ needs.deploy-staging.outputs.deployment_urls }}' | jq -r '.[0] // ""')
+          
+          if [ -n "$STAGING_URL" ]; then
+            echo "Testing against: $STAGING_URL"
+            
+            # Basic health check
+            curl -f "$STAGING_URL/health" || {
+              echo "Health check failed"
+              exit 1
+            }
+            
+            # Run custom integration tests if they exist
+            if npm run | grep -q "test:integration"; then
+              echo "Running custom integration test suite..."
+              API_URL="$STAGING_URL" npm run test:integration
+            fi
+            
+            echo "Integration tests passed!"
+          else
+            echo "No staging URL available for testing"
+            exit 1
+          fi
+
+      # Performance testing (optional)
+      - name: Performance Tests
+        continue-on-error: true
+        env:
+          STAGING_URL: ${{ fromJson(needs.deploy-staging.outputs.deployment_urls)[0] }}
+        run: |
+          if [ -n "$STAGING_URL" ]; then
+            echo "Running basic performance checks..."
+            
+            # Simple load test with curl
+            for i in {1..10}; do
+              echo "Request $i..."
+              curl -w "Time: %{time_total}s\n" -s "$STAGING_URL" > /dev/null
+            done
+          fi
+
+  # Deploy to production with manual approval
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, integration-tests]
+    
+    # Only run on main branch or manual production deployments
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    
+    # Production environment with protection rules
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.urls && fromJson(steps.deploy.outputs.urls)[0] }}
+    
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY }}
+    
+    outputs:
+      deployment_success: ${{ steps.deploy.outputs.success }}
+      deployment_urls: ${{ steps.deploy.outputs.urls }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Show production changes for final review
+      - name: Preview Production Changes
+        id: prod-diff
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: diff
+          stage: production
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      # Log production deployment details
+      - name: Production Deployment Info
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Staging App**: ${{ needs.deploy-staging.outputs.app_name }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.prod-diff.outputs.success }}" = "true" ]; then
+            echo "- **Changes**: ${{ steps.prod-diff.outputs.resource_changes }} resources" >> $GITHUB_STEP_SUMMARY
+            echo "- **Summary**: ${{ steps.prod-diff.outputs.diff_summary }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # Deploy to production
+      - name: Deploy to Production
+        id: deploy
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: deploy
+          stage: production
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: true
+          max-output-size: 150000
+
+      # Create production deployment record
+      - name: Record Production Deployment
+        if: steps.deploy.outputs.success == 'true'
+        run: |
+          echo "## ✅ Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **App**: ${{ steps.deploy.outputs.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stage**: ${{ steps.deploy.outputs.stage }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resources Changed**: ${{ steps.deploy.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          
+          URLS='${{ steps.deploy.outputs.urls }}'
+          if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+            echo "- **Live URLs**:" >> $GITHUB_STEP_SUMMARY
+            echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ steps.deploy.outputs.permalink }}" ]; then
+            echo "- **Console**: ${{ steps.deploy.outputs.permalink }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Post-deployment validation
+  production-validation:
+    name: Production Validation
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: needs.deploy-production.outputs.deployment_success == 'true'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Validate production deployment
+      - name: Production Health Checks
+        env:
+          PRODUCTION_URLS: ${{ needs.deploy-production.outputs.deployment_urls }}
+        run: |
+          echo "Validating production deployment..."
+          
+          URLS='${{ needs.deploy-production.outputs.deployment_urls }}'
+          
+          for url in $(echo "$URLS" | jq -r '.[]'); do
+            echo "Validating: $url"
+            
+            # Health check with retry logic
+            for attempt in {1..5}; do
+              if curl -f -s --max-time 30 "$url/health"; then
+                echo "✅ $url is healthy"
+                break
+              elif [ $attempt -eq 5 ]; then
+                echo "❌ $url failed health check after 5 attempts"
+                exit 1
+              else
+                echo "Attempt $attempt failed, retrying in 10 seconds..."
+                sleep 10
+              fi
+            done
+          done
+          
+          echo "All production endpoints are healthy!"
+
+      # Optional: Run smoke tests
+      - name: Production Smoke Tests
+        continue-on-error: true
+        run: |
+          echo "Running production smoke tests..."
+          
+          # Add your production smoke tests here
+          # These should be lightweight tests that verify core functionality
+          
+          echo "Smoke tests completed"
+
+  # Notification job that runs after all deployments
+  notify:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production, production-validation]
+    if: always()
+    
+    steps:
+      - name: Determine Overall Status
+        id: status
+        run: |
+          STAGING_SUCCESS="${{ needs.deploy-staging.result }}"
+          PRODUCTION_SUCCESS="${{ needs.deploy-production.result }}"
+          VALIDATION_SUCCESS="${{ needs.production-validation.result }}"
+          
+          if [ "$STAGING_SUCCESS" = "success" ] && [ "$PRODUCTION_SUCCESS" = "success" ] && [ "$VALIDATION_SUCCESS" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=Full pipeline deployment successful" >> $GITHUB_OUTPUT
+          elif [ "$STAGING_SUCCESS" = "success" ] && [ "$PRODUCTION_SUCCESS" = "skipped" ]; then
+            echo "status=partial" >> $GITHUB_OUTPUT
+            echo "message=Staging deployment successful" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=Pipeline deployment failed" >> $GITHUB_OUTPUT
+          fi
+
+      # Send notifications (customize based on your needs)
+      - name: Send Notification
+        run: |
+          STATUS="${{ steps.status.outputs.status }}"
+          MESSAGE="${{ steps.status.outputs.message }}"
+          
+          case "$STATUS" in
+            "success")
+              echo "🚀 $MESSAGE"
+              # Add success notification logic (Slack, Teams, email, etc.)
+              ;;
+            "partial")
+              echo "🟡 $MESSAGE"
+              # Add partial success notification
+              ;;
+            "failure")
+              echo "❌ $MESSAGE"
+              # Add failure notification
+              ;;
+          esac
+          
+          echo "Notification sent for status: $STATUS"

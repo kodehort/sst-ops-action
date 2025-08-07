@@ -114,7 +114,7 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
       /access.*denied/i,
       /permission.*denied/i,
       /insufficient.*permissions/i,
-      /forbidden.*access/i,
+      /forbidden/i,
       /not authorized/i,
       /unauthorized/i,
       /s3:.*permission/i,
@@ -328,5 +328,29 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     recoverable: false,
     retryable: false,
     recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+  },
+
+  // System Resource Exhaustion
+  {
+    patterns: [
+      /out of memory/i,
+      /memory exhausted/i,
+      /system memory exhausted/i,
+      /cannot allocate memory/i,
+      /disk.*full/i,
+      /no space left/i,
+      /resource.*exhausted/i,
+    ],
+    category: ErrorCategory.SYSTEM,
+    severity: ErrorSeverity.CRITICAL,
+    getSuggestions: () => [
+      'System resources exhausted - increase available memory or disk space',
+      'Consider using a larger instance type or increasing resource limits',
+      'Clean up temporary files and unused resources',
+      'Contact system administrator for resource allocation',
+    ],
+    recoverable: false,
+    retryable: false,
+    recoveryStrategy: RecoveryStrategy.NOT_RECOVERABLE,
   },
 ];

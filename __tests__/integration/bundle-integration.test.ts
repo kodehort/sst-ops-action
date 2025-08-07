@@ -6,15 +6,7 @@
 import { execFile } from 'node:child_process';
 import { access, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// Unmock fs operations for bundle tests
-vi.mock('node:fs/promises', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs/promises')>();
-  return {
-    ...actual,
-  };
-});
+import { beforeEach, describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
 
@@ -69,10 +61,7 @@ describe('Bundle Integration Tests', () => {
     it('should have dist/index.cjs bundle file', async () => {
       const bundlePath = 'dist/index.cjs';
 
-      // Check file exists
-      await expect(access(bundlePath)).resolves.not.toThrow();
-
-      // Check file is not empty
+      // Check file exists and is not empty
       const stats = await stat(bundlePath);
       expect(stats.size).toBeGreaterThan(1000); // At least 1KB
     });

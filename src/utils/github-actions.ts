@@ -193,20 +193,20 @@ export function handleOperationFailure(
 function createOperationTable(result: OperationResult): string {
   const statusEmoji = result.success ? '✅' : '❌';
   const statusColor = result.success ? '🟢' : '🔴';
-  
+
   let summary = `# ${statusEmoji} SST ${result.operation.charAt(0).toUpperCase() + result.operation.slice(1)} Operation\n\n`;
-  
+
   summary += '| Field | Value |\n';
   summary += '|-------|-------|\n';
   summary += `| ${statusColor} Status | ${result.completionStatus} |\n`;
   summary += `| 🏷️ Stage | \`${result.stage}\` |\n`;
   summary += `| 📱 App | \`${result.app || 'N/A'}\` |\n`;
   summary += `| 📊 Resource Changes | ${('resourceChanges' in result ? result.resourceChanges : 0) || 0} |\n`;
-  
+
   if (result.permalink) {
     summary += `| 🔗 Console | [View in SST Console](${result.permalink}) |\n`;
   }
-  
+
   summary += '\n';
   return summary;
 }
@@ -214,10 +214,17 @@ function createOperationTable(result: OperationResult): string {
 /**
  * Add operation-specific details to summary
  */
-function addOperationDetails(result: OperationResult, initialSummary: string): string {
+function addOperationDetails(
+  result: OperationResult,
+  initialSummary: string
+): string {
   let summary = initialSummary;
-  
-  if (result.operation === 'deploy' && 'urls' in result && result.urls?.length) {
+
+  if (
+    result.operation === 'deploy' &&
+    'urls' in result &&
+    result.urls?.length
+  ) {
     summary += '## 🌐 Deployed URLs\n\n';
     for (const url of result.urls) {
       summary += `- **${url.name}** (${url.type}): ${url.url}\n`;
@@ -225,7 +232,11 @@ function addOperationDetails(result: OperationResult, initialSummary: string): s
     summary += '\n';
   }
 
-  if (result.operation === 'diff' && 'changeSummary' in result && result.changeSummary) {
+  if (
+    result.operation === 'diff' &&
+    'changeSummary' in result &&
+    result.changeSummary
+  ) {
     summary += '## 📋 Change Summary\n\n';
     summary += `${result.changeSummary}\n\n`;
   }
@@ -234,16 +245,19 @@ function addOperationDetails(result: OperationResult, initialSummary: string): s
     summary += '## 🗑️ Resources Removed\n\n';
     summary += `Total resources removed: **${result.resourcesRemoved || 0}**\n\n`;
   }
-  
+
   return summary;
 }
 
 /**
  * Add error and warning details to summary
  */
-function addErrorDetails(result: OperationResult, initialSummary: string): string {
+function addErrorDetails(
+  result: OperationResult,
+  initialSummary: string
+): string {
   let summary = initialSummary;
-  
+
   if (!result.success && result.error) {
     summary += '## ❌ Error Details\n\n';
     summary += '```\n';
@@ -252,9 +266,10 @@ function addErrorDetails(result: OperationResult, initialSummary: string): strin
   }
 
   if (result.truncated) {
-    summary += '> ⚠️ **Note**: Output was truncated due to size limits. Check the raw output for complete details.\n\n';
+    summary +=
+      '> ⚠️ **Note**: Output was truncated due to size limits. Check the raw output for complete details.\n\n';
   }
-  
+
   return summary;
 }
 
@@ -265,7 +280,7 @@ export function createActionSummary(result: OperationResult): void {
   let summary = createOperationTable(result);
   summary = addOperationDetails(result, summary);
   summary = addErrorDetails(result, summary);
-  
+
   core.summary.addRaw(summary).write();
 }
 

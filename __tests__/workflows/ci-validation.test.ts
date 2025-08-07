@@ -19,9 +19,10 @@ interface WorkflowJob {
 
 interface ReleaseWorkflow extends GitHubWorkflow {
   on: {
-    push: {
-      tags: string[];
+    push?: {
+      branches?: string[];
     };
+    workflow_dispatch?: unknown;
   };
 }
 
@@ -101,7 +102,7 @@ describe('CI/CD Workflows', () => {
       }).not.toThrow();
     });
 
-    it('should trigger on version tags', () => {
+    it('should trigger on main branch push or manual dispatch', () => {
       const releasePath = join(
         __dirname,
         '../../.github/workflows/release.yml'
@@ -109,7 +110,8 @@ describe('CI/CD Workflows', () => {
       const releaseContent = readFileSync(releasePath, 'utf8');
       const releaseConfig = yaml.load(releaseContent) as ReleaseWorkflow;
 
-      expect(releaseConfig.on.push.tags).toContain('v*');
+      expect(releaseConfig.on.push?.branches).toContain('main');
+      expect(releaseConfig.on).toHaveProperty('workflow_dispatch');
     });
 
     it('should include quality gates before release', () => {

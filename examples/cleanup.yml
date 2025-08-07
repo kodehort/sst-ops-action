@@ -1,0 +1,559 @@
+# Resource Cleanup Strategies
+# 
+# This workflow demonstrates various strategies for cleaning up SST resources to manage costs
+# and prevent resource accumulation. It includes scheduled cleanup, manual cleanup commands,
+# and emergency cleanup procedures.
+#
+# Key Features:
+# - Scheduled cleanup of temporary environments
+# - Manual cleanup workflows with safety checks
+# - Age-based cleanup strategies
+# - Emergency cleanup procedures
+# - Cost optimization through automated resource management
+
+name: Resource Cleanup
+
+on:
+  # Scheduled cleanup runs daily to remove old environments
+  schedule:
+    # Run at 2 AM UTC daily to clean up unused resources
+    - cron: '0 2 * * *'
+  
+  # Manual cleanup triggers
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: 'Type of cleanup to perform'
+        required: true
+        default: 'pr-environments'
+        type: choice
+        options:
+          - pr-environments
+          - feature-branches
+          - specific-stage
+          - emergency-cleanup
+      stage_name:
+        description: 'Specific stage to clean up (for specific-stage only)'
+        required: false
+        type: string
+      max_age_days:
+        description: 'Maximum age in days for environments to keep'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Perform a dry run without actually deleting resources'
+        required: false
+        default: true
+        type: boolean
+
+  # Cleanup when branches are deleted
+  delete:
+    branches:
+      - 'feature/*'
+      - 'bugfix/*'
+      - 'hotfix/*'
+
+# Required permissions for cleanup operations
+permissions:
+  contents: read           # Read repository contents
+  actions: write          # Access workflow artifacts
+  issues: write           # Comment on issues (for notifications)
+  pull-requests: write    # Comment on PRs
+
+# Environment variables
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: us-east-1
+  SST_TELEMETRY_DISABLED: "1"
+
+jobs:
+  # Discover environments that need cleanup
+  discover-environments:
+    name: Discover Cleanup Candidates
+    runs-on: ubuntu-latest
+    
+    outputs:
+      # Export lists of environments to clean up
+      pr_environments: ${{ steps.discover.outputs.pr_environments }}
+      feature_environments: ${{ steps.discover.outputs.feature_environments }}
+      old_environments: ${{ steps.discover.outputs.old_environments }}
+      emergency_environments: ${{ steps.discover.outputs.emergency_environments }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Get full history for branch analysis
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Discover existing SST stages/environments
+      - name: List SST Stages
+        id: list-stages
+        continue-on-error: true
+        run: |
+          echo "Discovering SST stages..."
+          
+          # Try to list stages (this may fail if no stages exist)
+          if npx sst list-stages > stages.txt 2>/dev/null; then
+            cat stages.txt
+            echo "stages_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "No stages found or sst list-stages not available"
+            echo "stages_found=false" >> $GITHUB_OUTPUT
+            touch stages.txt
+          fi
+
+      # Analyze which environments should be cleaned up
+      - name: Analyze Cleanup Candidates
+        id: discover
+        env:
+          MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days || '7' }}
+          CLEANUP_TYPE: ${{ github.event.inputs.cleanup_type || 'scheduled' }}
+        run: |
+          MAX_AGE="${MAX_AGE_DAYS:-7}"
+          CUTOFF_DATE=$(date -d "$MAX_AGE days ago" +%s)
+          
+          echo "Analyzing environments for cleanup (older than $MAX_AGE days)..."
+          
+          # Arrays to store different types of environments
+          PR_ENVS='[]'
+          FEATURE_ENVS='[]'
+          OLD_ENVS='[]'
+          EMERGENCY_ENVS='[]'
+          
+          if [ -f "stages.txt" ]; then
+            while IFS= read -r stage; do
+              # Skip empty lines and headers
+              [ -z "$stage" ] && continue
+              echo "$stage" | grep -q "Stage" && continue
+              
+              # Clean stage name
+              stage=$(echo "$stage" | tr -d ' \t')
+              [ -z "$stage" ] && continue
+              
+              echo "Analyzing stage: $stage"
+              
+              # Categorize environments based on naming patterns
+              case "$stage" in
+                pr-*)
+                  PR_NUM=$(echo "$stage" | sed 's/pr-//')
+                  if [ "$CLEANUP_TYPE" = "pr-environments" ] || [ "$CLEANUP_TYPE" = "scheduled" ]; then
+                    # Check if PR is still open
+                    if ! gh pr view "$PR_NUM" >/dev/null 2>&1; then
+                      PR_ENVS=$(echo "$PR_ENVS" | jq ". + [\"$stage\"]")
+                      echo "- $stage: PR closed, candidate for cleanup"
+                    else
+                      echo "- $stage: PR still open, keeping"
+                    fi
+                  fi
+                  ;;
+                feature-*|bugfix-*|hotfix-*)
+                  if [ "$CLEANUP_TYPE" = "feature-branches" ] || [ "$CLEANUP_TYPE" = "scheduled" ]; then
+                    BRANCH_NAME=$(echo "$stage" | sed 's/^[^-]*-//')
+                    # Check if branch still exists
+                    if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
+                      FEATURE_ENVS=$(echo "$FEATURE_ENVS" | jq ". + [\"$stage\"]")
+                      echo "- $stage: Branch deleted, candidate for cleanup"
+                    else
+                      echo "- $stage: Branch still exists, keeping"
+                    fi
+                  fi
+                  ;;
+                temp-*|test-*|experiment-*)
+                  # These are considered temporary and cleaned up based on age
+                  OLD_ENVS=$(echo "$OLD_ENVS" | jq ". + [\"$stage\"]")
+                  echo "- $stage: Temporary environment, candidate for cleanup"
+                  ;;
+                production|staging|development)
+                  echo "- $stage: Protected environment, skipping"
+                  ;;
+                *)
+                  if [ "$CLEANUP_TYPE" = "emergency-cleanup" ]; then
+                    # In emergency mode, consider all non-protected stages
+                    case "$stage" in
+                      production|staging|development|prod|stage|dev)
+                        echo "- $stage: Protected environment, skipping even in emergency mode"
+                        ;;
+                      *)
+                        EMERGENCY_ENVS=$(echo "$EMERGENCY_ENVS" | jq ". + [\"$stage\"]")
+                        echo "- $stage: Emergency cleanup candidate"
+                        ;;
+                    esac
+                  else
+                    echo "- $stage: Unknown pattern, skipping cleanup"
+                  fi
+                  ;;
+              esac
+            done < stages.txt
+          fi
+          
+          # Handle specific stage cleanup
+          if [ "$CLEANUP_TYPE" = "specific-stage" ] && [ -n "${{ github.event.inputs.stage_name }}" ]; then
+            SPECIFIC_STAGE="${{ github.event.inputs.stage_name }}"
+            case "$SPECIFIC_STAGE" in
+              production|staging|development|prod|stage|dev)
+                echo "ERROR: Cannot clean up protected stage: $SPECIFIC_STAGE"
+                exit 1
+                ;;
+              *)
+                OLD_ENVS=$(echo "[]" | jq ". + [\"$SPECIFIC_STAGE\"]")
+                echo "- $SPECIFIC_STAGE: Specific stage requested for cleanup"
+                ;;
+            esac
+          fi
+          
+          # Output results
+          echo "pr_environments=$PR_ENVS" >> $GITHUB_OUTPUT
+          echo "feature_environments=$FEATURE_ENVS" >> $GITHUB_OUTPUT
+          echo "old_environments=$OLD_ENVS" >> $GITHUB_OUTPUT
+          echo "emergency_environments=$EMERGENCY_ENVS" >> $GITHUB_OUTPUT
+          
+          # Summary
+          PR_COUNT=$(echo "$PR_ENVS" | jq 'length')
+          FEATURE_COUNT=$(echo "$FEATURE_ENVS" | jq 'length')
+          OLD_COUNT=$(echo "$OLD_ENVS" | jq 'length')
+          EMERGENCY_COUNT=$(echo "$EMERGENCY_ENVS" | jq 'length')
+          
+          echo "## Cleanup Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Environments**: $PR_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Feature Environments**: $FEATURE_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Old/Temp Environments**: $OLD_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Emergency Candidates**: $EMERGENCY_COUNT" >> $GITHUB_STEP_SUMMARY
+          
+        env:
+          # Use GitHub CLI for PR status checks
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Clean up PR environments
+  cleanup-pr-environments:
+    name: Cleanup PR Environments
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: |
+      needs.discover-environments.outputs.pr_environments != '[]' && 
+      (github.event.inputs.cleanup_type == 'pr-environments' || 
+       github.event.inputs.cleanup_type == null ||
+       github.event_name == 'schedule')
+    
+    strategy:
+      matrix:
+        stage: ${{ fromJson(needs.discover-environments.outputs.pr_environments) }}
+      fail-fast: false  # Continue cleanup even if some stages fail
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Safety check before cleanup
+      - name: Safety Check
+        run: |
+          STAGE="${{ matrix.stage }}"
+          echo "Preparing to clean up stage: $STAGE"
+          
+          # Verify this is a PR environment
+          if [[ ! "$STAGE" =~ ^pr-[0-9]+$ ]]; then
+            echo "ERROR: Stage $STAGE doesn't match PR pattern"
+            exit 1
+          fi
+          
+          # Extract PR number
+          PR_NUM=$(echo "$STAGE" | sed 's/pr-//')
+          echo "PR number: $PR_NUM"
+          
+          # Double-check PR status
+          if gh pr view "$PR_NUM" >/dev/null 2>&1; then
+            echo "WARNING: PR $PR_NUM is still open!"
+            if [ "${{ github.event.inputs.dry_run }}" != "false" ]; then
+              echo "Dry run mode: Would skip cleanup of active PR environment"
+              exit 0
+            else
+              echo "ERROR: Refusing to clean up active PR environment"
+              exit 1
+            fi
+          fi
+          
+          echo "PR $PR_NUM is closed, proceeding with cleanup"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Perform the cleanup (or dry run)
+      - name: Remove PR Environment
+        id: cleanup
+        if: github.event.inputs.dry_run != 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: remove
+          stage: ${{ matrix.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false  # Continue with other cleanups if one fails
+
+      # Dry run mode - show what would be cleaned up
+      - name: Dry Run - Show Cleanup Plan
+        if: github.event.inputs.dry_run == 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: diff
+          stage: ${{ matrix.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      # Report results
+      - name: Report Cleanup Results
+        run: |
+          STAGE="${{ matrix.stage }}"
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 DRY RUN: Would clean up stage $STAGE"
+          else
+            SUCCESS="${{ steps.cleanup.outputs.success }}"
+            STATUS="${{ steps.cleanup.outputs.completion_status }}"
+            CHANGES="${{ steps.cleanup.outputs.resource_changes }}"
+            
+            if [ "$SUCCESS" = "true" ]; then
+              echo "✅ Successfully cleaned up stage $STAGE"
+              echo "Resources removed: $CHANGES"
+            else
+              echo "❌ Failed to clean up stage $STAGE"
+              echo "Status: $STATUS"
+            fi
+          fi
+
+  # Clean up feature branch environments
+  cleanup-feature-environments:
+    name: Cleanup Feature Environments
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: |
+      needs.discover-environments.outputs.feature_environments != '[]' && 
+      (github.event.inputs.cleanup_type == 'feature-branches' || 
+       github.event_name == 'delete')
+    
+    strategy:
+      matrix:
+        stage: ${{ fromJson(needs.discover-environments.outputs.feature_environments) }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Remove Feature Environment
+        id: cleanup
+        if: github.event.inputs.dry_run != 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: remove
+          stage: ${{ matrix.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      - name: Report Results
+        run: |
+          STAGE="${{ matrix.stage }}"
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 DRY RUN: Would clean up feature environment $STAGE"
+          else
+            SUCCESS="${{ steps.cleanup.outputs.success }}"
+            if [ "$SUCCESS" = "true" ]; then
+              echo "✅ Cleaned up feature environment $STAGE"
+            else
+              echo "❌ Failed to clean up feature environment $STAGE"
+            fi
+          fi
+
+  # Clean up old/temporary environments
+  cleanup-old-environments:
+    name: Cleanup Old Environments
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: |
+      needs.discover-environments.outputs.old_environments != '[]' && 
+      (github.event.inputs.cleanup_type == 'specific-stage' || 
+       github.event_name == 'schedule')
+    
+    strategy:
+      matrix:
+        stage: ${{ fromJson(needs.discover-environments.outputs.old_environments) }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Remove Old Environment
+        id: cleanup
+        if: github.event.inputs.dry_run != 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: remove
+          stage: ${{ matrix.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      - name: Report Results
+        run: |
+          STAGE="${{ matrix.stage }}"
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 DRY RUN: Would clean up old environment $STAGE"
+          else
+            SUCCESS="${{ steps.cleanup.outputs.success }}"
+            if [ "$SUCCESS" = "true" ]; then
+              echo "✅ Cleaned up old environment $STAGE"
+            else
+              echo "❌ Failed to clean up old environment $STAGE"
+            fi
+          fi
+
+  # Emergency cleanup for all non-protected environments
+  emergency-cleanup:
+    name: Emergency Cleanup
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: |
+      github.event.inputs.cleanup_type == 'emergency-cleanup' &&
+      needs.discover-environments.outputs.emergency_environments != '[]'
+    
+    # Require manual confirmation for emergency cleanup
+    environment:
+      name: emergency-cleanup
+    
+    strategy:
+      matrix:
+        stage: ${{ fromJson(needs.discover-environments.outputs.emergency_environments) }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Emergency Cleanup Warning
+        run: |
+          echo "🚨 EMERGENCY CLEANUP MODE 🚨"
+          echo "Stage: ${{ matrix.stage }}"
+          echo "This will remove ALL resources for this stage!"
+
+      - name: Remove Environment
+        id: cleanup
+        if: github.event.inputs.dry_run != 'true'
+        uses: kodehort/sst-operations-action@v1
+        with:
+          operation: remove
+          stage: ${{ matrix.stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      - name: Report Emergency Cleanup
+        run: |
+          STAGE="${{ matrix.stage }}"
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 EMERGENCY DRY RUN: Would clean up $STAGE"
+          else
+            SUCCESS="${{ steps.cleanup.outputs.success }}"
+            if [ "$SUCCESS" = "true" ]; then
+              echo "⚠️ Emergency cleanup completed for $STAGE"
+            else
+              echo "❌ Emergency cleanup failed for $STAGE"
+            fi
+          fi
+
+  # Summarize cleanup results
+  cleanup-summary:
+    name: Cleanup Summary
+    runs-on: ubuntu-latest
+    needs: [discover-environments, cleanup-pr-environments, cleanup-feature-environments, cleanup-old-environments, emergency-cleanup]
+    if: always()
+    
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Type**: ${{ github.event.inputs.cleanup_type || 'scheduled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run**: ${{ github.event.inputs.dry_run || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count environments by type
+          PR_COUNT=$(echo '${{ needs.discover-environments.outputs.pr_environments || '[]' }}' | jq 'length')
+          FEATURE_COUNT=$(echo '${{ needs.discover-environments.outputs.feature_environments || '[]' }}' | jq 'length')
+          OLD_COUNT=$(echo '${{ needs.discover-environments.outputs.old_environments || '[]' }}' | jq 'length')
+          EMERGENCY_COUNT=$(echo '${{ needs.discover-environments.outputs.emergency_environments || '[]' }}' | jq 'length')
+          
+          echo "## Environment Counts" >> $GITHUB_STEP_SUMMARY
+          echo "- PR Environments: $PR_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- Feature Environments: $FEATURE_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- Old/Temp Environments: $OLD_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- Emergency Candidates: $EMERGENCY_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Job results
+          echo "## Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "- PR Cleanup: ${{ needs.cleanup-pr-environments.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Feature Cleanup: ${{ needs.cleanup-feature-environments.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Old Environment Cleanup: ${{ needs.cleanup-old-environments.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Emergency Cleanup: ${{ needs.emergency-cleanup.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          
+          # Cost savings estimate (placeholder - customize based on your infrastructure)
+          TOTAL_CLEANED=$((PR_COUNT + FEATURE_COUNT + OLD_COUNT + EMERGENCY_COUNT))
+          if [ $TOTAL_CLEANED -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Estimated Cost Savings" >> $GITHUB_STEP_SUMMARY
+            echo "- Environments processed: $TOTAL_CLEANED" >> $GITHUB_STEP_SUMMARY
+            echo "- Estimated monthly savings: \$$(($TOTAL_CLEANED * 50))" >> $GITHUB_STEP_SUMMARY
+            echo "  *(Based on \$50/month per environment estimate)*" >> $GITHUB_STEP_SUMMARY
+          fi

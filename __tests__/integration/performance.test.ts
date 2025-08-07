@@ -319,7 +319,11 @@ describe('Performance Integration Tests', () => {
           SST_REMOVE_SUCCESS_OUTPUT,
         ];
         const outputIndex = callCount++ % 3;
-        return createMockChildProcess(outputs[outputIndex] || SST_DEPLOY_SUCCESS_OUTPUT, 0, 1000);
+        return createMockChildProcess(
+          outputs[outputIndex] || SST_DEPLOY_SUCCESS_OUTPUT,
+          0,
+          1000
+        );
       });
 
       const startTime = Date.now();
