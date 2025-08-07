@@ -1,27 +1,28 @@
 import * as core from '@actions/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorHandler } from '../src/errors/error-handler';
+import { ErrorCategory } from '../src/errors/categories';
 import { run } from '../src/main';
-import { executeOperation } from '../src/operations/router';
+
+// Import modules to spy on - these will be mocked in beforeEach
+import * as operationRouter from '../src/operations/router';
 import { OutputFormatter } from '../src/outputs/formatter';
 import { ValidationError } from '../src/utils/validation';
 
-// Mock all dependencies
-vi.mock('../src/operations/router');
-vi.mock('../src/outputs/formatter');
-vi.mock('../src/errors/error-handler');
-
-const mockExecuteOperation = vi.mocked(executeOperation);
-const mockOutputFormatter = vi.mocked(OutputFormatter);
-const mockErrorHandler = vi.mocked(ErrorHandler);
-const mockCore = vi.mocked(core);
-
 describe('Main Entry Point', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  const originalEnv = process.env;
 
-    // Default mock implementations
-    mockCore.getInput.mockImplementation((name) => {
+  beforeEach(() => {
+    // Mock process.env to control environment variables in tests
+    process.env = {
+      NODE_ENV: 'test',
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+    };
+
+    // Set up default input values (core is already mocked in setup.ts)
+    // The setup.ts already creates vi.fn() for these, so we can use them directly
+    (core.getInput as any).mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
         operation: 'deploy',
         stage: 'staging',
@@ -32,14 +33,30 @@ describe('Main Entry Point', () => {
       return inputs[name] || '';
     });
 
-    mockCore.getBooleanInput.mockImplementation((name) => {
+    (core.getBooleanInput as any).mockImplementation((name: string) => {
       if (name === 'fail-on-error') {
         return true;
       }
       return false;
     });
 
-    mockOutputFormatter.formatForGitHubActions.mockReturnValue({
+    // Spy on and mock the operation router
+    vi.spyOn(operationRouter, 'executeOperation').mockResolvedValue({
+      success: true,
+      operation: 'deploy' as const,
+      stage: 'staging',
+      app: 'test-app',
+      completionStatus: 'complete',
+      resourceChanges: 3,
+      urls: [],
+      resources: [],
+      truncated: false,
+      rawOutput: 'Deploy successful',
+      exitCode: 0,
+    } as any);
+
+    // Spy on and mock the output formatter
+    vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockReturnValue({
       success: 'true',
       operation: 'deploy',
       stage: 'staging',
@@ -57,7 +74,26 @@ describe('Main Entry Point', () => {
       removed_resources: '',
     });
 
-    mockOutputFormatter.validateOutputs.mockImplementation(() => {});
+    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {});
+
+    // Spy on and mock the error handler
+    vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
+      category: ErrorCategory.CLI_EXECUTION,
+      severity: 'high' as const,
+      message: 'Test error',
+      originalError: new Error('Test error'),
+      suggestions: [],
+      recoverable: false,
+      retryable: false,
+      recoveryStrategy: 'manual_intervention' as const,
+    } as any);
+
+    vi.spyOn(ErrorHandler, 'handleError').mockResolvedValue();
+  });
+
+  afterEach(() => {
+    // Restore original process.env after each test
+    process.env = originalEnv;
   });
 
   describe('successful operations', () => {
@@ -76,41 +112,47 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '🚀 Starting SST Operations Action'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '📝 Parsed inputs: deploy operation on stage "staging"'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '🔧 Executing deploy operation...'
       );
-      expect(mockExecuteOperation).toHaveBeenCalledWith(
+      expect(operationRouter.executeOperation).toHaveBeenCalledWith(
         'deploy',
         expect.objectContaining({
-          operation: 'deploy',
           stage: 'staging',
           token: 'fake-token',
           commentMode: 'on-success',
           failOnError: true,
           maxOutputSize: 50_000,
+          environment: expect.objectContaining({
+            NODE_ENV: 'test',
+            CI: 'true',
+            GITHUB_ACTIONS: 'true',
+          }),
         })
       );
-      expect(mockOutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
+      expect(OutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
         mockResult
       );
-      expect(mockCore.setOutput).toHaveBeenCalledTimes(15); // All outputs
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.setOutput).toHaveBeenCalledTimes(15); // All outputs
+      expect(core.info).toHaveBeenCalledWith(
         '✅ SST deploy operation completed successfully'
       );
     });
 
     it('should handle successful diff operation', async () => {
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'diff';
         }
@@ -138,29 +180,33 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockExecuteOperation).toHaveBeenCalledWith(
+      expect(operationRouter.executeOperation).toHaveBeenCalledWith(
         'diff',
         expect.objectContaining({
-          operation: 'diff',
           stage: 'production',
           token: 'ghp_test123',
           commentMode: 'always',
+          environment: expect.objectContaining({
+            NODE_ENV: 'test',
+            CI: 'true',
+            GITHUB_ACTIONS: 'true',
+          }),
         })
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
-        '📋 Found 5 planned change(s)'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith('📋 Found 5 planned change(s)');
+      expect(core.info).toHaveBeenCalledWith(
         '✅ SST diff operation completed successfully'
       );
     });
 
     it('should handle successful remove operation', async () => {
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'remove';
         }
@@ -186,19 +232,25 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockExecuteOperation).toHaveBeenCalledWith(
+      expect(operationRouter.executeOperation).toHaveBeenCalledWith(
         'remove',
         expect.objectContaining({
-          operation: 'remove',
           stage: 'staging',
+          environment: expect.objectContaining({
+            NODE_ENV: 'test',
+            CI: 'true',
+            GITHUB_ACTIONS: 'true',
+          }),
         })
       );
-      expect(mockCore.info).toHaveBeenCalledWith('🗑️ Removed 7 resource(s)');
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith('🗑️ Removed 7 resource(s)');
+      expect(core.info).toHaveBeenCalledWith(
         '✅ SST remove operation completed successfully'
       );
     });
@@ -219,20 +271,22 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockCore.setFailed).toHaveBeenCalledWith(
+      expect(core.setFailed).toHaveBeenCalledWith(
         'SST deploy operation failed: Authentication failed'
       );
-      expect(mockCore.info).not.toHaveBeenCalledWith(
+      expect(core.info).not.toHaveBeenCalledWith(
         expect.stringMatching(/completed successfully/)
       );
     });
 
     it('should handle operation failure with failOnError=false', async () => {
-      mockCore.getBooleanInput.mockImplementation((name) => {
+      (core.getBooleanInput as any).mockImplementation((name: string) => {
         if (name === 'fail-on-error') {
           return false;
         }
@@ -252,23 +306,25 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockCore.warning).toHaveBeenCalledWith(
+      expect(core.warning).toHaveBeenCalledWith(
         'SST deploy operation failed: Network timeout'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '🔄 Continuing workflow as fail-on-error is disabled'
       );
-      expect(mockCore.setFailed).not.toHaveBeenCalled();
+      expect(core.setFailed).not.toHaveBeenCalled();
     });
   });
 
   describe('input validation', () => {
     it('should handle input validation errors', async () => {
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'invalid-operation';
         }
@@ -288,7 +344,7 @@ describe('Main Entry Point', () => {
         ['Valid operations are: deploy, diff, remove']
       );
 
-      mockErrorHandler.categorizeError.mockReturnValue({
+      (ErrorHandler.categorizeError as any).mockReturnValue({
         category: 'validation',
         severity: 'high',
         message: validationError.message,
@@ -301,15 +357,15 @@ describe('Main Entry Point', () => {
 
       await run();
 
-      expect(mockCore.error).toHaveBeenCalledWith(
+      expect(core.error).toHaveBeenCalledWith(
         expect.stringContaining('Input validation failed')
       );
-      expect(mockErrorHandler.categorizeError).toHaveBeenCalled();
-      expect(mockErrorHandler.handleError).toHaveBeenCalled();
+      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
+      expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
 
     it('should validate required inputs', async () => {
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         if (name === 'stage') {
           return '';
         }
@@ -321,10 +377,10 @@ describe('Main Entry Point', () => {
 
       await run();
 
-      expect(mockCore.error).toHaveBeenCalledWith(
+      expect(core.error).toHaveBeenCalledWith(
         expect.stringContaining('Input validation failed')
       );
-      expect(mockErrorHandler.categorizeError).toHaveBeenCalled();
+      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
     });
   });
 
@@ -340,17 +396,19 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockOutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
+      expect(OutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
         mockResult
       );
-      expect(mockOutputFormatter.validateOutputs).toHaveBeenCalled();
-      expect(mockCore.setOutput).toHaveBeenCalledWith('success', 'true');
-      expect(mockCore.setOutput).toHaveBeenCalledWith('operation', 'deploy');
-      expect(mockCore.setOutput).toHaveBeenCalledWith('stage', 'staging');
+      expect(OutputFormatter.validateOutputs).toHaveBeenCalled();
+      expect(core.setOutput).toHaveBeenCalledWith('success', 'true');
+      expect(core.setOutput).toHaveBeenCalledWith('operation', 'deploy');
+      expect(core.setOutput).toHaveBeenCalledWith('stage', 'staging');
     });
 
     it('should handle output truncation warnings', async () => {
@@ -364,11 +422,13 @@ describe('Main Entry Point', () => {
         truncated: true,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
 
       await run();
 
-      expect(mockCore.warning).toHaveBeenCalledWith(
+      expect(core.warning).toHaveBeenCalledWith(
         '⚠️ Output was truncated due to size limits'
       );
     });
@@ -384,8 +444,10 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockExecuteOperation.mockResolvedValueOnce(mockResult);
-      mockOutputFormatter.formatForGitHubActions.mockImplementation(() => {
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        mockResult
+      );
+      (OutputFormatter.formatForGitHubActions as any).mockImplementation(() => {
         throw new Error('Output formatting failed');
       });
 
@@ -400,22 +462,24 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       };
 
-      mockErrorHandler.categorizeError.mockReturnValue(mockActionError);
+      (ErrorHandler.categorizeError as any).mockReturnValue(mockActionError);
 
       await run();
 
-      expect(mockCore.error).toHaveBeenCalledWith(
+      expect(core.error).toHaveBeenCalledWith(
         'Failed to set outputs: Output formatting failed'
       );
-      expect(mockErrorHandler.categorizeError).toHaveBeenCalled();
-      expect(mockErrorHandler.handleError).toHaveBeenCalled();
+      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
+      expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
   });
 
   describe('error handling', () => {
     it('should use enhanced error handling for operation failures', async () => {
       const operationError = new Error('SST CLI execution failed');
-      mockExecuteOperation.mockRejectedValueOnce(operationError);
+      (operationRouter.executeOperation as any).mockRejectedValueOnce(
+        operationError
+      );
 
       const mockActionError = {
         category: 'cli_execution',
@@ -428,14 +492,12 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       };
 
-      mockErrorHandler.categorizeError.mockReturnValue(mockActionError);
+      (ErrorHandler.categorizeError as any).mockReturnValue(mockActionError);
 
       await run();
 
-      expect(mockErrorHandler.categorizeError).toHaveBeenCalledWith(
-        operationError
-      );
-      expect(mockErrorHandler.handleError).toHaveBeenCalledWith(
+      expect(ErrorHandler.categorizeError).toHaveBeenCalledWith(operationError);
+      expect(ErrorHandler.handleError).toHaveBeenCalledWith(
         mockActionError,
         expect.any(Object)
       );
@@ -443,9 +505,11 @@ describe('Main Entry Point', () => {
 
     it('should handle error handler failures gracefully', async () => {
       const operationError = new Error('Operation failed');
-      mockExecuteOperation.mockRejectedValueOnce(operationError);
+      (operationRouter.executeOperation as any).mockRejectedValueOnce(
+        operationError
+      );
 
-      mockErrorHandler.categorizeError.mockReturnValue({
+      (ErrorHandler.categorizeError as any).mockReturnValue({
         category: 'system',
         severity: 'high',
         message: 'Operation failed',
@@ -456,16 +520,16 @@ describe('Main Entry Point', () => {
         recoveryStrategy: 'manual_intervention',
       });
 
-      mockErrorHandler.handleError.mockRejectedValueOnce(
+      (ErrorHandler.handleError as any).mockRejectedValueOnce(
         new Error('Error handler failed')
       );
 
       await run();
 
-      expect(mockCore.error).toHaveBeenCalledWith(
+      expect(core.error).toHaveBeenCalledWith(
         expect.stringContaining('Error handling failed')
       );
-      expect(mockCore.setFailed).toHaveBeenCalledWith(
+      expect(core.setFailed).toHaveBeenCalledWith(
         'Action failed: Operation failed'
       );
     });
@@ -474,7 +538,7 @@ describe('Main Entry Point', () => {
   describe('integration scenarios', () => {
     it('should handle end-to-end deploy workflow', async () => {
       // Simulate full deploy workflow
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
           operation: 'deploy',
           stage: 'production',
@@ -506,7 +570,7 @@ describe('Main Entry Point', () => {
       };
 
       // Override the formatter mock to return production-specific outputs
-      mockOutputFormatter.formatForGitHubActions.mockReturnValue({
+      (OutputFormatter.formatForGitHubActions as any).mockReturnValue({
         success: 'true',
         operation: 'deploy',
         stage: 'production',
@@ -525,48 +589,51 @@ describe('Main Entry Point', () => {
         removed_resources: '',
       });
 
-      mockExecuteOperation.mockResolvedValueOnce(deployResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        deployResult
+      );
 
       await run();
 
       // Verify the complete workflow
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '🚀 Starting SST Operations Action'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '📝 Parsed inputs: deploy operation on stage "production"'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '🔧 Executing deploy operation...'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith(
         '✅ Operation: deploy (production)'
       );
-      expect(mockCore.info).toHaveBeenCalledWith(
-        '📊 Status: SUCCESS (complete)'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith('🚀 Deployed 15 resource(s)');
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith('📊 Status: SUCCESS (complete)');
+      expect(core.info).toHaveBeenCalledWith('🚀 Deployed 15 resource(s)');
+      expect(core.info).toHaveBeenCalledWith(
         '✅ SST deploy operation completed successfully'
       );
 
-      expect(mockExecuteOperation).toHaveBeenCalledWith(
+      expect(operationRouter.executeOperation).toHaveBeenCalledWith(
         'deploy',
         expect.objectContaining({
-          operation: 'deploy',
           stage: 'production',
           token: 'ghp_real_token_123',
           commentMode: 'on-success',
           failOnError: true,
           maxOutputSize: 100_000,
-          environment: process.env,
+          environment: expect.objectContaining({
+            NODE_ENV: 'test',
+            CI: 'true',
+            GITHUB_ACTIONS: 'true',
+          }),
         })
       );
 
-      expect(mockCore.setOutput).toHaveBeenCalledWith('success', 'true');
-      expect(mockCore.setOutput).toHaveBeenCalledWith('operation', 'deploy');
-      expect(mockCore.setOutput).toHaveBeenCalledWith('stage', 'production');
-      expect(mockCore.setOutput).toHaveBeenCalledWith(
+      expect(core.setOutput).toHaveBeenCalledWith('success', 'true');
+      expect(core.setOutput).toHaveBeenCalledWith('operation', 'deploy');
+      expect(core.setOutput).toHaveBeenCalledWith('stage', 'production');
+      expect(core.setOutput).toHaveBeenCalledWith(
         'completion_status',
         'complete'
       );
@@ -588,7 +655,7 @@ describe('Main Entry Point', () => {
         truncated: false,
       };
 
-      mockCore.getInput.mockImplementation((name) => {
+      (core.getInput as any).mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'remove';
         }
@@ -601,15 +668,15 @@ describe('Main Entry Point', () => {
         return '';
       });
 
-      mockExecuteOperation.mockResolvedValueOnce(partialResult);
+      (operationRouter.executeOperation as any).mockResolvedValueOnce(
+        partialResult
+      );
 
       await run();
 
-      expect(mockCore.info).toHaveBeenCalledWith(
-        '📊 Status: SUCCESS (partial)'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith('🗑️ Removed 5 resource(s)');
-      expect(mockCore.info).toHaveBeenCalledWith(
+      expect(core.info).toHaveBeenCalledWith('📊 Status: SUCCESS (partial)');
+      expect(core.info).toHaveBeenCalledWith('🗑️ Removed 5 resource(s)');
+      expect(core.info).toHaveBeenCalledWith(
         '✅ SST remove operation completed successfully'
       );
     });

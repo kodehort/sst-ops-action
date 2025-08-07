@@ -37,14 +37,14 @@ jobs:
         
       - name: Verify bundle exists
         run: |
-          if [ ! -f "dist/main.js" ]; then
-            echo "Build failed: dist/main.js not found"
+          if [ ! -f "dist/index.js" ]; then
+            echo "Build failed: dist/index.js not found"
             exit 1
           fi
           
       - name: Check bundle size
         run: |
-          BUNDLE_SIZE=$(stat -f%z dist/main.js 2>/dev/null || stat -c%s dist/main.js)
+          BUNDLE_SIZE=$(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js)
           BUNDLE_SIZE_MB=$((BUNDLE_SIZE / 1024 / 1024))
           echo "Bundle size: ${BUNDLE_SIZE_MB}MB"
           
@@ -58,7 +58,7 @@ jobs:
       - name: Test bundle execution
         run: |
           echo "Testing bundle execution..."
-          timeout 10s node dist/main.js || true
+          timeout 10s node dist/index.js || true
           echo "✅ Bundle is executable"
           
       - name: Upload build artifacts

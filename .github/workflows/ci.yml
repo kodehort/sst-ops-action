@@ -44,8 +44,8 @@ jobs:
         
       - name: Verify bundle
         run: |
-          ls -la dist/main.js
-          file dist/main.js
+          ls -la dist/index.js
+          file dist/index.js
           
   build:
     name: Build Check
@@ -69,7 +69,7 @@ jobs:
         
       - name: Verify bundle size
         run: |
-          BUNDLE_SIZE=$(stat -f%z dist/main.js 2>/dev/null || stat -c%s dist/main.js)
+          BUNDLE_SIZE=$(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js)
           BUNDLE_SIZE_MB=$((BUNDLE_SIZE / 1024 / 1024))
           echo "Bundle size: ${BUNDLE_SIZE_MB}MB"
           if [ $BUNDLE_SIZE_MB -gt 10 ]; then

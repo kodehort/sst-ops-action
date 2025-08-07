@@ -5,7 +5,7 @@
 
 import type { GitHubClient } from '../github/client';
 import { RemoveParser } from '../parsers/remove-parser';
-import type { RemoveResult, OperationOptions } from '../types';
+import type { OperationOptions, RemoveResult } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
 
 /**

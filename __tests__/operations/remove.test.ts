@@ -3,18 +3,25 @@
  * Validates remove operation execution, parsing, and GitHub integration
  */
 
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
-import { RemoveOperation } from '../../src/operations/remove';
-import type { GitHubClient } from '../../src/github/client';
-import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
-import type { OperationOptions, RemoveResult } from '../../src/types';
 import {
-  SST_REMOVE_SUCCESS_OUTPUT,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockedFunction,
+  vi,
+} from 'vitest';
+import type { GitHubClient } from '../../src/github/client';
+import { RemoveOperation } from '../../src/operations/remove';
+import type { OperationOptions, RemoveResult } from '../../src/types';
+import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
+import {
+  SST_REMOVE_COMPLEX_OUTPUT,
+  SST_REMOVE_ERROR_OUTPUT,
+  SST_REMOVE_MALFORMED_OUTPUT,
   SST_REMOVE_NO_RESOURCES_OUTPUT,
   SST_REMOVE_PARTIAL_OUTPUT,
-  SST_REMOVE_ERROR_OUTPUT,
-  SST_REMOVE_COMPLEX_OUTPUT,
-  SST_REMOVE_MALFORMED_OUTPUT,
+  SST_REMOVE_SUCCESS_OUTPUT,
 } from '../fixtures/sst-remove-outputs';
 
 describe('RemoveOperation', () => {
@@ -27,7 +34,7 @@ describe('RemoveOperation', () => {
     token: 'fake-token',
     commentMode: 'on-success',
     failOnError: true,
-    maxOutputSize: 50000,
+    maxOutputSize: 50_000,
   };
 
   beforeEach(() => {
@@ -51,7 +58,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_SUCCESS_OUTPUT,
         exitCode: 0,
-        duration: 30000,
+        duration: 30_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_SUCCESS_OUTPUT,
@@ -60,11 +67,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(true);
@@ -100,11 +111,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(true);
@@ -119,7 +134,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_PARTIAL_OUTPUT,
         exitCode: 0,
-        duration: 45000,
+        duration: 45_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_PARTIAL_OUTPUT,
@@ -128,11 +143,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(true);
@@ -140,8 +159,12 @@ describe('RemoveOperation', () => {
       expect(result.resourcesRemoved).toBe(2);
       expect(result.completionStatus).toBe('partial');
       expect(result.removedResources).toHaveLength(3);
-      expect(result.removedResources.filter(r => r.status === 'removed')).toHaveLength(2);
-      expect(result.removedResources.filter(r => r.status === 'failed')).toHaveLength(1);
+      expect(
+        result.removedResources.filter((r) => r.status === 'removed')
+      ).toHaveLength(2);
+      expect(
+        result.removedResources.filter((r) => r.status === 'failed')
+      ).toHaveLength(1);
     });
 
     it('should handle removal failure', async () => {
@@ -149,7 +172,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_ERROR_OUTPUT,
         exitCode: 1,
-        duration: 10000,
+        duration: 10_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_ERROR_OUTPUT,
@@ -158,11 +181,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(false);
@@ -177,7 +204,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_COMPLEX_OUTPUT,
         exitCode: 0,
-        duration: 120000,
+        duration: 120_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_COMPLEX_OUTPUT,
@@ -186,11 +213,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(true);
@@ -198,8 +229,12 @@ describe('RemoveOperation', () => {
       expect(result.resourcesRemoved).toBe(8);
       expect(result.completionStatus).toBe('partial');
       expect(result.removedResources).toHaveLength(9);
-      expect(result.removedResources.filter(r => r.status === 'removed')).toHaveLength(8);
-      expect(result.removedResources.filter(r => r.status === 'failed')).toHaveLength(1);
+      expect(
+        result.removedResources.filter((r) => r.status === 'removed')
+      ).toHaveLength(8);
+      expect(
+        result.removedResources.filter((r) => r.status === 'failed')
+      ).toHaveLength(1);
     });
 
     it('should handle malformed output gracefully', async () => {
@@ -216,11 +251,15 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
-      const result: RemoveResult = await removeOperation.execute(defaultOptions);
+      const result: RemoveResult =
+        await removeOperation.execute(defaultOptions);
 
       // Assert
       expect(result.success).toBe(false);
@@ -267,7 +306,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_SUCCESS_OUTPUT,
         exitCode: 0,
-        duration: 30000,
+        duration: 30_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_SUCCESS_OUTPUT,
@@ -276,8 +315,11 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
       await removeOperation.execute(defaultOptions);
@@ -303,7 +345,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_SUCCESS_OUTPUT,
         exitCode: 0,
-        duration: 30000,
+        duration: 30_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_SUCCESS_OUTPUT,
@@ -312,13 +354,22 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
-      
-      (mockGitHubClient.createOrUpdateComment as MockedFunction<typeof mockGitHubClient.createOrUpdateComment>)
-        .mockRejectedValueOnce(new Error('GitHub API error'));
-      (mockGitHubClient.createWorkflowSummary as MockedFunction<typeof mockGitHubClient.createWorkflowSummary>)
-        .mockRejectedValueOnce(new Error('Summary error'));
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
+
+      (
+        mockGitHubClient.createOrUpdateComment as MockedFunction<
+          typeof mockGitHubClient.createOrUpdateComment
+        >
+      ).mockRejectedValueOnce(new Error('GitHub API error'));
+      (
+        mockGitHubClient.createWorkflowSummary as MockedFunction<
+          typeof mockGitHubClient.createWorkflowSummary
+        >
+      ).mockRejectedValueOnce(new Error('Summary error'));
 
       // Act & Assert - Should not throw
       const result = await removeOperation.execute(defaultOptions);
@@ -332,7 +383,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_SUCCESS_OUTPUT,
         exitCode: 0,
-        duration: 30000,
+        duration: 30_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_SUCCESS_OUTPUT,
@@ -341,8 +392,11 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
       await removeOperation.execute(defaultOptions);
@@ -357,7 +411,7 @@ describe('RemoveOperation', () => {
             SST_REMOVE_CONFIRM: 'true',
           }),
           timeout: 900_000, // 15 minutes
-          maxOutputSize: 50000,
+          maxOutputSize: 50_000,
         })
       );
     });
@@ -367,7 +421,7 @@ describe('RemoveOperation', () => {
       const mockCLIResult: SSTCommandResult = {
         output: SST_REMOVE_SUCCESS_OUTPUT,
         exitCode: 0,
-        duration: 30000,
+        duration: 30_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
         stdout: SST_REMOVE_SUCCESS_OUTPUT,
@@ -376,8 +430,11 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
       await removeOperation.execute(defaultOptions);
@@ -396,11 +453,16 @@ describe('RemoveOperation', () => {
   describe('edge cases and error handling', () => {
     it('should handle CLI execution errors', async () => {
       // Arrange
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockRejectedValueOnce(new Error('CLI execution failed'));
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockRejectedValueOnce(new Error('CLI execution failed'));
 
       // Act & Assert
-      await expect(removeOperation.execute(defaultOptions)).rejects.toThrow('CLI execution failed');
+      await expect(removeOperation.execute(defaultOptions)).rejects.toThrow(
+        'CLI execution failed'
+      );
     });
 
     it('should handle empty output', async () => {
@@ -417,8 +479,11 @@ describe('RemoveOperation', () => {
         stage: 'test-stage',
         operation: 'remove',
       };
-      (mockSSTExecutor.executeSST as MockedFunction<typeof mockSSTExecutor.executeSST>)
-        .mockResolvedValueOnce(mockCLIResult);
+      (
+        mockSSTExecutor.executeSST as MockedFunction<
+          typeof mockSSTExecutor.executeSST
+        >
+      ).mockResolvedValueOnce(mockCLIResult);
 
       // Act
       const result = await removeOperation.execute(defaultOptions);

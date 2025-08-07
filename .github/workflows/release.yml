@@ -1,24 +1,149 @@
-name: Release
+name: Release Automation
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version tag to release'
+      release_type:
+        description: 'Type of release (auto, patch, minor, major)'
         required: true
-        type: string
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  issues: write
 
 jobs:
-  release:
-    name: Create Release
+  determine-release:
+    name: Determine Release Type
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      should-release: ${{ steps.release-check.outputs.should-release }}
+      release-type: ${{ steps.release-check.outputs.release-type }}
+      new-version: ${{ steps.release-check.outputs.new-version }}
+      current-version: ${{ steps.release-check.outputs.current-version }}
       
     steps:
-      - name: Checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install semantic-release dependencies
+        run: |
+          npm install -g semantic-release
+          npm install -g @semantic-release/changelog
+          npm install -g @semantic-release/git
+          npm install -g @semantic-release/github
+          npm install -g @semantic-release/exec
+          npm install -g conventional-changelog-conventionalcommits
+          
+      - name: Determine Release Type
+        id: release-check
+        run: |
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          # Check if there are commits since last release
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS_SINCE_LAST=$(git rev-list --count HEAD)
+          else
+            COMMITS_SINCE_LAST=$(git rev-list --count ${LAST_TAG}..HEAD)
+          fi
+          
+          echo "Commits since last release: $COMMITS_SINCE_LAST"
+          
+          # Determine if we should release
+          if [ "$COMMITS_SINCE_LAST" -eq 0 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "should-release=false" >> $GITHUB_OUTPUT
+            echo "No new commits since last release"
+            exit 0
+          fi
+          
+          # Analyze commit messages for semantic versioning
+          if [ "${{ github.event.inputs.release_type }}" != "auto" ] && [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          else
+            # Auto-determine release type based on conventional commits
+            if [ -z "$LAST_TAG" ]; then
+              COMMITS_TO_CHECK=$(git log --pretty=format:"%s" HEAD)
+            else
+              COMMITS_TO_CHECK=$(git log --pretty=format:"%s" ${LAST_TAG}..HEAD)
+            fi
+            
+            echo "Analyzing commits:"
+            echo "$COMMITS_TO_CHECK"
+            
+            # Check for breaking changes (major version)
+            if echo "$COMMITS_TO_CHECK" | grep -qE "^[a-zA-Z]+(\(.+\))?!:" || echo "$COMMITS_TO_CHECK" | grep -qE "BREAKING CHANGE"; then
+              RELEASE_TYPE="major"
+            # Check for features (minor version)  
+            elif echo "$COMMITS_TO_CHECK" | grep -qE "^feat(\(.+\))?:"; then
+              RELEASE_TYPE="minor"
+            # Check for fixes, docs, etc (patch version)
+            elif echo "$COMMITS_TO_CHECK" | grep -qE "^(fix|docs|style|refactor|perf|test|chore)(\(.+\))?:"; then
+              RELEASE_TYPE="patch"
+            # If no conventional commits found, default to patch
+            else
+              RELEASE_TYPE="patch"
+            fi
+          fi
+          
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "release-type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+          
+          # Calculate new version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+          
+          case $RELEASE_TYPE in
+            major)
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            minor) 
+              NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+              ;;
+          esac
+          
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Determined release type: $RELEASE_TYPE ($CURRENT_VERSION → $NEW_VERSION)"
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: determine-release
+    if: needs.determine-release.outputs.should-release == 'true'
+    
+    steps:
+      - name: Checkout Repository
         uses: actions/checkout@v4
         
       - name: Setup Bun
@@ -27,83 +152,378 @@ jobs:
           bun-version: latest
           
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
         
-      - name: Run quality gates
+      - name: Run Quality Gates
         run: |
-          echo "🔍 Running quality checks..."
+          echo "🔍 Running comprehensive quality checks..."
           bun run typecheck
-          bun run lint  
+          bun run lint
           bun test
-          bun run test:coverage
           echo "✅ All quality gates passed"
           
-      - name: Build action
+      - name: Build Production Bundle
         run: |
-          echo "🔨 Building action..."
+          echo "🔨 Building production bundle..."
           bun run build
-          echo "✅ Build completed"
-        
-      - name: Verify bundle
-        run: |
-          echo "🧪 Verifying bundle..."
-          ls -la dist/main.js
-          file dist/main.js
+          echo "✅ Production build completed"
           
-          # Test bundle execution
-          timeout 10s node dist/main.js || echo "Bundle execution test completed"
+      - name: Verify Bundle
+        run: |
+          echo "🧪 Verifying production bundle..."
+          
+          # Check bundle exists
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ Bundle file not found"
+            exit 1
+          fi
           
           # Check bundle size
-          BUNDLE_SIZE=$(stat -f%z dist/main.js 2>/dev/null || stat -c%s dist/main.js)
-          BUNDLE_SIZE_MB=$((BUNDLE_SIZE / 1024 / 1024))
+          BUNDLE_SIZE=$(stat -c%s dist/index.js 2>/dev/null || stat -f%z dist/index.js)
+          BUNDLE_SIZE_MB=$(echo "scale=2; $BUNDLE_SIZE / 1024 / 1024" | bc)
           echo "Bundle size: ${BUNDLE_SIZE_MB}MB"
           
-          if [ $BUNDLE_SIZE_MB -gt 10 ]; then
+          if (( $(echo "$BUNDLE_SIZE_MB > 10" | bc -l) )); then
             echo "❌ Bundle size exceeds 10MB limit!"
             exit 1
           fi
-          echo "✅ Bundle verified"
           
-      - name: Create Release
-        id: create_release
+          echo "✅ Bundle verification passed"
+          
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-${{ github.sha }}
+          path: |
+            dist/
+            package.json
+            action.yml
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [determine-release, build-and-test]
+    if: needs.determine-release.outputs.should-release == 'true'
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Git Config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-${{ github.sha }}
+          path: ./
+          
+      - name: Update Version
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          echo "Updating version to $NEW_VERSION"
+          
+          # Update package.json version
+          npm version $NEW_VERSION --no-git-tag-version
+          
+          echo "✅ Version updated to $NEW_VERSION"
+          
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          CURRENT_VERSION="${{ needs.determine-release.outputs.current-version }}"
+          
+          # Get the last tag, or use first commit if no tags exist
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          
+          echo "Generating changelog from $LAST_TAG to HEAD"
+          
+          # Generate changelog content
+          cat > RELEASE_NOTES.md << EOF
+          # Release v${NEW_VERSION}
+          
+          **Release Date:** $(date -u +"%Y-%m-%d")
+          **Previous Version:** v${CURRENT_VERSION}
+          
+          ## 🚀 What's New
+          
+          EOF
+          
+          # Parse commits for changelog
+          COMMITS=$(git log --pretty=format:"%h %s" ${LAST_TAG}..HEAD 2>/dev/null || git log --pretty=format:"%h %s" HEAD)
+          
+          # Categorize commits
+          echo "" >> RELEASE_NOTES.md
+          
+          # Features
+          FEATURES=$(echo "$COMMITS" | grep -E "^[a-f0-9]+ feat(\(.+\))?: " || true)
+          if [ -n "$FEATURES" ]; then
+            echo "### ✨ Features" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "$FEATURES" | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                HASH=$(echo "$line" | cut -d' ' -f1)
+                MSG=$(echo "$line" | cut -d' ' -f2-)
+                echo "- $MSG (\`$HASH\`)" >> RELEASE_NOTES.md
+              fi
+            done
+            echo "" >> RELEASE_NOTES.md
+          fi
+          
+          # Bug fixes
+          FIXES=$(echo "$COMMITS" | grep -E "^[a-f0-9]+ fix(\(.+\))?: " || true)
+          if [ -n "$FIXES" ]; then
+            echo "### 🐛 Bug Fixes" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "$FIXES" | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                HASH=$(echo "$line" | cut -d' ' -f1)
+                MSG=$(echo "$line" | cut -d' ' -f2-)
+                echo "- $MSG (\`$HASH\`)" >> RELEASE_NOTES.md
+              fi
+            done
+            echo "" >> RELEASE_NOTES.md
+          fi
+          
+          # Other improvements
+          OTHERS=$(echo "$COMMITS" | grep -E "^[a-f0-9]+ (docs|style|refactor|perf|test|chore)(\(.+\))?: " || true)
+          if [ -n "$OTHERS" ]; then
+            echo "### 🔧 Improvements & Maintenance" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "$OTHERS" | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                HASH=$(echo "$line" | cut -d' ' -f1)
+                MSG=$(echo "$line" | cut -d' ' -f2-)
+                echo "- $MSG (\`$HASH\`)" >> RELEASE_NOTES.md
+              fi
+            done
+            echo "" >> RELEASE_NOTES.md
+          fi
+          
+          # Add bundle information
+          if [ -f "dist/build-manifest.json" ]; then
+            BUNDLE_SIZE_MB=$(jq -r '.bundleSizeMB' dist/build-manifest.json)
+            BUNDLE_SIZE=$(jq -r '.bundleSize' dist/build-manifest.json)
+            BUILD_DURATION=$(jq -r '.duration' dist/build-manifest.json)
+            
+            cat >> RELEASE_NOTES.md << EOF
+          ## 📦 Bundle Information
+          
+          - **Bundle Size:** ${BUNDLE_SIZE_MB}MB (${BUNDLE_SIZE} bytes)
+          - **Build Duration:** ${BUILD_DURATION}ms
+          - **Format:** CommonJS for GitHub Actions
+          - **Target:** Node.js 20+
+          - **Source Maps:** Included for debugging
+          
+          EOF
+          fi
+          
+          # Add usage example
+          cat >> RELEASE_NOTES.md << EOF
+          ## 🚀 Usage
+          
+          \`\`\`yaml
+          - name: SST Operations
+            uses: ${{ github.repository }}@v${NEW_VERSION}
+            with:
+              operation: deploy  # deploy, diff, or remove
+              stage: production
+              token: \${{ secrets.GITHUB_TOKEN }}
+          \`\`\`
+          
+          ## 🔗 Links
+          
+          - [Full Changelog](https://github.com/${{ github.repository }}/compare/v${CURRENT_VERSION}...v${NEW_VERSION})
+          - [Documentation](https://github.com/${{ github.repository }}/blob/v${NEW_VERSION}/README.md)
+          - [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${CURRENT_VERSION}...v${NEW_VERSION}
+          EOF
+          
+          echo "✅ Release notes generated"
+          
+      - name: Update CHANGELOG.md
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          # Create or update CHANGELOG.md
+          if [ ! -f "CHANGELOG.md" ]; then
+            cat > CHANGELOG.md << EOF
+          # Changelog
+          
+          All notable changes to this project will be documented in this file.
+          
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+          
+          EOF
+          fi
+          
+          # Prepend new version to CHANGELOG.md
+          cat RELEASE_NOTES.md > temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "---" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          cat CHANGELOG.md >> temp_changelog.md
+          mv temp_changelog.md CHANGELOG.md
+          
+          echo "✅ CHANGELOG.md updated"
+          
+      - name: Commit Version Updates
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          # Add all changed files
+          git add package.json CHANGELOG.md dist/
+          
+          # Commit changes
+          git commit -m "chore(release): v${NEW_VERSION} [skip ci]
+          
+          - Update package.json version to ${NEW_VERSION}
+          - Update CHANGELOG.md with release notes
+          - Update production bundle"
+          
+          # Create annotated tag
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
+          
+          $(cat RELEASE_NOTES.md)"
+          
+          # Push changes and tag
+          git push origin main
+          git push origin "v${NEW_VERSION}"
+          
+          echo "✅ Version committed and tagged"
+          
+      - name: Create GitHub Release
+        id: create-release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: v${{ needs.determine-release.outputs.new-version }}
+          release_name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
+          body_path: ./RELEASE_NOTES.md
           draft: false
-          prerelease: false
-          body: |
-            ## 🚀 SST Operations Action Release
-            
-            ### Changes in this release
-            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
-            
-            ### Installation
-            ```yaml
-            - name: SST Operations
-              uses: ${{ github.repository }}@${{ github.ref_name }}
-              with:
-                operation: deploy
-                stage: staging
-                token: ${{ secrets.GITHUB_TOKEN }}
-            ```
-            
-            ### Performance
-            - Bundle size: Generated during build
-            - GitHub Actions compatible (Node.js 20)
-            - All quality gates passed ✅
-            
-            ---
-            Auto-generated release from tag ${{ github.ref }}
-            
-      - name: Upload Release Asset
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          
+      - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/main.js
-          asset_name: main.js
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./dist/index.js
+          asset_name: index.js
           asset_content_type: application/javascript
+          
+      - name: Update Major Version Tag
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
+          
+          echo "Updating major version tag: $MAJOR_VERSION"
+          
+          # Create or update major version tag (e.g., v1, v2)
+          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
+          git push -f origin "$MAJOR_VERSION"
+          
+          echo "✅ Major version tag updated: $MAJOR_VERSION"
+          
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    needs: [determine-release, create-release]
+    if: needs.determine-release.outputs.should-release == 'true'
+    
+    steps:
+      - name: Checkout Released Tag
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.determine-release.outputs.new-version }}
+          
+      - name: Test Action Usage
+        id: test-action
+        continue-on-error: true
+        uses: ./
+        with:
+          operation: diff
+          stage: test-release
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+          
+      - name: Validate Release
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          echo "🔍 Validating release v$NEW_VERSION"
+          
+          # Check that files exist
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ dist/index.js not found in release"
+            exit 1
+          fi
+          
+          if [ ! -f "action.yml" ]; then
+            echo "❌ action.yml not found in release" 
+            exit 1
+          fi
+          
+          # Verify action.yml points to correct main file
+          if ! grep -q "main.*dist/index.js" action.yml; then
+            echo "❌ action.yml does not reference dist/index.js"
+            exit 1
+          fi
+          
+          # Check package.json version matches
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$PKG_VERSION" != "$NEW_VERSION" ]; then
+            echo "❌ Package.json version ($PKG_VERSION) doesn't match release version ($NEW_VERSION)"
+            exit 1
+          fi
+          
+          echo "✅ Release validation passed"
+          
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          echo "❌ Release validation failed, initiating rollback"
+          
+          # Delete the release if it was created
+          gh release delete "v$NEW_VERSION" --yes --cleanup-tag || echo "Release deletion failed or not found"
+          
+          # Delete tags
+          git push --delete origin "v$NEW_VERSION" || echo "Tag deletion failed or not found"
+          git push --delete origin "v$(echo $NEW_VERSION | cut -d. -f1)" || echo "Major tag deletion failed or not found"
+          
+          echo "🔄 Rollback completed"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-success:
+    name: Notify Release Success
+    runs-on: ubuntu-latest
+    needs: [determine-release, validate-release]
+    if: needs.determine-release.outputs.should-release == 'true' && success()
+    
+    steps:
+      - name: Notify Success
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          RELEASE_TYPE="${{ needs.determine-release.outputs.release-type }}"
+          
+          echo "🎉 Release v$NEW_VERSION completed successfully!"
+          echo "📦 Release type: $RELEASE_TYPE"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$NEW_VERSION"
+          echo "📋 Changelog: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md"
