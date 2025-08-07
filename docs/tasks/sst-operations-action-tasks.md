@@ -1016,9 +1016,10 @@ export class DiffOperation extends BaseOperation<DiffResult> {
 ---
 
 ### Task sst-ops-015: Remove Operation Implementation
-**Status:** in_progress
-**Agent:** backend-engineer
-**Dependencies:** sst-ops-007, sst-ops-012
+**Status:** completed
+**Completed:** 2025-01-08T11:30:00Z
+**Agent:** task:process
+**Dependencies:** sst-ops-007 ✅, sst-ops-012 ✅
 **User Story:** As a developer, I want to automatically remove staging resources when PR is closed so we don't accumulate costs
 
 **PRD Context:** Extract and implement remove operation for infrastructure cleanup from existing monorepo composite action or implement as new functionality, typically triggered on PR close or manual cleanup workflows
@@ -1083,6 +1084,14 @@ export class RemoveOperation extends BaseOperation<RemoveResult> {
 **Files Created:**
 - `src/operations/remove.ts`
 - `__tests__/operations/remove.test.ts`
+
+**Completion Notes:**
+- ✅ Implemented RemoveOperation class following same pattern as DeployOperation and DiffOperation
+- ✅ All 14 unit tests passing with comprehensive test coverage
+- ✅ Integrated with existing RemoveParser and GitHub client infrastructure
+- ✅ Added auto-confirmation environment variable (SST_REMOVE_CONFIRM=true) for CI environments
+- ✅ Follows unified type system with RemoveResult interface
+- ✅ Graceful error handling with GitHub integration failures
 
 ---
 
