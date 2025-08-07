@@ -34,6 +34,11 @@ export interface CLIResult {
 }
 
 /**
+ * Supported package managers/runners for SST commands
+ */
+export type SSTRunner = 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
+
+/**
  * Options for CLI command execution
  */
 export interface CLIOptions {
@@ -47,6 +52,8 @@ export interface CLIOptions {
   maxOutputSize?: number | undefined;
   /** Arguments to pass to the SST command */
   args?: string[] | undefined;
+  /** Package manager/runner to use for SST commands (default: 'bun') */
+  runner?: SSTRunner | undefined;
 }
 
 /**
@@ -155,7 +162,8 @@ export class SSTCLIExecutor {
     stage: string,
     options: CLIOptions
   ): Promise<string[]> {
-    const command = ['sst', operation];
+    const runner = options.runner || 'bun';
+    const command = this.buildRunnerCommand(runner, operation);
 
     // Add stage parameter
     command.push('--stage', stage);
@@ -181,6 +189,48 @@ export class SSTCLIExecutor {
     }
 
     return command;
+  }
+
+  /**
+   * Build the command array with the specified runner
+   */
+  private buildRunnerCommand(runner: SSTRunner, operation: SSTOperation): string[] {
+    switch (runner) {
+      case 'sst':
+        // Direct SST binary execution
+        return ['sst', operation];
+      case 'bun':
+        return ['bun', 'sst', operation];
+      case 'npm':
+        return ['npm', 'run', 'sst', '--', operation];
+      case 'pnpm':
+        return ['pnpm', 'sst', operation];
+      case 'yarn':
+        return ['yarn', 'sst', operation];
+      default:
+        throw new Error(`Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`);
+    }
+  }
+
+  /**
+   * Build a command array for utility operations like --version
+   */
+  private buildUtilityCommand(runner: SSTRunner, args: string[]): string[] {
+    switch (runner) {
+      case 'sst':
+        // Direct SST binary execution
+        return ['sst', ...args];
+      case 'bun':
+        return ['bun', 'sst', ...args];
+      case 'npm':
+        return ['npm', 'run', 'sst', '--', ...args];
+      case 'pnpm':
+        return ['pnpm', 'sst', ...args];
+      case 'yarn':
+        return ['yarn', 'sst', ...args];
+      default:
+        throw new Error(`Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`);
+    }
   }
 
   /**
@@ -355,13 +405,14 @@ export class SSTCLIExecutor {
   /**
    * Check if SST CLI is available in the environment
    */
-  async checkSSTAvailability(): Promise<{
+  async checkSSTAvailability(runner: SSTRunner = 'bun'): Promise<{
     available: boolean;
     version?: string;
     error?: string;
   }> {
     try {
-      const result = await this.executeCommand(['sst', '--version'], {
+      const versionCommand = this.buildUtilityCommand(runner, ['--version']);
+      const result = await this.executeCommand(versionCommand, {
         timeout: 30_000, // 30 seconds
         maxOutputSize: 1024, // 1KB
       });
@@ -387,10 +438,12 @@ export class SSTCLIExecutor {
    * Get SST project information
    */
   async getProjectInfo(
-    cwd?: string
+    cwd?: string,
+    runner: SSTRunner = 'bun'
   ): Promise<{ app?: string; stage?: string; error?: string }> {
     try {
-      const result = await this.executeCommand(['sst', 'env'], {
+      const envCommand = this.buildUtilityCommand(runner, ['env']);
+      const result = await this.executeCommand(envCommand, {
         cwd,
         timeout: 30_000, // 30 seconds
         maxOutputSize: 4096, // 4KB

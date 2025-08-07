@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { CommentMode, SSTOperation } from '../types/index.js';
+import type { SSTRunner } from './cli.js';
 import {
   isValidCommentMode,
   isValidOperation,
@@ -98,6 +99,18 @@ export const ActionInputsSchema = z.object({
     )
     .transform((val) => validateMaxOutputSize(val))
     .default(50_000),
+
+  runner: z
+    .string()
+    .default('bun')
+    .refine(
+      (val): val is SSTRunner => ['bun', 'npm', 'pnpm', 'yarn', 'sst'].includes(val),
+      (val) => ({
+        message: `Invalid runner: ${val}. Must be one of: bun, npm, pnpm, yarn, sst`,
+        path: ['runner'],
+      })
+    )
+    .transform((val) => val as SSTRunner),
 });
 
 /**
@@ -209,6 +222,16 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
         'Use larger values for verbose SST outputs',
       ];
 
+    case 'runner':
+      return [
+        'Valid runners are: bun, npm, pnpm, yarn, sst',
+        'Use "bun" (default) for Bun runtime',
+        'Use "npm" for npm with package scripts',
+        'Use "pnpm" for PNPM runtime',
+        'Use "yarn" for Yarn runtime',
+        'Use "sst" for direct SST binary execution',
+      ];
+
     default:
       return [];
   }
@@ -264,6 +287,9 @@ export const InputValidators = {
       ActionInputsSchema.shape.maxOutputSize,
       'maxOutputSize'
     ),
+
+  runner: (value: unknown) =>
+    validateInput(value, ActionInputsSchema.shape.runner, 'runner'),
 };
 
 /**

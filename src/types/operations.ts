@@ -15,6 +15,7 @@ export interface OperationOptions {
   commentMode?: CommentMode;
   failOnError?: boolean;
   maxOutputSize?: number;
+  runner?: 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
   environment?: Record<string, string>;
 }
 

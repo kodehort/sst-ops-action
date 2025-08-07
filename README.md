@@ -15,6 +15,7 @@ A unified, production-ready GitHub Action for **SST (Serverless Stack)** operati
 - 📝 **Automated PR Comments** - Rich markdown comments with deployment status and changes
 - 🔍 **Infrastructure Diff** - See planned changes before deployment
 - 🧹 **Resource Cleanup** - Automated removal of staging environments
+- ⚙️ **Configurable Runtime** - Support for Bun, npm, pnpm, Yarn, or direct SST CLI
 - ⚡ **Production-Optimized** - Sub-second load times with 2.5MB bundle
 - 🛡️ **Enterprise-Grade** - Comprehensive error handling and security scanning
 - 📊 **GitHub Integration** - Workflow summaries, artifacts, and status reporting
@@ -92,6 +93,7 @@ jobs:
 | `operation` | SST operation to perform | No | `deploy` | `deploy`, `diff`, `remove` |
 | `stage` | SST stage to operate on | Yes | - | `production`, `staging`, `pr-123` |
 | `token` | GitHub token for authentication | Yes | - | `${{ secrets.GITHUB_TOKEN }}` |
+| `runner` | Package manager/runtime for SST commands | No | `bun` | `bun`, `npm`, `pnpm`, `yarn`, `sst` |
 | `comment-mode` | When to create PR comments | No | `on-success` | `always`, `on-success`, `on-failure`, `never` |
 | `fail-on-error` | Whether to fail the workflow on errors | No | `true` | `true`, `false` |
 | `max-output-size` | Maximum output size in bytes | No | `50000` | `100000` |
@@ -320,6 +322,62 @@ jobs:
 ```
 
 ## 🛠️ Advanced Configuration
+
+### Package Manager/Runtime Configuration
+
+Choose your preferred package manager or runtime for executing SST commands:
+
+```yaml
+# Use Bun (default)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: bun  # Executes: bun sst deploy --stage production
+
+# Use npm with package scripts
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: npm  # Executes: npm run sst -- deploy --stage production
+
+# Use pnpm
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: pnpm  # Executes: pnpm sst deploy --stage production
+
+# Use Yarn
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: yarn  # Executes: yarn sst deploy --stage production
+
+# Use SST CLI directly (requires global installation)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: sst   # Executes: sst deploy --stage production
+```
+
+**Runner Selection Guide:**
+
+| Runner | Best For | Command Format | Requirements |
+|--------|----------|----------------|--------------|
+| `bun` | Modern projects, fastest execution | `bun sst <operation>` | SST installed as dependency |
+| `npm` | Traditional npm projects | `npm run sst -- <operation>` | SST script in package.json |
+| `pnpm` | Efficient package management | `pnpm sst <operation>` | SST installed as dependency |
+| `yarn` | Yarn-based projects | `yarn sst <operation>` | SST installed as dependency |
+| `sst` | Direct CLI usage | `sst <operation>` | SST CLI globally installed |
 
 ### Error Handling
 

@@ -27,8 +27,10 @@ export default defineConfig({
       },
     },
     setupFiles: ['./__tests__/setup.ts'],
-    testTimeout: 10_000,
-    hookTimeout: 10_000,
+    testTimeout: 30_000, // Increased for integration tests
+    hookTimeout: 30_000,
+    // Test categories with different configurations
+    pool: 'forks', // Better isolation for integration tests
   },
   resolve: {
     alias: {
