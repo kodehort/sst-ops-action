@@ -1,6 +1,11 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorCategory, ErrorSeverity, RecoveryStrategy } from '../src/errors/categories';
+import type {
+  ActionError,
+  ErrorCategory,
+  ErrorSeverity,
+  RecoveryStrategy,
+} from '../src/errors/categories';
 import { ErrorHandler } from '../src/errors/error-handler';
 import { run } from '../src/main';
 
@@ -15,7 +20,7 @@ describe('Main Entry Point', () => {
   beforeEach(() => {
     // Clear all mocks first
     vi.clearAllMocks();
-    
+
     // Mock process.env to control environment variables in tests
     process.env = {
       NODE_ENV: 'test',
@@ -80,8 +85,8 @@ describe('Main Entry Point', () => {
 
     // Spy on and mock the error handler
     vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-      category: ErrorCategory.CLI_EXECUTION,
-      severity: ErrorSeverity.HIGH,
+      category: 'cli_execution',
+      severity: 'high',
       message: 'Test error',
       originalError: new Error('Test error'),
       suggestions: [],
@@ -116,7 +121,9 @@ describe('Main Entry Point', () => {
         exitCode: 0,
         completionStatus: 'complete' as const,
         resourceChanges: 3,
-        urls: [{ name: 'API', url: 'https://api.example.com', type: 'api' as const }],
+        urls: [
+          { name: 'API', url: 'https://api.example.com', type: 'api' as const },
+        ],
         resources: [
           { type: 'Function', name: 'MyFunction', status: 'created' as const },
         ],
@@ -364,14 +371,14 @@ describe('Main Entry Point', () => {
       );
 
       vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.HIGH,
+        category: 'validation',
+        severity: 'high',
         message: validationError.message,
         originalError: validationError,
         suggestions: validationError.suggestions,
         recoverable: false,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+        recoveryStrategy: 'configuration_update',
       });
 
       await run();
@@ -478,22 +485,26 @@ describe('Main Entry Point', () => {
       vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
-      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockImplementation(() => {
-        throw new Error('Output formatting failed');
-      });
+      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockImplementation(
+        () => {
+          throw new Error('Output formatting failed');
+        }
+      );
 
-      const mockActionError = {
-        category: 'system',
-        severity: 'high',
+      const mockActionError: ActionError = {
+        category: 'system' as const,
+        severity: 'high' as const,
         message: 'Output formatting failed',
         originalError: new Error('Output formatting failed'),
         suggestions: [],
         recoverable: false,
         retryable: false,
-        recoveryStrategy: 'manual_intervention',
+        recoveryStrategy: 'manual_intervention' as const,
       };
 
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(mockActionError);
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(
+        mockActionError
+      );
 
       await run();
 
@@ -512,18 +523,20 @@ describe('Main Entry Point', () => {
         operationError
       );
 
-      const mockActionError = {
-        category: 'cli_execution',
-        severity: 'high',
+      const mockActionError: ActionError = {
+        category: 'cli_execution' as const,
+        severity: 'high' as const,
         message: 'SST CLI execution failed',
         originalError: operationError,
         suggestions: ['Check AWS credentials'],
         recoverable: false,
         retryable: false,
-        recoveryStrategy: 'manual_intervention',
+        recoveryStrategy: 'manual_intervention' as const,
       };
 
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(mockActionError);
+      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(
+        mockActionError
+      );
 
       await run();
 
@@ -582,22 +595,24 @@ describe('Main Entry Point', () => {
 
       const deployResult = {
         success: true,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'production',
         app: 'my-sst-app',
-        completionStatus: 'complete',
+        completionStatus: 'complete' as const,
         resourceChanges: 15,
         urls: [
-          { name: 'API', url: 'https://api.myapp.com', type: 'api' },
-          { name: 'Web', url: 'https://myapp.com', type: 'web' },
+          { name: 'API', url: 'https://api.myapp.com', type: 'api' as const },
+          { name: 'Web', url: 'https://myapp.com', type: 'web' as const },
         ],
         resources: [
-          { type: 'Function', name: 'ApiHandler', status: 'created' },
-          { type: 'Database', name: 'MainDB', status: 'updated' },
+          { type: 'Function', name: 'ApiHandler', status: 'created' as const },
+          { type: 'Database', name: 'MainDB', status: 'updated' as const },
         ],
         permalink:
           'https://console.sst.dev/my-sst-app/production/deployments/abc123',
         truncated: false,
+        rawOutput: 'Deploy completed successfully',
+        exitCode: 0,
       };
 
       // Override the formatter mock to return production-specific outputs
@@ -673,17 +688,19 @@ describe('Main Entry Point', () => {
     it('should handle partial success scenarios', async () => {
       const partialResult = {
         success: true,
-        operation: 'remove',
+        operation: 'remove' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'partial',
+        completionStatus: 'partial' as const,
         resourcesRemoved: 5,
         removedResources: [
-          { type: 'Function', name: 'Func1', status: 'removed' },
-          { type: 'Function', name: 'Func2', status: 'removed' },
-          { type: 'Database', name: 'DB1', status: 'failed' },
+          { type: 'Function', name: 'Func1', status: 'removed' as const },
+          { type: 'Function', name: 'Func2', status: 'removed' as const },
+          { type: 'Database', name: 'DB1', status: 'failed' as const },
         ],
         truncated: false,
+        rawOutput: 'Remove completed with partial success',
+        exitCode: 0,
       };
 
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {

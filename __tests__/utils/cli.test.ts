@@ -1,4 +1,5 @@
 import { access } from 'node:fs';
+import * as mockExecModule from '@actions/exec';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SSTOperation } from '../../src/types/index.js';
 import {
@@ -8,15 +9,8 @@ import {
   SSTCLIExecutor,
 } from '../../src/utils/cli.js';
 
-// Mock @actions/exec
-vi.mock('@actions/exec');
-vi.mock('node:fs');
-vi.mock('node:util', () => ({
-  promisify: vi.fn((fn) => vi.fn(fn)),
-}));
-
-const mockExec = vi.mocked(await import('@actions/exec'));
-const mockAccess = vi.mocked(access);
+const mockExec = mockExecModule as any;
+const mockAccess = access as any;
 
 describe('SST CLI Utilities', () => {
   let executor: SSTCLIExecutor;
@@ -44,7 +38,7 @@ describe('SST CLI Utilities', () => {
         const stage = 'staging';
 
         // Mock successful execution with output via listeners
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('Deploying app: test-app\n'));
             options.listeners.stdout(Buffer.from('Stage: staging\n'));
@@ -62,8 +56,8 @@ describe('SST CLI Utilities', () => {
         expect(result.output).toContain('Deploying app: test-app');
         expect(result.command).toContain('sst deploy --stage staging');
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['deploy', '--stage', 'staging'],
+          'bun',
+          ['sst', 'deploy', '--stage', 'staging'],
           expect.any(Object)
         );
       });
@@ -72,7 +66,7 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'diff';
         const stage = 'staging';
 
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(
               Buffer.from('~ Resource will be updated\n')
@@ -88,8 +82,8 @@ describe('SST CLI Utilities', () => {
         expect(result.stage).toBe('staging');
         expect(result.output).toContain('~ Resource will be updated');
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['diff', '--stage', 'staging'],
+          'bun',
+          ['sst', 'diff', '--stage', 'staging'],
           expect.any(Object)
         );
       });
@@ -98,7 +92,7 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'remove';
         const stage = 'pr-123';
 
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('Removing resources...\n'));
             options.listeners.stdout(Buffer.from('✓ All resources removed\n'));
@@ -112,8 +106,8 @@ describe('SST CLI Utilities', () => {
         expect(result.operation).toBe('remove');
         expect(result.stage).toBe('pr-123');
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['remove', '--stage', 'pr-123', '--yes'],
+          'bun',
+          ['sst', 'remove', '--stage', 'pr-123', '--yes'],
           expect.any(Object)
         );
       });
@@ -122,7 +116,7 @@ describe('SST CLI Utilities', () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
 
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stderr) {
             options.listeners.stderr(Buffer.from('Error: Deployment failed\n'));
           }
@@ -158,7 +152,7 @@ describe('SST CLI Utilities', () => {
         const stage = 'staging';
         const options: CLIOptions = { maxOutputSize: 50 };
 
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             // Generate output larger than maxOutputSize
             const largeOutput = 'x'.repeat(100);
@@ -187,8 +181,8 @@ describe('SST CLI Utilities', () => {
         await executor.executeSST(operation, stage, options);
 
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['deploy', '--stage', 'staging'],
+          'bun',
+          ['sst', 'deploy', '--stage', 'staging'],
           expect.objectContaining({
             env: expect.objectContaining({
               AWS_REGION: 'us-west-2',
@@ -203,7 +197,7 @@ describe('SST CLI Utilities', () => {
 
     describe('checkSSTAvailability', () => {
       it('should detect available SST CLI', async () => {
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('2.41.3\n'));
           }
@@ -215,14 +209,14 @@ describe('SST CLI Utilities', () => {
         expect(result.available).toBe(true);
         expect(result.version).toBe('2.41.3');
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['--version'],
+          'bun',
+          ['sst', '--version'],
           expect.any(Object)
         );
       });
 
       it('should handle SST CLI error response', async () => {
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stderr) {
             options.listeners.stderr(Buffer.from('Command not found\n'));
           }
@@ -238,7 +232,7 @@ describe('SST CLI Utilities', () => {
 
     describe('getProjectInfo', () => {
       it('should extract project information', async () => {
-        mockExec.exec.mockImplementation(async (_command, _args, options) => {
+        mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(
               Buffer.from('App: my-app\nStage: production\n')
@@ -252,8 +246,8 @@ describe('SST CLI Utilities', () => {
         expect(result.app).toBe('my-app');
         expect(result.stage).toBe('production');
         expect(mockExec.exec).toHaveBeenCalledWith(
-          'sst',
-          ['env'],
+          'bun',
+          ['sst', 'env'],
           expect.any(Object)
         );
       });
@@ -265,7 +259,7 @@ describe('SST CLI Utilities', () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'production';
 
-      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+      mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
         if (options?.listeners?.stdout) {
           options.listeners.stdout(Buffer.from('Deploy complete\n'));
         }
@@ -298,8 +292,8 @@ describe('SST CLI Utilities', () => {
       await executor.executeSST(operation, stage, { cwd: customCwd });
 
       expect(mockExec.exec).toHaveBeenCalledWith(
-        'sst',
-        ['deploy', '--stage', 'staging'],
+        'bun',
+        ['sst', 'deploy', '--stage', 'staging'],
         expect.objectContaining({
           cwd: customCwd,
         })
@@ -314,8 +308,8 @@ describe('SST CLI Utilities', () => {
       await executor.executeSST(operation, stage, { args: customArgs });
 
       expect(mockExec.exec).toHaveBeenCalledWith(
-        'sst',
-        ['deploy', '--stage', 'staging', '--verbose', '--debug'],
+        'bun',
+        ['sst', 'deploy', '--stage', 'staging', '--verbose', '--debug'],
         expect.any(Object)
       );
     });
@@ -324,7 +318,7 @@ describe('SST CLI Utilities', () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';
 
-      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+      mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
         if (options?.listeners?.stdout) {
           options.listeners.stdout(Buffer.from('Deploying...\n'));
         }
@@ -367,7 +361,7 @@ describe('SST CLI Utilities', () => {
       const operation: SSTOperation = 'deploy';
       const concurrentCount = 3;
 
-      mockExec.exec.mockImplementation(async (_command, _args, options) => {
+      mockExec.exec.mockImplementation(async (_command: string, _args: string[], options: any) => {
         if (options?.listeners?.stdout) {
           options.listeners.stdout(Buffer.from('Deploy complete\n'));
         }

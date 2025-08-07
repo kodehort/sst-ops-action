@@ -384,7 +384,7 @@ async function buildBundle(options: BuildOptions = {}): Promise<void> {
 **Implementation Details:**
 ```typescript
 // src/utils/validation.ts
-import { z } from 'zod';
+import * as z from 'zod/v4';
 
 export const ActionInputsSchema = z.object({
   operation: z.enum(['deploy', 'diff', 'remove']).default('deploy'),

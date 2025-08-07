@@ -10,26 +10,14 @@ import { ValidationError } from './validation.js';
 /**
  * Error categories for systematic error handling
  */
-export enum ErrorCategory {
-  VALIDATION = 'validation',
-  AUTHENTICATION = 'authentication',
-  PERMISSION = 'permission',
-  NETWORK = 'network',
-  TIMEOUT = 'timeout',
-  PARSING = 'parsing',
-  SYSTEM = 'system',
-  UNKNOWN = 'unknown',
-}
+export const ERROR_CATEGORY_VALUES = ['validation', 'authentication', 'permission', 'network', 'timeout', 'parsing', 'system', 'unknown'] as const;
+export type ErrorCategory = typeof ERROR_CATEGORY_VALUES[number];
 
 /**
  * Error severity levels
  */
-export enum ErrorSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
+export const ERROR_SEVERITY_VALUES = ['low', 'medium', 'high', 'critical'] as const;
+export type ErrorSeverity = typeof ERROR_SEVERITY_VALUES[number];
 
 /**
  * Structured error information
@@ -57,8 +45,8 @@ export function categorizeError(
   // Validation errors
   if (error instanceof ValidationError) {
     return {
-      category: ErrorCategory.VALIDATION,
-      severity: ErrorSeverity.HIGH,
+      category: 'validation' as const,
+      severity: 'high' as const,
       message: error.message,
       originalError: error,
       suggestions: error.suggestions,
@@ -75,8 +63,8 @@ export function categorizeError(
     message.includes('401')
   ) {
     return {
-      category: ErrorCategory.AUTHENTICATION,
-      severity: ErrorSeverity.CRITICAL,
+      category: 'authentication' as const,
+      severity: 'critical' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -98,8 +86,8 @@ export function categorizeError(
     message.includes('403')
   ) {
     return {
-      category: ErrorCategory.PERMISSION,
-      severity: ErrorSeverity.HIGH,
+      category: 'permission' as const,
+      severity: 'high' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -121,8 +109,8 @@ export function categorizeError(
     message.includes('econnreset')
   ) {
     return {
-      category: ErrorCategory.TIMEOUT,
-      severity: ErrorSeverity.MEDIUM,
+      category: 'timeout' as const,
+      severity: 'medium' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -143,8 +131,8 @@ export function categorizeError(
     message.includes('econnrefused')
   ) {
     return {
-      category: ErrorCategory.NETWORK,
-      severity: ErrorSeverity.MEDIUM,
+      category: 'network' as const,
+      severity: 'medium' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -167,8 +155,8 @@ export function categorizeError(
     message.includes('syntax')
   ) {
     return {
-      category: ErrorCategory.PARSING,
-      severity: ErrorSeverity.MEDIUM,
+      category: 'parsing' as const,
+      severity: 'medium' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -187,11 +175,12 @@ export function categorizeError(
   if (
     message.includes('enoent') ||
     message.includes('file not found') ||
-    message.includes('command not found')
+    message.includes('command not found') ||
+    message.includes('no such file or directory')
   ) {
     return {
-      category: ErrorCategory.SYSTEM,
-      severity: ErrorSeverity.CRITICAL,
+      category: 'system' as const,
+      severity: 'critical' as const,
       message: error.message,
       originalError: error,
       suggestions: [
@@ -208,8 +197,8 @@ export function categorizeError(
 
   // Default case for unknown errors
   return {
-    category: ErrorCategory.UNKNOWN,
-    severity: ErrorSeverity.MEDIUM,
+    category: 'unknown' as const,
+    severity: 'medium' as const,
     message: error.message,
     originalError: error,
     suggestions: [
@@ -297,11 +286,11 @@ export function createErrorSummary(
   context?: Record<string, unknown>
 ): void {
   const errorInfo = categorizeError(error, context);
-  const severityEmoji = {
-    [ErrorSeverity.LOW]: '🟡',
-    [ErrorSeverity.MEDIUM]: '🟠',
-    [ErrorSeverity.HIGH]: '🔴',
-    [ErrorSeverity.CRITICAL]: '🚨',
+  const severityEmoji: Record<ErrorSeverity, string> = {
+    low: '🟡',
+    medium: '🟠',
+    high: '🔴',
+    critical: '🚨',
   };
 
   let summary = `# ❌ SST ${operation.charAt(0).toUpperCase() + operation.slice(1)} Failed\n\n`;
@@ -398,8 +387,8 @@ export function isTemporaryError(error: Error): boolean {
   const errorInfo = categorizeError(error);
   return (
     errorInfo.retryable ||
-    errorInfo.category === ErrorCategory.NETWORK ||
-    errorInfo.category === ErrorCategory.TIMEOUT
+    errorInfo.category === 'network' ||
+    errorInfo.category === 'timeout'
   );
 }
 
@@ -410,7 +399,7 @@ export function isRecoverableError(error: Error): boolean {
   const errorInfo = categorizeError(error);
   return (
     errorInfo.recoverable &&
-    errorInfo.category !== ErrorCategory.SYSTEM &&
-    errorInfo.category !== ErrorCategory.AUTHENTICATION
+    errorInfo.category !== 'system' &&
+    errorInfo.category !== 'authentication'
   );
 }

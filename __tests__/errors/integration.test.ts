@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
+import type {
+  ActionError,
   ErrorCategory,
   ErrorSeverity,
   RecoveryStrategy,
@@ -30,12 +31,12 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(error, context);
 
-      expect(actionError.category).toBe(ErrorCategory.AUTHENTICATION);
-      expect(actionError.severity).toBe(ErrorSeverity.HIGH);
+      expect(actionError.category).toBe('authentication');
+      expect(actionError.severity).toBe('high');
       expect(actionError.recoverable).toBe(true);
       expect(actionError.retryable).toBe(false);
       expect(actionError.recoveryStrategy).toBe(
-        RecoveryStrategy.CONFIGURATION_UPDATE
+        'configuration_update'
       );
 
       const options: OperationOptions = {
@@ -79,9 +80,9 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(error, context);
 
-      expect(actionError.category).toBe(ErrorCategory.TIMEOUT);
+      expect(actionError.category).toBe('timeout');
       expect(actionError.retryable).toBe(true);
-      expect(actionError.recoveryStrategy).toBe(RecoveryStrategy.RETRY);
+      expect(actionError.recoveryStrategy).toBe('retry');
 
       const options: OperationOptions = {
         stage: 'staging',
@@ -116,8 +117,8 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(error, context);
 
-      expect(actionError.category).toBe(ErrorCategory.OUTPUT_PARSING);
-      expect(actionError.severity).toBe(ErrorSeverity.LOW);
+      expect(actionError.category).toBe('output_parsing');
+      expect(actionError.severity).toBe('low');
       expect(actionError.recoverable).toBe(true);
 
       expect(ErrorHandler.isPartialSuccess(actionError)).toBe(true);
@@ -143,8 +144,8 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(validationError);
 
-      expect(actionError.category).toBe(ErrorCategory.VALIDATION);
-      expect(actionError.severity).toBe(ErrorSeverity.HIGH);
+      expect(actionError.category).toBe('validation');
+      expect(actionError.severity).toBe('high');
       expect(actionError.recoverable).toBe(false);
       expect(actionError.retryable).toBe(false);
 
@@ -176,9 +177,9 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(error, context);
 
-      expect(actionError.category).toBe(ErrorCategory.GITHUB_API);
+      expect(actionError.category).toBe('github_api');
       expect(actionError.retryable).toBe(true);
-      expect(actionError.recoveryStrategy).toBe(RecoveryStrategy.RETRY);
+      expect(actionError.recoveryStrategy).toBe('retry');
 
       const options: OperationOptions = {
         stage: 'production',
@@ -209,12 +210,12 @@ describe('Error Handling Integration', () => {
 
       const actionError = ErrorHandler.categorizeError(error, context);
 
-      expect(actionError.category).toBe(ErrorCategory.PERMISSIONS);
-      expect(actionError.severity).toBe(ErrorSeverity.HIGH);
+      expect(actionError.category).toBe('permissions');
+      expect(actionError.severity).toBe('high');
       expect(actionError.recoverable).toBe(true);
       expect(actionError.retryable).toBe(false); // Need to fix permissions first
       expect(actionError.recoveryStrategy).toBe(
-        RecoveryStrategy.CONFIGURATION_UPDATE
+        'configuration_update'
       );
 
       const options: OperationOptions = {
@@ -239,23 +240,23 @@ describe('Error Handling Integration', () => {
     const testCases = [
       {
         message: 'Command not found: sst',
-        expected: ErrorCategory.CLI_EXECUTION,
+        expected: 'cli_execution',
       },
       {
         message: 'Connection timeout to AWS services',
-        expected: ErrorCategory.TIMEOUT,
+        expected: 'timeout',
       },
       {
         message: 'Network error: Connection refused',
-        expected: ErrorCategory.NETWORK,
+        expected: 'network',
       },
       {
         message: 'Resource MyStack-Function-abc123 already exists',
-        expected: ErrorCategory.RESOURCE_CONFLICT,
+        expected: 'resource_conflict',
       },
       {
         message: 'Failed to parse deployment output: Invalid JSON',
-        expected: ErrorCategory.OUTPUT_PARSING,
+        expected: 'output_parsing',
       },
     ];
 
@@ -271,15 +272,15 @@ describe('Error Handling Integration', () => {
   describe('error severity impact', () => {
     it('should handle critical errors with immediate failure regardless of failOnError', async () => {
       const error = new Error('System corruption detected');
-      const actionError = {
-        category: ErrorCategory.SYSTEM,
-        severity: ErrorSeverity.CRITICAL,
+      const actionError: ActionError = {
+        category: 'system' as const,
+        severity: 'critical' as const,
         message: error.message,
         originalError: error,
         suggestions: ['Contact system administrator immediately'],
         recoverable: false,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.NOT_RECOVERABLE,
+        recoveryStrategy: 'not_recoverable' as const,
       };
 
       const options: OperationOptions = {
@@ -295,15 +296,15 @@ describe('Error Handling Integration', () => {
 
     it('should handle low severity errors gracefully', async () => {
       const error = new Error('Minor parsing issue in non-critical output');
-      const actionError = {
-        category: ErrorCategory.OUTPUT_PARSING,
-        severity: ErrorSeverity.LOW,
+      const actionError: ActionError = {
+        category: 'output_parsing' as const,
+        severity: 'low' as const,
         message: error.message,
         originalError: error,
         suggestions: ['Review output format', 'Update parsing logic'],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+        recoveryStrategy: 'manual_intervention' as const,
       };
 
       const options: OperationOptions = {
@@ -326,22 +327,22 @@ describe('Error Handling Integration', () => {
         {
           error: new Error('AWS credentials not found'),
           context: { stderr: 'aws credentials not configured' },
-          expectedStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+          expectedStrategy: 'configuration_update',
         },
         {
           error: new Error('Request timeout'),
           context: { stderr: 'operation timed out' },
-          expectedStrategy: RecoveryStrategy.RETRY,
+          expectedStrategy: 'retry',
         },
         {
           error: new Error('System memory exhausted'),
           context: { stderr: 'out of memory' },
-          expectedStrategy: RecoveryStrategy.NOT_RECOVERABLE,
+          expectedStrategy: 'not_recoverable',
         },
         {
           error: new Error('Deployment partially completed'),
           context: { stderr: 'some resources failed to deploy' },
-          expectedStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+          expectedStrategy: 'manual_intervention',
         },
       ];
 
@@ -397,7 +398,7 @@ describe('Error Handling Integration', () => {
         5000
       );
 
-      expect(cliError.category).toBe(ErrorCategory.AUTHENTICATION);
+      expect(cliError.category).toBe('authentication');
       expect(cliError.message).toBe('SST deploy failed');
       expect(cliError.debugInfo?.exitCode).toBe(1);
       expect(cliError.debugInfo?.operation).toBe('deploy');
@@ -411,11 +412,11 @@ describe('Error Handling Integration', () => {
         '{"incomplete": '
       );
 
-      expect(parsingError.category).toBe(ErrorCategory.OUTPUT_PARSING);
+      expect(parsingError.category).toBe('output_parsing');
       expect(parsingError.message).toBe(
         'Failed to parse diff output: Malformed JSON'
       );
-      expect(parsingError.severity).toBe(ErrorSeverity.LOW);
+      expect(parsingError.severity).toBe('low');
     });
 
     it('should create GitHub errors with API category', () => {
@@ -425,7 +426,7 @@ describe('Error Handling Integration', () => {
         'staging'
       );
 
-      expect(githubError.category).toBe(ErrorCategory.GITHUB_API);
+      expect(githubError.category).toBe('github_api');
       expect(githubError.message).toBe('GitHub API error: Token expired');
       expect(githubError.retryable).toBe(true);
     });

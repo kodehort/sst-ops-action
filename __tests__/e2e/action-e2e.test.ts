@@ -4,19 +4,22 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 // Test constants
-const E2E_TIMEOUT = 60000; // 1 minute for end-to-end operations
+const E2E_TIMEOUT = 60_000; // 1 minute for end-to-end operations
 const ACTION_DIST_PATH = join(process.cwd(), 'dist', 'index.cjs');
 
 /**
  * Execute the GitHub Action with given inputs and environment
  */
-async function executeAction(inputs: Record<string, string>, env: Record<string, string> = {}): Promise<{
+async function executeAction(
+  inputs: Record<string, string>,
+  env: Record<string, string> = {}
+): Promise<{
   exitCode: number;
   stdout: string;
   stderr: string;
@@ -80,7 +83,9 @@ async function executeAction(inputs: Record<string, string>, env: Record<string,
       const outputPattern = /::set-output name=([^:]+)::(.*)$/gm;
       let match;
       while ((match = outputPattern.exec(stdout)) !== null) {
-        outputs[match[1]] = match[2];
+        if (match[1] && match[2] !== undefined) {
+          outputs[match[1]] = match[2];
+        }
       }
 
       resolve({
@@ -118,7 +123,10 @@ function createTestProject(projectPath: string) {
       sst: '^3.0.0',
     },
   };
-  writeFileSync(join(projectPath, 'package.json'), JSON.stringify(packageJson, null, 2));
+  writeFileSync(
+    join(projectPath, 'package.json'),
+    JSON.stringify(packageJson, null, 2)
+  );
 
   // Create basic sst.config.ts
   const sstConfig = `/// <reference path="./.sst/platform/config.d.ts" />
@@ -153,7 +161,6 @@ describe('End-to-End Action Tests', () => {
   beforeEach(() => {
     // Check if the action is built
     if (!existsSync(ACTION_DIST_PATH)) {
-      console.warn('⚠️ Action not built - run `bun run build` first');
     }
 
     // Save original directory
@@ -171,16 +178,12 @@ describe('End-to-End Action Tests', () => {
     // Change back to original directory first
     try {
       process.chdir(originalCwd);
-    } catch (error) {
-      console.warn(`Failed to change back to original directory: ${error}`);
-    }
+    } catch (_error) {}
 
     // Clean up test project
     try {
       rmSync(testProjectPath, { recursive: true, force: true });
-    } catch (error) {
-      console.warn(`Failed to clean up E2E test project: ${error}`);
-    }
+    } catch (_error) {}
   });
 
   describe('Action Distribution', () => {
@@ -251,7 +254,7 @@ describe('End-to-End Action Tests', () => {
   describe('Input Processing E2E', () => {
     it('should handle all operation types successfully', async () => {
       const operations = ['deploy', 'diff', 'remove'];
-      
+
       for (const operation of operations) {
         const result = await executeAction({
           operation,
@@ -263,7 +266,9 @@ describe('End-to-End Action Tests', () => {
         // Each operation should start successfully (may fail later due to missing AWS creds)
         expect(result.exitCode).toBeGreaterThanOrEqual(0);
         expect(result.stdout).toContain('SST Operations Action');
-        expect(result.stdout).toMatch(new RegExp(`${operation}.*operation`, 'i'));
+        expect(result.stdout).toMatch(
+          new RegExp(`${operation}.*operation`, 'i')
+        );
       }
     });
 
@@ -331,15 +336,18 @@ describe('End-to-End Action Tests', () => {
     });
 
     it('should respect always comment mode', async () => {
-      const result = await executeAction({
-        operation: 'deploy',
-        stage: 'test',
-        token: 'fake-token',
-        'comment-mode': 'always',
-        'fail-on-error': 'true',
-      }, {
-        GITHUB_EVENT_NAME: 'pull_request', // Ensure PR context
-      });
+      const result = await executeAction(
+        {
+          operation: 'deploy',
+          stage: 'test',
+          token: 'fake-token',
+          'comment-mode': 'always',
+          'fail-on-error': 'true',
+        },
+        {
+          GITHUB_EVENT_NAME: 'pull_request', // Ensure PR context
+        }
+      );
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);
       expect(result.stdout).toContain('SST Operations Action');
@@ -365,31 +373,37 @@ describe('End-to-End Action Tests', () => {
 
   describe('Environment Integration E2E', () => {
     it('should work in CI environment', async () => {
-      const result = await executeAction({
-        operation: 'diff',
-        stage: 'ci-test',
-        token: 'fake-token',
-        'fail-on-error': 'true',
-      }, {
-        CI: 'true',
-        GITHUB_ACTIONS: 'true',
-      });
+      const result = await executeAction(
+        {
+          operation: 'diff',
+          stage: 'ci-test',
+          token: 'fake-token',
+          'fail-on-error': 'true',
+        },
+        {
+          CI: 'true',
+          GITHUB_ACTIONS: 'true',
+        }
+      );
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);
       expect(result.stdout).toContain('SST Operations Action');
     });
 
     it('should handle missing GitHub context gracefully', async () => {
-      const result = await executeAction({
-        operation: 'deploy',
-        stage: 'no-context-test',
-        token: 'fake-token',
-        'fail-on-error': 'true',
-      }, {
-        // Remove GitHub context
-        GITHUB_REPOSITORY: undefined,
-        GITHUB_REF: undefined,
-      });
+      const result = await executeAction(
+        {
+          operation: 'deploy',
+          stage: 'no-context-test',
+          token: 'fake-token',
+          'fail-on-error': 'true',
+        },
+        {
+          // Remove GitHub context
+          GITHUB_REPOSITORY: '',
+          GITHUB_REF: '',
+        }
+      );
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);
       expect(result.stdout).toContain('SST Operations Action');

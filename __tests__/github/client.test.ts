@@ -39,14 +39,14 @@ describe('GitHubClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mock behaviors
     mockOctokit.rest.issues.listComments.mockResolvedValue({ data: [] } as any);
 
     // Reset github mock to return our mock octokit
     const mockGetOctokit = github.getOctokit as any;
     mockGetOctokit.mockReturnValue(mockOctokit);
-    
+
     // Setup core summary mock - core is already mocked in setup.ts
     (core as any).summary = mockSummary as any;
 
@@ -172,7 +172,7 @@ describe('GitHubClient', () => {
       await testClient.createOrUpdateComment(mockDeployResult, 'always');
 
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
-      
+
       // Restore original payload
       (github as any).context.payload = originalPayload;
     });
@@ -270,9 +270,11 @@ describe('GitHubClient', () => {
       const failingArtifactClient = {
         uploadArtifact: vi.fn().mockRejectedValue(new Error('Upload failed')),
       };
-      
+
       // Mock DefaultArtifactClient to return our failing instance
-      (DefaultArtifactClient as any).mockReturnValueOnce(failingArtifactClient as any);
+      (DefaultArtifactClient as any).mockReturnValueOnce(
+        failingArtifactClient as any
+      );
 
       await client.uploadArtifacts(mockRemoveResult);
 

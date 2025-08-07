@@ -3,13 +3,7 @@
  * Tests end-to-end workflows with realistic scenarios
  */
 
-import { spawn } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  SST_DEPLOY_SUCCESS_OUTPUT,
-  SST_DIFF_OUTPUT,
-  SST_REMOVE_SUCCESS_OUTPUT,
-} from '../fixtures/sst-outputs';
 
 // Mock node:child_process
 vi.mock('node:child_process');
@@ -94,14 +88,17 @@ async function executeAction(env: Record<string, string>) {
 
   // Mock validation functions to return proper inputs
   const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+    {} as any
+  );
   vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
     failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    runner: 'bun' as const,
   });
 
   // Mock operation execution based on the operation type
@@ -188,14 +185,17 @@ async function executeActionWithFailure(
 
   // Mock validation functions to return proper inputs
   const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+    {} as any
+  );
   vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
     failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    runner: 'bun' as const,
   });
 
   // Mock failed operation execution
@@ -277,14 +277,17 @@ async function executeActionWithFailureAndContinue(
 
   // Mock validation functions to return proper inputs
   const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+    {} as any
+  );
   vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
     failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    runner: 'bun' as const,
   });
 
   // Mock failed operation execution
@@ -321,7 +324,7 @@ async function executeActionWithFailureAndContinue(
 /**
  * Executes the action with a validation error scenario
  */
-async function executeActionWithValidationError(
+async function _executeActionWithValidationError(
   env: Record<string, string>,
   errorMessage: string
 ) {
@@ -433,14 +436,17 @@ async function executeActionWithTruncation(env: Record<string, string>) {
 
   // Mock validation functions to return proper inputs
   const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+    {} as any
+  );
   vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
     failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+    runner: 'bun' as const,
   });
 
   // Mock operation execution with truncated result

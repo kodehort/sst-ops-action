@@ -6,9 +6,9 @@ import * as io from '@actions/io';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type ActionError,
-  ErrorCategory,
-  ErrorSeverity,
-  RecoveryStrategy,
+  type ErrorCategory,
+  type ErrorSeverity,
+  type RecoveryStrategy,
 } from '../../src/errors/categories';
 import { ErrorHandler } from '../../src/errors/error-handler';
 import type { OperationOptions } from '../../src/types';
@@ -37,14 +37,14 @@ describe('ErrorHandler', () => {
       const result = ErrorHandler.categorizeError(validationError);
 
       expect(result).toEqual({
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.HIGH,
+        category: 'validation',
+        severity: 'high',
         message: 'Invalid stage value',
         originalError: validationError,
         suggestions: ['Use staging, production, or dev'],
         recoverable: false,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+        recoveryStrategy: 'configuration_update',
         debugInfo: undefined,
         context: { field: 'stage', value: 'invalid-stage' },
       });
@@ -62,8 +62,8 @@ describe('ErrorHandler', () => {
 
       const result = ErrorHandler.categorizeError(error, context);
 
-      expect(result.category).toBe(ErrorCategory.AUTHENTICATION);
-      expect(result.severity).toBe(ErrorSeverity.HIGH);
+      expect(result.category).toBe('authentication');
+      expect(result.severity).toBe('high');
       expect(result.recoverable).toBe(true);
       expect(result.retryable).toBe(false);
       expect(result.debugInfo).toStrictEqual({
@@ -83,8 +83,8 @@ describe('ErrorHandler', () => {
 
       const result = ErrorHandler.categorizeError(error, context);
 
-      expect(result.category).toBe(ErrorCategory.TIMEOUT);
-      expect(result.severity).toBe(ErrorSeverity.MEDIUM);
+      expect(result.category).toBe('timeout');
+      expect(result.severity).toBe('medium');
       expect(result.retryable).toBe(true);
     });
 
@@ -98,8 +98,8 @@ describe('ErrorHandler', () => {
 
       const result = ErrorHandler.categorizeError(error, context);
 
-      expect(result.category).toBe(ErrorCategory.GITHUB_API);
-      expect(result.severity).toBe(ErrorSeverity.MEDIUM);
+      expect(result.category).toBe('github_api');
+      expect(result.severity).toBe('medium');
       expect(result.retryable).toBe(true);
     });
 
@@ -109,8 +109,8 @@ describe('ErrorHandler', () => {
       const result = ErrorHandler.categorizeError(error);
 
       expect(result).toEqual({
-        category: ErrorCategory.SYSTEM,
-        severity: ErrorSeverity.MEDIUM,
+        category: 'system',
+        severity: 'medium',
         message: 'Unknown system error',
         originalError: error,
         suggestions: [
@@ -121,7 +121,7 @@ describe('ErrorHandler', () => {
         ],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+        recoveryStrategy: 'manual_intervention',
         debugInfo: undefined,
       });
     });
@@ -136,8 +136,8 @@ describe('ErrorHandler', () => {
 
       const result = ErrorHandler.categorizeError(error, context);
 
-      expect(result.category).toBe(ErrorCategory.PERMISSIONS);
-      expect(result.severity).toBe(ErrorSeverity.HIGH);
+      expect(result.category).toBe('permissions');
+      expect(result.severity).toBe('high');
     });
   });
 
@@ -150,14 +150,14 @@ describe('ErrorHandler', () => {
     };
 
     const mockError: ActionError = {
-      category: ErrorCategory.CLI_EXECUTION,
-      severity: ErrorSeverity.HIGH,
+      category: 'cli_execution',
+      severity: 'high',
       message: 'Deploy command failed',
       originalError: new Error('Deploy failed'),
       suggestions: ['Check AWS credentials', 'Verify permissions'],
       recoverable: false,
       retryable: false,
-      recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+      recoveryStrategy: 'manual_intervention',
       debugInfo: {
         operation: 'deploy',
         stage: 'staging',
@@ -183,7 +183,7 @@ describe('ErrorHandler', () => {
       const recoverableError: ActionError = {
         ...mockError,
         recoverable: true,
-        severity: ErrorSeverity.MEDIUM,
+        severity: 'medium',
       };
 
       const optionsWithoutFail: OperationOptions = {
@@ -277,7 +277,7 @@ describe('ErrorHandler', () => {
         stage: 'staging',
         stdout: '{"invalid": json}',
       });
-      expect(result.category).toBe(ErrorCategory.OUTPUT_PARSING);
+      expect(result.category).toBe('output_parsing');
     });
   });
 
@@ -294,43 +294,43 @@ describe('ErrorHandler', () => {
         operation: 'deploy',
         stage: 'production',
       });
-      expect(result.category).toBe(ErrorCategory.GITHUB_API);
+      expect(result.category).toBe('github_api');
     });
   });
 
   describe('utility methods', () => {
     it('should identify partial success scenarios', () => {
       const parsingError: ActionError = {
-        category: ErrorCategory.OUTPUT_PARSING,
-        severity: ErrorSeverity.LOW,
+        category: 'output_parsing',
+        severity: 'low',
         message: 'Failed to parse some output',
         originalError: new Error(),
         suggestions: [],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.RETRY,
+        recoveryStrategy: 'retry',
       };
 
       const recoverableError: ActionError = {
-        category: ErrorCategory.TIMEOUT,
-        severity: ErrorSeverity.MEDIUM,
+        category: 'timeout',
+        severity: 'medium',
         message: 'Operation timeout',
         originalError: new Error(),
         suggestions: [],
         recoverable: true,
         retryable: true,
-        recoveryStrategy: RecoveryStrategy.RETRY,
+        recoveryStrategy: 'retry',
       };
 
       const criticalError: ActionError = {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.CRITICAL,
+        category: 'validation',
+        severity: 'critical',
         message: 'Critical validation error',
         originalError: new Error(),
         suggestions: [],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+        recoveryStrategy: 'configuration_update',
       };
 
       expect(ErrorHandler.isPartialSuccess(parsingError)).toBe(true);
@@ -340,30 +340,30 @@ describe('ErrorHandler', () => {
 
     it('should return appropriate exit codes', () => {
       const criticalError: ActionError = {
-        category: ErrorCategory.SYSTEM,
-        severity: ErrorSeverity.CRITICAL,
+        category: 'system',
+        severity: 'critical',
         message: 'Critical error',
         originalError: new Error(),
         suggestions: [],
         recoverable: false,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.NOT_RECOVERABLE,
+        recoveryStrategy: 'not_recoverable',
       };
 
       const highError: ActionError = {
         ...criticalError,
-        severity: ErrorSeverity.HIGH,
+        severity: 'high',
       };
 
       const recoverableError: ActionError = {
         ...criticalError,
-        severity: ErrorSeverity.MEDIUM,
+        severity: 'medium',
         recoverable: true,
       };
 
       const nonRecoverableError: ActionError = {
         ...criticalError,
-        severity: ErrorSeverity.LOW,
+        severity: 'low',
         recoverable: false,
       };
 
@@ -376,14 +376,14 @@ describe('ErrorHandler', () => {
 
   describe('error logging', () => {
     const mockError: ActionError = {
-      category: ErrorCategory.AUTHENTICATION,
-      severity: ErrorSeverity.HIGH,
+      category: 'authentication',
+      severity: 'high',
       message: 'Authentication failed',
       originalError: new Error('Auth error'),
       suggestions: ['Check credentials', 'Verify permissions'],
       recoverable: true,
       retryable: false,
-      recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+      recoveryStrategy: 'configuration_update',
       debugInfo: {
         operation: 'deploy',
         stage: 'production',
@@ -421,14 +421,14 @@ describe('ErrorHandler', () => {
 
     it('should handle missing debug info gracefully', async () => {
       const minimalError: ActionError = {
-        category: ErrorCategory.SYSTEM,
-        severity: ErrorSeverity.LOW,
+        category: 'system',
+        severity: 'low',
         message: 'System error',
         originalError: new Error(),
         suggestions: [],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.MANUAL_INTERVENTION,
+        recoveryStrategy: 'manual_intervention',
       };
 
       const options: OperationOptions = {
@@ -448,14 +448,14 @@ describe('ErrorHandler', () => {
   describe('artifact creation', () => {
     it('should create comprehensive error artifacts', async () => {
       const mockError: ActionError = {
-        category: ErrorCategory.CLI_EXECUTION,
-        severity: ErrorSeverity.HIGH,
+        category: 'cli_execution',
+        severity: 'high',
         message: 'CLI execution failed',
         originalError: new Error('Exec error'),
         suggestions: ['Retry operation'],
         recoverable: true,
         retryable: true,
-        recoveryStrategy: RecoveryStrategy.RETRY,
+        recoveryStrategy: 'retry',
         debugInfo: {
           operation: 'deploy',
           stage: 'staging',
@@ -513,14 +513,14 @@ describe('ErrorHandler', () => {
   describe('job summary creation', () => {
     it('should create comprehensive GitHub Actions job summary', async () => {
       const mockError: ActionError = {
-        category: ErrorCategory.PERMISSIONS,
-        severity: ErrorSeverity.HIGH,
+        category: 'permissions',
+        severity: 'high',
         message: 'Permission denied',
         originalError: new Error('Permission error'),
         suggestions: ['Check IAM roles', 'Verify resource permissions'],
         recoverable: true,
         retryable: false,
-        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
+        recoveryStrategy: 'configuration_update',
         debugInfo: {
           operation: 'remove',
           stage: 'production',
@@ -561,14 +561,14 @@ describe('ErrorHandler', () => {
 
     it('should handle different recovery strategies in summary', async () => {
       const retryError: ActionError = {
-        category: ErrorCategory.TIMEOUT,
-        severity: ErrorSeverity.MEDIUM,
+        category: 'timeout',
+        severity: 'medium',
         message: 'Operation timeout',
         originalError: new Error(),
         suggestions: [],
         recoverable: true,
         retryable: true,
-        recoveryStrategy: RecoveryStrategy.RETRY,
+        recoveryStrategy: 'retry',
         debugInfo: { operation: 'deploy', stage: 'staging' },
       };
 

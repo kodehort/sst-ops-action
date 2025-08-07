@@ -307,6 +307,7 @@ describe('GitHub Actions Integration', () => {
         commentMode: 'always' as const,
         failOnError: true,
         maxOutputSize: 75_000,
+        runner: 'bun' as const,
       };
 
       logOperationStart(inputs);
@@ -340,6 +341,7 @@ describe('GitHub Actions Integration', () => {
           commentMode: 'on-success' as const,
           failOnError: true,
           maxOutputSize: 50_000,
+          runner: 'bun' as const,
         };
 
         logOperationStart(inputs);
@@ -576,6 +578,7 @@ describe('GitHub Actions Integration', () => {
         commentMode: 'on-success' as const,
         failOnError: true,
         maxOutputSize: 50_000,
+        runner: 'bun' as const,
       };
 
       maskSensitiveValues(inputs);
@@ -591,6 +594,7 @@ describe('GitHub Actions Integration', () => {
         commentMode: 'on-success' as const,
         failOnError: true,
         maxOutputSize: 50_000,
+        runner: 'bun' as const,
       };
 
       maskSensitiveValues(inputs);

@@ -38,6 +38,10 @@ vi.mock('@actions/github', () => ({
   getOctokit: vi.fn(),
 }));
 
+vi.mock('@actions/exec', () => ({
+  exec: vi.fn(),
+}));
+
 vi.mock('@actions/artifact', () => ({
   DefaultArtifactClient: vi.fn().mockImplementation(() => ({
     uploadArtifact: vi.fn().mockResolvedValue({
@@ -49,6 +53,10 @@ vi.mock('@actions/artifact', () => ({
 
 vi.mock('@actions/io', () => ({
   mkdirP: vi.fn(),
+}));
+
+vi.mock('node:fs', () => ({
+  access: vi.fn(),
 }));
 
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -71,6 +79,10 @@ vi.mock('node:path', async (importOriginal) => {
     join: vi.fn((...paths: string[]) => paths.join('/')),
   };
 });
+
+vi.mock('node:util', () => ({
+  promisify: vi.fn((fn) => vi.fn(fn)),
+}));
 
 // Clean up between tests
 beforeEach(() => {

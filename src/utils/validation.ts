@@ -3,14 +3,14 @@
  * Provides comprehensive validation with clear error messages
  */
 
-import { z } from 'zod';
+import * as z from 'zod/v4';
 import type { CommentMode, SSTOperation } from '../types/index.js';
-import type { SSTRunner } from './cli.js';
 import {
   isValidCommentMode,
   isValidOperation,
   validateMaxOutputSize,
 } from '../types/index.js';
+import type { SSTRunner } from './cli.js';
 
 // Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
@@ -24,10 +24,9 @@ export const ActionInputsSchema = z.object({
     .default('deploy')
     .refine(
       (val) => isValidOperation(val),
-      (val) => ({
-        message: `Invalid operation: ${val}. Must be one of: deploy, diff, remove`,
-        path: ['operation'],
-      })
+      {
+        message: 'Invalid operation. Must be one of: deploy, diff, remove',
+      }
     )
     .transform((val) => val as SSTOperation),
 
@@ -63,10 +62,9 @@ export const ActionInputsSchema = z.object({
     .default('on-success')
     .refine(
       (val) => isValidCommentMode(val),
-      (val) => ({
-        message: `Invalid comment mode: ${val}. Must be one of: always, on-success, on-failure, never`,
-        path: ['commentMode'],
-      })
+      {
+        message: 'Invalid comment mode. Must be one of: always, on-success, on-failure, never',
+      }
     )
     .transform((val) => val as CommentMode),
 
@@ -104,11 +102,11 @@ export const ActionInputsSchema = z.object({
     .string()
     .default('bun')
     .refine(
-      (val): val is SSTRunner => ['bun', 'npm', 'pnpm', 'yarn', 'sst'].includes(val),
-      (val) => ({
-        message: `Invalid runner: ${val}. Must be one of: bun, npm, pnpm, yarn, sst`,
-        path: ['runner'],
-      })
+      (val): val is SSTRunner =>
+        ['bun', 'npm', 'pnpm', 'yarn', 'sst'].includes(val),
+      {
+        message: 'Invalid runner. Must be one of: bun, npm, pnpm, yarn, sst',
+      }
     )
     .transform((val) => val as SSTRunner),
 });
