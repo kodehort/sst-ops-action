@@ -51,10 +51,14 @@ vi.mock('@actions/io', () => ({
   mkdirP: vi.fn(),
 }));
 
-vi.mock('node:fs/promises', () => ({
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
-}));
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    writeFile: vi.fn(),
+    mkdir: vi.fn(),
+  };
+});
 
 vi.mock('node:os', () => ({
   tmpdir: vi.fn(() => '/tmp'),

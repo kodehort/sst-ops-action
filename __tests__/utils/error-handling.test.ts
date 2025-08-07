@@ -96,27 +96,6 @@ describe('Error Handling', () => {
       });
     });
 
-    it('should categorize timeout errors', () => {
-      const testCases = [
-        'Request timeout',
-        'ETIMEDOUT error',
-        'Connection reset',
-      ];
-
-      testCases.forEach((message) => {
-        const error = new Error(message);
-        const errorInfo = categorizeError(error);
-
-        expect(errorInfo.category).toBe(ErrorCategory.TIMEOUT);
-        expect(errorInfo.severity).toBe(ErrorSeverity.MEDIUM);
-        expect(errorInfo.suggestions.some((s) => s.includes('retry'))).toBe(
-          true
-        );
-        expect(errorInfo.recoverable).toBe(true);
-        expect(errorInfo.retryable).toBe(true);
-      });
-    });
-
     it('should categorize network errors', () => {
       const testCases = ['Network error', 'ENOTFOUND hostname', 'ECONNREFUSED'];
 

@@ -8,6 +8,7 @@ import { ErrorHandler } from './errors/error-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
 import type { OperationOptions } from './types';
+import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
   validateWithContext,
@@ -23,11 +24,12 @@ function parseGitHubActionsInputs() {
     stage: core.getInput('stage'),
     token: core.getInput('token'),
     commentMode: core.getInput('comment-mode') || 'on-success',
-    failOnError: core.getBooleanInput('fail-on-error') ?? true,
+    failOnError: (core.getInput('fail-on-error') || 'true').toLowerCase() !== 'false',
     maxOutputSize: Number.parseInt(
       core.getInput('max-output-size') || '50000',
       10
     ),
+    runner: (core.getInput('runner') || 'bun') as SSTRunner,
   };
 
   // Create validation context
@@ -54,6 +56,7 @@ function createOperationOptions(
       commentMode: inputs.commentMode,
       failOnError: inputs.failOnError,
       maxOutputSize: inputs.maxOutputSize,
+      runner: inputs.runner || 'bun',
       environment: Object.fromEntries(
         Object.entries(process.env).filter(([, value]) => value !== undefined)
       ) as Record<string, string>,
@@ -164,7 +167,7 @@ export async function run(): Promise<void> {
       // Attempt to get operation options for error handling
       const basicOptions: OperationOptions = {
         stage: core.getInput('stage') || 'unknown',
-        failOnError: core.getBooleanInput('fail-on-error') ?? true,
+        failOnError: (core.getInput('fail-on-error') || 'true').toLowerCase() !== 'false',
       };
 
       await ErrorHandler.handleError(actionError, basicOptions);

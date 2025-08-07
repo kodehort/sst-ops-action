@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorCategory } from '../src/errors/categories';
+import { ErrorCategory, ErrorSeverity, RecoveryStrategy } from '../src/errors/categories';
 import { ErrorHandler } from '../src/errors/error-handler';
 import { run } from '../src/main';
 
@@ -81,7 +81,7 @@ describe('Main Entry Point', () => {
     // Spy on and mock the error handler
     vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
       category: ErrorCategory.CLI_EXECUTION,
-      severity: 'high' as const,
+      severity: ErrorSeverity.HIGH,
       message: 'Test error',
       originalError: new Error('Test error'),
       suggestions: [],
@@ -109,14 +109,16 @@ describe('Main Entry Point', () => {
     it('should handle successful deploy operation', async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Deploy completed successfully',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         resourceChanges: 3,
-        urls: [{ name: 'API', url: 'https://api.example.com', type: 'api' }],
+        urls: [{ name: 'API', url: 'https://api.example.com', type: 'api' as const }],
         resources: [
-          { type: 'Function', name: 'MyFunction', status: 'created' },
+          { type: 'Function', name: 'MyFunction', status: 'created' as const },
         ],
         truncated: false,
       };
@@ -179,10 +181,12 @@ describe('Main Entry Point', () => {
 
       const mockResult = {
         success: true,
-        operation: 'diff',
+        operation: 'diff' as const,
         stage: 'production',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Diff analysis completed',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         plannedChanges: 5,
         changeSummary: 'Found 5 planned changes',
         changes: [],
@@ -230,13 +234,15 @@ describe('Main Entry Point', () => {
 
       const mockResult = {
         success: true,
-        operation: 'remove',
+        operation: 'remove' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Resources removed successfully',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         resourcesRemoved: 7,
         removedResources: [
-          { type: 'Function', name: 'OldFunction', status: 'removed' },
+          { type: 'Function', name: 'OldFunction', status: 'removed' as const },
         ],
         truncated: false,
       };
@@ -269,10 +275,12 @@ describe('Main Entry Point', () => {
     it('should handle operation failure with failOnError=true', async () => {
       const mockResult = {
         success: false,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'failed',
+        rawOutput: 'Deploy failed',
+        exitCode: 1,
+        completionStatus: 'failed' as const,
         error: 'Authentication failed',
         resourceChanges: 0,
         urls: [],
@@ -304,10 +312,12 @@ describe('Main Entry Point', () => {
 
       const mockResult = {
         success: false,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'failed',
+        rawOutput: 'Deploy failed due to network timeout',
+        exitCode: 1,
+        completionStatus: 'failed' as const,
         error: 'Network timeout',
         resourceChanges: 0,
         urls: [],
@@ -354,14 +364,14 @@ describe('Main Entry Point', () => {
       );
 
       vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-        category: 'validation',
-        severity: 'high',
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.HIGH,
         message: validationError.message,
         originalError: validationError,
         suggestions: validationError.suggestions,
         recoverable: false,
         retryable: false,
-        recoveryStrategy: 'configuration_update',
+        recoveryStrategy: RecoveryStrategy.CONFIGURATION_UPDATE,
       });
 
       await run();
@@ -397,11 +407,15 @@ describe('Main Entry Point', () => {
     it('should format and validate outputs correctly', async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Deploy completed',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         resourceChanges: 2,
+        urls: [],
+        resources: [],
         truncated: false,
       };
 
@@ -423,11 +437,15 @@ describe('Main Entry Point', () => {
     it('should handle output truncation warnings', async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Deploy completed with large output',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         resourceChanges: 1,
+        urls: [],
+        resources: [],
         truncated: true,
       };
 
@@ -445,11 +463,15 @@ describe('Main Entry Point', () => {
     it('should handle output formatting errors', async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy',
+        operation: 'deploy' as const,
         stage: 'staging',
         app: 'test-app',
-        completionStatus: 'complete',
+        rawOutput: 'Deploy completed',
+        exitCode: 0,
+        completionStatus: 'complete' as const,
         resourceChanges: 1,
+        urls: [],
+        resources: [],
         truncated: false,
       };
 

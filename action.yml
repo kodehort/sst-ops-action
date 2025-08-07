@@ -29,6 +29,10 @@ inputs:
     description: "Maximum output size before truncation (bytes)"
     required: false
     default: "50000"
+  runner:
+    description: "Package manager/runner to use for SST commands (bun, npm, pnpm, yarn, or 'sst' for direct binary)"
+    required: false
+    default: "bun"
 
 outputs:
   success:

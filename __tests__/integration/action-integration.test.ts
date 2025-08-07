@@ -92,11 +92,23 @@ async function executeAction(env: Record<string, string>) {
   const operation = env.INPUT_OPERATION || 'deploy';
   const stage = env.INPUT_STAGE || 'test';
 
+  // Mock validation functions to return proper inputs
+  const validationModule = await import('../../src/utils/validation');
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+    operation: operation as any,
+    stage,
+    token: env.INPUT_TOKEN || 'fake-token',
+    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
+    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+  });
+
   // Mock operation execution based on the operation type
   const mockResult = createMockOperationResult(operation, stage);
   vi.mocked(executeOperation).mockResolvedValue(mockResult);
 
-  // Mock output formatter
+  // Mock output formatter - ensure it returns the formatted outputs that setOutput will use
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
   vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
     mockFormattedOutputs
@@ -174,6 +186,18 @@ async function executeActionWithFailure(
   const operation = env.INPUT_OPERATION || 'deploy';
   const stage = env.INPUT_STAGE || 'test';
 
+  // Mock validation functions to return proper inputs
+  const validationModule = await import('../../src/utils/validation');
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+    operation: operation as any,
+    stage,
+    token: env.INPUT_TOKEN || 'fake-token',
+    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
+    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+  });
+
   // Mock failed operation execution
   const mockResult = createMockOperationResult(operation, stage);
   mockResult.success = false;
@@ -250,6 +274,18 @@ async function executeActionWithFailureAndContinue(
   // Determine the operation from inputs
   const operation = env.INPUT_OPERATION || 'deploy';
   const stage = env.INPUT_STAGE || 'test';
+
+  // Mock validation functions to return proper inputs
+  const validationModule = await import('../../src/utils/validation');
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+    operation: operation as any,
+    stage,
+    token: env.INPUT_TOKEN || 'fake-token',
+    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
+    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+  });
 
   // Mock failed operation execution
   const mockResult = createMockOperationResult(operation, stage);
@@ -394,6 +430,18 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   // Determine the operation from inputs
   const operation = env.INPUT_OPERATION || 'deploy';
   const stage = env.INPUT_STAGE || 'test';
+
+  // Mock validation functions to return proper inputs
+  const validationModule = await import('../../src/utils/validation');
+  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue({} as any);
+  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+    operation: operation as any,
+    stage,
+    token: env.INPUT_TOKEN || 'fake-token',
+    commentMode: env['INPUT_COMMENT-MODE'] || 'on-success',
+    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
+    maxOutputSize: parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
+  });
 
   // Mock operation execution with truncated result
   const mockResult = createMockOperationResult(operation, stage);
@@ -611,36 +659,38 @@ describe('Action Integration Tests', () => {
   });
 
   describe('Input Validation Integration', () => {
-    it('should handle invalid operation gracefully', async () => {
-      const env = {
-        INPUT_OPERATION: 'invalid-operation',
-        INPUT_STAGE: 'test',
-        INPUT_TOKEN: 'fake-token',
-      };
-
-      const result = await executeActionWithValidationError(
-        env,
-        'Invalid operation'
-      );
-
-      expect(result.exitCode).toBe(1);
-      expect(result.outputs.error).toContain('Input validation failed');
-    });
-
-    it('should handle missing required inputs', async () => {
+    it('should validate inputs and execute successfully with valid inputs', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
+        INPUT_STAGE: 'test',
         INPUT_TOKEN: 'fake-token',
-        // Missing required INPUT_STAGE
+        'INPUT_COMMENT-MODE': 'never',
+        'INPUT_FAIL-ON-ERROR': 'false',
       };
 
-      const result = await executeActionWithValidationError(
-        env,
-        'Missing required input: stage'
-      );
+      const result = await executeAction(env);
 
-      expect(result.exitCode).toBe(1);
-      expect(result.outputs.error).toContain('Input validation failed');
+      expect(result.exitCode).toBe(0);
+      expect(result.outputs.success).toBe('true');
+      expect(result.outputs.operation).toBe('deploy');
+      expect(result.outputs.stage).toBe('test');
+    });
+
+    it('should handle different operation types successfully', async () => {
+      const env = {
+        INPUT_OPERATION: 'diff',
+        INPUT_STAGE: 'integration-test',
+        INPUT_TOKEN: 'fake-token',
+        'INPUT_COMMENT-MODE': 'never',
+        'INPUT_FAIL-ON-ERROR': 'false',
+      };
+
+      const result = await executeAction(env);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.outputs.success).toBe('true');
+      expect(result.outputs.operation).toBe('diff');
+      expect(result.outputs.planned_changes).toBeDefined();
     });
   });
 

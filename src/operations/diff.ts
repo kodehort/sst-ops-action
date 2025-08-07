@@ -76,6 +76,7 @@ export class DiffOperation {
           env: this.buildEnvironment(options),
           timeout: this.defaultTimeout,
           maxOutputSize: options.maxOutputSize,
+          runner: options.runner,
         }
       );
 
