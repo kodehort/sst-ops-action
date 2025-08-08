@@ -1,6 +1,23 @@
 import type { BaseOperationResult } from '../types/operations';
 
 /**
+ * Common regex patterns for extracting information from SST outputs
+ * Moved to top-level for performance optimization
+ */
+const APP_INFO_PATTERN = /^App:\s+(.+)$/m;
+const STAGE_INFO_PATTERN = /^Stage:\s+(.+)$/m;
+const PERMALINK_PATTERN = /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m;
+const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
+const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
+const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
+const DURATION_PATTERN = /^Duration:\s+(\d+)s$/m;
+const RESOURCE_LINE_PATTERN = /^\|\s+(.+)$/m;
+const URL_LINE_PATTERN = /^\s*(Router|Api|Web|Website):\s+(https?:\/\/.+)$/m;
+const SECTION_SEPARATOR_PATTERN = /\n\n+/;
+const LINE_ENDING_PATTERN = /\r\n/g;
+const TRAILING_WHITESPACE_PATTERN = /\s+$/;
+
+/**
  * Abstract base parser for SST CLI outputs
  * Provides common parsing patterns and utilities shared across all operation types
  */
@@ -10,23 +27,23 @@ export abstract class BaseParser<T extends BaseOperationResult> {
    */
   protected readonly patterns = {
     // App and stage information
-    APP_INFO: /^App:\s+(.+)$/m,
-    STAGE_INFO: /^Stage:\s+(.+)$/m,
+    APP_INFO: APP_INFO_PATTERN,
+    STAGE_INFO: STAGE_INFO_PATTERN,
 
     // Permalink for SST console
-    PERMALINK: /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m,
+    PERMALINK: PERMALINK_PATTERN,
 
     // Completion status patterns
-    COMPLETION_SUCCESS: /^✓\s+Complete\s*$/m,
-    COMPLETION_PARTIAL: /^⚠\s+Partial\s*$/m,
-    COMPLETION_FAILED: /^✗\s+Failed\s*$/m,
+    COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
+    COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
+    COMPLETION_FAILED: COMPLETION_FAILED_PATTERN,
 
     // Duration and timing
-    DURATION: /^Duration:\s+(\d+)s$/m,
+    DURATION: DURATION_PATTERN,
 
     // Generic resource patterns (to be extended by subclasses)
-    RESOURCE_LINE: /^\|\s+(.+)$/m,
-    URL_LINE: /^\s*(Router|Api|Web|Website):\s+(https?:\/\/.+)$/m,
+    RESOURCE_LINE: RESOURCE_LINE_PATTERN,
+    URL_LINE: URL_LINE_PATTERN,
   };
 
   /**
@@ -71,7 +88,9 @@ export abstract class BaseParser<T extends BaseOperationResult> {
 
       // Note: Duration is not part of BaseOperationResult type currently
       // Can be added to specific operation result types as needed
-    } catch (_error) {}
+    } catch (_error) {
+      // Duration parsing is optional - continue without it
+    }
 
     return result;
   }
@@ -85,7 +104,7 @@ export abstract class BaseParser<T extends BaseOperationResult> {
     try {
       // Split by double newlines (common SST section separator)
       const sections = output
-        .split(/\n\n+/)
+        .split(SECTION_SEPARATOR_PATTERN)
         .map((section) => section.trim())
         .filter((section) => section.length > 0);
 
@@ -176,8 +195,8 @@ export abstract class BaseParser<T extends BaseOperationResult> {
    */
   protected cleanText(text: string): string {
     return text
-      .replace(/\r\n/g, '\n') // Normalize line endings
-      .replace(/\s+$/, '') // Remove trailing whitespace
+      .replace(LINE_ENDING_PATTERN, '\n') // Normalize line endings
+      .replace(TRAILING_WHITESPACE_PATTERN, '') // Remove trailing whitespace
       .trim();
   }
 }

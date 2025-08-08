@@ -5,13 +5,11 @@
 
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { spawn } = childProcess;
-const { existsSync, mkdirSync, rmSync, writeFileSync } = fs;
-const { tmpdir } = os;
+const { mkdirSync, writeFileSync } = fs;
 const { join } = path;
 
 // Test constants
@@ -30,14 +28,12 @@ vi.mock('../../src/outputs/formatter', () => ({
   },
 }));
 vi.mock('../../src/errors/error-handler', () => ({
-  ErrorHandler: {
-    handleError: vi.fn(),
-    createInputValidationError: vi.fn(),
-    createSubprocessError: vi.fn(),
-    createOutputParsingError: vi.fn(),
-    fromValidationError: vi.fn(),
-    isParsingError: vi.fn(),
-  },
+  handleError: vi.fn(),
+  createInputValidationError: vi.fn(),
+  createSubprocessError: vi.fn(),
+  createOutputParsingError: vi.fn(),
+  fromValidationError: vi.fn(),
+  isParsingError: vi.fn(),
 }));
 vi.mock('../../src/utils/validation', async (importOriginal) => {
   const original =
@@ -56,7 +52,6 @@ async function executeAction(env: Record<string, string>) {
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -122,7 +117,8 @@ async function executeAction(env: Record<string, string>) {
   });
 
   // Mock error handler (shouldn't be called for successful operations)
-  vi.mocked(ErrorHandler.handleError).mockResolvedValue();
+  const { handleError } = await import('../../src/errors/error-handler');
+  vi.mocked(handleError).mockReturnValue();
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -150,7 +146,6 @@ async function executeActionWithFailure(
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -245,7 +240,6 @@ async function executeActionWithFailureAndContinue(
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -339,7 +333,6 @@ async function _executeActionWithValidationError(
 ) {
   // Import mocked modules - we need to mock the validation functions
   const validationModule = await import('../../src/utils/validation');
-  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -383,7 +376,8 @@ async function _executeActionWithValidationError(
   });
 
   // Mock error handler for validation errors
-  vi.mocked(ErrorHandler.handleError).mockResolvedValue();
+  const { handleError } = await import('../../src/errors/error-handler');
+  vi.mocked(handleError).mockReturnValue();
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -407,7 +401,6 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -626,10 +619,12 @@ function _executeActionE2E(
       const outputs: Record<string, string> = {};
       const outputPattern = /::set-output name=([^:]+)::(.*)$/gm;
       let match: RegExpExecArray | null;
-      while ((match = outputPattern.exec(stdout)) !== null) {
+      match = outputPattern.exec(stdout);
+      while (match !== null) {
         if (match[1] && match[2] !== undefined) {
           outputs[match[1]] = match[2];
         }
+        match = outputPattern.exec(stdout);
       }
 
       resolve({

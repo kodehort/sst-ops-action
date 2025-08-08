@@ -2,6 +2,25 @@ import type { RemoveResult } from '../types/operations';
 import { BaseParser } from './base-parser';
 
 /**
+ * Remove-specific regex patterns for parsing resource removals
+ */
+const REMOVED_RESOURCE_PATTERN = /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const FAILED_RESOURCE_PATTERN = /^×\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const SKIPPED_RESOURCE_PATTERN = /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const COMPLETE_PATTERN = /^✓\s+Complete$/m;
+const PARTIAL_COMPLETION_PATTERN = /^⚠\s+Partial completion$/m;
+const FAILED_PATTERN = /^×\s+Failed$/m;
+const RESOURCES_REMOVED_COUNT_PATTERN =
+  /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?$/m;
+const NO_RESOURCES_PATTERN = /^No resources to remove$/m;
+const RESOURCES_SUMMARY_PATTERN =
+  /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?(?:,\s+(\d+)\s+skipped)?$/m;
+const ERROR_MESSAGE_PATTERN = /^Error:\s*(.+)$/m;
+const REMOVE_FAILED_PATTERN =
+  /Unable to connect|Permission denied|Error removing/i;
+const TIMEOUT_MESSAGE_PATTERN = /timeout|timed out/i;
+
+/**
  * Parser for SST remove operation outputs
  * Extracts resource removal information and tracks success/failure status
  */
@@ -11,26 +30,24 @@ export class RemoveParser extends BaseParser<RemoveResult> {
    */
   private readonly removePatterns = {
     // Resource removal patterns
-    REMOVED_RESOURCE: /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    FAILED_RESOURCE: /^×\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    SKIPPED_RESOURCE: /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+    REMOVED_RESOURCE: REMOVED_RESOURCE_PATTERN,
+    FAILED_RESOURCE: FAILED_RESOURCE_PATTERN,
+    SKIPPED_RESOURCE: SKIPPED_RESOURCE_PATTERN,
 
     // Status indicators
-    COMPLETE: /^✓\s+Complete$/m,
-    PARTIAL_COMPLETION: /^⚠\s+Partial completion$/m,
-    FAILED: /^×\s+Failed$/m,
+    COMPLETE: COMPLETE_PATTERN,
+    PARTIAL_COMPLETION: PARTIAL_COMPLETION_PATTERN,
+    FAILED: FAILED_PATTERN,
 
     // Resource count patterns
-    RESOURCES_REMOVED_COUNT:
-      /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?$/m,
-    NO_RESOURCES: /^No resources to remove$/m,
-    RESOURCES_SUMMARY:
-      /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?(?:,\s+(\d+)\s+skipped)?$/m,
+    RESOURCES_REMOVED_COUNT: RESOURCES_REMOVED_COUNT_PATTERN,
+    NO_RESOURCES: NO_RESOURCES_PATTERN,
+    RESOURCES_SUMMARY: RESOURCES_SUMMARY_PATTERN,
 
     // Error patterns
-    ERROR_MESSAGE: /^Error:\s*(.+)$/m,
-    REMOVE_FAILED: /Unable to connect|Permission denied|Error removing/i,
-    TIMEOUT_MESSAGE: /timeout|timed out/i,
+    ERROR_MESSAGE: ERROR_MESSAGE_PATTERN,
+    REMOVE_FAILED: REMOVE_FAILED_PATTERN,
+    TIMEOUT_MESSAGE: TIMEOUT_MESSAGE_PATTERN,
   };
 
   /**
@@ -96,50 +113,47 @@ export class RemoveParser extends BaseParser<RemoveResult> {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-
-      // Check for successfully removed resource (-)
-      const removedMatch = trimmedLine.match(
-        this.removePatterns.REMOVED_RESOURCE
-      );
-      if (removedMatch?.[1] && removedMatch[2]) {
-        const resource = {
-          type: removedMatch[1] || 'unknown',
-          name: removedMatch[2] || 'unknown',
-          status: 'removed' as const,
-        };
-        resources.push(resource);
-        continue;
-      }
-
-      // Check for failed resource (×)
-      const failedMatch = trimmedLine.match(
-        this.removePatterns.FAILED_RESOURCE
-      );
-      if (failedMatch?.[1] && failedMatch[2]) {
-        const resource = {
-          type: failedMatch[1] || 'unknown',
-          name: failedMatch[2] || 'unknown',
-          status: 'failed' as const,
-        };
-        resources.push(resource);
-        continue;
-      }
-
-      // Check for skipped resource (~)
-      const skippedMatch = trimmedLine.match(
-        this.removePatterns.SKIPPED_RESOURCE
-      );
-      if (skippedMatch?.[1] && skippedMatch[2]) {
-        const resource = {
-          type: skippedMatch[1] || 'unknown',
-          name: skippedMatch[2] || 'unknown',
-          status: 'skipped' as const,
-        };
+      const resource = this.parseResourceFromLine(trimmedLine);
+      if (resource) {
         resources.push(resource);
       }
     }
 
     return resources;
+  }
+
+  /**
+   * Parse a single resource from a remove line
+   */
+  private parseResourceFromLine(line: string): {
+    type: string;
+    name: string;
+    status: 'removed' | 'failed' | 'skipped';
+  } | null {
+    const patterns = [
+      {
+        regex: this.removePatterns.REMOVED_RESOURCE,
+        status: 'removed' as const,
+      },
+      { regex: this.removePatterns.FAILED_RESOURCE, status: 'failed' as const },
+      {
+        regex: this.removePatterns.SKIPPED_RESOURCE,
+        status: 'skipped' as const,
+      },
+    ];
+
+    for (const { regex, status } of patterns) {
+      const match = line.match(regex);
+      if (match?.[1] && match[2]) {
+        return {
+          type: match[1] || 'unknown',
+          name: match[2] || 'unknown',
+          status,
+        };
+      }
+    }
+
+    return null;
   }
 
   /**

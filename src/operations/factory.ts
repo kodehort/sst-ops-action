@@ -15,7 +15,7 @@ import { RemoveOperation } from './remove';
  * Base operation interface that all operations must implement
  */
 export interface BaseOperation {
-  execute(options: OperationOptions): Promise<any>;
+  execute(options: OperationOptions): Promise<unknown>;
 }
 
 /**
@@ -23,10 +23,13 @@ export interface BaseOperation {
  * Encapsulates the creation logic and dependencies
  */
 export class OperationFactory {
-  constructor(
-    private readonly cliExecutor: SSTCLIExecutor,
-    private readonly githubClient: GitHubClient
-  ) {}
+  private readonly cliExecutor: SSTCLIExecutor;
+  private readonly githubClient: GitHubClient;
+
+  constructor(cliExecutor: SSTCLIExecutor, githubClient: GitHubClient) {
+    this.cliExecutor = cliExecutor;
+    this.githubClient = githubClient;
+  }
 
   /**
    * Create an operation instance based on the operation type

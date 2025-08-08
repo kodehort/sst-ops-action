@@ -2,6 +2,30 @@ import type { DiffResult } from '../types/operations';
 import { BaseParser } from './base-parser';
 
 /**
+ * Diff-specific regex patterns for parsing planned changes
+ */
+const DIFF_PATTERNS = {
+  // Planned changes patterns
+  PLANNED_CREATE: /^\+\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+  PLANNED_UPDATE: /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+  PLANNED_DELETE: /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+
+  // Summary patterns
+  CHANGES_PLANNED: /^(\d+)\s+changes?\s+planned$/m,
+  NO_CHANGES: /^No changes$/m,
+
+  // Additional info patterns
+  COST_CHANGE: /^\s*Cost changes:/m,
+  BREAKING_CHANGES: /^\s*Breaking changes detected:/m,
+  IMPACT_BREAKING: /^\s*Impact:\s+(breaking|high)/im,
+  IMPACT_COSMETIC: /^\s*Impact:\s+(cosmetic|low|none)/im,
+
+  // Error patterns
+  ERROR_MESSAGE: /^Error:\s*(.+)$/m,
+  DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
+} as const;
+
+/**
  * Parser for SST diff operation outputs
  * Extracts planned infrastructure changes without deploying
  */
@@ -9,26 +33,7 @@ export class DiffParser extends BaseParser<DiffResult> {
   /**
    * Diff-specific regex patterns for parsing planned changes
    */
-  private readonly diffPatterns = {
-    // Planned changes patterns
-    PLANNED_CREATE: /^\+\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    PLANNED_UPDATE: /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    PLANNED_DELETE: /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-
-    // Summary patterns
-    CHANGES_PLANNED: /^(\d+)\s+changes?\s+planned$/m,
-    NO_CHANGES: /^No changes$/m,
-
-    // Additional info patterns
-    COST_CHANGE: /^\s*Cost changes:/m,
-    BREAKING_CHANGES: /^\s*Breaking changes detected:/m,
-    IMPACT_BREAKING: /^\s*Impact:\s+(breaking|high)/im,
-    IMPACT_COSMETIC: /^\s*Impact:\s+(cosmetic|low|none)/im,
-
-    // Error patterns
-    ERROR_MESSAGE: /^Error:\s*(.+)$/m,
-    DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
-  };
+  private readonly diffPatterns = DIFF_PATTERNS;
 
   /**
    * Parse SST diff output and extract planned changes
@@ -94,47 +99,43 @@ export class DiffParser extends BaseParser<DiffResult> {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-
-      // Check for create (+) pattern
-      const createMatch = trimmedLine.match(this.diffPatterns.PLANNED_CREATE);
-      if (createMatch?.[1] && createMatch[2]) {
-        const change = {
-          type: createMatch[1] || 'unknown',
-          name: createMatch[2] || 'unknown',
-          action: 'create' as const,
-          ...(createMatch[3] && { details: createMatch[3] }),
-        };
-        changes.push(change);
-        continue;
-      }
-
-      // Check for update (~) pattern
-      const updateMatch = trimmedLine.match(this.diffPatterns.PLANNED_UPDATE);
-      if (updateMatch?.[1] && updateMatch[2]) {
-        const change = {
-          type: updateMatch[1] || 'unknown',
-          name: updateMatch[2] || 'unknown',
-          action: 'update' as const,
-          ...(updateMatch[3] && { details: updateMatch[3] }),
-        };
-        changes.push(change);
-        continue;
-      }
-
-      // Check for delete (-) pattern
-      const deleteMatch = trimmedLine.match(this.diffPatterns.PLANNED_DELETE);
-      if (deleteMatch?.[1] && deleteMatch[2]) {
-        const change = {
-          type: deleteMatch[1] || 'unknown',
-          name: deleteMatch[2] || 'unknown',
-          action: 'delete' as const,
-          ...(deleteMatch[3] && { details: deleteMatch[3] }),
-        };
+      const change = this.parseChangeFromLine(trimmedLine);
+      if (change) {
         changes.push(change);
       }
     }
 
     return changes;
+  }
+
+  /**
+   * Parse a single change from a diff line
+   */
+  private parseChangeFromLine(line: string): {
+    type: string;
+    name: string;
+    action: 'create' | 'update' | 'delete';
+    details?: string;
+  } | null {
+    const patterns = [
+      { regex: this.diffPatterns.PLANNED_CREATE, action: 'create' as const },
+      { regex: this.diffPatterns.PLANNED_UPDATE, action: 'update' as const },
+      { regex: this.diffPatterns.PLANNED_DELETE, action: 'delete' as const },
+    ];
+
+    for (const { regex, action } of patterns) {
+      const match = line.match(regex);
+      if (match?.[1] && match[2]) {
+        return {
+          type: match[1] || 'unknown',
+          name: match[2] || 'unknown',
+          action,
+          ...(match[3] && { details: match[3] }),
+        };
+      }
+    }
+
+    return null;
   }
 
   /**

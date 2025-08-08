@@ -37,7 +37,11 @@ const DEFAULT_CONFIG: FormatConfig = {
  * Main formatter class for GitHub integration
  */
 export class OperationFormatter {
-  constructor(private config: FormatConfig = DEFAULT_CONFIG) {}
+  private config: FormatConfig;
+
+  constructor(config: FormatConfig = DEFAULT_CONFIG) {
+    this.config = config;
+  }
 
   /**
    * Format operation-specific comment content

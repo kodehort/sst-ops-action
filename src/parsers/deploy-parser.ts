@@ -6,29 +6,26 @@
 import type { DeployResult } from '../types/operations';
 import { BaseParser } from './base-parser';
 
+// Top-level regex patterns for better performance
+const RESOURCE_CREATED_PATTERN =
+  /^\|\s+Created\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const RESOURCE_UPDATED_PATTERN =
+  /^\|\s+Updated\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const RESOURCE_UNCHANGED_PATTERN =
+  /^\|\s+Unchanged\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+const RESOURCE_FAILED_PATTERN =
+  /^\|\s+Failed\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+
+const URL_ROUTER_PATTERN = /^\s*Router:\s+(https?:\/\/.+)$/;
+const URL_API_PATTERN = /^\s*Api:\s+(https?:\/\/.+)$/;
+const URL_WEB_PATTERN = /^\s*Web:\s+(https?:\/\/.+)$/;
+const URL_WEBSITE_PATTERN = /^\s*Website:\s+(https?:\/\/.+)$/;
+const URL_FUNCTION_PATTERN = /^\s*Function:\s+(https?:\/\/.+)$/;
+
+const ERROR_MESSAGE_PATTERN = /^Error:\s*(.+)$/m;
+const DEPLOYMENT_FAILED_PATTERN = /Deployment failed/;
+
 export class DeployParser extends BaseParser<DeployResult> {
-  /**
-   * Deploy-specific regex patterns for parsing SST output
-   */
-  private readonly deployPatterns = {
-    // Resource change patterns - handle various formats
-    RESOURCE_CREATED: /^\|\s+Created\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    RESOURCE_UPDATED: /^\|\s+Updated\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    RESOURCE_UNCHANGED: /^\|\s+Unchanged\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-    RESOURCE_FAILED: /^\|\s+Failed\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-
-    // URL patterns - various service types
-    URL_ROUTER: /^\s*Router:\s+(https?:\/\/.+)$/,
-    URL_API: /^\s*Api:\s+(https?:\/\/.+)$/,
-    URL_WEB: /^\s*Web:\s+(https?:\/\/.+)$/,
-    URL_WEBSITE: /^\s*Website:\s+(https?:\/\/.+)$/,
-    URL_FUNCTION: /^\s*Function:\s+(https?:\/\/.+)$/,
-
-    // Error message patterns
-    ERROR_MESSAGE: /^Error:\s*(.+)$/m,
-    DEPLOYMENT_FAILED: /Deployment failed/,
-  };
-
   /**
    * Parse SST deploy output into structured result
    */
@@ -94,40 +91,42 @@ export class DeployParser extends BaseParser<DeployResult> {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-
-      // Try to match different resource patterns
-      let match: RegExpMatchArray | null;
-      let status: 'created' | 'updated' | 'unchanged';
-
-      if ((match = trimmedLine.match(this.deployPatterns.RESOURCE_CREATED))) {
-        status = 'created';
-      } else if (
-        (match = trimmedLine.match(this.deployPatterns.RESOURCE_UPDATED))
-      ) {
-        status = 'updated';
-      } else if (
-        (match = trimmedLine.match(this.deployPatterns.RESOURCE_UNCHANGED))
-      ) {
-        status = 'unchanged';
-      } else if (
-        (match = trimmedLine.match(this.deployPatterns.RESOURCE_FAILED))
-      ) {
-        // Map failed resources to unchanged for now (as per test expectations)
-        status = 'unchanged';
-      } else {
-        continue; // No match, skip this line
-      }
-
-      if (match?.[1] && match?.[2]) {
-        resources.push({
-          type: match[1].trim(),
-          name: match[2].trim(),
-          status,
-        });
+      const resource = this.parseResourceChangeFromLine(trimmedLine);
+      if (resource) {
+        resources.push(resource);
       }
     }
 
     return resources;
+  }
+
+  /**
+   * Parse a single resource change from a deploy line
+   */
+  private parseResourceChangeFromLine(line: string): {
+    type: string;
+    name: string;
+    status: 'created' | 'updated' | 'unchanged';
+  } | null {
+    const patterns = [
+      { regex: RESOURCE_CREATED_PATTERN, status: 'created' as const },
+      { regex: RESOURCE_UPDATED_PATTERN, status: 'updated' as const },
+      { regex: RESOURCE_UNCHANGED_PATTERN, status: 'unchanged' as const },
+      { regex: RESOURCE_FAILED_PATTERN, status: 'unchanged' as const }, // Map failed to unchanged
+    ];
+
+    for (const { regex, status } of patterns) {
+      const match = line.match(regex);
+      if (match?.[1] && match[2]) {
+        return {
+          type: match[1].trim(),
+          name: match[2].trim(),
+          status,
+        };
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -147,37 +146,9 @@ export class DeployParser extends BaseParser<DeployResult> {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-      let match: RegExpMatchArray | null;
-      let name: string;
-      let type: 'api' | 'web' | 'function' | 'other';
-
-      if ((match = trimmedLine.match(this.deployPatterns.URL_ROUTER))) {
-        name = 'Router';
-        type = 'api';
-      } else if ((match = trimmedLine.match(this.deployPatterns.URL_API))) {
-        name = 'Api';
-        type = 'api';
-      } else if ((match = trimmedLine.match(this.deployPatterns.URL_WEB))) {
-        name = 'Web';
-        type = 'web';
-      } else if ((match = trimmedLine.match(this.deployPatterns.URL_WEBSITE))) {
-        name = 'Website';
-        type = 'web';
-      } else if (
-        (match = trimmedLine.match(this.deployPatterns.URL_FUNCTION))
-      ) {
-        name = 'Function';
-        type = 'function';
-      } else {
-        continue; // No match, skip this line
-      }
-
-      if (match?.[1]) {
-        urls.push({
-          name,
-          url: match[1].trim(),
-          type,
-        });
+      const url = this.parseUrlFromLine(trimmedLine);
+      if (url) {
+        urls.push(url);
       }
     }
 
@@ -185,16 +156,50 @@ export class DeployParser extends BaseParser<DeployResult> {
   }
 
   /**
+   * Parse a single URL from a deploy line
+   */
+  private parseUrlFromLine(line: string): {
+    name: string;
+    url: string;
+    type: 'api' | 'web' | 'function' | 'other';
+  } | null {
+    const patterns = [
+      { regex: URL_ROUTER_PATTERN, name: 'Router', type: 'api' as const },
+      { regex: URL_API_PATTERN, name: 'Api', type: 'api' as const },
+      { regex: URL_WEB_PATTERN, name: 'Web', type: 'web' as const },
+      { regex: URL_WEBSITE_PATTERN, name: 'Website', type: 'web' as const },
+      {
+        regex: URL_FUNCTION_PATTERN,
+        name: 'Function',
+        type: 'function' as const,
+      },
+    ];
+
+    for (const { regex, name, type } of patterns) {
+      const match = line.match(regex);
+      if (match?.[1]) {
+        return {
+          name,
+          url: match[1].trim(),
+          type,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Parse error messages from failed deployments
    */
   private parseErrorMessage(output: string): string | undefined {
-    const errorMatch = output.match(this.deployPatterns.ERROR_MESSAGE);
+    const errorMatch = output.match(ERROR_MESSAGE_PATTERN);
     if (errorMatch?.[1]) {
       return errorMatch[1].trim();
     }
 
     // Look for deployment failure pattern
-    if (this.deployPatterns.DEPLOYMENT_FAILED.test(output)) {
+    if (DEPLOYMENT_FAILED_PATTERN.test(output)) {
       return 'Deployment failed';
     }
 

@@ -106,9 +106,14 @@ export class GitHubClient {
       const commentBody = this.formatComment(result);
 
       if (commentOptions.updateExisting && this.context.payload.pull_request) {
+        if (!commentOptions.identifier) {
+          throw new Error(
+            'Comment identifier is required when updateExisting is true'
+          );
+        }
         await this.updateOrCreateComment(
           commentBody,
-          commentOptions.identifier!
+          commentOptions.identifier
         );
       } else {
         await this.createComment(commentBody);
