@@ -79,16 +79,31 @@ class ProductionBuilder {
       external: [
         // Node.js built-ins (provided by runtime)
         'node:*',
-        'fs', 'path', 'os', 'crypto', 'events', 'stream', 'util', 'buffer',
-        'http', 'https', 'net', 'tls', 'url', 'querystring', 'timers', 'assert', 'zlib',
-        
+        'fs',
+        'path',
+        'os',
+        'crypto',
+        'events',
+        'stream',
+        'util',
+        'buffer',
+        'http',
+        'https',
+        'net',
+        'tls',
+        'url',
+        'querystring',
+        'timers',
+        'assert',
+        'zlib',
+
         // GitHub Actions packages (provided by runner environment)
         '@actions/core',
-        '@actions/github', 
+        '@actions/github',
         '@actions/exec',
         '@actions/artifact',
-        '@actions/io'
-        
+        '@actions/io',
+
         // Note: Zod is bundled since it's not provided by GitHub Actions
       ],
 
