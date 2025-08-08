@@ -264,5 +264,5 @@ Have a workflow pattern that would be valuable to others? Contributions are welc
 
 - 📖 [Main Documentation](../README.md)
 - 🔍 [API Reference](../API.md)
-- 💬 [GitHub Discussions](https://github.com/kodehort/sst-operations-action/discussions)
-- 🐛 [Report Issues](https://github.com/kodehort/sst-operations-action/issues)
+- 💬 [GitHub Discussions](https://github.com/kodehort/sst-ops-action/discussions)
+- 🐛 [Report Issues](https://github.com/kodehort/sst-ops-action/issues)

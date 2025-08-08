@@ -216,7 +216,7 @@ jobs:
       # First deployment attempt
       - name: Primary Deployment Attempt
         id: deploy-primary
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}
@@ -281,7 +281,7 @@ jobs:
         if: |
           steps.deploy-primary.outputs.success != 'true' && 
           steps.analyze-failure.outputs.retry_recommended == 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}
@@ -299,7 +299,7 @@ jobs:
           steps.deploy-retry.outputs.success != 'true' && 
           steps.params.outputs.stage == 'production' &&
           steps.analyze-failure.outputs.failure_type != 'hard_failure'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}

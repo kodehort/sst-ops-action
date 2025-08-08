@@ -140,7 +140,7 @@ jobs:
       # Show what will be deployed to staging
       - name: Preview Staging Changes
         id: diff
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: staging
@@ -151,7 +151,7 @@ jobs:
       # Deploy to staging
       - name: Deploy to Staging
         id: deploy
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: staging
@@ -287,7 +287,7 @@ jobs:
       # Show production changes for final review
       - name: Preview Production Changes
         id: prod-diff
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: production
@@ -311,7 +311,7 @@ jobs:
       # Deploy to production
       - name: Deploy to Production
         id: deploy
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: production

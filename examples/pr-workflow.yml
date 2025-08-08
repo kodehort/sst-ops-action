@@ -69,7 +69,7 @@ jobs:
       # This runs against the staging environment by default
       - name: Show Infrastructure Changes
         id: diff
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: staging
@@ -155,7 +155,7 @@ jobs:
       # Using pr-{number} ensures each PR gets its own environment
       - name: Deploy Preview Environment
         id: deploy
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: pr-${{ github.event.number }}
@@ -322,7 +322,7 @@ jobs:
       # Remove the PR-specific environment
       - name: Remove Preview Environment
         id: cleanup
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: pr-${{ github.event.number }}

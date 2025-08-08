@@ -1,13 +1,11 @@
 # SST Operations Action
 
-[![CI](https://github.com/kodehort/sst-operations-action/actions/workflows/ci.yml/badge.svg)](https://github.com/kodehort/sst-operations-action/actions/workflows/ci.yml)
-[![Release](https://github.com/kodehort/sst-operations-action/actions/workflows/release.yml/badge.svg)](https://github.com/kodehort/sst-operations-action/actions/workflows/release.yml)
-[![GitHub release](https://img.shields.io/github/release/kodehort/sst-operations-action.svg)](https://github.com/kodehort/sst-operations-action/releases/)
+[![CI](https://github.com/kodehort/sst-ops-action/actions/workflows/ci.yml/badge.svg)](https://github.com/kodehort/sst-ops-action/actions/workflows/ci.yml)
+[![Release](https://github.com/kodehort/sst-ops-action/actions/workflows/release.yml/badge.svg)](https://github.com/kodehort/sst-ops-action/actions/workflows/release.yml)
+[![GitHub release](https://img.shields.io/github/release/kodehort/sst-ops-action.svg)](https://github.com/kodehort/sst-ops-action/releases/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A unified, production-ready GitHub Action for **SST (Serverless Stack)** operations: deploy, diff, and remove. This action consolidates functionality from multiple composite actions into a single, maintainable, and distributable solution.
-
-> **Migration Notice:** This action replaces multiple composite actions previously maintained in monorepos. It provides the same functionality with improved maintainability, enhanced error handling, and better developer experience.
 
 ## ✨ Features
 
@@ -16,10 +14,7 @@ A unified, production-ready GitHub Action for **SST (Serverless Stack)** operati
 - 🔍 **Infrastructure Diff** - See planned changes before deployment
 - 🧹 **Resource Cleanup** - Automated removal of staging environments
 - ⚙️ **Configurable Runtime** - Support for Bun, npm, pnpm, Yarn, or direct SST CLI
-- ⚡ **Production-Optimized** - Sub-second load times with 2.5MB bundle
-- 🛡️ **Enterprise-Grade** - Comprehensive error handling and security scanning
 - 📊 **GitHub Integration** - Workflow summaries, artifacts, and status reporting
-- 🔄 **Semantic Versioning** - Reliable upgrades with major version branches (@v1, @v2)
 
 ## 🚀 Quick Start
 
@@ -36,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kodehort/sst-operations-action@v1
+      - uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: staging
@@ -56,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kodehort/sst-operations-action@v1
+      - uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: staging
@@ -77,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kodehort/sst-operations-action@v1
+      - uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: pr-${{ github.event.number }}
@@ -120,7 +115,7 @@ jobs:
 Deploys your SST application to the specified stage.
 
 ```yaml
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -138,7 +133,7 @@ Deploys your SST application to the specified stage.
 
 **Use Cases:**
 - Production deployments on main branch
-- Staging deployments on develop branch  
+- Staging deployments on develop branch
 - Preview environments for pull requests
 - Scheduled deployments
 
@@ -147,7 +142,7 @@ Deploys your SST application to the specified stage.
 Shows planned infrastructure changes without deploying.
 
 ```yaml
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: diff
     stage: staging
@@ -173,7 +168,7 @@ Shows planned infrastructure changes without deploying.
 Removes all resources for the specified stage.
 
 ```yaml
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: remove
     stage: pr-${{ github.event.number }}
@@ -184,7 +179,6 @@ Removes all resources for the specified stage.
 - ✅ Removes all stack resources
 - ✅ Tracks cleanup status
 - ✅ Handles partial cleanup scenarios
-- ✅ Reports cost savings
 - ✅ Auto-confirms removal in CI
 
 **Use Cases:**
@@ -212,33 +206,33 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
+
       - name: Install Dependencies
         run: npm ci
-        
+
       - name: Run Tests
         run: npm test
-        
+
       - name: Deploy to Production
         id: deploy
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: production
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: never
           fail-on-error: true
-          
+
       - name: Notify Slack
         if: steps.deploy.outputs.success == 'true'
         uses: 8398a7/action-slack@v3
@@ -260,23 +254,23 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-        
+
       - name: Show Infrastructure Changes
         id: diff
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: staging
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: always
           fail-on-error: false
-          
+
       - name: Deploy Preview Environment
         if: contains(github.event.pull_request.labels.*.name, 'deploy-preview')
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: pr-${{ github.event.number }}
@@ -299,22 +293,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Deploy to Staging
         id: staging
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: staging
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
   deploy-production:
     needs: deploy-staging
     if: needs.deploy-staging.outputs.success == 'true'
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Production
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
           stage: production
@@ -329,7 +323,7 @@ Choose your preferred package manager or runtime for executing SST commands:
 
 ```yaml
 # Use Bun (default)
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -337,7 +331,7 @@ Choose your preferred package manager or runtime for executing SST commands:
     runner: bun  # Executes: bun sst deploy --stage production
 
 # Use npm with package scripts
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -345,7 +339,7 @@ Choose your preferred package manager or runtime for executing SST commands:
     runner: npm  # Executes: npm run sst -- deploy --stage production
 
 # Use pnpm
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -353,7 +347,7 @@ Choose your preferred package manager or runtime for executing SST commands:
     runner: pnpm  # Executes: pnpm sst deploy --stage production
 
 # Use Yarn
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -361,7 +355,7 @@ Choose your preferred package manager or runtime for executing SST commands:
     runner: yarn  # Executes: yarn sst deploy --stage production
 
 # Use SST CLI directly (requires global installation)
-- uses: kodehort/sst-operations-action@v1
+- uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
@@ -384,14 +378,14 @@ Choose your preferred package manager or runtime for executing SST commands:
 ```yaml
 - name: Deploy with Custom Error Handling
   id: deploy
-  uses: kodehort/sst-operations-action@v1
+  uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: staging
     token: ${{ secrets.GITHUB_TOKEN }}
     fail-on-error: false  # Don't fail workflow
     max-output-size: 100000  # Increased output limit
-    
+
 - name: Handle Deployment Failure
   if: steps.deploy.outputs.success == 'false'
   run: |
@@ -404,15 +398,15 @@ Choose your preferred package manager or runtime for executing SST commands:
 
 ```yaml
 - name: Conditional Remove
-  uses: kodehort/sst-operations-action@v1
+  uses: kodehort/sst-ops-action@v1
   with:
     operation: remove
     stage: pr-${{ github.event.number }}
     token: ${{ secrets.GITHUB_TOKEN }}
   # Only run on PR close, and only for certain file changes
   if: |
-    github.event_name == 'pull_request' && 
-    github.event.action == 'closed' && 
+    github.event_name == 'pull_request' &&
+    github.event.action == 'closed' &&
     contains(github.event.pull_request.head.ref, 'feature/')
 ```
 
@@ -421,21 +415,21 @@ Choose your preferred package manager or runtime for executing SST commands:
 ```yaml
 - name: Process Deploy Outputs
   id: deploy
-  uses: kodehort/sst-operations-action@v1
+  uses: kodehort/sst-ops-action@v1
   with:
     operation: deploy
     stage: production
     token: ${{ secrets.GITHUB_TOKEN }}
-    
+
 - name: Extract URLs
   run: |
     URLS='${{ steps.deploy.outputs.urls }}'
     echo "Deployed URLs: $URLS"
-    
+
     # Parse JSON output
     echo "API_URL=$(echo '$URLS' | jq -r '.[0]')" >> $GITHUB_ENV
     echo "WEB_URL=$(echo '$URLS' | jq -r '.[1]')" >> $GITHUB_ENV
-    
+
 - name: Run Integration Tests
   run: |
     curl -f $API_URL/health || exit 1
@@ -480,7 +474,7 @@ secrets:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatic
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  
+
 # Optional: Custom SST secrets
   SST_TELEMETRY_DISABLED: "1"
 ```
@@ -515,38 +509,10 @@ env:
 
 For more detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-## 🔄 Migration
-
-### From Composite Actions
-
-If you're migrating from composite actions in a monorepo:
-
-```yaml
-# Before (monorepo composite action)
-- uses: ./.github/actions/sst-deploy
-  with:
-    stage: staging
-    token: ${{ secrets.GITHUB_TOKEN }}
-
-# After (standalone action)
-- uses: kodehort/sst-operations-action@v1
-  with:
-    operation: deploy  # explicit operation required
-    stage: staging
-    token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-For complete migration instructions, see [MIGRATION.md](MIGRATION.md).
-
 ## 📚 Documentation
 
 - 📖 **[API Reference](API.md)** - Complete input/output documentation
-- 🔄 **[Migration Guide](MIGRATION.md)** - Upgrade from composite actions
-- 🛠️ **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions  
-- 📋 **[Upgrade Guide](UPGRADE_GUIDE.md)** - Version upgrade instructions
-- 🏗️ **[Contributing](CONTRIBUTING.md)** - Development and contribution guidelines
-- 📊 **[Versioning Policy](VERSIONING_POLICY.md)** - Semantic versioning strategy
-- 🔒 **[Compatibility Policy](COMPATIBILITY_POLICY.md)** - Backward compatibility commitments
+- 🛠️ **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
 
 ## 📁 Examples
 
@@ -558,48 +524,12 @@ Real-world workflow examples are available in the [examples/](examples/) directo
 - **[Cleanup](examples/cleanup.yml)** - Resource cleanup strategies
 - **[Error Handling](examples/error-handling.yml)** - Advanced error handling patterns
 
-## 📊 Performance
-
-- **Bundle Size:** 2.5MB (25% of GitHub Actions 10MB limit)
-- **Load Time:** <1 second in GitHub Actions environment
-- **Execution Time:** ~30 seconds typical deployment
-- **Memory Usage:** ~200MB peak during bundle execution
-
-## 🌟 Version Strategy
-
-This action uses semantic versioning with major version branches:
-
-```yaml
-# Recommended: Automatic updates within major version
-- uses: kodehort/sst-operations-action@v1
-
-# Conservative: Pin to specific version  
-- uses: kodehort/sst-operations-action@v1.0.0
-
-# Latest: Always use latest (not recommended for production)
-- uses: kodehort/sst-operations-action@main
-```
-
-**Support Lifecycle:**
-- **Current Major (v1):** ✅ Full support
-- **Previous Major:** 🔄 12 months maintenance  
-- **Legacy Versions:** 🔒 6 months security-only
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
-- Development setup and workflows
-- Code style and testing requirements  
-- Pull request and review process
-- Release and versioning procedures
-
 ### Quick Development Setup
 
 ```bash
 # Clone and setup
-git clone https://github.com/kodehort/sst-operations-action.git
-cd sst-operations-action
+git clone https://github.com/kodehort/sst-ops-action.git
+cd sst-ops-action
 bun install
 
 # Run tests
@@ -616,16 +546,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built on [SST (Serverless Stack)](https://sst.dev/) framework
-- Powered by [GitHub Actions](https://github.com/features/actions) platform  
+- Built for [SST (Serverless Stack)](https://sst.dev/) framework
+- Powered by [GitHub Actions](https://github.com/features/actions) platform
 - Uses [Bun](https://bun.sh/) runtime and [TypeScript](https://www.typescriptlang.org/)
 - Inspired by the GitHub Actions community and SST ecosystem
 
 ---
 
-**Need Help?** 
-- 💬 [GitHub Discussions](https://github.com/kodehort/sst-operations-action/discussions)
-- 🐛 [Report Issues](https://github.com/kodehort/sst-operations-action/issues)
+**Need Help?**
+- 🐛 [Report Issues](https://github.com/kodehort/sst-ops-action/issues)
 - 📧 [Contact Maintainers](mailto:maintainers@kodehort.com)
 
 Made with ❤️ by the Kodehort team
