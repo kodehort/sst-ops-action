@@ -181,6 +181,9 @@ export class SSTCLIExecutor {
         // Auto-confirm removal to avoid interactive prompts
         command.push('--yes');
         break;
+      default:
+        // Should never reach here due to TypeScript union types
+        throw new Error(`Unsupported operation: ${operation}`);
     }
 
     // Add any additional arguments
@@ -259,7 +262,10 @@ export class SSTCLIExecutor {
       const cwd = options.cwd || process.cwd();
 
       // Create a timeout promise if timeout is specified
-      const execPromise = exec.exec(command[0]!, command.slice(1), {
+      if (!command[0]) {
+        throw new Error('Command array is empty');
+      }
+      const execPromise = exec.exec(command[0], command.slice(1), {
         cwd,
         env,
         ignoreReturnCode: true,
@@ -389,16 +395,18 @@ export class SSTCLIExecutor {
     // Check if sst.config.ts exists
     const configPaths = ['sst.config.ts', 'sst.config.js', 'sst.config.mjs'];
 
-    let configFound = false;
-    for (const configPath of configPaths) {
+    // Check all config paths in parallel for better performance
+    const configChecks = configPaths.map(async (configPath) => {
       try {
         await accessAsync(join(workingDir, configPath), constants.F_OK);
-        configFound = true;
-        break;
+        return configPath;
       } catch {
-        // Config file not found, try next one
+        return null;
       }
-    }
+    });
+
+    const results = await Promise.all(configChecks);
+    const configFound = results.some((result) => result !== null);
 
     if (!configFound) {
       throw new Error(
@@ -442,6 +450,46 @@ export class SSTCLIExecutor {
   }
 
   /**
+   * Parse SST environment output to extract app and stage information
+   */
+  private parseProjectInfo(stdout: string): { app?: string; stage?: string } {
+    const lines = stdout.split('\n');
+    const info: { app?: string; stage?: string } = {};
+
+    for (const line of lines) {
+      if (line.includes('App:')) {
+        const appValue = line.split(':')[1]?.trim();
+        if (appValue) {
+          info.app = appValue;
+        }
+      }
+      if (line.includes('Stage:')) {
+        const stageValue = line.split(':')[1]?.trim();
+        if (stageValue) {
+          info.stage = stageValue;
+        }
+      }
+    }
+
+    return info;
+  }
+
+  /**
+   * Execute SST environment command to get project information
+   */
+  private async executeProjectInfoCommand(
+    runner: SSTRunner,
+    cwd?: string
+  ): Promise<CLIResult> {
+    const envCommand = this.buildUtilityCommand(runner, ['env']);
+    return await this.executeCommand(envCommand, {
+      cwd,
+      timeout: 30_000, // 30 seconds
+      maxOutputSize: 4096, // 4KB
+    });
+  }
+
+  /**
    * Get SST project information
    */
   async getProjectInfo(
@@ -449,34 +497,10 @@ export class SSTCLIExecutor {
     runner: SSTRunner = 'bun'
   ): Promise<{ app?: string; stage?: string; error?: string }> {
     try {
-      const envCommand = this.buildUtilityCommand(runner, ['env']);
-      const result = await this.executeCommand(envCommand, {
-        cwd,
-        timeout: 30_000, // 30 seconds
-        maxOutputSize: 4096, // 4KB
-      });
+      const result = await this.executeProjectInfoCommand(runner, cwd);
 
       if (result.exitCode === 0) {
-        // Parse environment output to extract app and stage info
-        const lines = result.stdout.split('\n');
-        const info: { app?: string; stage?: string } = {};
-
-        for (const line of lines) {
-          if (line.includes('App:')) {
-            const appValue = line.split(':')[1]?.trim();
-            if (appValue) {
-              info.app = appValue;
-            }
-          }
-          if (line.includes('Stage:')) {
-            const stageValue = line.split(':')[1]?.trim();
-            if (stageValue) {
-              info.stage = stageValue;
-            }
-          }
-        }
-
-        return info;
+        return this.parseProjectInfo(result.stdout);
       }
 
       return {

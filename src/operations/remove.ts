@@ -14,11 +14,13 @@ import type { SSTCLIExecutor } from '../utils/cli';
  */
 export class RemoveOperation {
   private readonly defaultTimeout = 900_000; // 15 minutes
+  private readonly sstExecutor: SSTCLIExecutor;
+  private readonly githubClient: GitHubClient;
 
-  constructor(
-    private readonly sstExecutor: SSTCLIExecutor,
-    private readonly githubClient: GitHubClient
-  ) {}
+  constructor(sstExecutor: SSTCLIExecutor, githubClient: GitHubClient) {
+    this.sstExecutor = sstExecutor;
+    this.githubClient = githubClient;
+  }
 
   /**
    * Execute SST remove operation with full workflow
@@ -83,12 +85,16 @@ export class RemoveOperation {
     integrationPromises.push(
       this.githubClient
         .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch((_error) => {})
+        .catch(() => {
+          // GitHub comment integration is non-critical, ignore errors
+        })
     );
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result).catch((_error) => {})
+      this.githubClient.createWorkflowSummary(result).catch(() => {
+        // Workflow summary integration is non-critical, ignore errors
+      })
     );
 
     // Wait for all GitHub integration tasks to complete

@@ -7,4 +7,11 @@ export type {
   ActionError,
   ErrorType,
 } from './categories';
-export { ErrorHandler } from './error-handler';
+export {
+  createInputValidationError,
+  createOutputParsingError,
+  createSubprocessError,
+  fromValidationError,
+  handleError,
+  isParsingError,
+} from './error-handler';

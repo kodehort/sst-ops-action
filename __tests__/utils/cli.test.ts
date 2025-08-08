@@ -39,7 +39,7 @@ describe('SST CLI Utilities - Command Execution', () => {
 
         // Mock successful execution with output via listeners
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stdout) {
               options.listeners.stdout(
                 Buffer.from('Deploying app: test-app\n')
@@ -71,7 +71,7 @@ describe('SST CLI Utilities - Command Execution', () => {
         const stage = 'staging';
 
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stdout) {
               options.listeners.stdout(
                 Buffer.from('~ Resource will be updated\n')
@@ -99,7 +99,7 @@ describe('SST CLI Utilities - Command Execution', () => {
         const stage = 'pr-123';
 
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stdout) {
               options.listeners.stdout(Buffer.from('Removing resources...\n'));
               options.listeners.stdout(
@@ -127,7 +127,7 @@ describe('SST CLI Utilities - Command Execution', () => {
         const stage = 'staging';
 
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stderr) {
               options.listeners.stderr(
                 Buffer.from('Error: Deployment failed\n')
@@ -164,20 +164,20 @@ describe('SST CLI Utilities - Command Execution', () => {
       it('should handle large output with truncation', async () => {
         const operation: SSTOperation = 'deploy';
         const stage = 'staging';
-        const options: CLIOptions = { maxOutputSize: 50 };
+        const cliOptions: CLIOptions = { maxOutputSize: 50 };
 
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stdout) {
+          (_command: string, _args: string[], execOptions: any) => {
+            if (execOptions?.listeners?.stdout) {
               // Generate output larger than maxOutputSize
               const largeOutput = 'x'.repeat(100);
-              options.listeners.stdout(Buffer.from(largeOutput));
+              execOptions.listeners.stdout(Buffer.from(largeOutput));
             }
             return 0;
           }
         );
 
-        const result = await executor.executeSST(operation, stage, options);
+        const result = await executor.executeSST(operation, stage, cliOptions);
 
         expect(result.success).toBe(true);
         expect(result.truncated).toBe(true);
@@ -214,7 +214,7 @@ describe('SST CLI Utilities - Command Execution', () => {
     describe('checkSSTAvailability', () => {
       it('should detect available SST CLI', async () => {
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stdout) {
               options.listeners.stdout(Buffer.from('2.41.3\n'));
             }
@@ -235,7 +235,7 @@ describe('SST CLI Utilities - Command Execution', () => {
 
       it('should handle SST CLI error response', async () => {
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stderr) {
               options.listeners.stderr(Buffer.from('Command not found\n'));
             }
@@ -253,7 +253,7 @@ describe('SST CLI Utilities - Command Execution', () => {
     describe('getProjectInfo', () => {
       it('should extract project information', async () => {
         mockExec.exec.mockImplementation(
-          async (_command: string, _args: string[], options: any) => {
+          (_command: string, _args: string[], options: any) => {
             if (options?.listeners?.stdout) {
               options.listeners.stdout(
                 Buffer.from('App: my-app\nStage: production\n')
@@ -282,7 +282,7 @@ describe('SST CLI Utilities - Command Execution', () => {
       const stage = 'production';
 
       mockExec.exec.mockImplementation(
-        async (_command: string, _args: string[], options: any) => {
+        (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('Deploy complete\n'));
           }
@@ -343,7 +343,7 @@ describe('SST CLI Utilities - Command Execution', () => {
       const stage = 'staging';
 
       mockExec.exec.mockImplementation(
-        async (_command: string, _args: string[], options: any) => {
+        (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('Deploying...\n'));
           }
@@ -388,7 +388,7 @@ describe('SST CLI Utilities - Command Execution', () => {
       const concurrentCount = 3;
 
       mockExec.exec.mockImplementation(
-        async (_command: string, _args: string[], options: any) => {
+        (_command: string, _args: string[], options: any) => {
           if (options?.listeners?.stdout) {
             options.listeners.stdout(Buffer.from('Deploy complete\n'));
           }

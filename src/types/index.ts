@@ -70,6 +70,11 @@ import type {
 } from './sst.js';
 
 /**
+ * Regular expression for validating SST stage names
+ */
+const SST_STAGE_NAME_PATTERN = /^[a-zA-Z0-9-_]+$/;
+
+/**
  * Type guards for operation results
  */
 export function isDeployResult(
@@ -144,7 +149,7 @@ export function validateStage(stage: unknown): string {
   const trimmedStage = stage.trim();
 
   // Basic validation for SST stage naming
-  if (!/^[a-zA-Z0-9-_]+$/.test(trimmedStage)) {
+  if (!SST_STAGE_NAME_PATTERN.test(trimmedStage)) {
     throw new Error(
       'Stage must contain only alphanumeric characters, hyphens, and underscores'
     );

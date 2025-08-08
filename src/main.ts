@@ -4,10 +4,15 @@
  */
 
 import * as core from '@actions/core';
-import { ErrorHandler } from './errors/error-handler';
+import {
+  createInputValidationError,
+  createSubprocessError,
+  fromValidationError,
+  handleError,
+} from './errors/error-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
-import type { OperationOptions } from './types';
+import type { OperationOptions, OperationResult } from './types';
 import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
@@ -38,6 +43,193 @@ function parseGitHubActionsInputs() {
 }
 
 /**
+ * Handle input validation errors with proper error conversion
+ */
+function handleInputValidationError(error: unknown): void {
+  if (error instanceof ValidationError) {
+    const actionError = fromValidationError(error);
+    handleError(actionError, {
+      stage: 'unknown',
+      failOnError: true,
+    });
+  } else if (error instanceof Error) {
+    const actionError = createInputValidationError(
+      error.message,
+      undefined,
+      undefined,
+      error
+    );
+    handleError(actionError, {
+      stage: 'unknown',
+      failOnError: true,
+    });
+  }
+  // Don't re-throw - let the function return normally
+}
+
+/**
+ * Execute the SST operation and handle the result
+ */
+async function executeAndHandleOperation(
+  operation: ReturnType<typeof validateWithContext>['operation'],
+  options: OperationOptions
+): Promise<void> {
+  try {
+    core.info(`🔧 Executing ${operation} operation...`);
+    const result = await executeOperation(operation, options);
+
+    // Set GitHub Actions outputs
+    setGitHubActionsOutputs(result);
+
+    // Handle success/failure based on result
+    handleOperationResult(result, operation, options);
+  } catch (error) {
+    handleOperationError(error, operation, options);
+  }
+}
+
+/**
+ * Handle the result of an operation execution
+ */
+function handleOperationResult(
+  result: OperationResult,
+  operation: ReturnType<typeof validateWithContext>['operation'],
+  options: OperationOptions
+): void {
+  if (result.success) {
+    core.info(`✅ SST ${operation} operation completed successfully`);
+    return;
+  }
+
+  const message = `SST ${operation} operation failed: ${result.error || 'Unknown error'}`;
+
+  if (options.failOnError) {
+    core.setFailed(message);
+  } else {
+    core.warning(message);
+    core.info('🔄 Continuing workflow as fail-on-error is disabled');
+  }
+}
+
+/**
+ * Handle errors that occur during operation execution
+ */
+function handleOperationError(
+  error: unknown,
+  operation: ReturnType<typeof validateWithContext>['operation'],
+  options: OperationOptions
+): void {
+  const message = error instanceof Error ? error.message : String(error);
+
+  try {
+    const isOutputFormattingError =
+      error instanceof Error &&
+      error.message.includes('Output formatting failed');
+
+    if (isOutputFormattingError) {
+      handleOutputFormattingError(error, message, operation, options);
+    } else {
+      handleGenericOperationError(error, message, operation, options);
+    }
+  } catch (errorHandlingError) {
+    handleErrorHandlingFailure(errorHandlingError, message);
+  }
+}
+
+/**
+ * Handle output formatting errors
+ */
+function handleOutputFormattingError(
+  error: Error,
+  message: string,
+  operation: ReturnType<typeof validateWithContext>['operation'],
+  options: OperationOptions
+): void {
+  core.error(`Failed to set outputs: ${message}`);
+  const actionError = createSubprocessError(
+    message,
+    operation,
+    options.stage,
+    1,
+    undefined,
+    undefined,
+    error
+  );
+  handleError(actionError, options);
+}
+
+/**
+ * Handle generic operation errors
+ */
+function handleGenericOperationError(
+  error: unknown,
+  message: string,
+  operation: ReturnType<typeof validateWithContext>['operation'],
+  options: OperationOptions
+): void {
+  const actionError = createSubprocessError(
+    message,
+    operation,
+    options.stage,
+    1,
+    undefined,
+    undefined,
+    error instanceof Error ? error : undefined
+  );
+  handleError(actionError, options);
+}
+
+/**
+ * Handle failures in error handling itself
+ */
+function handleErrorHandlingFailure(
+  errorHandlingError: unknown,
+  originalMessage: string
+): void {
+  core.error(
+    `Error handling failed: ${errorHandlingError instanceof Error ? errorHandlingError.message : String(errorHandlingError)}`
+  );
+  core.setFailed(`Action failed: ${originalMessage}`);
+}
+
+/**
+ * Handle unexpected errors with fallback error reporting
+ */
+function handleUnexpectedError(error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error);
+
+  // Simple fallback error handling
+  try {
+    const failOnErrorInput = core.getInput('fail-on-error') || 'true';
+    const basicOptions: OperationOptions = {
+      stage: core.getInput('stage') || 'unknown',
+      failOnError: failOnErrorInput === 'true',
+    };
+
+    // Create a generic subprocess error for unhandled errors
+    const actionError = createSubprocessError(
+      message,
+      'deploy', // Default operation
+      basicOptions.stage,
+      1, // Generic error exit code
+      undefined,
+      undefined,
+      error instanceof Error ? error : undefined
+    );
+
+    handleError(actionError, basicOptions);
+  } catch (errorHandlingError) {
+    // If error handling itself fails, fall back to basic GitHub Actions error reporting
+    core.error(
+      `Error handling failed: ${errorHandlingError instanceof Error ? errorHandlingError.message : String(errorHandlingError)}`
+    );
+    core.setFailed(`Action failed: ${message}`);
+  }
+
+  throw error;
+}
+
+/**
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(
@@ -63,9 +255,33 @@ function createOperationOptions(
 }
 
 /**
+ * Log operation summary information
+ */
+function logOperationSummary(result: OperationResult): void {
+  core.info(`✅ Operation: ${result.operation} (${result.stage})`);
+  core.info(
+    `📊 Status: ${result.success ? 'SUCCESS' : 'FAILED'} (${result.completionStatus})`
+  );
+
+  if (result.success) {
+    if (result.operation === 'deploy' && result.resourceChanges > 0) {
+      core.info(`🚀 Deployed ${result.resourceChanges} resource(s)`);
+    } else if (result.operation === 'diff' && result.plannedChanges > 0) {
+      core.info(`📋 Found ${result.plannedChanges} planned change(s)`);
+    } else if (result.operation === 'remove' && result.resourcesRemoved > 0) {
+      core.info(`🗑️ Removed ${result.resourcesRemoved} resource(s)`);
+    }
+  }
+
+  if (result.truncated) {
+    core.warning('⚠️ Output was truncated due to size limits');
+  }
+}
+
+/**
  * Set GitHub Actions outputs using the OutputFormatter
  */
-function setGitHubActionsOutputs(result: any): void {
+function setGitHubActionsOutputs(result: OperationResult): void {
   try {
     const formattedOutputs = OutputFormatter.formatForGitHubActions(result);
 
@@ -78,24 +294,7 @@ function setGitHubActionsOutputs(result: any): void {
     }
 
     // Log summary information
-    core.info(`✅ Operation: ${result.operation} (${result.stage})`);
-    core.info(
-      `📊 Status: ${result.success ? 'SUCCESS' : 'FAILED'} (${result.completionStatus})`
-    );
-
-    if (result.success) {
-      if (result.operation === 'deploy' && result.resourceChanges > 0) {
-        core.info(`🚀 Deployed ${result.resourceChanges} resource(s)`);
-      } else if (result.operation === 'diff' && result.plannedChanges > 0) {
-        core.info(`📋 Found ${result.plannedChanges} planned change(s)`);
-      } else if (result.operation === 'remove' && result.resourcesRemoved > 0) {
-        core.info(`🗑️ Removed ${result.resourcesRemoved} resource(s)`);
-      }
-    }
-
-    if (result.truncated) {
-      core.warning('⚠️ Output was truncated due to size limits');
-    }
+    logOperationSummary(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     core.error(`Failed to set outputs: ${message}`);
@@ -118,82 +317,16 @@ export async function run(): Promise<void> {
         `📝 Parsed inputs: ${inputs.operation} operation on stage "${inputs.stage}"`
       );
     } catch (error) {
-      // Handle input validation errors
-      if (error instanceof ValidationError) {
-        const actionError = ErrorHandler.fromValidationError(error);
-        await ErrorHandler.handleError(actionError, {
-          stage: 'unknown',
-          failOnError: true,
-        });
-      } else if (error instanceof Error) {
-        const actionError = ErrorHandler.createInputValidationError(
-          error.message,
-          undefined,
-          undefined,
-          error
-        );
-        await ErrorHandler.handleError(actionError, {
-          stage: 'unknown',
-          failOnError: true,
-        });
-      }
-      throw error;
+      handleInputValidationError(error);
+      return; // Early return after handling validation error
     }
 
     // 2. Create operation options
     const { operation, options } = createOperationOptions(inputs);
 
-    // 3. Execute the SST operation
-    core.info(`🔧 Executing ${operation} operation...`);
-    const result = await executeOperation(operation, options);
-
-    // 4. Set GitHub Actions outputs
-    setGitHubActionsOutputs(result);
-
-    // 5. Handle success/failure based on result and failOnError setting
-    if (result.success) {
-      core.info(`✅ SST ${operation} operation completed successfully`);
-    } else {
-      const message = `SST ${operation} operation failed: ${result.error || 'Unknown error'}`;
-
-      if (options.failOnError) {
-        // Fail the action
-        core.setFailed(message);
-      } else {
-        // Log as warning but don't fail
-        core.warning(message);
-        core.info('🔄 Continuing workflow as fail-on-error is disabled');
-      }
-    }
+    // 3. Execute the SST operation and handle results
+    await executeAndHandleOperation(operation, options);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    // Simple fallback error handling
-    try {
-      const failOnErrorInput = core.getInput('fail-on-error') || 'true';
-      const basicOptions: OperationOptions = {
-        stage: core.getInput('stage') || 'unknown',
-        failOnError: failOnErrorInput === 'true',
-      };
-
-      // Create a generic subprocess error for unhandled errors
-      const actionError = ErrorHandler.createSubprocessError(
-        message,
-        'deploy', // Default operation
-        basicOptions.stage,
-        1, // Generic error exit code
-        undefined,
-        undefined,
-        error instanceof Error ? error : undefined
-      );
-
-      await ErrorHandler.handleError(actionError, basicOptions);
-    } catch (errorHandlingError) {
-      // If error handling itself fails, fall back to basic GitHub Actions error reporting
-      core.error(
-        `Error handling failed: ${errorHandlingError instanceof Error ? errorHandlingError.message : String(errorHandlingError)}`
-      );
-      core.setFailed(`Action failed: ${message}`);
-    }
+    handleUnexpectedError(error);
   }
 }

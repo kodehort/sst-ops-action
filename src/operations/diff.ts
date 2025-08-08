@@ -3,6 +3,16 @@ import { DiffParser } from '../parsers/diff-parser';
 import type { OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
 
+/**
+ * Regex patterns for detecting breaking changes in diff output
+ */
+const BREAKING_CHANGE_PATTERNS = [
+  /⚠️.*[Bb]reaking/,
+  /[Bb]reaking.*changes.*detected/i,
+  /[Bb]reaking.*change/i,
+  /[Ii]mpact.*[Bb]reaking/i,
+] as const;
+
 // Enhanced DiffResult interface for operation handling
 // This extends the basic DiffResult with additional properties needed for PR comments
 interface EnhancedDiffResult {
@@ -59,12 +69,21 @@ export interface DiffOperationResult {
 
 export class DiffOperation {
   private readonly defaultTimeout = 300_000; // 5 minutes
+  private readonly sstExecutor: SSTCLIExecutor;
+  private readonly githubClient: GitHubClient;
+  private readonly diffParser?: DiffParser;
 
   constructor(
-    private readonly sstExecutor: SSTCLIExecutor,
-    private readonly githubClient: GitHubClient,
-    private readonly diffParser?: DiffParser
-  ) {}
+    sstExecutor: SSTCLIExecutor,
+    githubClient: GitHubClient,
+    diffParser?: DiffParser
+  ) {
+    this.sstExecutor = sstExecutor;
+    this.githubClient = githubClient;
+    if (diffParser) {
+      this.diffParser = diffParser;
+    }
+  }
 
   async execute(options: OperationOptions): Promise<DiffOperationResult> {
     try {
@@ -189,116 +208,151 @@ export class DiffOperation {
 
   private formatPRComment(diffResult: EnhancedDiffResult): string {
     if (!diffResult.hasChanges) {
-      return `## 📋 No Infrastructure Changes
-
-No infrastructure changes detected for stage \`${diffResult.stage}\`.
-
-✅ Your infrastructure is up to date!`;
+      return this.formatNoChangesComment(diffResult.stage);
     }
 
     const sections: string[] = [];
 
-    // Header with breaking changes warning
-    if (diffResult.breakingChanges) {
-      sections.push(`## ⚠️ **Breaking Changes Detected**
+    // Add header section
+    sections.push(this.formatHeaderSection(diffResult));
 
-**IMPORTANT**: This deployment contains breaking changes that may impact your application.`);
-    } else {
-      sections.push(`## 📋 Infrastructure Changes Detected
+    // Add summary section
+    sections.push(this.formatSummarySection(diffResult));
 
-Changes detected for stage \`${diffResult.stage}\`:`);
-    }
-
-    // Changes summary
-    const createCount = diffResult.changes.filter(
-      (c) => c.action === 'create'
-    ).length;
-    const updateCount = diffResult.changes.filter(
-      (c) => c.action === 'update'
-    ).length;
-    const deleteCount = diffResult.changes.filter(
-      (c) => c.action === 'delete'
-    ).length;
-
-    sections.push(`### 📊 Summary
-- **${diffResult.plannedChanges}** total changes planned
-- **${createCount}** resources to be created
-- **${updateCount}** resources to be updated
-- **${deleteCount}** resources to be deleted`);
-
-    // Cost analysis if available
+    // Add cost analysis if available
     if (diffResult.costAnalysis) {
-      const { costAnalysis } = diffResult;
-      const changeIcon =
-        costAnalysis.change > 0 ? '📈' : costAnalysis.change < 0 ? '📉' : '📊';
-      const changeText =
-        costAnalysis.change > 0
-          ? 'increase'
-          : costAnalysis.change < 0
-            ? 'decrease'
-            : 'no change';
-
-      sections.push(`### 💰 Cost Analysis
-${changeIcon} Monthly cost ${changeText}: **${costAnalysis.formatted}**`);
+      sections.push(this.formatCostAnalysisSection(diffResult.costAnalysis));
     }
 
-    // Detailed changes
+    // Add detailed changes
     if (diffResult.changes.length > 0) {
-      sections.push('### 🔄 Detailed Changes');
-
-      const groupedChanges = {
-        create: diffResult.changes.filter((c) => c.action === 'create'),
-        update: diffResult.changes.filter((c) => c.action === 'update'),
-        delete: diffResult.changes.filter((c) => c.action === 'delete'),
-      };
-
-      if (groupedChanges.create.length > 0) {
-        sections.push('#### ➕ Resources to be Created');
-        groupedChanges.create.forEach((change) => {
-          sections.push(
-            `- **${change.type}** \`${change.name}\`${change.details ? ` - ${change.details}` : ''}`
-          );
-        });
-      }
-
-      if (groupedChanges.update.length > 0) {
-        sections.push('#### 🔄 Resources to be Updated');
-        groupedChanges.update.forEach((change) => {
-          sections.push(
-            `- **${change.type}** \`${change.name}\`${change.details ? ` - ${change.details}` : ''}`
-          );
-        });
-      }
-
-      if (groupedChanges.delete.length > 0) {
-        sections.push('#### ❌ Resources to be Deleted');
-        groupedChanges.delete.forEach((change) => {
-          sections.push(
-            `- **${change.type}** \`${change.name}\`${change.details ? ` - ${change.details}` : ''}`
-          );
-        });
-      }
+      sections.push(this.formatDetailedChangesSection(diffResult.changes));
     }
 
-    // Breaking changes warning
+    // Add breaking changes warning
     if (diffResult.breakingChanges) {
-      sections.push(`---
-⚠️ **Please review these changes carefully before deploying to production.**`);
+      sections.push(this.formatBreakingChangesWarning());
     }
 
     return sections.join('\n\n');
   }
 
+  private formatNoChangesComment(stage: string): string {
+    return `## 📋 No Infrastructure Changes
+
+No infrastructure changes detected for stage \`${stage}\`.
+
+✅ Your infrastructure is up to date!`;
+  }
+
+  private formatHeaderSection(diffResult: EnhancedDiffResult): string {
+    if (diffResult.breakingChanges) {
+      return `## ⚠️ **Breaking Changes Detected**
+
+**IMPORTANT**: This deployment contains breaking changes that may impact your application.`;
+    }
+    return `## 📋 Infrastructure Changes Detected
+
+Changes detected for stage \`${diffResult.stage}\`:`;
+  }
+
+  private formatSummarySection(diffResult: EnhancedDiffResult): string {
+    const changeCounts = this.getChangeCounts(diffResult.changes);
+
+    return `### 📊 Summary
+- **${diffResult.plannedChanges}** total changes planned
+- **${changeCounts.create}** resources to be created
+- **${changeCounts.update}** resources to be updated
+- **${changeCounts.delete}** resources to be deleted`;
+  }
+
+  private getChangeCounts(changes: EnhancedDiffResult['changes']) {
+    return {
+      create: changes.filter((c) => c.action === 'create').length,
+      update: changes.filter((c) => c.action === 'update').length,
+      delete: changes.filter((c) => c.action === 'delete').length,
+    };
+  }
+
+  private formatCostAnalysisSection(
+    costAnalysis: NonNullable<EnhancedDiffResult['costAnalysis']>
+  ): string {
+    const { changeIcon, changeText } = this.getCostChangeInfo(
+      costAnalysis.change
+    );
+    return `### 💰 Cost Analysis
+${changeIcon} Monthly cost ${changeText}: **${costAnalysis.formatted}**`;
+  }
+
+  private getCostChangeInfo(change: number) {
+    if (change > 0) {
+      return { changeIcon: '📈', changeText: 'increase' };
+    }
+    if (change < 0) {
+      return { changeIcon: '📉', changeText: 'decrease' };
+    }
+    return { changeIcon: '📊', changeText: 'no change' };
+  }
+
+  private formatDetailedChangesSection(
+    changes: EnhancedDiffResult['changes']
+  ): string {
+    const sections = ['### 🔄 Detailed Changes'];
+    const groupedChanges = this.groupChangesByAction(changes);
+
+    this.addChangeGroup(
+      sections,
+      groupedChanges.create,
+      '#### ➕ Resources to be Created'
+    );
+    this.addChangeGroup(
+      sections,
+      groupedChanges.update,
+      '#### 🔄 Resources to be Updated'
+    );
+    this.addChangeGroup(
+      sections,
+      groupedChanges.delete,
+      '#### ❌ Resources to be Deleted'
+    );
+
+    return sections.join('\n\n');
+  }
+
+  private groupChangesByAction(changes: EnhancedDiffResult['changes']) {
+    return {
+      create: changes.filter((c) => c.action === 'create'),
+      update: changes.filter((c) => c.action === 'update'),
+      delete: changes.filter((c) => c.action === 'delete'),
+    };
+  }
+
+  private addChangeGroup(
+    sections: string[],
+    changes: EnhancedDiffResult['changes'],
+    title: string
+  ): void {
+    if (changes.length === 0) {
+      return;
+    }
+
+    sections.push(title);
+    for (const change of changes) {
+      const details = change.details ? ` - ${change.details}` : '';
+      sections.push(`- **${change.type}** \`${change.name}\`${details}`);
+    }
+  }
+
+  private formatBreakingChangesWarning(): string {
+    return `---
+⚠️ **Please review these changes carefully before deploying to production.**`;
+  }
+
   private detectBreakingChanges(changeSummary: string): boolean {
     // Check for breaking change indicators in the change summary
-    const breakingIndicators = [
-      /⚠️.*[Bb]reaking/,
-      /[Bb]reaking.*changes.*detected/i,
-      /[Bb]reaking.*change/i,
-      /[Ii]mpact.*[Bb]reaking/i,
-    ];
-
-    return breakingIndicators.some((pattern) => pattern.test(changeSummary));
+    return BREAKING_CHANGE_PATTERNS.some((pattern) =>
+      pattern.test(changeSummary)
+    );
   }
 
   private createFailureResult(

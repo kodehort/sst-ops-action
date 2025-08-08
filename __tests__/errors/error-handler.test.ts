@@ -1,6 +1,13 @@
 import * as core from '@actions/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorHandler } from '../../src/errors/error-handler';
+import {
+  createInputValidationError,
+  createOutputParsingError,
+  createSubprocessError,
+  fromValidationError,
+  handleError,
+  isParsingError,
+} from '../../src/errors/error-handler';
 import type { OperationOptions } from '../../src/types';
 import { ValidationError } from '../../src/utils/validation';
 
@@ -23,7 +30,7 @@ describe('Error Handler - Error Processing', () => {
 
   describe('createInputValidationError', () => {
     it('should create validation error for input failures', () => {
-      const error = ErrorHandler.createInputValidationError(
+      const error = createInputValidationError(
         'Invalid stage value',
         'stage',
         'invalid-stage'
@@ -43,7 +50,7 @@ describe('Error Handler - Error Processing', () => {
 
     it('should create validation error without field details', () => {
       const originalError = new Error('Test error');
-      const error = ErrorHandler.createInputValidationError(
+      const error = createInputValidationError(
         'General validation error',
         undefined,
         undefined,
@@ -62,7 +69,7 @@ describe('Error Handler - Error Processing', () => {
 
   describe('createSubprocessError', () => {
     it('should create subprocess error for SST CLI failures', () => {
-      const error = ErrorHandler.createSubprocessError(
+      const error = createSubprocessError(
         'Deploy failed with exit code 1',
         'deploy',
         'production',
@@ -88,7 +95,7 @@ describe('Error Handler - Error Processing', () => {
 
     it('should create subprocess error with original error', () => {
       const originalError = new Error('Subprocess failed');
-      const error = ErrorHandler.createSubprocessError(
+      const error = createSubprocessError(
         'SST command failed',
         'diff',
         'staging',
@@ -107,7 +114,7 @@ describe('Error Handler - Error Processing', () => {
 
   describe('createOutputParsingError', () => {
     it('should create parsing error that does not fail action', () => {
-      const error = ErrorHandler.createOutputParsingError(
+      const error = createOutputParsingError(
         'Invalid JSON in output',
         'diff',
         'staging',
@@ -137,7 +144,7 @@ describe('Error Handler - Error Processing', () => {
         ['Use staging, production, or dev']
       );
 
-      const actionError = ErrorHandler.fromValidationError(validationError);
+      const actionError = fromValidationError(validationError);
 
       expect(actionError.type).toBe('input_validation');
       expect(actionError.message).toBe(validationError.message);
@@ -156,14 +163,14 @@ describe('Error Handler - Error Processing', () => {
       failOnError: true,
     };
 
-    it('should fail action for validation errors', async () => {
-      const error = ErrorHandler.createInputValidationError(
+    it('should fail action for validation errors', () => {
+      const error = createInputValidationError(
         'Invalid input',
         'stage',
         'bad-stage'
       );
 
-      await ErrorHandler.handleError(error, mockOptions);
+      handleError(error, mockOptions);
 
       expect(mockError).toHaveBeenCalledWith(
         '🔴 staging input_validation: Invalid input'
@@ -174,8 +181,8 @@ describe('Error Handler - Error Processing', () => {
       );
     });
 
-    it('should fail action for subprocess errors', async () => {
-      const error = ErrorHandler.createSubprocessError(
+    it('should fail action for subprocess errors', () => {
+      const error = createSubprocessError(
         'Deploy failed',
         'deploy',
         'production',
@@ -189,7 +196,7 @@ describe('Error Handler - Error Processing', () => {
         failOnError: true,
       };
 
-      await ErrorHandler.handleError(error, options);
+      handleError(error, options);
 
       expect(mockError).toHaveBeenCalledWith(
         '🔴 production subprocess_error: Deploy failed'
@@ -201,15 +208,15 @@ describe('Error Handler - Error Processing', () => {
       );
     });
 
-    it('should log warning for parsing errors but not fail action', async () => {
-      const error = ErrorHandler.createOutputParsingError(
+    it('should log warning for parsing errors but not fail action', () => {
+      const error = createOutputParsingError(
         'Parse error',
         'diff',
         'staging',
         'bad json'
       );
 
-      await ErrorHandler.handleError(error, mockOptions);
+      handleError(error, mockOptions);
 
       expect(mockWarning).toHaveBeenCalledWith(
         '🟡 staging output_parsing: Parse error'
@@ -217,11 +224,11 @@ describe('Error Handler - Error Processing', () => {
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
 
-    it('should log stack trace in debug mode', async () => {
+    it('should log stack trace in debug mode', () => {
       const originalError = new Error('Original error');
       originalError.stack = 'Stack trace here';
 
-      const error = ErrorHandler.createSubprocessError(
+      const error = createSubprocessError(
         'Command failed',
         'deploy',
         'staging',
@@ -231,7 +238,7 @@ describe('Error Handler - Error Processing', () => {
         originalError
       );
 
-      await ErrorHandler.handleError(error, mockOptions);
+      handleError(error, mockOptions);
 
       expect(mockDebug).toHaveBeenCalledWith('Stack Trace: Stack trace here');
     });
@@ -239,16 +246,15 @@ describe('Error Handler - Error Processing', () => {
 
   describe('isParsingError', () => {
     it('should identify parsing errors', () => {
-      const parsingError = ErrorHandler.createOutputParsingError(
+      const parsingError = createOutputParsingError(
         'Parse failed',
         'diff',
         'staging'
       );
-      const validationError =
-        ErrorHandler.createInputValidationError('Invalid input');
+      const validationError = createInputValidationError('Invalid input');
 
-      expect(ErrorHandler.isParsingError(parsingError)).toBe(true);
-      expect(ErrorHandler.isParsingError(validationError)).toBe(false);
+      expect(isParsingError(parsingError)).toBe(true);
+      expect(isParsingError(validationError)).toBe(false);
     });
   });
 });

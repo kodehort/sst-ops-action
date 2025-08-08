@@ -1,11 +1,26 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorHandler } from '../src/errors/error-handler';
+import { fromValidationError, handleError } from '../src/errors/error-handler';
+
+// Mock the error handler functions
+vi.mock('../src/errors/error-handler', () => ({
+  handleError: vi.fn(),
+  fromValidationError: vi.fn(),
+  createInputValidationError: vi.fn(),
+  createSubprocessError: vi.fn(),
+}));
+
 import { run } from '../src/main';
 
 import * as operationRouter from '../src/operations/router';
 import { OutputFormatter } from '../src/outputs/formatter';
-import { ValidationError } from '../src/utils/validation';
+
+// Helper function to create mock getInput
+function createGetInputMock(inputs: Record<string, string>) {
+  return (name: string) => {
+    return inputs[name] || '';
+  };
+}
 
 describe('Main Entry Point - Action Execution', () => {
   const originalEnv = process.env;
@@ -75,7 +90,7 @@ describe('Main Entry Point - Action Execution', () => {
     });
 
     // Spy on the error handler (but let it run to test actual error logging)
-    vi.spyOn(ErrorHandler, 'handleError');
+    vi.spyOn({ handleError }, 'handleError');
 
     // Mock all core functions with spies
     vi.spyOn(core, 'info').mockImplementation(() => {
@@ -160,21 +175,13 @@ describe('Main Entry Point - Action Execution', () => {
     });
 
     it('should analyze deployment changes and provide comprehensive diff report', async () => {
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'diff';
-        }
-        if (name === 'stage') {
-          return 'production';
-        }
-        if (name === 'token') {
-          return 'ghp_test123';
-        }
-        if (name === 'comment-mode') {
-          return 'always';
-        }
-        return '';
-      });
+      const inputs = {
+        operation: 'diff',
+        stage: 'production',
+        token: 'ghp_test123',
+        'comment-mode': 'always',
+      };
+      vi.spyOn(core, 'getInput').mockImplementation(createGetInputMock(inputs));
 
       const mockResult = {
         success: true,
@@ -340,6 +347,16 @@ describe('Main Entry Point - Action Execution', () => {
 
   describe('Input Validation Workflows', () => {
     it('should handle input validation errors', async () => {
+      // Temporarily use real error handling functions for this test
+      const {
+        handleError: realHandleError,
+        fromValidationError: realFromValidationError,
+      } = (await vi.importActual('../src/errors/error-handler')) as any;
+      vi.mocked(handleError).mockImplementation(realHandleError as any);
+      vi.mocked(fromValidationError).mockImplementation(
+        realFromValidationError as any
+      );
+
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'invalid-operation';
@@ -353,35 +370,29 @@ describe('Main Entry Point - Action Execution', () => {
         return '';
       });
 
-      const validationError = new ValidationError(
-        'Invalid operation: invalid-operation. Must be one of: deploy, diff, remove',
-        'operation',
-        'invalid-operation',
-        ['Valid operations are: deploy, diff, remove']
-      );
-
-      // Mock the fromValidationError method to return appropriate ActionError
-      vi.spyOn(ErrorHandler, 'fromValidationError').mockReturnValue({
-        type: 'input_validation',
-        message: validationError.message,
-        shouldFailAction: true,
-        originalError: validationError,
-        details: {
-          field: 'operation',
-          value: 'invalid-operation',
-        },
-      });
+      // Let the real validation run - it should throw ValidationError for 'invalid-operation'
+      // The error handling will then call fromValidationError and handleError
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
         expect.stringContaining('🔴 unknown input_validation:')
       );
-      expect(ErrorHandler.fromValidationError).toHaveBeenCalled();
-      expect(ErrorHandler.handleError).toHaveBeenCalled();
+      expect(vi.mocked(fromValidationError)).toHaveBeenCalled();
+      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
     it('should validate required inputs', async () => {
+      // Temporarily use real error handling functions for this test
+      const {
+        handleError: realHandleError,
+        fromValidationError: realFromValidationError,
+      } = (await vi.importActual('../src/errors/error-handler')) as any;
+      vi.mocked(handleError).mockImplementation(realHandleError as any);
+      vi.mocked(fromValidationError).mockImplementation(
+        realFromValidationError as any
+      );
+
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'stage') {
           return '';
@@ -397,7 +408,7 @@ describe('Main Entry Point - Action Execution', () => {
       expect(core.error).toHaveBeenCalledWith(
         expect.stringContaining('🔴 unknown input_validation:')
       );
-      expect(ErrorHandler.handleError).toHaveBeenCalled();
+      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
   });
 
@@ -487,7 +498,7 @@ describe('Main Entry Point - Action Execution', () => {
       expect(core.error).toHaveBeenCalledWith(
         'Failed to set outputs: Output formatting failed'
       );
-      expect(ErrorHandler.handleError).toHaveBeenCalled();
+      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
   });
 
@@ -500,7 +511,7 @@ describe('Main Entry Point - Action Execution', () => {
 
       await run();
 
-      expect(ErrorHandler.handleError).toHaveBeenCalled();
+      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
     it('should handle error handler failures gracefully', async () => {
@@ -509,9 +520,9 @@ describe('Main Entry Point - Action Execution', () => {
         operationError
       );
 
-      vi.spyOn(ErrorHandler, 'handleError').mockRejectedValueOnce(
-        new Error('Error handler failed')
-      );
+      vi.mocked(handleError).mockImplementationOnce(() => {
+        throw new Error('Error handler failed');
+      });
 
       await run();
 
