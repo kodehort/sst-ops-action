@@ -300,7 +300,7 @@ jobs:
       - name: Remove PR Environment
         id: cleanup
         if: github.event.inputs.dry_run != 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: ${{ matrix.stage }}
@@ -311,7 +311,7 @@ jobs:
       # Dry run mode - show what would be cleaned up
       - name: Dry Run - Show Cleanup Plan
         if: github.event.inputs.dry_run == 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
           stage: ${{ matrix.stage }}
@@ -371,7 +371,7 @@ jobs:
       - name: Remove Feature Environment
         id: cleanup
         if: github.event.inputs.dry_run != 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: ${{ matrix.stage }}
@@ -425,7 +425,7 @@ jobs:
       - name: Remove Old Environment
         id: cleanup
         if: github.event.inputs.dry_run != 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: ${{ matrix.stage }}
@@ -488,7 +488,7 @@ jobs:
       - name: Remove Environment
         id: cleanup
         if: github.event.inputs.dry_run != 'true'
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           operation: remove
           stage: ${{ matrix.stage }}

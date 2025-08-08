@@ -83,7 +83,7 @@ jobs:
       # This is the core step that handles the SST deployment
       - name: Deploy SST Application
         id: deploy
-        uses: kodehort/sst-operations-action@v1
+        uses: kodehort/sst-ops-action@v1
         with:
           # Deploy operation (default, but explicit for clarity)
           operation: deploy
