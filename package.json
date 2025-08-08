@@ -17,7 +17,7 @@
     "format:check": "bunx ultracite@latest format --check",
     "lint": "bunx ultracite@latest lint",
     "lint:fix": "bunx ultracite@latest lint --fix",
-    "validate": "bun run typecheck && bun run lint && bun test",
+    "validate": "bun run typecheck && bun run lint && bun run test",
     "dev": "bunx @github/local-action run . src/main.ts .env",
     "prepare": "lefthook install",
     "quality:check": "bun run quality:lint && bun run quality:format && bun run quality:typecheck && bun run quality:test-coverage && bun run quality:bundle-size",
