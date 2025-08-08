@@ -1,0 +1,14 @@
+{
+  "buildTimestamp": "2025-08-08T22:13:44.784Z",
+  "bundlePath": "/Users/alistairstead/dev/kodehort/sst-operations-action/dist/index.cjs",
+  "bundleSize": 2790903,
+  "bundleSizeMB": 2.6616125106811523,
+  "integrity": "e48a238aea03d9623551c97715df878913c3943679df7cc1e74de923901a595a",
+  "sourceMap": true,
+  "duration": 102,
+  "platform": "node",
+  "target": "node20",
+  "format": "cjs",
+  "minified": true,
+  "version": "1.0.0"
+}

@@ -42,19 +42,28 @@ class ProductionBuilder {
       bundle: true,
       platform: 'node',
       target: 'node20',
-      format: 'cjs', // GitHub Actions requires CommonJS
+      format: 'cjs', // GitHub Actions proven to work with CommonJS
       outfile: this.outputFile,
 
       // Optimization settings
       minify: true,
+      minifyWhitespace: true,
+      minifyIdentifiers: true,
+      minifySyntax: true,
       treeShaking: true,
       keepNames: false,
+      ignoreAnnotations: false, // Respect pure annotations for better tree shaking
+      
+      // Advanced minification
+      mangleProps: /^_/, // Mangle properties starting with underscore
+      drop: ['console', 'debugger'], // Remove console statements and debugger in production
+      legalComments: 'none', // Remove license comments to reduce size
 
-      // Source map configuration
-      sourcemap: 'external',
-      sourcesContent: false,
+      // Source map configuration (optimized for size)
+      sourcemap: 'linked', // Slightly smaller than 'external' for GitHub Actions
+      sourcesContent: false, // Exclude original source content to reduce map size
 
-      // Bundle analysis
+      // Bundle analysis and reporting
       metafile: true,
 
       // External dependencies (GitHub Actions provides these)
@@ -82,7 +91,12 @@ class ProductionBuilder {
 
     try {
       // Execute build
-      const _result = await build(buildOptions);
+      const esbuildResult = await build(buildOptions);
+      
+      // Log bundle analysis if metafile is available
+      if (esbuildResult.metafile) {
+        this.logBundleAnalysis(esbuildResult.metafile);
+      }
 
       // Verify build output exists
       if (!existsSync(this.outputFile)) {
@@ -188,6 +202,54 @@ class ProductionBuilder {
   private logError(message: string): void {
     // In build scripts, direct output to stderr is acceptable
     process.stderr.write(`[BUILD ERROR] ${message}\n`);
+  }
+
+  private logBundleAnalysis(metafile: any): void {
+    // Analyze bundle composition for size optimization insights
+    const outputs = metafile.outputs || {};
+    const inputs = metafile.inputs || {};
+    
+    // Find the main output file
+    const mainOutput = Object.entries(outputs).find(([path]) => 
+      path.endsWith('index.cjs') || path.includes(this.outputFile)
+    );
+    
+    if (mainOutput) {
+      const [, outputData] = mainOutput as [string, any];
+      
+      // Log largest dependencies
+      if (outputData.imports) {
+        const importSizes = outputData.imports
+          .map((imp: any) => ({
+            path: imp.path,
+            size: inputs[imp.path]?.bytes || 0
+          }))
+          .filter((imp: any) => imp.size > 0)
+          .sort((a: any, b: any) => b.size - a.size)
+          .slice(0, 5);
+        
+        if (importSizes.length > 0) {
+          this.logInfo('📊 Largest dependencies:');
+          importSizes.forEach((imp: any, index: number) => {
+            const sizeMB = (imp.size / (1024 * 1024)).toFixed(2);
+            this.logInfo(`  ${index + 1}. ${imp.path} (${sizeMB}MB)`);
+          });
+        }
+      }
+    }
+    
+    // Calculate total input size vs output size for compression ratio
+    const totalInputSize = Object.values(inputs).reduce((sum: number, input: any) => 
+      sum + (input.bytes || 0), 0
+    );
+    const totalOutputSize = Object.values(outputs).reduce((sum: number, output: any) => 
+      sum + (output.bytes || 0), 0
+    );
+    
+    if (totalInputSize > 0 && totalOutputSize > 0) {
+      const compressionRatio = ((totalInputSize - totalOutputSize) / totalInputSize * 100).toFixed(1);
+      this.logInfo(`📈 Compression: ${(totalInputSize / (1024 * 1024)).toFixed(2)}MB → ${(totalOutputSize / (1024 * 1024)).toFixed(2)}MB (${compressionRatio}% reduction)`);
+    }
   }
 
   private generateBuildManifest(result: BuildResult): void {
