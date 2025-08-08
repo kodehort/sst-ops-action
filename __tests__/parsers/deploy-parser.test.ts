@@ -14,14 +14,14 @@ import {
   SST_DEPLOY_SUCCESS_OUTPUT,
 } from '../fixtures/sst-outputs';
 
-describe('DeployParser', () => {
+describe('Deploy Parser - SST Output Processing', () => {
   let parser: DeployParser;
 
   beforeEach(() => {
     parser = new DeployParser();
   });
 
-  describe('parse', () => {
+  describe('Deployment Output Parsing', () => {
     it('should parse successful deployment output', () => {
       const result = parser.parse(SST_DEPLOY_SUCCESS_OUTPUT, 'staging', 0);
 

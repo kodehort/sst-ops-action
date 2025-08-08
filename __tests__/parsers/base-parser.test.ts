@@ -96,7 +96,7 @@ class TestParser {
   }
 }
 
-describe('BaseParser', () => {
+describe('Base Parser - Common Output Processing', () => {
   let parser: TestParser;
 
   beforeEach(() => {

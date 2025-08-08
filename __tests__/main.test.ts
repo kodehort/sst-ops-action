@@ -8,7 +8,7 @@ import * as operationRouter from '../src/operations/router';
 import { OutputFormatter } from '../src/outputs/formatter';
 import { ValidationError } from '../src/utils/validation';
 
-describe('Main Entry Point', () => {
+describe('Main Entry Point - Action Execution', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -89,8 +89,8 @@ describe('Main Entry Point', () => {
     process.env = originalEnv;
   });
 
-  describe('successful operations', () => {
-    it('should handle successful deploy operation', async () => {
+  describe('Successful Operation Execution', () => {
+    it('should execute deploy operation and report success with detailed metrics', async () => {
       const mockResult = {
         success: true,
         operation: 'deploy' as const,
@@ -148,7 +148,7 @@ describe('Main Entry Point', () => {
       );
     });
 
-    it('should handle successful diff operation', async () => {
+    it('should analyze deployment changes and provide comprehensive diff report', async () => {
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'diff';
@@ -204,7 +204,7 @@ describe('Main Entry Point', () => {
       );
     });
 
-    it('should handle successful remove operation', async () => {
+    it('should remove deployed resources and provide cleanup summary', async () => {
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'remove';
@@ -257,7 +257,7 @@ describe('Main Entry Point', () => {
     });
   });
 
-  describe('failed operations', () => {
+  describe('Failed Operation Handling', () => {
     it('should handle operation failure with failOnError=true', async () => {
       const mockResult = {
         success: false,
@@ -327,7 +327,7 @@ describe('Main Entry Point', () => {
     });
   });
 
-  describe('input validation', () => {
+  describe('Input Validation Workflows', () => {
     it('should handle input validation errors', async () => {
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
@@ -390,7 +390,7 @@ describe('Main Entry Point', () => {
     });
   });
 
-  describe('output handling', () => {
+  describe('Output Processing Workflows', () => {
     it('should format and validate outputs correctly', async () => {
       const mockResult = {
         success: true,
@@ -480,7 +480,7 @@ describe('Main Entry Point', () => {
     });
   });
 
-  describe('error handling', () => {
+  describe('Error Handling Workflows', () => {
     it('should use enhanced error handling for operation failures', async () => {
       const operationError = new Error('SST CLI execution failed');
       vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
@@ -513,7 +513,7 @@ describe('Main Entry Point', () => {
     });
   });
 
-  describe('integration scenarios', () => {
+  describe('End-to-End Integration Scenarios', () => {
     it('should handle end-to-end deploy workflow', async () => {
       // Simulate full deploy workflow
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {

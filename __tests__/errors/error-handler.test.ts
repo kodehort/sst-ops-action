@@ -4,7 +4,7 @@ import { ErrorHandler } from '../../src/errors/error-handler';
 import type { OperationOptions } from '../../src/types';
 import { ValidationError } from '../../src/utils/validation';
 
-describe('ErrorHandler', () => {
+describe('Error Handler - Error Processing', () => {
   const mockError = vi.fn();
   const mockWarning = vi.fn();
   const mockInfo = vi.fn();

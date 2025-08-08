@@ -1,27 +1,34 @@
 /**
- * Integration tests for the complete SST Operations Action
- * Tests end-to-end workflows with realistic scenarios
+ * SST Operations Action - Integration Tests
+ * Tests complete end-to-end workflows including real subprocess execution scenarios
  */
 
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock node:child_process
-vi.mock('node:child_process');
+const { spawn } = childProcess;
+const { existsSync, mkdirSync, rmSync, writeFileSync } = fs;
+const { tmpdir } = os;
+const { join } = path;
 
-// Mock operations router to control operation execution
+// Test constants
+const E2E_TIMEOUT = 60_000;
+const ACTION_DIST_PATH = join(process.cwd(), 'dist', 'index.cjs');
+
+// Mock modules for integration tests
+vi.mock('node:child_process');
 vi.mock('../../src/operations/router', () => ({
   executeOperation: vi.fn(),
 }));
-
-// Mock output formatter to control output generation
 vi.mock('../../src/outputs/formatter', () => ({
   OutputFormatter: {
     formatForGitHubActions: vi.fn(),
     validateOutputs: vi.fn(),
   },
 }));
-
-// Mock error handler
 vi.mock('../../src/errors/error-handler', () => ({
   ErrorHandler: {
     handleError: vi.fn(),
@@ -32,8 +39,6 @@ vi.mock('../../src/errors/error-handler', () => ({
     isParsingError: vi.fn(),
   },
 }));
-
-// Mock validation utilities
 vi.mock('../../src/utils/validation', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('../../src/utils/validation')>();
@@ -43,8 +48,6 @@ vi.mock('../../src/utils/validation', async (importOriginal) => {
     createValidationContext: vi.fn(),
   };
 });
-
-// Mock child process functionality is handled through mocked operation router
 
 /**
  * Executes the action with given environment variables
@@ -548,7 +551,141 @@ function createMockFormattedOutputs(result: any) {
   };
 }
 
-describe('Action Integration Tests', () => {
+/**
+ * Execute the GitHub Action with given inputs and environment in real subprocess
+ */
+async function executeActionE2E(
+  inputs: Record<string, string>,
+  env: Record<string, string> = {}
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  outputs: Record<string, string>;
+}> {
+  return new Promise((resolve) => {
+    const actionEnv = {
+      ...process.env,
+      ...env,
+      GITHUB_ACTIONS: 'true',
+      GITHUB_WORKFLOW: 'test-workflow',
+      GITHUB_RUN_ID: '123456',
+      GITHUB_RUN_NUMBER: '1',
+      GITHUB_REPOSITORY: 'test-org/test-repo',
+      GITHUB_REF: 'refs/heads/main',
+      GITHUB_SHA: 'abc123def456',
+      GITHUB_ACTOR: 'test-actor',
+      GITHUB_EVENT_NAME: 'push',
+      ...Object.fromEntries(
+        Object.entries(inputs).map(([key, value]) => [
+          `INPUT_${key.toUpperCase().replace(/-/g, '_')}`,
+          value,
+        ])
+      ),
+    };
+
+    const child = spawn('node', [ACTION_DIST_PATH], {
+      stdio: 'pipe',
+      env: actionEnv,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout?.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      resolve({
+        exitCode: -1,
+        stdout,
+        stderr: stderr + '\nTimeout: Process killed',
+        outputs: {},
+      });
+    }, E2E_TIMEOUT);
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+
+      const outputs: Record<string, string> = {};
+      const outputPattern = /::set-output name=([^:]+)::(.*)$/gm;
+      let match;
+      while ((match = outputPattern.exec(stdout)) !== null) {
+        if (match[1] && match[2] !== undefined) {
+          outputs[match[1]] = match[2];
+        }
+      }
+
+      resolve({
+        exitCode: code || 0,
+        stdout,
+        stderr,
+        outputs,
+      });
+    });
+
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      resolve({
+        exitCode: -1,
+        stdout,
+        stderr: stderr + error.message,
+        outputs: {},
+      });
+    });
+  });
+}
+
+/**
+ * Create a test project structure for E2E testing
+ */
+function createTestProject(projectPath: string) {
+  mkdirSync(projectPath, { recursive: true });
+
+  const packageJson = {
+    name: 'integration-test-project',
+    version: '0.1.0',
+    type: 'module',
+    dependencies: {
+      sst: '^3.0.0',
+    },
+  };
+  writeFileSync(
+    join(projectPath, 'package.json'),
+    JSON.stringify(packageJson, null, 2)
+  );
+
+  const sstConfig = `/// <reference path="./.sst/platform/config.d.ts" />
+
+export default $config({
+  app(input) {
+    return {
+      name: "integration-test-app",
+      removal: "remove",
+      home: "aws",
+    };
+  },
+  async run() {
+    new sst.aws.Function("IntegrationTestFunction", {
+      handler: "index.handler",
+      runtime: "nodejs20.x",
+      code: {
+        zipFile: "exports.handler = async () => ({ statusCode: 200, body: 'Integration Test' });"
+      }
+    });
+  },
+});
+`;
+  writeFileSync(join(projectPath, 'sst.config.ts'), sstConfig);
+}
+
+describe('SST Operations Action - Integration Workflows', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Clear environment variables
@@ -559,8 +696,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Deploy Operation Integration', () => {
-    it('should execute complete deploy workflow successfully', async () => {
+  describe('Deploy Operation - Complete Workflows', () => {
+    it('should deploy application successfully with GitHub integration', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test-integration',
@@ -584,7 +721,7 @@ describe('Action Integration Tests', () => {
       // Verify core actions were called (core is mocked in setup.ts)
     });
 
-    it('should handle deploy failures correctly', async () => {
+    it('should handle deployment failures with proper error reporting', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test-integration',
@@ -604,8 +741,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Diff Operation Integration', () => {
-    it('should execute complete diff workflow successfully', async () => {
+  describe('Diff Operation - Planning Workflows', () => {
+    it('should analyze deployment changes and report planned resources', async () => {
       const env = {
         INPUT_OPERATION: 'diff',
         INPUT_STAGE: 'staging',
@@ -631,8 +768,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Remove Operation Integration', () => {
-    it('should execute complete remove workflow successfully', async () => {
+  describe('Remove Operation - Cleanup Workflows', () => {
+    it('should remove deployed resources and report cleanup results', async () => {
       const env = {
         INPUT_OPERATION: 'remove',
         INPUT_STAGE: 'temp-test',
@@ -658,8 +795,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Input Validation Integration', () => {
-    it('should validate inputs and execute successfully with valid inputs', async () => {
+  describe('Input Processing - Validation Workflows', () => {
+    it('should validate user inputs and execute operations with proper configuration', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test',
@@ -676,7 +813,7 @@ describe('Action Integration Tests', () => {
       expect(result.outputs.stage).toBe('test');
     });
 
-    it('should handle different operation types successfully', async () => {
+    it('should support all operation types with appropriate input validation', async () => {
       const env = {
         INPUT_OPERATION: 'diff',
         INPUT_STAGE: 'integration-test',
@@ -694,8 +831,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Comment Mode Integration', () => {
-    it('should respect comment-mode setting for success', async () => {
+  describe('GitHub Integration - Comment Workflows', () => {
+    it('should create PR comments based on configured comment mode', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test',
@@ -714,8 +851,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Error Recovery Integration', () => {
-    it('should continue workflow when fail-on-error is false', async () => {
+  describe('Error Handling - Recovery Workflows', () => {
+    it('should continue execution when fail-on-error is disabled', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test',
@@ -734,8 +871,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Output Size Limits Integration', () => {
-    it('should handle output truncation correctly', async () => {
+  describe('Output Management - Size Limit Workflows', () => {
+    it('should truncate large outputs while preserving essential information', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'test',
@@ -750,8 +887,8 @@ describe('Action Integration Tests', () => {
     });
   });
 
-  describe('Environment Integration', () => {
-    it('should work with different environment configurations', async () => {
+  describe('Environment Compatibility - CI/CD Workflows', () => {
+    it('should execute successfully in various GitHub Actions environments', async () => {
       const env = {
         INPUT_OPERATION: 'deploy',
         INPUT_STAGE: 'production',
