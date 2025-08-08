@@ -1,14 +1,14 @@
 {
-  "buildTimestamp": "2025-08-08T22:26:02.737Z",
+  "buildTimestamp": "2025-08-08T22:55:48.795Z",
   "bundlePath": "/Users/alistairstead/dev/kodehort/sst-operations-action/dist/index.js",
-  "bundleSize": 2790883,
-  "bundleSizeMB": 2.661593437194824,
-  "integrity": "bc10e72a709388fab03378fa0358c33b80d3169baf0d302e4e7becc71df978e0",
+  "bundleSize": 281932,
+  "bundleSizeMB": 0.2688713073730469,
+  "integrity": "364581002c00020399f57c854606b71cee130e1e05cd60838739ab93d029ef36",
   "sourceMap": true,
-  "duration": 102,
+  "duration": 21,
   "platform": "node",
   "target": "node20",
-  "format": "cjs",
+  "format": "esm",
   "minified": true,
   "version": "1.0.0"
 }
