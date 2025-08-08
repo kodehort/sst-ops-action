@@ -7,7 +7,7 @@ import type {
   RemoveResult,
 } from '../../src/types';
 
-describe('OutputFormatter', () => {
+describe('Output Formatter - GitHub Actions Output Processing', () => {
   describe('formatForGitHubActions', () => {
     describe('deploy operations', () => {
       it('should format successful deploy result correctly', () => {

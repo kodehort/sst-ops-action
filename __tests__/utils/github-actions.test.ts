@@ -240,7 +240,7 @@ describe('GitHub Actions Integration', () => {
 
       setActionOutputs(minimalResult);
 
-      expect(setOutput).toHaveBeenCalledWith('app', '');
+      expect(setOutput).toHaveBeenCalledWith('app', 'test-app');
       expect(setOutput).toHaveBeenCalledWith('permalink', '');
       expect(setOutput).toHaveBeenCalledWith('error', 'Deploy failed');
     });

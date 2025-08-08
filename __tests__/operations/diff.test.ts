@@ -18,7 +18,7 @@ const mockDiffParser = {
   parse: vi.fn(),
 };
 
-describe('DiffOperation', () => {
+describe('Diff Operation - Change Analysis Workflows', () => {
   let diffOperation: DiffOperation;
 
   beforeEach(() => {

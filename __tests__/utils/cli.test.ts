@@ -12,7 +12,7 @@ import {
 const mockExec = mockExecModule as any;
 const mockAccess = access as any;
 
-describe('SST CLI Utilities', () => {
+describe('SST CLI Utilities - Command Execution', () => {
   let executor: SSTCLIExecutor;
 
   beforeEach(() => {

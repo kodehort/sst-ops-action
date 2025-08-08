@@ -15,7 +15,7 @@ import {
   SST_DEPLOY_PARTIAL_OUTPUT,
 } from '../fixtures/sst-outputs';
 
-describe('DeployOperation', () => {
+describe('Deploy Operation - SST Deployment Workflows', () => {
   let deployOperation: DeployOperation;
   let mockSSTExecutor: SSTCLIExecutor;
   let mockGitHubClient: GitHubClient;
@@ -79,8 +79,8 @@ describe('DeployOperation', () => {
     deployOperation = new DeployOperation(mockSSTExecutor, mockGitHubClient);
   });
 
-  describe('execute', () => {
-    it('should execute successful deployment with complete workflow', async () => {
+  describe('Operation Execution', () => {
+    it('should deploy application successfully and integrate with GitHub', async () => {
       // Mock the parser
       const mockParse = vi
         .spyOn(DeployParser.prototype, 'parse')
@@ -137,7 +137,7 @@ describe('DeployOperation', () => {
       );
     });
 
-    it('should handle CLI execution failure', async () => {
+    it('should propagate SST CLI execution failures', async () => {
       const cliError = new Error('SST command failed');
 
       vi.mocked(mockSSTExecutor.executeSST).mockRejectedValue(cliError);
@@ -147,7 +147,7 @@ describe('DeployOperation', () => {
       ).rejects.toThrow('SST command failed');
     });
 
-    it('should handle GitHub integration failures gracefully', async () => {
+    it('should continue deployment when GitHub integration fails', async () => {
       const _mockParse = vi
         .spyOn(DeployParser.prototype, 'parse')
         .mockReturnValue(mockDeployResult);
@@ -165,7 +165,7 @@ describe('DeployOperation', () => {
       expect(result).toEqual(mockDeployResult);
     });
 
-    it('should handle partial deployment scenario', async () => {
+    it('should report partial deployment when some resources fail', async () => {
       const partialCLIResult: SSTCommandResult = {
         output: SST_DEPLOY_PARTIAL_OUTPUT,
         exitCode: 0,
@@ -228,7 +228,7 @@ describe('DeployOperation', () => {
       expect(result.resourceChanges).toBe(2);
     });
 
-    it('should handle deployment failure scenario', async () => {
+    it('should report failed deployment with error details', async () => {
       const failureCLIResult: SSTCommandResult = {
         output: SST_DEPLOY_FAILURE_OUTPUT,
         exitCode: 1,
@@ -286,7 +286,7 @@ describe('DeployOperation', () => {
       expect(result.error).toBe('Deployment failed due to permission errors');
     });
 
-    it('should handle different comment modes correctly', async () => {
+    it('should respect user-configured comment mode settings', async () => {
       const _mockParse = vi
         .spyOn(DeployParser.prototype, 'parse')
         .mockReturnValue(mockDeployResult);
@@ -312,7 +312,7 @@ describe('DeployOperation', () => {
       );
     });
 
-    it('should handle large outputs and truncation', async () => {
+    it('should truncate large CLI outputs while preserving key information', async () => {
       const largeCLIResult: SSTCommandResult = {
         ...mockCLIResult,
         truncated: true,
@@ -344,7 +344,7 @@ describe('DeployOperation', () => {
     });
   });
 
-  describe('buildEnvironment', () => {
+  describe('Environment Configuration', () => {
     it('should build correct environment variables', () => {
       const env = deployOperation.buildEnvironment(mockOperationOptions);
 
@@ -369,7 +369,7 @@ describe('DeployOperation', () => {
     });
   });
 
-  describe('migration compatibility', () => {
+  describe('Migration Compatibility', () => {
     it('should maintain same interface as composite action for seamless migration', async () => {
       // Verify that the operation interface matches what composite actions expect
       expect(deployOperation).toHaveProperty('execute');

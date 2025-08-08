@@ -33,7 +33,7 @@ const mockSummary = {
   write: vi.fn().mockResolvedValue(undefined),
 };
 
-describe('GitHubClient', () => {
+describe('GitHub Client - API Integration', () => {
   let client: GitHubClient;
   const mockToken = 'ghp_test_token';
 

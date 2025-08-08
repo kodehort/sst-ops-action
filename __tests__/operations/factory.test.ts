@@ -14,7 +14,7 @@ const mockGitHubClient = {
   createWorkflowSummary: vi.fn(),
 } as unknown as GitHubClient;
 
-describe('OperationFactory', () => {
+describe('Operation Factory - Operation Creation', () => {
   let factory: OperationFactory;
 
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('OperationFactory', () => {
     factory = new OperationFactory(mockSSTExecutor, mockGitHubClient);
   });
 
-  describe('createOperation', () => {
+  describe('Operation Creation', () => {
     it('should create DeployOperation for deploy operation type', () => {
       const operation = factory.createOperation('deploy');
 
@@ -66,7 +66,7 @@ describe('OperationFactory', () => {
     });
   });
 
-  describe('isValidOperationType', () => {
+  describe('Operation Type Validation', () => {
     it('should return true for valid operation types', () => {
       expect(OperationFactory.isValidOperationType('deploy')).toBe(true);
       expect(OperationFactory.isValidOperationType('diff')).toBe(true);
@@ -88,7 +88,7 @@ describe('OperationFactory', () => {
     });
   });
 
-  describe('getSupportedOperations', () => {
+  describe('Supported Operations Query', () => {
     it('should return all supported operation types', () => {
       const supportedOps = OperationFactory.getSupportedOperations();
 
@@ -108,7 +108,7 @@ describe('OperationFactory', () => {
     });
   });
 
-  describe('factory instance management', () => {
+  describe('Instance Management', () => {
     it('should maintain separate instances for different operation types', () => {
       const deploy1 = factory.createOperation('deploy');
       const deploy2 = factory.createOperation('deploy');
@@ -120,7 +120,7 @@ describe('OperationFactory', () => {
     });
   });
 
-  describe('integration with operation constructors', () => {
+  describe('Constructor Integration', () => {
     it('should create operations with the provided dependencies', () => {
       const deployOp = factory.createOperation('deploy');
       const diffOp = factory.createOperation('diff');
@@ -141,7 +141,7 @@ describe('OperationFactory', () => {
     });
   });
 
-  describe('type safety', () => {
+  describe('Type Safety Validation', () => {
     it('should enforce correct operation types at compile time', () => {
       // These should compile without errors
       factory.createOperation('deploy');
