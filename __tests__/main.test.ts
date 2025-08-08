@@ -1,15 +1,9 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ActionError,
-  ErrorCategory,
-  ErrorSeverity,
-  RecoveryStrategy,
-} from '../src/errors/categories';
+import type { ActionError } from '../src/errors/categories';
 import { ErrorHandler } from '../src/errors/error-handler';
 import { run } from '../src/main';
 
-// Import modules to spy on - these will be mocked in beforeEach
 import * as operationRouter from '../src/operations/router';
 import { OutputFormatter } from '../src/outputs/formatter';
 import { ValidationError } from '../src/utils/validation';
@@ -18,17 +12,14 @@ describe('Main Entry Point', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    // Clear all mocks first
     vi.clearAllMocks();
 
-    // Mock process.env to control environment variables in tests
     process.env = {
       NODE_ENV: 'test',
       CI: 'true',
       GITHUB_ACTIONS: 'true',
     };
 
-    // Set up default input values using vi.spyOn to work with cleared mocks
     vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
         operation: 'deploy',
@@ -47,7 +38,6 @@ describe('Main Entry Point', () => {
       return false;
     });
 
-    // Spy on and mock the operation router
     vi.spyOn(operationRouter, 'executeOperation').mockResolvedValue({
       success: true,
       operation: 'deploy' as const,
@@ -83,19 +73,8 @@ describe('Main Entry Point', () => {
 
     vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {});
 
-    // Spy on and mock the error handler
-    vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-      category: 'cli_execution',
-      severity: 'high',
-      message: 'Test error',
-      originalError: new Error('Test error'),
-      suggestions: [],
-      recoverable: false,
-      retryable: false,
-      recoveryStrategy: 'manual_intervention' as const,
-    } as any);
-
-    vi.spyOn(ErrorHandler, 'handleError').mockResolvedValue();
+    // Spy on the error handler (but let it run to test actual error logging)
+    vi.spyOn(ErrorHandler, 'handleError');
 
     // Mock all core functions with spies
     vi.spyOn(core, 'info').mockImplementation(() => {});
@@ -370,23 +349,24 @@ describe('Main Entry Point', () => {
         ['Valid operations are: deploy, diff, remove']
       );
 
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-        category: 'validation',
-        severity: 'high',
+      // Mock the fromValidationError method to return appropriate ActionError
+      vi.spyOn(ErrorHandler, 'fromValidationError').mockReturnValue({
+        type: 'input_validation',
         message: validationError.message,
+        shouldFailAction: true,
         originalError: validationError,
-        suggestions: validationError.suggestions,
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'configuration_update',
+        details: {
+          field: 'operation',
+          value: 'invalid-operation',
+        },
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('Input validation failed')
+        expect.stringContaining('🔴 unknown input_validation:')
       );
-      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
+      expect(ErrorHandler.fromValidationError).toHaveBeenCalled();
       expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
 
@@ -404,9 +384,9 @@ describe('Main Entry Point', () => {
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('Input validation failed')
+        expect.stringContaining('🔴 unknown input_validation:')
       );
-      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
+      expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
   });
 
@@ -491,27 +471,11 @@ describe('Main Entry Point', () => {
         }
       );
 
-      const mockActionError: ActionError = {
-        category: 'system' as const,
-        severity: 'high' as const,
-        message: 'Output formatting failed',
-        originalError: new Error('Output formatting failed'),
-        suggestions: [],
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'manual_intervention' as const,
-      };
-
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(
-        mockActionError
-      );
-
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
         'Failed to set outputs: Output formatting failed'
       );
-      expect(ErrorHandler.categorizeError).toHaveBeenCalled();
       expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
   });
@@ -523,28 +487,9 @@ describe('Main Entry Point', () => {
         operationError
       );
 
-      const mockActionError: ActionError = {
-        category: 'cli_execution' as const,
-        severity: 'high' as const,
-        message: 'SST CLI execution failed',
-        originalError: operationError,
-        suggestions: ['Check AWS credentials'],
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'manual_intervention' as const,
-      };
-
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue(
-        mockActionError
-      );
-
       await run();
 
-      expect(ErrorHandler.categorizeError).toHaveBeenCalledWith(operationError);
-      expect(ErrorHandler.handleError).toHaveBeenCalledWith(
-        mockActionError,
-        expect.any(Object)
-      );
+      expect(ErrorHandler.handleError).toHaveBeenCalled();
     });
 
     it('should handle error handler failures gracefully', async () => {
@@ -552,17 +497,6 @@ describe('Main Entry Point', () => {
       vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
         operationError
       );
-
-      vi.spyOn(ErrorHandler, 'categorizeError').mockReturnValue({
-        category: 'system',
-        severity: 'high',
-        message: 'Operation failed',
-        originalError: operationError,
-        suggestions: [],
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'manual_intervention',
-      });
 
       vi.spyOn(ErrorHandler, 'handleError').mockRejectedValueOnce(
         new Error('Error handler failed')

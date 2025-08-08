@@ -1,13 +1,13 @@
-/**
- * End-to-End Tests for SST Operations Action
- * Tests the complete action workflow from input to output
- */
-
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+const { spawn } = childProcess;
+const { existsSync, mkdirSync, rmSync, writeFileSync } = fs;
+const { tmpdir } = os;
+const { join } = path;
 
 // Test constants
 const E2E_TIMEOUT = 60_000; // 1 minute for end-to-end operations
@@ -159,10 +159,6 @@ describe('End-to-End Action Tests', () => {
   let originalCwd: string;
 
   beforeEach(() => {
-    // Check if the action is built
-    if (!existsSync(ACTION_DIST_PATH)) {
-    }
-
     // Save original directory
     originalCwd = process.cwd();
 
@@ -175,15 +171,9 @@ describe('End-to-End Action Tests', () => {
   });
 
   afterEach(() => {
-    // Change back to original directory first
-    try {
-      process.chdir(originalCwd);
-    } catch (_error) {}
+    process.chdir(originalCwd);
 
-    // Clean up test project
-    try {
-      rmSync(testProjectPath, { recursive: true, force: true });
-    } catch (_error) {}
+    rmSync(testProjectPath, { recursive: true, force: true });
   });
 
   describe('Action Distribution', () => {
@@ -229,6 +219,7 @@ describe('End-to-End Action Tests', () => {
         stage: 'e2e-diff-test',
         token: 'fake-token',
         'comment-mode': 'always',
+        'fail-on-error': 'true',
       });
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);
@@ -243,6 +234,7 @@ describe('End-to-End Action Tests', () => {
         operation: 'remove',
         stage: 'e2e-remove-test',
         token: 'fake-token',
+        'fail-on-error': 'true',
       });
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);
@@ -261,6 +253,7 @@ describe('End-to-End Action Tests', () => {
           stage: `e2e-${operation}-test`,
           token: 'fake-token',
           'comment-mode': 'never',
+          'fail-on-error': 'true',
         });
 
         // Each operation should start successfully (may fail later due to missing AWS creds)
@@ -279,6 +272,7 @@ describe('End-to-End Action Tests', () => {
         token: 'fake-token-comprehensive',
         'comment-mode': 'on-success',
         'max-output-size': '25000',
+        'fail-on-error': 'true',
       });
 
       expect(result.exitCode).toBeGreaterThanOrEqual(0);

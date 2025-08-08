@@ -336,7 +336,7 @@ Breaking changes detected. Please review carefully.`,
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
     mockDiffParser.parse.mockReturnValue(mockDiffResult);
     mockGitHubClient.postPRComment.mockRejectedValue(
-      new Error('GitHub API rate limit exceeded')
+      new Error('GitHub API token invalid')
     );
 
     const result = await diffOperation.execute(options);

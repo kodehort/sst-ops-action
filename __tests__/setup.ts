@@ -1,6 +1,5 @@
 import { beforeEach, vi } from 'vitest';
 
-// Make vi available globally
 (globalThis as any).vi = vi;
 
 // Mock GitHub Actions core and github modules for tests
@@ -9,6 +8,7 @@ vi.mock('@actions/core', () => ({
   getBooleanInput: vi.fn(),
   setOutput: vi.fn(),
   setFailed: vi.fn(),
+  setSecret: vi.fn(),
   info: vi.fn(),
   warning: vi.fn(),
   error: vi.fn(),
@@ -55,9 +55,13 @@ vi.mock('@actions/io', () => ({
   mkdirP: vi.fn(),
 }));
 
-vi.mock('node:fs', () => ({
-  access: vi.fn(),
-}));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    access: vi.fn(),
+  };
+});
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -68,9 +72,13 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-vi.mock('node:os', () => ({
-  tmpdir: vi.fn(() => '/tmp'),
-}));
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:os')>();
+  return {
+    ...actual,
+    tmpdir: vi.fn(() => '/tmp'),
+  };
+});
 
 vi.mock('node:path', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:path')>();
@@ -84,7 +92,6 @@ vi.mock('node:util', () => ({
   promisify: vi.fn((fn) => vi.fn(fn)),
 }));
 
-// Clean up between tests
 beforeEach(() => {
   vi.clearAllMocks();
 });

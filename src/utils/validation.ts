@@ -22,12 +22,9 @@ export const ActionInputsSchema = z.object({
   operation: z
     .string()
     .default('deploy')
-    .refine(
-      (val) => isValidOperation(val),
-      {
-        message: 'Invalid operation. Must be one of: deploy, diff, remove',
-      }
-    )
+    .refine((val) => isValidOperation(val), {
+      message: 'Invalid operation. Must be one of: deploy, diff, remove',
+    })
     .transform((val) => val as SSTOperation),
 
   stage: z
@@ -60,29 +57,13 @@ export const ActionInputsSchema = z.object({
   commentMode: z
     .string()
     .default('on-success')
-    .refine(
-      (val) => isValidCommentMode(val),
-      {
-        message: 'Invalid comment mode. Must be one of: always, on-success, on-failure, never',
-      }
-    )
+    .refine((val) => isValidCommentMode(val), {
+      message:
+        'Invalid comment mode. Must be one of: always, on-success, on-failure, never',
+    })
     .transform((val) => val as CommentMode),
 
-  failOnError: z
-    .boolean()
-    .or(
-      z.string().transform((val) => {
-        // Handle string boolean conversion from GitHub Actions
-        if (val === 'true') {
-          return true;
-        }
-        if (val === 'false') {
-          return false;
-        }
-        throw new Error('fail-on-error must be "true" or "false"');
-      })
-    )
-    .default(true),
+  failOnError: z.boolean().default(true),
 
   maxOutputSize: z
     .number()
@@ -207,9 +188,10 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
 
     case 'failOnError':
       return [
-        'Must be "true" or "false" (as string)',
-        'Use "true" to fail the workflow on errors',
-        'Use "false" to continue workflow even if operation fails',
+        'Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled',
+        'Use "true" or "yes" to fail the workflow on errors',
+        'Use "false" or "no" to continue workflow even if operation fails',
+        'Values are case-insensitive',
       ];
 
     case 'maxOutputSize':

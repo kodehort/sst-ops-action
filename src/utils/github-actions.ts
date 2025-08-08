@@ -22,10 +22,7 @@ export function getActionInputs(): ActionInputs {
       stage: core.getInput('stage'),
       token: core.getInput('token'),
       commentMode: core.getInput('comment-mode') || undefined,
-      failOnError:
-        core.getBooleanInput('fail-on-error') ||
-        core.getInput('fail-on-error') ||
-        undefined,
+      failOnError: core.getInput('fail-on-error') || undefined,
       maxOutputSize: core.getInput('max-output-size') || undefined,
     };
 

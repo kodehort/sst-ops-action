@@ -7,7 +7,6 @@
 import { GitHubClient } from '../github/client';
 import type { OperationOptions, OperationResult, SSTOperation } from '../types';
 import { SSTCLIExecutor } from '../utils/cli';
-import { categorizeError } from '../utils/error-handling';
 import { OperationFactory } from './factory';
 
 /**
@@ -54,12 +53,6 @@ export async function executeOperation(
     // Transform result to unified format
     return transformToUnifiedResult(operationType, result, options);
   } catch (error) {
-    // Categorize error for logging/debugging
-    categorizeError(error as Error, {
-      stage: options.stage,
-      operation: operationType,
-    });
-
     // Return a failed result with error details
     return createFailureResult(operationType, error as Error, options);
   }

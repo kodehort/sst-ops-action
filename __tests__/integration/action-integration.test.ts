@@ -24,8 +24,12 @@ vi.mock('../../src/outputs/formatter', () => ({
 // Mock error handler
 vi.mock('../../src/errors/error-handler', () => ({
   ErrorHandler: {
-    categorizeError: vi.fn(),
     handleError: vi.fn(),
+    createInputValidationError: vi.fn(),
+    createSubprocessError: vi.fn(),
+    createOutputParsingError: vi.fn(),
+    fromValidationError: vi.fn(),
+    isParsingError: vi.fn(),
   },
 }));
 
@@ -113,11 +117,6 @@ async function executeAction(env: Record<string, string>) {
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {});
 
   // Mock error handler (shouldn't be called for successful operations)
-  vi.mocked(ErrorHandler.categorizeError).mockReturnValue({
-    category: 'CLI_EXECUTION',
-    message: 'Test error',
-    recoverable: false,
-  } as any);
   vi.mocked(ErrorHandler.handleError).mockResolvedValue();
 
   // Import and run the action
@@ -374,11 +373,6 @@ async function _executeActionWithValidationError(
   });
 
   // Mock error handler for validation errors
-  vi.mocked(ErrorHandler.categorizeError).mockReturnValue({
-    category: 'validation',
-    message: errorMessage,
-    recoverable: false,
-  } as any);
   vi.mocked(ErrorHandler.handleError).mockResolvedValue();
 
   // Import and run the action

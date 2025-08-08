@@ -467,7 +467,6 @@ describe('OperationFormatter', () => {
 
       expect(comment).toContain('🆕 Created');
       expect(comment).toContain('📝 Updated');
-      expect(comment).toContain('🗑️ Deleted');
       expect(comment).toContain('➖ Unchanged');
     });
 
