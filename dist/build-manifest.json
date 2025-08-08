@@ -1,14 +1,14 @@
 {
-  "buildTimestamp": "2025-08-08T22:37:31.417Z",
-  "bundlePath": "/home/runner/work/sst-ops-action/sst-ops-action/dist/index.js",
-  "bundleSize": 2413837,
-  "bundleSizeMB": 2.3020143508911133,
-  "integrity": "70001fa1914b599996355c6c8505d1464b74331bab3a1b6502bf8001268d6c4e",
+  "buildTimestamp": "2025-08-08T23:02:55.994Z",
+  "bundlePath": "/Users/alistairstead/dev/kodehort/sst-operations-action/dist/index.js",
+  "bundleSize": 281932,
+  "bundleSizeMB": 0.2688713073730469,
+  "integrity": "94c33f2bbe9e389d118d21b246f632e9ea712d314357f7846772c0ac45bed8a3",
   "sourceMap": true,
-  "duration": 730,
+  "duration": 25,
   "platform": "node",
   "target": "node20",
-  "format": "cjs",
+  "format": "esm",
   "minified": true,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -51,7 +51,7 @@ class ProductionBuilder {
       bundle: true,
       platform: 'node',
       target: 'node20',
-      format: 'cjs', // GitHub Actions proven to work with CommonJS
+      format: 'esm', // ES modules for better tree-shaking
       outfile: this.outputFile,
 
       // Optimization settings
@@ -75,8 +75,22 @@ class ProductionBuilder {
       // Bundle analysis and reporting
       metafile: true,
 
-      // External dependencies (GitHub Actions provides these)
-      external: [],
+      // External dependencies (provided by GitHub Actions runtime)
+      external: [
+        // Node.js built-ins (provided by runtime)
+        'node:*',
+        'fs', 'path', 'os', 'crypto', 'events', 'stream', 'util', 'buffer',
+        'http', 'https', 'net', 'tls', 'url', 'querystring', 'timers', 'assert', 'zlib',
+        
+        // GitHub Actions packages (provided by runner environment)
+        '@actions/core',
+        '@actions/github', 
+        '@actions/exec',
+        '@actions/artifact',
+        '@actions/io'
+        
+        // Note: Zod is bundled since it's not provided by GitHub Actions
+      ],
 
       // Bundle splitting disabled for single-file output
       splitting: false,
@@ -90,7 +104,7 @@ class ProductionBuilder {
       banner: {
         js: `#!/usr/bin/env node
 /**
- * SST Operations Action - Production Bundle (CommonJS)
+ * SST Operations Action - Production Bundle (ES Modules)
  * Built at: ${new Date().toISOString()}
  * Node.js: ${process.version}
  */`,
@@ -297,7 +311,7 @@ class ProductionBuilder {
       duration: result.duration,
       platform: 'node',
       target: 'node20',
-      format: 'cjs',
+      format: 'esm',
       minified: true,
       version: packageJson.version,
     };
