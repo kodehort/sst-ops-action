@@ -9,9 +9,18 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 import { type BuildOptions, build } from 'esbuild';
+
+// Constants
+const MANGLE_PROPS_REGEX = /^_/;
 
 interface BuildResult {
   success: boolean;
@@ -53,9 +62,9 @@ class ProductionBuilder {
       treeShaking: true,
       keepNames: false,
       ignoreAnnotations: false, // Respect pure annotations for better tree shaking
-      
+
       // Advanced minification
-      mangleProps: /^_/, // Mangle properties starting with underscore
+      mangleProps: MANGLE_PROPS_REGEX, // Mangle properties starting with underscore
       drop: ['console', 'debugger'], // Remove console statements and debugger in production
       legalComments: 'none', // Remove license comments to reduce size
 
@@ -84,7 +93,6 @@ class ProductionBuilder {
  * SST Operations Action - Production Bundle (CommonJS)
  * Built at: ${new Date().toISOString()}
  * Node.js: ${process.version}
- * ESBuild: ${require('esbuild/package.json').version}
  */`,
       },
     };
@@ -92,7 +100,7 @@ class ProductionBuilder {
     try {
       // Execute build
       const esbuildResult = await build(buildOptions);
-      
+
       // Log bundle analysis if metafile is available
       if (esbuildResult.metafile) {
         this.logBundleAnalysis(esbuildResult.metafile);
@@ -135,7 +143,7 @@ class ProductionBuilder {
       return buildResult;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logBuildError(error, duration);
+      this.logBuildError(error);
 
       return {
         success: false,
@@ -163,7 +171,7 @@ class ProductionBuilder {
   }
 
   private generateIntegrityHash(filePath: string): string {
-    const fileContent = require('node:fs').readFileSync(filePath);
+    const fileContent = readFileSync(filePath);
     return createHash('sha256').update(fileContent).digest('hex');
   }
 
@@ -185,7 +193,7 @@ class ProductionBuilder {
     );
   }
 
-  private logBuildError(error: unknown, _duration: number): void {
+  private logBuildError(error: unknown): void {
     if (error instanceof Error && error.stack) {
       this.logError(`Build failed: ${error.message}`);
       this.logError(`Stack trace: ${error.stack}`);
@@ -204,55 +212,81 @@ class ProductionBuilder {
     process.stderr.write(`[BUILD ERROR] ${message}\n`);
   }
 
-  private logBundleAnalysis(metafile: any): void {
+  private logBundleAnalysis(metafile: Record<string, unknown>): void {
     // Analyze bundle composition for size optimization insights
-    const outputs = metafile.outputs || {};
-    const inputs = metafile.inputs || {};
-    
+    const outputs = (metafile.outputs as Record<string, unknown>) || {};
+    const inputs = (metafile.inputs as Record<string, unknown>) || {};
+
     // Find the main output file
-    const mainOutput = Object.entries(outputs).find(([path]) => 
-      path.endsWith('index.js') || path.includes(this.outputFile)
+    const mainOutput = Object.entries(outputs).find(
+      ([path]) => path.endsWith('index.js') || path.includes(this.outputFile)
     );
-    
+
     if (mainOutput) {
-      const [, outputData] = mainOutput as [string, any];
-      
+      const [, outputData] = mainOutput;
+
       // Log largest dependencies
-      if (outputData.imports) {
-        const importSizes = outputData.imports
-          .map((imp: any) => ({
-            path: imp.path,
-            size: inputs[imp.path]?.bytes || 0
-          }))
-          .filter((imp: any) => imp.size > 0)
-          .sort((a: any, b: any) => b.size - a.size)
+      const outputRecord = outputData as Record<string, unknown>;
+      if (outputRecord.imports && Array.isArray(outputRecord.imports)) {
+        const importSizes = outputRecord.imports
+          .map((imp: unknown) => {
+            const importRecord = imp as Record<string, unknown>;
+            const inputRecord = inputs[importRecord.path as string] as Record<
+              string,
+              unknown
+            >;
+            return {
+              path: importRecord.path as string,
+              size: (inputRecord?.bytes as number) || 0,
+            };
+          })
+          .filter((imp) => imp.size > 0)
+          .sort((a, b) => b.size - a.size)
           .slice(0, 5);
-        
+
         if (importSizes.length > 0) {
           this.logInfo('📊 Largest dependencies:');
-          importSizes.forEach((imp: any, index: number) => {
+          for (const [index, imp] of importSizes.entries()) {
             const sizeMB = (imp.size / (1024 * 1024)).toFixed(2);
             this.logInfo(`  ${index + 1}. ${imp.path} (${sizeMB}MB)`);
-          });
+          }
         }
       }
     }
-    
+
     // Calculate total input size vs output size for compression ratio
-    const totalInputSize = Object.values(inputs).reduce((sum: number, input: any) => 
-      sum + (input.bytes || 0), 0
+    const totalInputSize = Object.values(inputs).reduce(
+      (sum: number, input) => {
+        const inputRecord = input as Record<string, unknown>;
+        return sum + ((inputRecord.bytes as number) || 0);
+      },
+      0
     );
-    const totalOutputSize = Object.values(outputs).reduce((sum: number, output: any) => 
-      sum + (output.bytes || 0), 0
+
+    const totalOutputSize = Object.values(outputs).reduce(
+      (sum: number, output) => {
+        const outputRecord = output as Record<string, unknown>;
+        return sum + ((outputRecord.bytes as number) || 0);
+      },
+      0
     );
-    
+
     if (totalInputSize > 0 && totalOutputSize > 0) {
-      const compressionRatio = ((totalInputSize - totalOutputSize) / totalInputSize * 100).toFixed(1);
-      this.logInfo(`📈 Compression: ${(totalInputSize / (1024 * 1024)).toFixed(2)}MB → ${(totalOutputSize / (1024 * 1024)).toFixed(2)}MB (${compressionRatio}% reduction)`);
+      const compressionRatio = (
+        ((totalInputSize - totalOutputSize) / totalInputSize) *
+        100
+      ).toFixed(1);
+      this.logInfo(
+        `📈 Compression: ${(totalInputSize / (1024 * 1024)).toFixed(2)}MB → ${(totalOutputSize / (1024 * 1024)).toFixed(2)}MB (${compressionRatio}% reduction)`
+      );
     }
   }
 
   private generateBuildManifest(result: BuildResult): void {
+    const packageJsonPath = resolve('package.json');
+    const packageJsonContent = readFileSync(packageJsonPath, 'utf8');
+    const packageJson = JSON.parse(packageJsonContent) as { version: string };
+
     const manifest = {
       buildTimestamp: new Date().toISOString(),
       bundlePath: result.bundlePath,
@@ -265,7 +299,7 @@ class ProductionBuilder {
       target: 'node20',
       format: 'cjs',
       minified: true,
-      version: require('../package.json').version,
+      version: packageJson.version,
     };
 
     const manifestPath = join(this.outputDir, 'build-manifest.json');
@@ -288,7 +322,7 @@ function verifyBuildIntegrity(buildResult: BuildResult): boolean {
 
   // Verify integrity hash
   const currentHash = createHash('sha256')
-    .update(require('node:fs').readFileSync(buildResult.bundlePath))
+    .update(readFileSync(buildResult.bundlePath))
     .digest('hex');
 
   if (currentHash !== buildResult.integrity) {
@@ -300,7 +334,7 @@ function verifyBuildIntegrity(buildResult: BuildResult): boolean {
 function runBuildDiagnostics(bundlePath: string): void {
   try {
     // Read bundle content for basic validation
-    const bundleContent = require('node:fs').readFileSync(bundlePath, 'utf8');
+    const bundleContent = readFileSync(bundlePath, 'utf8');
 
     // Check if bundle has expected CommonJS structure
     const hasExports =
@@ -321,7 +355,7 @@ function runBuildDiagnostics(bundlePath: string): void {
     if (hasExports && isMinified && hasActionCore && lineCount > 0) {
       // Bundle appears to be properly built
     }
-  } catch (_error) {
+  } catch {
     process.exit(1);
   }
 }
@@ -345,17 +379,17 @@ async function main(): Promise<void> {
 }
 
 // Handle unhandled errors
-process.on('unhandledRejection', (_error) => {
+process.on('unhandledRejection', () => {
   process.exit(1);
 });
 
-process.on('uncaughtException', (_error) => {
+process.on('uncaughtException', () => {
   process.exit(1);
 });
 
 // Execute if run directly
 if (import.meta.main) {
-  main().catch((_error) => {
+  main().catch(() => {
     process.exit(1);
   });
 }
