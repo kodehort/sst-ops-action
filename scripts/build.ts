@@ -26,8 +26,8 @@ interface BuildResult {
 class ProductionBuilder {
   private readonly entryPoint = resolve('src/index.ts');
   private readonly outputDir = resolve('dist');
-  private readonly outputFile = join(this.outputDir, 'index.cjs');
-  private readonly sourceMapFile = join(this.outputDir, 'index.cjs.map');
+  private readonly outputFile = join(this.outputDir, 'index.js');
+  private readonly sourceMapFile = join(this.outputDir, 'index.js.map');
   private readonly maxBundleSizeMB = 10;
 
   async build(): Promise<BuildResult> {
@@ -211,7 +211,7 @@ class ProductionBuilder {
     
     // Find the main output file
     const mainOutput = Object.entries(outputs).find(([path]) => 
-      path.endsWith('index.cjs') || path.includes(this.outputFile)
+      path.endsWith('index.js') || path.includes(this.outputFile)
     );
     
     if (mainOutput) {
