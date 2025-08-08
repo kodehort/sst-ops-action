@@ -66,7 +66,7 @@ export const createMockGitHubClient = (): GitHubClient => {
   // Default successful GitHub integration
   vi.mocked(mockClient.createOrUpdateComment).mockResolvedValue(undefined);
   vi.mocked(mockClient.createWorkflowSummary).mockResolvedValue(undefined);
-  vi.mocked(mockClient.uploadArtifact).mockResolvedValue(undefined);
+  vi.mocked(mockClient.uploadArtifacts).mockResolvedValue(undefined);
 
   return mockClient;
 };
@@ -99,7 +99,9 @@ export const setupCoreMocks = () => {
   });
 
   mocks.getBooleanInput.mockImplementation((name: string) => {
-    if (name === 'fail-on-error') return true;
+    if (name === 'fail-on-error') {
+      return true;
+    }
     return false;
   });
 
@@ -157,7 +159,7 @@ export const createMockValidation = () => ({
  * Mock error handler functions
  */
 export const createMockErrorHandler = () => ({
-  handleError: vi.fn().mockResolvedValue(),
+  handleError: vi.fn().mockResolvedValue(undefined),
   createInputValidationError: vi.fn(),
   createSubprocessError: vi.fn(),
   createOutputParsingError: vi.fn(),

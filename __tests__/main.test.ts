@@ -1,6 +1,5 @@
 import * as core from '@actions/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ActionError } from '../src/errors/categories';
 import { ErrorHandler } from '../src/errors/error-handler';
 import { run } from '../src/main';
 
@@ -71,17 +70,29 @@ describe('Main Entry Point - Action Execution', () => {
       removed_resources: '',
     });
 
-    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {});
+    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {
+      /* no-op */
+    });
 
     // Spy on the error handler (but let it run to test actual error logging)
     vi.spyOn(ErrorHandler, 'handleError');
 
     // Mock all core functions with spies
-    vi.spyOn(core, 'info').mockImplementation(() => {});
-    vi.spyOn(core, 'warning').mockImplementation(() => {});
-    vi.spyOn(core, 'error').mockImplementation(() => {});
-    vi.spyOn(core, 'setOutput').mockImplementation(() => {});
-    vi.spyOn(core, 'setFailed').mockImplementation(() => {});
+    vi.spyOn(core, 'info').mockImplementation(() => {
+      /* no-op */
+    });
+    vi.spyOn(core, 'warning').mockImplementation(() => {
+      /* no-op */
+    });
+    vi.spyOn(core, 'error').mockImplementation(() => {
+      /* no-op */
+    });
+    vi.spyOn(core, 'setOutput').mockImplementation(() => {
+      /* no-op */
+    });
+    vi.spyOn(core, 'setFailed').mockImplementation(() => {
+      /* no-op */
+    });
   });
 
   afterEach(() => {

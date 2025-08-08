@@ -117,7 +117,9 @@ async function executeAction(env: Record<string, string>) {
   vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {});
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
+    /* no-op */
+  });
 
   // Mock error handler (shouldn't be called for successful operations)
   vi.mocked(ErrorHandler.handleError).mockResolvedValue();
@@ -214,7 +216,9 @@ async function executeActionWithFailure(
   vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {});
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
+    /* no-op */
+  });
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -241,6 +245,7 @@ async function executeActionWithFailureAndContinue(
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
+  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -306,7 +311,9 @@ async function executeActionWithFailureAndContinue(
   vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {});
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
+    /* no-op */
+  });
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -400,6 +407,7 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   // Import mocked modules
   const { executeOperation } = await import('../../src/operations/router');
   const { OutputFormatter } = await import('../../src/outputs/formatter');
+  const { ErrorHandler } = await import('../../src/errors/error-handler');
   const core = await import('@actions/core');
 
   // Set up environment
@@ -457,7 +465,9 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {});
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
+    /* no-op */
+  });
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -554,7 +564,7 @@ function createMockFormattedOutputs(result: any) {
 /**
  * Execute the GitHub Action with given inputs and environment in real subprocess
  */
-async function executeActionE2E(
+function _executeActionE2E(
   inputs: Record<string, string>,
   env: Record<string, string> = {}
 ): Promise<{
@@ -615,7 +625,7 @@ async function executeActionE2E(
 
       const outputs: Record<string, string> = {};
       const outputPattern = /::set-output name=([^:]+)::(.*)$/gm;
-      let match;
+      let match: RegExpExecArray | null;
       while ((match = outputPattern.exec(stdout)) !== null) {
         if (match[1] && match[2] !== undefined) {
           outputs[match[1]] = match[2];
@@ -645,7 +655,7 @@ async function executeActionE2E(
 /**
  * Create a test project structure for E2E testing
  */
-function createTestProject(projectPath: string) {
+function _createTestProject(projectPath: string) {
   mkdirSync(projectPath, { recursive: true });
 
   const packageJson = {

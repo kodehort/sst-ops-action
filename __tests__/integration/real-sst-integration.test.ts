@@ -68,7 +68,7 @@ export default $config({
 /**
  * Check if SST CLI is available in the system
  */
-async function checkSSTAvailability(): Promise<boolean> {
+function checkSSTAvailability(): Promise<boolean> {
   return new Promise((resolve) => {
     const child = spawn('sst', ['--version'], { stdio: 'pipe' });
     child.on('close', (code) => {
@@ -83,7 +83,7 @@ async function checkSSTAvailability(): Promise<boolean> {
 /**
  * Execute SST command and capture output
  */
-async function executeSSTCommand(
+function executeSSTCommand(
   command: string[],
   cwd: string,
   timeout: number = TEST_TIMEOUT
@@ -149,14 +149,18 @@ describe('Real SST CLI Integration Tests', () => {
     // Clean up test project
     try {
       rmSync(testProjectPath, { recursive: true, force: true });
-    } catch (_error) {}
+    } catch (_error) {
+      /* Ignore cleanup errors */
+    }
   });
 
   describe('SST CLI Availability', () => {
     it('should detect if SST CLI is available', () => {
       // This test always runs to document CLI availability
       if (sstAvailable) {
+        /* CLI available */
       } else {
+        /* CLI not available */
       }
 
       // Always pass - this is just informational

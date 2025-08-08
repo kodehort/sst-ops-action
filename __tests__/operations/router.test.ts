@@ -43,7 +43,7 @@ describe('OperationRouter', () => {
     });
 
     it('should handle missing token gracefully', () => {
-      const { token, ...optionsWithoutToken } = mockOperationOptions;
+      const { token: _token, ...optionsWithoutToken } = mockOperationOptions;
 
       const factory = createOperationFactory(optionsWithoutToken);
 
