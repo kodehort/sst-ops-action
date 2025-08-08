@@ -21,6 +21,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
@@ -146,13 +150,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Environment
+        uses: ./.github/actions/setup-node-env
         with:
           bun-version: latest
-          
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+          cache-key-suffix: -release
         
       - name: Run Quality Gates
         run: |
@@ -405,25 +407,18 @@ jobs:
           
       - name: Create GitHub Release
         id: create-release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ needs.determine-release.outputs.new-version }}
-          release_name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
+          name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
           draft: false
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
-          
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./dist/index.js
-          asset_name: index.js
-          asset_content_type: application/javascript
+          files: |
+            ./dist/index.js
+            ./dist/index.js.map
           
       - name: Update Major Version Tag
         run: |

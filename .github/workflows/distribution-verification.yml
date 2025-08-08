@@ -15,6 +15,10 @@ on:
         default: true
         type: boolean
 
+concurrency:
+  group: distribution-verification-${{ github.event.release.tag_name || github.event.inputs.version }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: read
@@ -236,11 +240,11 @@ jobs:
     name: Cross-Platform Verification
     runs-on: ${{ matrix.os }}
     needs: verify-distribution
-    if: needs.verify-distribution.outputs.verification-status == 'passed' && github.event.inputs.full_verification == 'true'
+    if: needs.verify-distribution.outputs.verification-status == 'passed' && (github.event.inputs.full_verification == 'true' || github.event.inputs.full_verification == null)
     
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]  # Remove macOS to reduce cost and time
         
     steps:
       - name: Checkout Release Tag
@@ -379,7 +383,7 @@ jobs:
           |-----------|--------|---------|
           | Distribution Files | ${{ needs.verify-distribution.outputs.verification-status == 'passed' && '✅ Passed' || '❌ Failed' }} | Bundle size: ${{ needs.verify-distribution.outputs.bundle-size }} |
           | Functional Tests | ${{ needs.verify-functionality.result == 'success' && '✅ Passed' || (needs.verify-functionality.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} | All operations tested |
-          | Cross-Platform | ${{ needs.verify-cross-platform.result == 'success' && '✅ Passed' || (needs.verify-cross-platform.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} | Ubuntu, Windows, macOS |
+          | Cross-Platform | ${{ needs.verify-cross-platform.result == 'success' && '✅ Passed' || (needs.verify-cross-platform.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} | Ubuntu, Windows |
           | Security Scan | ${{ needs.verify-security.result == 'success' && '✅ Passed' || '❌ Failed' }} | No security issues detected |
           
           ## Distribution Details

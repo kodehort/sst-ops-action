@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '0 6 * * 1'  # Weekly on Mondays
 
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
@@ -32,13 +36,11 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Environment
+        uses: ./.github/actions/setup-node-env
         with:
           bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
+          cache-key-suffix: -codeql
 
       - name: Build
         run: bun run build
