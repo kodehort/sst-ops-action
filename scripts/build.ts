@@ -75,7 +75,7 @@ class ProductionBuilder {
       // Bundle analysis and reporting
       metafile: true,
 
-      // External dependencies (provided by GitHub Actions runtime)
+      // External dependencies (provided by Node.js runtime)
       external: [
         // Node.js built-ins (provided by runtime)
         'node:*',
@@ -97,13 +97,7 @@ class ProductionBuilder {
         'assert',
         'zlib',
 
-        // GitHub Actions packages (provided by runner environment)
-        '@actions/core',
-        '@actions/github',
-        '@actions/exec',
-        '@actions/artifact',
-        '@actions/io',
-
+        // Note: @actions packages must be bundled, not externalized
         // Note: Zod is bundled since it's not provided by GitHub Actions
       ],
 
