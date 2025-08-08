@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: production-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/') }}
+
 env:
   NODE_VERSION: '20'
   BUN_VERSION: 'latest'
@@ -27,34 +31,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      - name: Setup Bun Runtime
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Environment  
+        uses: ./.github/actions/setup-node-env
         with:
           bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Cache Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.bun/install/cache
-            node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-          
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
+          cache-key-suffix: -production
         
-      - name: Run Quality Checks
-        run: |
-          echo "🔍 Running pre-build quality checks..."
-          bun run typecheck
-          bun run lint
-          
-      - name: Run Tests
-        run: |
-          echo "🧪 Running test suite..."
-          bun test
+      # Quality checks are handled by the main CI workflow
+      # Skip duplicate quality gates for production builds
           
       - name: Production Build
         id: build
@@ -256,13 +240,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      - name: Setup Bun Runtime
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Environment
+        uses: ./.github/actions/setup-node-env
         with:
           bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
+          cache-key-suffix: -matrix
         
       - name: Test Build on ${{ matrix.os }}
         run: |

@@ -10,6 +10,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: update-major-version-${{ github.event.release.tag_name || github.event.inputs.release_version }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
