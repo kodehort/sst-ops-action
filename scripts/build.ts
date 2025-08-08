@@ -75,27 +75,26 @@ class ProductionBuilder {
       // Bundle analysis and reporting
       metafile: true,
 
-      // External dependencies (provided by Node.js runtime)
+      // External dependencies - for ES modules, use node: prefix for built-ins
       external: [
-        // Node.js built-ins (provided by runtime)
-        'node:*',
-        'fs',
-        'path',
-        'os',
-        'crypto',
-        'events',
-        'stream',
-        'util',
-        'buffer',
-        'http',
-        'https',
-        'net',
-        'tls',
-        'url',
-        'querystring',
-        'timers',
-        'assert',
-        'zlib',
+        // Node.js built-ins with node: prefix (ES module compatible)
+        'node:fs',
+        'node:path', 
+        'node:os',
+        'node:crypto',
+        'node:events',
+        'node:stream',
+        'node:util',
+        'node:buffer',
+        'node:http',
+        'node:https',
+        'node:net',
+        'node:tls',
+        'node:url',
+        'node:querystring',
+        'node:timers',
+        'node:assert',
+        'node:zlib',
 
         // Note: @actions packages must be bundled, not externalized
         // Note: Zod is bundled since it's not provided by GitHub Actions
