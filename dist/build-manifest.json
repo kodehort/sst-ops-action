@@ -1,14 +1,14 @@
 {
-  "buildTimestamp": "2025-08-08T23:27:52.401Z",
+  "buildTimestamp": "2025-08-08T23:33:51.667Z",
   "bundlePath": "/home/runner/work/sst-ops-action/sst-ops-action/dist/index.js",
   "bundleSize": 281943,
   "bundleSizeMB": 0.26888179779052734,
   "integrity": "44d6cd00075b50e0cd908e6137249a961d0b1e91d75e2167789cddeb63b3977b",
   "sourceMap": true,
-  "duration": 53,
+  "duration": 56,
   "platform": "node",
   "target": "node20",
   "format": "esm",
   "minified": true,
-  "version": "1.1.1"
+  "version": "1.1.2"
 }
