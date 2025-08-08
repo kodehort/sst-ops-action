@@ -120,8 +120,7 @@ class ProductionBuilder {
         js: `#!/usr/bin/env node
 /**
  * SST Operations Action - Production Bundle (ES Modules)
- * Built at: ${new Date().toISOString()}
- * Node.js: ${process.version}
+ * Optimized build with externalized dependencies for GitHub Actions
  */`,
       },
     };
