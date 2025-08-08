@@ -110,7 +110,7 @@ export class SSTCLIExecutor {
     const maxOutputSize = options.maxOutputSize || this.defaultMaxOutputSize;
 
     // Build the command
-    const command = await this.buildCommand(operation, stage, options);
+    const command = this.buildCommand(operation, stage, options);
 
     try {
       // Validate environment and prerequisites
@@ -157,11 +157,11 @@ export class SSTCLIExecutor {
   /**
    * Build the SST command array based on operation and options
    */
-  private async buildCommand(
+  private buildCommand(
     operation: SSTOperation,
     stage: string,
     options: CLIOptions
-  ): Promise<string[]> {
+  ): string[] {
     const runner = options.runner || 'bun';
     const command = this.buildRunnerCommand(runner, operation);
 
@@ -500,7 +500,7 @@ export function createSSTExecutor(): SSTCLIExecutor {
 /**
  * Execute an SST command with default configuration
  */
-export async function executeSST(
+export function executeSST(
   operation: SSTOperation,
   stage: string,
   options?: CLIOptions

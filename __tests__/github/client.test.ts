@@ -4,7 +4,6 @@ import * as github from '@actions/github';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGitHubClient, GitHubClient } from '../../src/github/client.js';
 import type {
-  BaseOperationResult,
   DeployResult,
   DiffResult,
   RemoveResult,
