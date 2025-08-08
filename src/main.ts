@@ -11,6 +11,7 @@ import type { OperationOptions } from './types';
 import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
+  ValidationError,
   validateWithContext,
 } from './utils/validation';
 
@@ -25,10 +26,7 @@ function parseGitHubActionsInputs() {
     token: core.getInput('token'),
     commentMode: core.getInput('comment-mode') || 'on-success',
     failOnError: core.getBooleanInput('fail-on-error') ?? true,
-    maxOutputSize: Number.parseInt(
-      core.getInput('max-output-size') || '50000',
-      10
-    ),
+    maxOutputSize: core.getInput('max-output-size') || '50000',
     runner: (core.getInput('runner') || 'bun') as SSTRunner,
   };
 
@@ -120,10 +118,20 @@ export async function run(): Promise<void> {
         `📝 Parsed inputs: ${inputs.operation} operation on stage "${inputs.stage}"`
       );
     } catch (error) {
-      // Enhanced input validation error handling
-      if (error instanceof Error) {
-        core.error(`❌ Input validation failed: ${error.message}`);
-        const actionError = ErrorHandler.categorizeError(error);
+      // Handle input validation errors
+      if (error instanceof ValidationError) {
+        const actionError = ErrorHandler.fromValidationError(error);
+        await ErrorHandler.handleError(actionError, {
+          stage: 'unknown',
+          failOnError: true,
+        });
+      } else if (error instanceof Error) {
+        const actionError = ErrorHandler.createInputValidationError(
+          error.message,
+          undefined,
+          undefined,
+          error
+        );
         await ErrorHandler.handleError(actionError, {
           stage: 'unknown',
           failOnError: true,
@@ -160,15 +168,24 @@ export async function run(): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    // Use enhanced error handling for comprehensive logging and debugging
-    const actionError = ErrorHandler.categorizeError(error as Error);
-
+    // Simple fallback error handling
     try {
-      // Attempt to get operation options for error handling
+      const failOnErrorInput = core.getInput('fail-on-error') || 'true';
       const basicOptions: OperationOptions = {
         stage: core.getInput('stage') || 'unknown',
-        failOnError: core.getBooleanInput('fail-on-error') ?? true,
+        failOnError: failOnErrorInput === 'true',
       };
+
+      // Create a generic subprocess error for unhandled errors
+      const actionError = ErrorHandler.createSubprocessError(
+        message,
+        'deploy', // Default operation
+        basicOptions.stage,
+        1, // Generic error exit code
+        undefined,
+        undefined,
+        error instanceof Error ? error : undefined
+      );
 
       await ErrorHandler.handleError(actionError, basicOptions);
     } catch (errorHandlingError) {

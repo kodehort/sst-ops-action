@@ -23,53 +23,41 @@ import {
   createMockRemoveResult,
 } from '../utils/test-types.js';
 
-// Mock @actions/core
-vi.mock('@actions/core');
+// @actions/core is mocked globally in setup.ts
 
 describe('GitHub Actions Integration', () => {
-  const mockedCore = vi.mocked(core);
+  // Cast core functions to mock functions for testing
+  const getInput = core.getInput as any;
+  const getBooleanInput = core.getBooleanInput as any;
+  const setOutput = core.setOutput as any;
+  const setFailed = core.setFailed as any;
+  const setSecret = core.setSecret as any;
+  const info = core.info as any;
+  const warning = core.warning as any;
+  const error = core.error as any;
+  const debug = core.debug as any;
+  const summary = core.summary as any;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Setup default core mocks
-    mockedCore.getInput.mockImplementation((name: string) => {
+    // Set up default mock implementations
+    getInput.mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
         operation: 'deploy',
         stage: 'staging',
         token: 'ghp_1234567890abcdef',
         'comment-mode': 'on-success',
-        'fail-on-error': 'true',
         'max-output-size': '50000',
+        runner: 'bun',
       };
       return inputs[name] || '';
     });
 
-    mockedCore.getBooleanInput.mockImplementation((name: string) => {
-      if (name === 'fail-on-error') {
-        return true;
-      }
-      return false;
+    getBooleanInput.mockImplementation((name: string) => {
+      const boolInputs: Record<string, boolean> = {
+        'fail-on-error': true,
+      };
+      return boolInputs[name] ?? false;
     });
-
-    mockedCore.setOutput.mockImplementation(() => {});
-    mockedCore.setFailed.mockImplementation(() => {});
-    mockedCore.info.mockImplementation(() => {});
-    mockedCore.error.mockImplementation(() => {});
-    mockedCore.warning.mockImplementation(() => {});
-    mockedCore.debug.mockImplementation(() => {});
-    mockedCore.setSecret.mockImplementation(() => {});
-
-    // Mock summary
-    const mockSummary = {
-      addRaw: vi.fn().mockReturnThis(),
-      write: vi.fn().mockResolvedValue(undefined),
-    };
-    mockedCore.summary = mockSummary as any;
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
   });
 
   describe('getActionInputs', () => {
@@ -85,7 +73,7 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should handle missing optional inputs with defaults', () => {
-      mockedCore.getInput.mockImplementation((name: string) => {
+      getInput.mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
           stage: 'test',
           token: 'fake-token',
@@ -93,7 +81,7 @@ describe('GitHub Actions Integration', () => {
         return inputs[name] || '';
       });
 
-      mockedCore.getBooleanInput.mockReturnValue(false);
+      getBooleanInput.mockReturnValue(false);
 
       const result = getActionInputs();
 
@@ -104,7 +92,7 @@ describe('GitHub Actions Integration', () => {
     });
 
     it('should handle validation errors and set failure', () => {
-      mockedCore.getInput.mockImplementation((name: string) => {
+      getInput.mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
           operation: 'invalid-operation',
           stage: 'test',
@@ -114,13 +102,13 @@ describe('GitHub Actions Integration', () => {
       });
 
       expect(() => getActionInputs()).toThrow(ValidationError);
-      expect(mockedCore.setFailed).toHaveBeenCalledWith(
+      expect(setFailed).toHaveBeenCalledWith(
         expect.stringContaining("Input validation failed for 'operation'")
       );
     });
 
     it('should include suggestions in failure message', () => {
-      mockedCore.getInput.mockImplementation((name: string) => {
+      getInput.mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
           operation: 'invalid-operation',
           stage: 'test',
@@ -131,7 +119,7 @@ describe('GitHub Actions Integration', () => {
 
       expect(() => getActionInputs()).toThrow();
 
-      const failedCall = vi.mocked(mockedCore.setFailed).mock.calls[0]?.[0];
+      const failedCall = setFailed.mock.calls[0]?.[0];
       expect(failedCall).toContain('Suggestions:');
       expect(failedCall).toContain('deploy, diff, remove');
     });
@@ -160,30 +148,24 @@ describe('GitHub Actions Integration', () => {
       setActionOutputs(deployResult);
 
       // Check required outputs
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('success', 'true');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('operation', 'deploy');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('stage', 'staging');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
-        'completion_status',
-        'complete'
-      );
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('app', 'test-app');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
+      expect(setOutput).toHaveBeenCalledWith('success', 'true');
+      expect(setOutput).toHaveBeenCalledWith('operation', 'deploy');
+      expect(setOutput).toHaveBeenCalledWith('stage', 'staging');
+      expect(setOutput).toHaveBeenCalledWith('completion_status', 'complete');
+      expect(setOutput).toHaveBeenCalledWith('app', 'test-app');
+      expect(setOutput).toHaveBeenCalledWith(
         'permalink',
         'https://console.sst.dev/test/staging'
       );
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('truncated', 'false');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
-        'resource_changes',
-        '3'
-      );
+      expect(setOutput).toHaveBeenCalledWith('truncated', 'false');
+      expect(setOutput).toHaveBeenCalledWith('resource_changes', '3');
 
       // Check deploy-specific outputs
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
+      expect(setOutput).toHaveBeenCalledWith(
         'urls',
         JSON.stringify(deployResult.urls)
       );
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
+      expect(setOutput).toHaveBeenCalledWith(
         'resources',
         JSON.stringify(deployResult.resources)
       );
@@ -207,11 +189,11 @@ describe('GitHub Actions Integration', () => {
       setActionOutputs(diffResult);
 
       // Check diff-specific outputs
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
+      expect(setOutput).toHaveBeenCalledWith(
         'diff_summary',
         '2 resources to be updated'
       );
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('planned_changes', '2');
+      expect(setOutput).toHaveBeenCalledWith('planned_changes', '2');
     });
 
     it('should set all required outputs for remove operation', () => {
@@ -233,11 +215,8 @@ describe('GitHub Actions Integration', () => {
       setActionOutputs(removeResult);
 
       // Check remove-specific outputs
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
-        'resources_removed',
-        '2'
-      );
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
+      expect(setOutput).toHaveBeenCalledWith('resources_removed', '2');
+      expect(setOutput).toHaveBeenCalledWith(
         'removed_resources',
         JSON.stringify(removeResult.removedResources)
       );
@@ -261,40 +240,31 @@ describe('GitHub Actions Integration', () => {
 
       setActionOutputs(minimalResult);
 
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('app', '');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith('permalink', '');
-      expect(mockedCore.setOutput).toHaveBeenCalledWith(
-        'error',
-        'Deploy failed'
-      );
+      expect(setOutput).toHaveBeenCalledWith('app', '');
+      expect(setOutput).toHaveBeenCalledWith('permalink', '');
+      expect(setOutput).toHaveBeenCalledWith('error', 'Deploy failed');
     });
   });
 
   describe('logValidationError', () => {
     it('should log validation error with suggestions', () => {
-      const error = new ValidationError(
+      const validationError = new ValidationError(
         'Invalid operation',
         'operation',
         'invalid-op',
         ['Use deploy, diff, or remove', 'Check spelling']
       );
 
-      logValidationError(error);
+      logValidationError(validationError);
 
-      expect(mockedCore.error).toHaveBeenCalledWith(
+      expect(error).toHaveBeenCalledWith(
         "Input validation failed for field 'operation'"
       );
-      expect(mockedCore.error).toHaveBeenCalledWith(
-        'Value provided: "invalid-op"'
-      );
-      expect(mockedCore.error).toHaveBeenCalledWith('Error: Invalid operation');
-      expect(mockedCore.info).toHaveBeenCalledWith(
-        'Suggestions to fix this error:'
-      );
-      expect(mockedCore.info).toHaveBeenCalledWith(
-        '  • Use deploy, diff, or remove'
-      );
-      expect(mockedCore.info).toHaveBeenCalledWith('  • Check spelling');
+      expect(error).toHaveBeenCalledWith('Value provided: "invalid-op"');
+      expect(error).toHaveBeenCalledWith('Error: Invalid operation');
+      expect(info).toHaveBeenCalledWith('Suggestions to fix this error:');
+      expect(info).toHaveBeenCalledWith('  • Use deploy, diff, or remove');
+      expect(info).toHaveBeenCalledWith('  • Check spelling');
     });
   });
 
@@ -312,18 +282,12 @@ describe('GitHub Actions Integration', () => {
 
       logOperationStart(inputs);
 
-      expect(mockedCore.info).toHaveBeenCalledWith(
-        '🚀 Starting SST deploy operation'
-      );
-      expect(mockedCore.info).toHaveBeenCalledWith('📍 Stage: staging');
-      expect(mockedCore.info).toHaveBeenCalledWith('💬 Comment mode: always');
-      expect(mockedCore.info).toHaveBeenCalledWith('⚠️  Fail on error: true');
-      expect(mockedCore.debug).toHaveBeenCalledWith(
-        'Max output size: 75000 bytes'
-      );
-      expect(mockedCore.debug).toHaveBeenCalledWith(
-        'Token type: Personal Access Token'
-      );
+      expect(info).toHaveBeenCalledWith('🚀 Starting SST deploy operation');
+      expect(info).toHaveBeenCalledWith('📍 Stage: staging');
+      expect(info).toHaveBeenCalledWith('💬 Comment mode: always');
+      expect(info).toHaveBeenCalledWith('⚠️  Fail on error: true');
+      expect(debug).toHaveBeenCalledWith('Max output size: 75000 bytes');
+      expect(debug).toHaveBeenCalledWith('Token type: Personal Access Token');
     });
 
     it('should detect different token types', () => {
@@ -346,9 +310,7 @@ describe('GitHub Actions Integration', () => {
 
         logOperationStart(inputs);
 
-        expect(mockedCore.debug).toHaveBeenCalledWith(
-          `Token type: ${expected}`
-        );
+        expect(debug).toHaveBeenCalledWith(`Token type: ${expected}`);
         vi.clearAllMocks();
       });
     });
@@ -373,10 +335,10 @@ describe('GitHub Actions Integration', () => {
 
       logOperationComplete(result);
 
-      expect(mockedCore.info).toHaveBeenCalledWith('✅ SST deploy complete');
-      expect(mockedCore.info).toHaveBeenCalledWith('📊 Resource changes: 3');
-      expect(mockedCore.info).toHaveBeenCalledWith('🌐 Deployed URLs: 1');
-      expect(mockedCore.info).toHaveBeenCalledWith(
+      expect(info).toHaveBeenCalledWith('✅ SST deploy complete');
+      expect(info).toHaveBeenCalledWith('📊 Resource changes: 3');
+      expect(info).toHaveBeenCalledWith('🌐 Deployed URLs: 1');
+      expect(info).toHaveBeenCalledWith(
         '🔗 Console: https://console.sst.dev/test/staging'
       );
     });
@@ -399,8 +361,8 @@ describe('GitHub Actions Integration', () => {
 
       logOperationComplete(result);
 
-      expect(mockedCore.info).toHaveBeenCalledWith('❌ SST deploy failed');
-      expect(mockedCore.error).toHaveBeenCalledWith(
+      expect(info).toHaveBeenCalledWith('❌ SST deploy failed');
+      expect(error).toHaveBeenCalledWith(
         '❌ Operation failed: Deployment failed'
       );
     });
@@ -422,7 +384,7 @@ describe('GitHub Actions Integration', () => {
 
       logOperationComplete(result);
 
-      expect(mockedCore.warning).toHaveBeenCalledWith(
+      expect(warning).toHaveBeenCalledWith(
         '⚠️ Output was truncated due to size limits'
       );
     });
@@ -447,7 +409,7 @@ describe('GitHub Actions Integration', () => {
 
       handleOperationFailure(result, true);
 
-      expect(mockedCore.setFailed).toHaveBeenCalledWith(
+      expect(setFailed).toHaveBeenCalledWith(
         'deploy failed: Deployment failed'
       );
     });
@@ -470,13 +432,11 @@ describe('GitHub Actions Integration', () => {
 
       handleOperationFailure(result, false);
 
-      expect(mockedCore.warning).toHaveBeenCalledWith(
+      expect(warning).toHaveBeenCalledWith(
         'deploy failed but continuing due to fail-on-error: false'
       );
-      expect(mockedCore.warning).toHaveBeenCalledWith(
-        'Error: Deployment failed'
-      );
-      expect(mockedCore.setFailed).not.toHaveBeenCalled();
+      expect(warning).toHaveBeenCalledWith('Error: Deployment failed');
+      expect(setFailed).not.toHaveBeenCalled();
     });
   });
 
@@ -502,16 +462,16 @@ describe('GitHub Actions Integration', () => {
 
       createActionSummary(result);
 
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('✅ SST Deploy Operation')
       );
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('🌐 Deployed URLs')
       );
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('api.example.com')
       );
-      expect(mockedCore.summary.write).toHaveBeenCalled();
+      expect(summary.write).toHaveBeenCalled();
     });
 
     it('should create summary for diff operation', () => {
@@ -531,10 +491,10 @@ describe('GitHub Actions Integration', () => {
 
       createActionSummary(result);
 
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('📋 Change Summary')
       );
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('2 to create, 1 to update')
       );
     });
@@ -557,13 +517,13 @@ describe('GitHub Actions Integration', () => {
 
       createActionSummary(result);
 
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('❌ Error Details')
       );
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('Network timeout')
       );
-      expect(mockedCore.summary.addRaw).toHaveBeenCalledWith(
+      expect(summary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('⚠️ **Note**: Output was truncated')
       );
     });
@@ -583,7 +543,7 @@ describe('GitHub Actions Integration', () => {
 
       maskSensitiveValues(inputs);
 
-      expect(mockedCore.setSecret).toHaveBeenCalledWith('ghp_1234567890abcdef');
+      expect(setSecret).toHaveBeenCalledWith('ghp_1234567890abcdef');
     });
 
     it('should not mask fake tokens', () => {
@@ -599,7 +559,7 @@ describe('GitHub Actions Integration', () => {
 
       maskSensitiveValues(inputs);
 
-      expect(mockedCore.setSecret).not.toHaveBeenCalled();
+      expect(setSecret).not.toHaveBeenCalled();
     });
   });
 
@@ -638,7 +598,7 @@ describe('GitHub Actions Integration', () => {
 
       validateGitHubActionsEnvironment();
 
-      expect(mockedCore.warning).toHaveBeenCalledWith(
+      expect(warning).toHaveBeenCalledWith(
         'Not running in GitHub Actions environment'
       );
     });

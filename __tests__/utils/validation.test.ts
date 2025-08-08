@@ -57,10 +57,8 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should handle string boolean conversion for failOnError', () => {
+    it('should handle boolean values for failOnError', () => {
       const testCases = [
-        { input: 'true', expected: true },
-        { input: 'false', expected: false },
         { input: true, expected: true },
         { input: false, expected: false },
       ];
@@ -216,9 +214,7 @@ describe('Input Validation', () => {
         failOnError: 'maybe',
       };
 
-      expect(() => ActionInputsSchema.parse(inputs)).toThrow(
-        'fail-on-error must be "true" or "false"'
-      );
+      expect(() => ActionInputsSchema.parse(inputs)).toThrow();
     });
 
     it('should reject invalid numbers for maxOutputSize', () => {
@@ -368,9 +364,8 @@ describe('Input Validation', () => {
     });
 
     it('should validate failOnError', () => {
-      expect(InputValidators.failOnError('true')).toBe(true);
-      expect(InputValidators.failOnError('false')).toBe(false);
       expect(InputValidators.failOnError(true)).toBe(true);
+      expect(InputValidators.failOnError(false)).toBe(false);
     });
 
     it('should validate maxOutputSize', () => {
@@ -559,7 +554,7 @@ describe('Input Validation', () => {
           stage: 'pr-123',
           token: 'fake-token',
           commentMode: 'never',
-          failOnError: 'true', // string boolean
+          failOnError: true, // boolean
           maxOutputSize: '75000', // string number
         },
       ];

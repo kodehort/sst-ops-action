@@ -19,16 +19,6 @@ import type {
 } from '../types/index.js';
 
 /**
- * GitHub API rate limiting configuration
- */
-interface RateLimitConfig {
-  maxRetries: number;
-  baseDelay: number;
-  maxDelay: number;
-  backoffFactor: number;
-}
-
-/**
  * Comment creation options
  */
 interface CommentOptions {
@@ -52,12 +42,6 @@ interface ArtifactOptions {
 export class GitHubClient {
   private readonly octokit: ReturnType<typeof github.getOctokit>;
   private readonly context: typeof github.context;
-  private readonly rateLimitConfig: RateLimitConfig = {
-    maxRetries: 3,
-    baseDelay: 1000,
-    maxDelay: 30_000,
-    backoffFactor: 2,
-  };
 
   constructor(token?: string) {
     const githubToken =
@@ -83,12 +67,10 @@ export class GitHubClient {
     const commentWithMarker = `<!-- sst-${operationType} -->\n${comment}`;
 
     try {
-      await this.withRateLimit(async () => {
-        await this.octokit.rest.issues.createComment({
-          ...this.context.repo,
-          issue_number: this.context.payload.pull_request?.number || 0,
-          body: commentWithMarker,
-        });
+      await this.octokit.rest.issues.createComment({
+        ...this.context.repo,
+        issue_number: this.context.payload.pull_request?.number || 0,
+        body: commentWithMarker,
       });
       core.info(`Successfully posted ${operationType} PR comment`);
     } catch (error) {
@@ -448,12 +430,10 @@ export class GitHubClient {
       return;
     }
 
-    await this.withRateLimit(async () => {
-      await this.octokit.rest.issues.createComment({
-        ...this.context.repo,
-        issue_number: this.context.payload.pull_request?.number || 0,
-        body,
-      });
+    await this.octokit.rest.issues.createComment({
+      ...this.context.repo,
+      issue_number: this.context.payload.pull_request?.number || 0,
+      body,
     });
   }
 
@@ -472,90 +452,31 @@ export class GitHubClient {
     const commentMarker = `<!-- ${identifier} -->`;
     const commentWithMarker = `${commentMarker}\n${body}`;
 
-    await this.withRateLimit(async () => {
-      // Find existing comment
-      const comments = await this.octokit.rest.issues.listComments({
+    // Find existing comment
+    const comments = await this.octokit.rest.issues.listComments({
+      ...this.context.repo,
+      issue_number: this.context.payload.pull_request?.number || 0,
+    });
+
+    const existingComment = comments.data.find((comment) =>
+      comment.body?.includes(commentMarker)
+    );
+
+    if (existingComment) {
+      // Update existing comment
+      await this.octokit.rest.issues.updateComment({
+        ...this.context.repo,
+        comment_id: existingComment.id,
+        body: commentWithMarker,
+      });
+    } else {
+      // Create new comment
+      await this.octokit.rest.issues.createComment({
         ...this.context.repo,
         issue_number: this.context.payload.pull_request?.number || 0,
+        body: commentWithMarker,
       });
-
-      const existingComment = comments.data.find((comment) =>
-        comment.body?.includes(commentMarker)
-      );
-
-      if (existingComment) {
-        // Update existing comment
-        await this.octokit.rest.issues.updateComment({
-          ...this.context.repo,
-          comment_id: existingComment.id,
-          body: commentWithMarker,
-        });
-      } else {
-        // Create new comment
-        await this.octokit.rest.issues.createComment({
-          ...this.context.repo,
-          issue_number: this.context.payload.pull_request?.number || 0,
-          body: commentWithMarker,
-        });
-      }
-    });
-  }
-
-  /**
-   * Execute API call with rate limiting and retry logic
-   */
-  private async withRateLimit<T>(operation: () => Promise<T>): Promise<T> {
-    let lastError: Error | undefined;
-
-    for (
-      let attempt = 1;
-      attempt <= this.rateLimitConfig.maxRetries;
-      attempt++
-    ) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-
-        // Check if it's a rate limit error
-        if (this.isRateLimitError(lastError)) {
-          const delay = Math.min(
-            this.rateLimitConfig.baseDelay *
-              this.rateLimitConfig.backoffFactor ** (attempt - 1),
-            this.rateLimitConfig.maxDelay
-          );
-
-          core.warning(
-            `Rate limited, retrying in ${delay}ms (attempt ${attempt}/${this.rateLimitConfig.maxRetries})`
-          );
-          await this.sleep(delay);
-          continue;
-        }
-
-        // For non-rate-limit errors, don't retry
-        throw lastError;
-      }
     }
-
-    throw lastError || new Error('Rate limit retry attempts exhausted');
-  }
-
-  /**
-   * Check if error is a rate limit error
-   */
-  private isRateLimitError(error: Error): boolean {
-    return (
-      error.message.includes('rate limit') ||
-      error.message.includes('403') ||
-      error.message.includes('API rate limit exceeded')
-    );
-  }
-
-  /**
-   * Sleep utility for rate limiting
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

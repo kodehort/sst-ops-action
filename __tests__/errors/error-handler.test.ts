@@ -1,32 +1,135 @@
-import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import * as core from '@actions/core';
-import * as io from '@actions/io';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  type ActionError,
-  type ErrorCategory,
-  type ErrorSeverity,
-  type RecoveryStrategy,
-} from '../../src/errors/categories';
 import { ErrorHandler } from '../../src/errors/error-handler';
 import type { OperationOptions } from '../../src/types';
 import { ValidationError } from '../../src/utils/validation';
 
-const mockIo = io as any;
-const mockWriteFile = writeFile as any;
-const _mockTmpdir = tmpdir as any;
-const _mockJoin = join as any;
-const mockCore = core as any;
-
 describe('ErrorHandler', () => {
+  const mockError = vi.fn();
+  const mockWarning = vi.fn();
+  const mockInfo = vi.fn();
+  const mockDebug = vi.fn();
+  const mockSetFailed = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.spyOn(core, 'error').mockImplementation(mockError);
+    vi.spyOn(core, 'warning').mockImplementation(mockWarning);
+    vi.spyOn(core, 'info').mockImplementation(mockInfo);
+    vi.spyOn(core, 'debug').mockImplementation(mockDebug);
+    vi.spyOn(core, 'setFailed').mockImplementation(mockSetFailed);
   });
 
-  describe('categorizeError', () => {
-    it('should categorize validation errors correctly', () => {
+  describe('createInputValidationError', () => {
+    it('should create validation error for input failures', () => {
+      const error = ErrorHandler.createInputValidationError(
+        'Invalid stage value',
+        'stage',
+        'invalid-stage'
+      );
+
+      expect(error).toEqual({
+        type: 'input_validation',
+        message: 'Invalid stage value',
+        shouldFailAction: true,
+        originalError: undefined,
+        details: {
+          field: 'stage',
+          value: 'invalid-stage',
+        },
+      });
+    });
+
+    it('should create validation error without field details', () => {
+      const originalError = new Error('Test error');
+      const error = ErrorHandler.createInputValidationError(
+        'General validation error',
+        undefined,
+        undefined,
+        originalError
+      );
+
+      expect(error).toEqual({
+        type: 'input_validation',
+        message: 'General validation error',
+        shouldFailAction: true,
+        originalError,
+        details: undefined,
+      });
+    });
+  });
+
+  describe('createSubprocessError', () => {
+    it('should create subprocess error for SST CLI failures', () => {
+      const error = ErrorHandler.createSubprocessError(
+        'Deploy failed with exit code 1',
+        'deploy',
+        'production',
+        1,
+        'Deploy output',
+        'Error: Permission denied'
+      );
+
+      expect(error).toEqual({
+        type: 'subprocess_error',
+        message: 'Deploy failed with exit code 1',
+        shouldFailAction: true,
+        originalError: undefined,
+        details: {
+          operation: 'deploy',
+          stage: 'production',
+          exitCode: 1,
+          stdout: 'Deploy output',
+          stderr: 'Error: Permission denied',
+        },
+      });
+    });
+
+    it('should create subprocess error with original error', () => {
+      const originalError = new Error('Subprocess failed');
+      const error = ErrorHandler.createSubprocessError(
+        'SST command failed',
+        'diff',
+        'staging',
+        127,
+        undefined,
+        undefined,
+        originalError
+      );
+
+      expect(error.type).toBe('subprocess_error');
+      expect(error.shouldFailAction).toBe(true);
+      expect(error.originalError).toBe(originalError);
+      expect(error.details?.exitCode).toBe(127);
+    });
+  });
+
+  describe('createOutputParsingError', () => {
+    it('should create parsing error that does not fail action', () => {
+      const error = ErrorHandler.createOutputParsingError(
+        'Invalid JSON in output',
+        'diff',
+        'staging',
+        '{"invalid": json}'
+      );
+
+      expect(error).toEqual({
+        type: 'output_parsing',
+        message: 'Invalid JSON in output',
+        shouldFailAction: false, // Parsing errors don't fail the action
+        originalError: undefined,
+        details: {
+          operation: 'diff',
+          stage: 'staging',
+          stdout: '{"invalid": json}',
+        },
+      });
+    });
+  });
+
+  describe('fromValidationError', () => {
+    it('should create ActionError from ValidationError instance', () => {
       const validationError = new ValidationError(
         'Invalid stage value',
         'stage',
@@ -34,556 +137,118 @@ describe('ErrorHandler', () => {
         ['Use staging, production, or dev']
       );
 
-      const result = ErrorHandler.categorizeError(validationError);
+      const actionError = ErrorHandler.fromValidationError(validationError);
 
-      expect(result).toEqual({
-        category: 'validation',
-        severity: 'high',
-        message: 'Invalid stage value',
-        originalError: validationError,
-        suggestions: ['Use staging, production, or dev'],
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'configuration_update',
-        debugInfo: undefined,
-        context: { field: 'stage', value: 'invalid-stage' },
+      expect(actionError.type).toBe('input_validation');
+      expect(actionError.message).toBe(validationError.message);
+      expect(actionError.shouldFailAction).toBe(true);
+      expect(actionError.originalError).toBe(validationError);
+      expect(actionError.details).toEqual({
+        field: 'stage',
+        value: 'invalid-stage',
       });
-    });
-
-    it('should categorize CLI execution errors', () => {
-      const error = new Error('Deploy failed: Authentication error');
-      const context = {
-        operation: 'deploy' as const,
-        stage: 'production',
-        exitCode: 1,
-        stderr: 'AWS credentials not found',
-        duration: 5000,
-      };
-
-      const result = ErrorHandler.categorizeError(error, context);
-
-      expect(result.category).toBe('authentication');
-      expect(result.severity).toBe('high');
-      expect(result.recoverable).toBe(true);
-      expect(result.retryable).toBe(false);
-      expect(result.debugInfo).toStrictEqual({
-        ...context,
-        operation: String(context.operation),
-      });
-    });
-
-    it('should categorize timeout errors', () => {
-      const error = new Error('Operation timeout');
-      const context = {
-        operation: 'deploy' as const,
-        stage: 'staging',
-        stderr: 'timed out after 30 minutes',
-        duration: 1_800_000,
-      };
-
-      const result = ErrorHandler.categorizeError(error, context);
-
-      expect(result.category).toBe('timeout');
-      expect(result.severity).toBe('medium');
-      expect(result.retryable).toBe(true);
-    });
-
-    it('should categorize GitHub API errors', () => {
-      const error = new Error('GitHub API rate limit exceeded');
-      const context = {
-        operation: 'diff' as const,
-        stage: 'staging',
-        stderr: 'API rate limit exceeded',
-      };
-
-      const result = ErrorHandler.categorizeError(error, context);
-
-      expect(result.category).toBe('github_api');
-      expect(result.severity).toBe('medium');
-      expect(result.retryable).toBe(true);
-    });
-
-    it('should handle unknown errors with default categorization', () => {
-      const error = new Error('Unknown system error');
-
-      const result = ErrorHandler.categorizeError(error);
-
-      expect(result).toEqual({
-        category: 'system',
-        severity: 'medium',
-        message: 'Unknown system error',
-        originalError: error,
-        suggestions: [
-          'Review the full error message and stack trace for more details',
-          'Check GitHub Actions logs for additional context',
-          'Ensure all inputs and configuration are correct',
-          'Contact support if the issue persists with error details',
-        ],
-        recoverable: true,
-        retryable: false,
-        recoveryStrategy: 'manual_intervention',
-        debugInfo: undefined,
-      });
-    });
-
-    it('should use combined stderr and message for pattern matching', () => {
-      const error = new Error('Deploy failed');
-      const context = {
-        operation: 'deploy' as const,
-        stage: 'production',
-        stderr: 'insufficient permissions to access s3 bucket',
-      };
-
-      const result = ErrorHandler.categorizeError(error, context);
-
-      expect(result.category).toBe('permissions');
-      expect(result.severity).toBe('high');
     });
   });
 
   describe('handleError', () => {
     const mockOptions: OperationOptions = {
       stage: 'staging',
-      token: 'mock-token',
       failOnError: true,
-      commentMode: 'always',
     };
 
-    const mockError: ActionError = {
-      category: 'cli_execution',
-      severity: 'high',
-      message: 'Deploy command failed',
-      originalError: new Error('Deploy failed'),
-      suggestions: ['Check AWS credentials', 'Verify permissions'],
-      recoverable: false,
-      retryable: false,
-      recoveryStrategy: 'manual_intervention',
-      debugInfo: {
-        operation: 'deploy',
-        stage: 'staging',
-        exitCode: 1,
-        stderr: 'Permission denied',
-        duration: 10_000,
-      },
-    };
-
-    it('should handle non-recoverable errors with fail-on-error true', async () => {
-      await ErrorHandler.handleError(mockError, mockOptions);
-
-      expect(mockCore.setFailed).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'cli execution error in staging deploy operation: Deploy command failed'
-        )
+    it('should fail action for validation errors', async () => {
+      const error = ErrorHandler.createInputValidationError(
+        'Invalid input',
+        'stage',
+        'bad-stage'
       );
-      expect(mockCore.error).toHaveBeenCalled();
-      expect(mockCore.info).toHaveBeenCalledWith('🔄 Recoverable: No');
-    });
 
-    it('should handle recoverable errors with fail-on-error false', async () => {
-      const recoverableError: ActionError = {
-        ...mockError,
-        recoverable: true,
-        severity: 'medium',
-      };
+      await ErrorHandler.handleError(error, mockOptions);
 
-      const optionsWithoutFail: OperationOptions = {
-        ...mockOptions,
-        failOnError: false,
-      };
-
-      await ErrorHandler.handleError(recoverableError, optionsWithoutFail);
-
-      expect(mockCore.setFailed).not.toHaveBeenCalled();
-      expect(mockCore.warning).toHaveBeenCalledWith(
-        'Recoverable cli_execution error: Deploy command failed'
+      expect(mockError).toHaveBeenCalledWith(
+        '🔴 staging input_validation: Invalid input'
+      );
+      expect(mockInfo).toHaveBeenCalledWith('Invalid Field: stage = bad-stage');
+      expect(mockSetFailed).toHaveBeenCalledWith(
+        'input validation in staging: Invalid input'
       );
     });
 
-    it('should create error artifacts and job summary', async () => {
-      await ErrorHandler.handleError(mockError, mockOptions);
-
-      expect(mockIo.mkdirP).toHaveBeenCalledWith('/tmp/sst-error-artifacts');
-
-      // Check that error summary file was created
-      const errorSummaryCalls = mockWriteFile.mock.calls.filter(
-        ([path]: any[]) =>
-          path.includes('error-summary-') && path.endsWith('.json')
-      );
-      expect(errorSummaryCalls).toHaveLength(1);
-      expect(errorSummaryCalls[0][1]).toContain('"category": "cli_execution"');
-      expect(mockCore.summary.addRaw).toHaveBeenCalled();
-      expect(mockCore.summary.write).toHaveBeenCalled();
-    });
-
-    it('should handle artifact creation failures gracefully', async () => {
-      mockIo.mkdirP.mockRejectedValueOnce(new Error('Permission denied'));
-
-      await ErrorHandler.handleError(mockError, mockOptions);
-
-      expect(mockCore.warning).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to create error artifacts')
-      );
-    });
-
-    it('should handle job summary creation failures gracefully', async () => {
-      mockCore.summary.write.mockRejectedValueOnce(new Error('Network error'));
-
-      await ErrorHandler.handleError(mockError, mockOptions);
-
-      expect(mockCore.warning).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to create job summary')
-      );
-    });
-  });
-
-  describe('createCLIError', () => {
-    it('should create ActionError from CLI execution failure', () => {
-      const result = ErrorHandler.createCLIError(
-        'Deploy failed with exit code 1',
-        1,
-        'Deploy output',
-        'Error: Permission denied',
+    it('should fail action for subprocess errors', async () => {
+      const error = ErrorHandler.createSubprocessError(
+        'Deploy failed',
         'deploy',
         'production',
-        15_000
+        1,
+        'Output',
+        'Error output'
       );
 
-      expect(result.message).toBe('Deploy failed with exit code 1');
-      expect(result.debugInfo).toEqual({
-        operation: 'deploy',
+      const options: OperationOptions = {
         stage: 'production',
-        exitCode: 1,
-        stdout: 'Deploy output',
-        stderr: 'Error: Permission denied',
-        duration: 15_000,
-      });
-    });
-  });
+        failOnError: true,
+      };
 
-  describe('createParsingError', () => {
-    it('should create ActionError from parsing failure', () => {
-      const result = ErrorHandler.createParsingError(
-        'Invalid JSON in output',
+      await ErrorHandler.handleError(error, options);
+
+      expect(mockError).toHaveBeenCalledWith(
+        '🔴 production subprocess_error: Deploy failed'
+      );
+      expect(mockInfo).toHaveBeenCalledWith('Exit Code: 1');
+      expect(mockInfo).toHaveBeenCalledWith('Error Output: Error output');
+      expect(mockSetFailed).toHaveBeenCalledWith(
+        'subprocess error in production deploy operation: Deploy failed'
+      );
+    });
+
+    it('should log warning for parsing errors but not fail action', async () => {
+      const error = ErrorHandler.createOutputParsingError(
+        'Parse error',
         'diff',
         'staging',
-        '{"invalid": json}'
+        'bad json'
       );
 
-      expect(result.message).toBe(
-        'Failed to parse diff output: Invalid JSON in output'
+      await ErrorHandler.handleError(error, mockOptions);
+
+      expect(mockWarning).toHaveBeenCalledWith(
+        '🟡 staging output_parsing: Parse error'
       );
-      expect(result.debugInfo).toEqual({
-        operation: 'diff',
-        stage: 'staging',
-        stdout: '{"invalid": json}',
-      });
-      expect(result.category).toBe('output_parsing');
+      expect(mockSetFailed).not.toHaveBeenCalled();
     });
-  });
 
-  describe('createGitHubError', () => {
-    it('should create ActionError from GitHub API failure', () => {
-      const result = ErrorHandler.createGitHubError(
-        'Rate limit exceeded',
+    it('should log stack trace in debug mode', async () => {
+      const originalError = new Error('Original error');
+      originalError.stack = 'Stack trace here';
+
+      const error = ErrorHandler.createSubprocessError(
+        'Command failed',
         'deploy',
-        'production'
+        'staging',
+        1,
+        undefined,
+        undefined,
+        originalError
       );
 
-      expect(result.message).toBe('GitHub API error: Rate limit exceeded');
-      expect(result.debugInfo).toEqual({
-        operation: 'deploy',
-        stage: 'production',
-      });
-      expect(result.category).toBe('github_api');
+      await ErrorHandler.handleError(error, mockOptions);
+
+      expect(mockDebug).toHaveBeenCalledWith('Stack Trace: Stack trace here');
     });
   });
 
-  describe('utility methods', () => {
-    it('should identify partial success scenarios', () => {
-      const parsingError: ActionError = {
-        category: 'output_parsing',
-        severity: 'low',
-        message: 'Failed to parse some output',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: true,
-        retryable: false,
-        recoveryStrategy: 'retry',
-      };
-
-      const recoverableError: ActionError = {
-        category: 'timeout',
-        severity: 'medium',
-        message: 'Operation timeout',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: true,
-        retryable: true,
-        recoveryStrategy: 'retry',
-      };
-
-      const criticalError: ActionError = {
-        category: 'validation',
-        severity: 'critical',
-        message: 'Critical validation error',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: true,
-        retryable: false,
-        recoveryStrategy: 'configuration_update',
-      };
-
-      expect(ErrorHandler.isPartialSuccess(parsingError)).toBe(true);
-      expect(ErrorHandler.isPartialSuccess(recoverableError)).toBe(true);
-      expect(ErrorHandler.isPartialSuccess(criticalError)).toBe(false);
-    });
-
-    it('should return appropriate exit codes', () => {
-      const criticalError: ActionError = {
-        category: 'system',
-        severity: 'critical',
-        message: 'Critical error',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: false,
-        retryable: false,
-        recoveryStrategy: 'not_recoverable',
-      };
-
-      const highError: ActionError = {
-        ...criticalError,
-        severity: 'high',
-      };
-
-      const recoverableError: ActionError = {
-        ...criticalError,
-        severity: 'medium',
-        recoverable: true,
-      };
-
-      const nonRecoverableError: ActionError = {
-        ...criticalError,
-        severity: 'low',
-        recoverable: false,
-      };
-
-      expect(ErrorHandler.getExitCode(criticalError)).toBe(2);
-      expect(ErrorHandler.getExitCode(highError)).toBe(1);
-      expect(ErrorHandler.getExitCode(recoverableError)).toBe(0);
-      expect(ErrorHandler.getExitCode(nonRecoverableError)).toBe(1);
-    });
-  });
-
-  describe('error logging', () => {
-    const mockError: ActionError = {
-      category: 'authentication',
-      severity: 'high',
-      message: 'Authentication failed',
-      originalError: new Error('Auth error'),
-      suggestions: ['Check credentials', 'Verify permissions'],
-      recoverable: true,
-      retryable: false,
-      recoveryStrategy: 'configuration_update',
-      debugInfo: {
-        operation: 'deploy',
-        stage: 'production',
-        exitCode: 1,
-        duration: 5000,
-      },
-    };
-
-    it('should log structured error information', async () => {
-      const options: OperationOptions = {
-        stage: 'production',
-        token: 'mock-token',
-        failOnError: false,
-      };
-
-      await ErrorHandler.handleError(mockError, options);
-
-      expect(mockCore.error).toHaveBeenCalledWith(
-        '🔴 production authentication error: Authentication failed'
+  describe('isParsingError', () => {
+    it('should identify parsing errors', () => {
+      const parsingError = ErrorHandler.createOutputParsingError(
+        'Parse failed',
+        'diff',
+        'staging'
       );
-      expect(mockCore.info).toHaveBeenCalledWith('🔄 Recoverable: Yes');
-      expect(mockCore.info).toHaveBeenCalledWith('⏱️  Retryable: No');
-      expect(mockCore.info).toHaveBeenCalledWith(
-        '🔧 Recovery Strategy: configuration update'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith('💡 Suggested solutions:');
-      expect(mockCore.info).toHaveBeenCalledWith('   1. Check credentials');
-      expect(mockCore.info).toHaveBeenCalledWith('   2. Verify permissions');
-      expect(mockCore.info).toHaveBeenCalledWith(
-        '📋 Operation: deploy (stage: production)'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith('🚪 Exit Code: 1');
-      expect(mockCore.info).toHaveBeenCalledWith('⏰ Duration: 5000ms');
-    });
+      const validationError =
+        ErrorHandler.createInputValidationError('Invalid input');
 
-    it('should handle missing debug info gracefully', async () => {
-      const minimalError: ActionError = {
-        category: 'system',
-        severity: 'low',
-        message: 'System error',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: true,
-        retryable: false,
-        recoveryStrategy: 'manual_intervention',
-      };
-
-      const options: OperationOptions = {
-        stage: 'staging',
-        failOnError: false,
-      };
-
-      await ErrorHandler.handleError(minimalError, options);
-
-      expect(mockCore.error).toHaveBeenCalledWith(
-        '🟡 staging system error: System error'
-      );
-      expect(mockCore.info).toHaveBeenCalledWith('🔄 Recoverable: Yes');
-    });
-  });
-
-  describe('artifact creation', () => {
-    it('should create comprehensive error artifacts', async () => {
-      const mockError: ActionError = {
-        category: 'cli_execution',
-        severity: 'high',
-        message: 'CLI execution failed',
-        originalError: new Error('Exec error'),
-        suggestions: ['Retry operation'],
-        recoverable: true,
-        retryable: true,
-        recoveryStrategy: 'retry',
-        debugInfo: {
-          operation: 'deploy',
-          stage: 'staging',
-          exitCode: 1,
-          stdout: 'Deploy output',
-          stderr: 'Error output',
-          duration: 10_000,
-        },
-      };
-
-      const options: OperationOptions = {
-        stage: 'staging',
-        token: 'mock-token',
-        commentMode: 'always',
-        failOnError: true,
-      };
-
-      await ErrorHandler.handleError(mockError, options);
-
-      // Verify artifact directory creation
-      expect(mockIo.mkdirP).toHaveBeenCalledWith('/tmp/sst-error-artifacts');
-
-      // Verify error summary file
-      const errorSummaryCalls = mockWriteFile.mock.calls.filter(
-        ([path]: any[]) =>
-          path.includes('error-summary-') && path.endsWith('.json')
-      );
-      expect(errorSummaryCalls).toHaveLength(1);
-      expect(errorSummaryCalls[0][1]).toContain('"category": "cli_execution"');
-
-      // Verify stdout file
-      const stdoutCalls = mockWriteFile.mock.calls.filter(
-        ([path]: any[]) => path.includes('stdout-') && path.endsWith('.txt')
-      );
-      expect(stdoutCalls).toHaveLength(1);
-      expect(stdoutCalls[0][1]).toBe('Deploy output');
-
-      // Verify stderr file
-      const stderrCalls = mockWriteFile.mock.calls.filter(
-        ([path]: any[]) => path.includes('stderr-') && path.endsWith('.txt')
-      );
-      expect(stderrCalls).toHaveLength(1);
-      expect(stderrCalls[0][1]).toBe('Error output');
-
-      // Verify environment context file
-      const envCalls = mockWriteFile.mock.calls.filter(
-        ([path]: any[]) =>
-          path.includes('environment-') && path.endsWith('.json')
-      );
-      expect(envCalls).toHaveLength(1);
-      expect(envCalls[0][1]).toContain('"nodeVersion":');
-    });
-  });
-
-  describe('job summary creation', () => {
-    it('should create comprehensive GitHub Actions job summary', async () => {
-      const mockError: ActionError = {
-        category: 'permissions',
-        severity: 'high',
-        message: 'Permission denied',
-        originalError: new Error('Permission error'),
-        suggestions: ['Check IAM roles', 'Verify resource permissions'],
-        recoverable: true,
-        retryable: false,
-        recoveryStrategy: 'configuration_update',
-        debugInfo: {
-          operation: 'remove',
-          stage: 'production',
-          exitCode: 1,
-          stderr: 'Access denied to S3 bucket',
-          duration: 3000,
-        },
-      };
-
-      const options: OperationOptions = {
-        stage: 'production',
-        token: 'mock-token',
-        failOnError: true,
-      };
-
-      await ErrorHandler.handleError(mockError, options);
-
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('# 🔴 SST Operation Failed')
-      );
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('| **Operation** | remove |')
-      );
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('| **Stage** | `production` |')
-      );
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('Permission denied')
-      );
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('1. Check IAM roles')
-      );
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('Access denied to S3 bucket')
-      );
-      expect(mockCore.summary.write).toHaveBeenCalled();
-    });
-
-    it('should handle different recovery strategies in summary', async () => {
-      const retryError: ActionError = {
-        category: 'timeout',
-        severity: 'medium',
-        message: 'Operation timeout',
-        originalError: new Error(),
-        suggestions: [],
-        recoverable: true,
-        retryable: true,
-        recoveryStrategy: 'retry',
-        debugInfo: { operation: 'deploy', stage: 'staging' },
-      };
-
-      const options: OperationOptions = {
-        stage: 'staging',
-        failOnError: false,
-      };
-
-      await ErrorHandler.handleError(retryError, options);
-
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '🔄 **Retry the operation** - This error is typically temporary and may resolve on retry.'
-        )
-      );
+      expect(ErrorHandler.isParsingError(parsingError)).toBe(true);
+      expect(ErrorHandler.isParsingError(validationError)).toBe(false);
     });
   });
 });
