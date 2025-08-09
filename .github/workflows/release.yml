@@ -331,13 +331,13 @@ jobs:
           if [ -f "dist/build-manifest.json" ]; then
             BUNDLE_SIZE_MB=$(jq -r '.bundleSizeMB' dist/build-manifest.json)
             BUNDLE_SIZE=$(jq -r '.bundleSize' dist/build-manifest.json)
-            BUILD_DURATION=$(jq -r '.duration' dist/build-manifest.json)
+            BUNDLE_INTEGRITY=$(jq -r '.integrity' dist/build-manifest.json)
 
             cat >> RELEASE_NOTES.md << EOF
           ## 📦 Bundle Information
 
           - **Bundle Size:** ${BUNDLE_SIZE_MB}MB (${BUNDLE_SIZE} bytes)
-          - **Build Duration:** ${BUILD_DURATION}ms
+          - **Integrity Hash:** \`${BUNDLE_INTEGRITY:0:16}...\`
           - **Format:** ES Modules for GitHub Actions
           - **Target:** Node.js 20+
           - **Source Maps:** Included for debugging
@@ -422,6 +422,9 @@ jobs:
           git push origin "v${NEW_VERSION}"
 
           echo "✅ Version committed and tagged"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         id: create-release
@@ -451,6 +454,7 @@ jobs:
           echo "✅ Major version tag updated: $MAJOR_VERSION"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-release:
     name: Validate Release
