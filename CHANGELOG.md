@@ -1,3 +1,46 @@
+# Release v1.3.1
+
+**Release Date:** 2025-08-09
+**Previous Version:** v1.3.0
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix: simplify rollup config (`f92847c`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 5.21MB (5457946 bytes)
+- **Integrity Hash:** `9a7af0bfeb2d7aa0...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v1.3.1
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_QKp4tN61Qhxkxf8JuXEDWqa3okMfvk38vr93
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v1.3.0...v1.3.1)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v1.3.1/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v1.3.0...v1.3.1
+
+---
+
 # Release v1.3.0
 
 **Release Date:** 2025-08-09
