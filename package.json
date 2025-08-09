@@ -4,7 +4,7 @@
   "description": "A unified GitHub Action for SST operations: deploy, diff, and remove",
   "main": "dist/index.js",
   "scripts": {
-    "build": "bun run scripts/build.ts",
+    "build": "ncc build src/index.ts --minify --license licenses.txt",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -61,6 +61,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.2.0",
     "@types/yaml": "^1.9.7",
+    "@vercel/ncc": "^0.38.3",
     "@vitest/coverage-v8": "^3.2.4",
     "esbuild": "^0.25.8",
     "js-yaml": "^4.1.0",
