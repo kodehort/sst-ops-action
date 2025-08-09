@@ -36,23 +36,7 @@ export const ActionInputsSchema = z.object({
     )
     .transform((val) => val.trim()),
 
-  token: z
-    .string()
-    .min(1, 'Token cannot be empty')
-    .refine(
-      (val) => {
-        // Allow fake-token for testing or actual GitHub tokens
-        return (
-          val === 'fake-token' ||
-          val.startsWith('ghp_') ||
-          val.startsWith('github_pat_')
-        );
-      },
-      {
-        message:
-          'Token must be a valid GitHub token (starting with ghp_ or github_pat_) or "fake-token" for testing',
-      }
-    ),
+  token: z.string().min(1, 'Token cannot be empty'),
 
   commentMode: z
     .string()
@@ -172,8 +156,7 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
     case 'token':
       return [
         `Use a valid GitHub token (e.g., \`${'$'}{{ secrets.GITHUB_TOKEN }}\`)`,
-        'GitHub personal access tokens start with "ghp_"',
-        'GitHub App tokens start with "github_pat_"',
+        'Token must be provided and cannot be empty',
         'Use "fake-token" only for testing',
       ];
 

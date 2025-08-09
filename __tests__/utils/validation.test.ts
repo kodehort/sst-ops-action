@@ -166,24 +166,14 @@ describe('Input Validation', () => {
       );
     });
 
-    it('should reject invalid token formats', () => {
-      const invalidTokens = ['invalid-token', 'bearer_token', 'token123'];
-
-      invalidTokens.forEach((token) => {
-        const inputs = {
-          stage: 'test',
-          token,
-        };
-
-        expect(() => ActionInputsSchema.parse(inputs)).toThrow();
-      });
-    });
-
-    it('should accept valid token formats', () => {
+    it('should accept any non-empty token', () => {
       const validTokens = [
         'ghp_1234567890abcdef',
         'github_pat_1234567890abcdef',
         'fake-token',
+        'custom-token',
+        'bearer_token',
+        'any-token-value',
       ];
 
       validTokens.forEach((token) => {
@@ -356,6 +346,8 @@ describe('Input Validation', () => {
         'ghp_1234567890abcdef'
       );
       expect(InputValidators.token('fake-token')).toBe('fake-token');
+      expect(InputValidators.token('custom-token')).toBe('custom-token');
+      expect(InputValidators.token('any-value')).toBe('any-value');
     });
 
     it('should validate commentMode', () => {
