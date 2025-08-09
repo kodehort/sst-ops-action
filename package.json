@@ -4,7 +4,7 @@
   "description": "A unified GitHub Action for SST operations: deploy, diff, and remove",
   "main": "dist/index.js",
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -19,18 +19,7 @@
     "lint:fix": "bunx ultracite@latest lint --fix",
     "validate": "bun run typecheck && bun run lint && bun run test",
     "dev": "bunx @github/local-action run . src/main.ts .env",
-    "prepare": "lefthook install",
-    "quality:check": "bun run quality:lint && bun run quality:format && bun run quality:typecheck && bun run quality:test-coverage && bun run quality:bundle-size",
-    "quality:lint": "bunx ultracite@latest lint",
-    "quality:format": "bunx ultracite@latest format --check",
-    "quality:typecheck": "tsc --noEmit --pretty",
-    "quality:test-coverage": "vitest run --coverage --coverage.thresholds.lines=90 --coverage.thresholds.functions=90 --coverage.thresholds.branches=90 --coverage.thresholds.statements=90",
-    "quality:bundle-size": "bun run build",
-    "quality:complexity": "echo '✓ Code complexity analysis passed (placeholder for future tooling)'",
-    "quality:security": "echo '✓ Security scan passed (placeholder for future tooling)'",
-    "quality:performance": "echo '✓ Performance analysis passed (placeholder for future tooling)'",
-    "quality:all": "bun run quality:check && bun run quality:complexity && bun run quality:security && bun run quality:performance",
-    "ci:quality": "bun run quality:all"
+    "prepare": "lefthook install"
   },
   "repository": {
     "type": "git",
