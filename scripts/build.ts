@@ -80,7 +80,6 @@ class ProductionBuilder {
         // Node.js built-ins with node: prefix (ES module compatible)
         'node:fs',
         'node:path',
-        'node:os',
         'node:crypto',
         'node:events',
         'node:stream',
@@ -95,6 +94,8 @@ class ProductionBuilder {
         'node:timers',
         'node:assert',
         'node:zlib',
+        // Legacy imports (for better bundler compatibility)
+        'os',
 
         // Note: @actions packages must be bundled, not externalized
         // Note: Zod is bundled since it's not provided by GitHub Actions
