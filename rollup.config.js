@@ -23,10 +23,22 @@ export default {
     terser({
       mangle: {
         keep_fnames: true,
+        reserved: [],
       },
       compress: {
         keep_fnames: true,
+        passes: 1,
+        pure_getters: true,
+        unsafe_comps: false,
+        unsafe_math: false,
+        unsafe_proto: false,
+        sequences: false,
       },
+      format: {
+        comments: false,
+        beautify: false,
+      },
+      sourceMap: true,
     }),
   ],
   external: [
