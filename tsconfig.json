@@ -7,8 +7,6 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "newLine": "lf",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -30,7 +28,7 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "coverage", "__tests__"],
+  "exclude": ["node_modules", "dist", "coverage"],
   "ts-node": {
     "esm": true
   }
