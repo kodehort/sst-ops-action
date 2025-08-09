@@ -433,6 +433,8 @@ jobs:
           git push -f origin "$MAJOR_VERSION"
 
           echo "✅ Major version tag updated: $MAJOR_VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-release:
     name: Validate Release
