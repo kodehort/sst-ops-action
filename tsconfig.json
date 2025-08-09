@@ -7,6 +7,8 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "newLine": "lf",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -27,8 +29,8 @@
       "@tests/*": ["./__tests__/*"]
     }
   },
-  "include": ["src/**/*", "__tests__/**/*"],
-  "exclude": ["node_modules", "dist", "coverage"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "coverage", "__tests__"],
   "ts-node": {
     "esm": true
   }
