@@ -36,7 +36,7 @@ function generateBuildManifest() {
 
       // Write manifest to dist folder
       const manifestPath = 'dist/build-manifest.json';
-      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     },
   };
 }
