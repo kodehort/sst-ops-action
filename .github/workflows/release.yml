@@ -427,7 +427,7 @@ jobs:
         id: create-release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ github.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ needs.determine-release.outputs.new-version }}
           name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
