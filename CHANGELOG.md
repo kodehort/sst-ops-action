@@ -1,3 +1,47 @@
+# Release v1.1.7
+
+**Release Date:** 2025-08-09
+**Previous Version:** v1.1.6
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix: remove trailing space to pass linting checks (`819cea6`)
+- fix: use node: prefixed imports for ES module compatibility (`46e7532`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 2.300774574279785MB (2412537 bytes)
+- **Build Duration:** 419ms
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v1.1.7
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_ad7d4Ddgn6B3SnWpLfOPr9IPDW0JMt1H3dGB
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v1.1.6...v1.1.7)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v1.1.7/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v1.1.6...v1.1.7
+
+---
+
 # Release v1.1.6
 
 **Release Date:** 2025-08-08

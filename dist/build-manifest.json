@@ -1,34 +1,14 @@
 {
-<<<<<<< HEAD
-  "buildTimestamp": "2025-08-08T23:54:49.352Z",
+  "buildTimestamp": "2025-08-09T00:02:03.370Z",
   "bundlePath": "/home/runner/work/sst-ops-action/sst-ops-action/dist/index.js",
   "bundleSize": 2412537,
   "bundleSizeMB": 2.300774574279785,
   "integrity": "38c6791464c7c2f747081203e3700341d4c7cd5988b3db0829cf79164502c0f6",
-||||||| parent of a0844b2 (fix: use node: prefixed imports for ES module compatibility)
-  "buildTimestamp": "2025-08-08T23:50:35.678Z",
-  "bundlePath": "/home/runner/work/sst-ops-action/sst-ops-action/dist/index.js",
-  "bundleSize": 2412537,
-  "bundleSizeMB": 2.300774574279785,
-  "integrity": "38c6791464c7c2f747081203e3700341d4c7cd5988b3db0829cf79164502c0f6",
-=======
-  "buildTimestamp": "2025-08-08T23:57:08.932Z",
-  "bundlePath": "/Users/alistairstead/dev/kodehort/sst-operations-action/dist/index.js",
-  "bundleSize": 2789038,
-  "bundleSizeMB": 2.6598339080810547,
-  "integrity": "872932cd39df149ec5670e531b365bd0c1893bc78b915d4a78877dbb33f88770",
->>>>>>> a0844b2 (fix: use node: prefixed imports for ES module compatibility)
   "sourceMap": true,
-<<<<<<< HEAD
-  "duration": 426,
-||||||| parent of a0844b2 (fix: use node: prefixed imports for ES module compatibility)
-  "duration": 395,
-=======
-  "duration": 102,
->>>>>>> a0844b2 (fix: use node: prefixed imports for ES module compatibility)
+  "duration": 419,
   "platform": "node",
   "target": "node20",
   "format": "esm",
   "minified": true,
-  "version": "1.1.5"
+  "version": "1.1.6"
 }
