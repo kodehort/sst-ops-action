@@ -79,7 +79,7 @@ class ProductionBuilder {
       external: [
         // Node.js built-ins with node: prefix (ES module compatible)
         'node:fs',
-        'node:path', 
+        'node:path',
         'node:os',
         'node:crypto',
         'node:events',
