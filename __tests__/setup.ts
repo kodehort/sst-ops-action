@@ -72,8 +72,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-vi.mock('node:os', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:os')>();
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
   return {
     ...actual,
     tmpdir: vi.fn(() => '/tmp'),
