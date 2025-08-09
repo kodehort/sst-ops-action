@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release version to process (e.g., v1.2.3)'
+        description: "Release version to process (e.g., v1.2.3)"
         required: true
         type: string
 
@@ -23,19 +23,19 @@ jobs:
     name: Update Major Version Branch
     runs-on: ubuntu-latest
     if: startsWith(github.event.release.tag_name, 'v') || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Setup Git Config
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
       - name: Determine Version
         id: version
         run: |
@@ -44,46 +44,46 @@ jobs:
           else
             TAG="${{ github.event.release.tag_name }}"
           fi
-          
+
           # Validate tag format
           if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
             echo "❌ Invalid tag format: $TAG (expected: vX.Y.Z)"
             exit 1
           fi
-          
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          
+
           # Extract major version (v1.2.3 -> v1)
           MAJOR_VERSION=$(echo "$TAG" | cut -d. -f1)
           echo "major=$MAJOR_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Extract version numbers
           VERSION_PARTS=$(echo "$TAG" | sed 's/^v//' | tr '.' ' ')
           read -r MAJOR MINOR PATCH <<< "$VERSION_PARTS"
           echo "major_num=$MAJOR" >> $GITHUB_OUTPUT
           echo "minor_num=$MINOR" >> $GITHUB_OUTPUT
           echo "patch_num=$PATCH" >> $GITHUB_OUTPUT
-          
+
           echo "Processing release: $TAG"
           echo "Major version branch: $MAJOR_VERSION"
-          
+
       - name: Verify Release Tag Exists
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          
+
           # Check if tag exists
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "❌ Tag $TAG does not exist"
             exit 1
           fi
-          
+
           echo "✅ Tag $TAG exists and is valid"
-          
+
       - name: Check if Major Version Branch Exists
         id: branch-check
         run: |
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
-          
+
           # Check if branch exists locally or remotely
           if git show-ref --verify --quiet "refs/heads/$MAJOR_VERSION"; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -95,39 +95,39 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "Branch $MAJOR_VERSION does not exist"
           fi
-          
+
       - name: Create or Update Major Version Branch
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
           BRANCH_EXISTS="${{ steps.branch-check.outputs.exists }}"
-          
+
           echo "🔄 Updating major version branch: $MAJOR_VERSION -> $TAG"
-          
+
           # Fetch all branches and tags
           git fetch origin
-          
+
           # Check if this is a newer version for this major branch
           if [ "$BRANCH_EXISTS" = "true" ]; then
             # Get current commit of major version branch
             git fetch origin "$MAJOR_VERSION:$MAJOR_VERSION" 2>/dev/null || true
-            
+
             # Get current version from that branch if it exists
             if git show-ref --verify --quiet "refs/heads/$MAJOR_VERSION"; then
               CURRENT_COMMIT=$(git rev-parse "$MAJOR_VERSION")
               echo "Current $MAJOR_VERSION branch points to: $CURRENT_COMMIT"
-              
+
               # Check if new version is newer than current
               CURRENT_TAG=$(git describe --tags --exact-match "$CURRENT_COMMIT" 2>/dev/null || echo "unknown")
               echo "Current version on $MAJOR_VERSION branch: $CURRENT_TAG"
-              
+
               if [ "$CURRENT_TAG" != "unknown" ] && [ "$CURRENT_TAG" != "$TAG" ]; then
                 echo "Comparing versions: $CURRENT_TAG vs $TAG"
-                
+
                 # Extract version numbers for comparison
                 CURRENT_VERSION=$(echo "$CURRENT_TAG" | sed 's/^v//')
                 NEW_VERSION=$(echo "$TAG" | sed 's/^v//')
-                
+
                 # Simple version comparison (assumes semantic versioning)
                 if printf '%s\n%s\n' "$NEW_VERSION" "$CURRENT_VERSION" | sort -V | head -n1 | grep -q "^$NEW_VERSION$"; then
                   echo "⚠️ Version $TAG is not newer than current $CURRENT_TAG on branch $MAJOR_VERSION"
@@ -137,81 +137,81 @@ jobs:
               fi
             fi
           fi
-          
+
           # Create or update the major version branch to point to the new tag
           git checkout -B "$MAJOR_VERSION" "$TAG"
-          
+
           # Push the branch (force update if it exists)
           git push origin "$MAJOR_VERSION" --force
-          
+
           echo "✅ Major version branch $MAJOR_VERSION updated to point to $TAG"
-          
+
       - name: Update Version Documentation
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
           MAJOR_NUM="${{ steps.version.outputs.major_num }}"
-          
+
           echo "📝 Updating version documentation..."
-          
+
           # Create or update version mapping file
           cat > VERSION_MAPPING.md << EOF
           # Version Mapping
-          
+
           This file tracks the mapping between major version branches and specific releases.
-          
+
           ## Current Major Versions
-          
+
           | Major Version | Latest Release | Branch | Status |
           |---------------|----------------|---------|---------|
           | v$MAJOR_NUM | $TAG | $MAJOR_VERSION | ✅ Current |
-          
+
           ## Usage
-          
+
           ### Use Latest Major Version (Recommended)
           \`\`\`yaml
           - uses: ${{ github.repository }}@$MAJOR_VERSION
           \`\`\`
-          
+
           ### Use Specific Version (Pinned)
           \`\`\`yaml
           - uses: ${{ github.repository }}@$TAG
           \`\`\`
-          
+
           ## Version Strategy
-          
+
           - **Major Version Branches (v1, v2, etc.)**: Always point to the latest release within that major version
           - **Semantic Version Tags (v1.2.3)**: Point to specific releases
           - **Breaking Changes**: Increment major version (v1 -> v2)
           - **New Features**: Increment minor version (v1.0 -> v1.1)
           - **Bug Fixes**: Increment patch version (v1.0.0 -> v1.0.1)
-          
+
           ## Deprecation Policy
-          
+
           - Major versions are supported for 12 months after the next major version release
           - Deprecation notices will be provided 6 months before end of support
           - Security fixes will be backported to supported major versions
-          
+
           Last updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           Generated for release: $TAG
           EOF
-          
+
           echo "✅ Version documentation updated"
-          
+
       - name: Validate Branch Update
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
-          
+
           echo "🔍 Validating branch update..."
-          
+
           # Fetch the updated branch
           git fetch origin "$MAJOR_VERSION"
-          
+
           # Verify the branch points to the correct commit
           BRANCH_COMMIT=$(git rev-parse "origin/$MAJOR_VERSION")
           TAG_COMMIT=$(git rev-parse "$TAG")
-          
+
           if [ "$BRANCH_COMMIT" = "$TAG_COMMIT" ]; then
             echo "✅ Branch $MAJOR_VERSION correctly points to $TAG ($BRANCH_COMMIT)"
           else
@@ -220,35 +220,35 @@ jobs:
             echo "   Actual:   $BRANCH_COMMIT"
             exit 1
           fi
-          
+
           # Verify the action.yml exists and is valid
           git checkout "origin/$MAJOR_VERSION"
           if [ ! -f "action.yml" ]; then
             echo "❌ action.yml not found in branch $MAJOR_VERSION"
             exit 1
           fi
-          
+
           # Verify the dist directory exists (for distribution)
           if [ ! -d "dist" ]; then
             echo "❌ dist/ directory not found in branch $MAJOR_VERSION"
             exit 1
           fi
-          
+
           # Verify main entry file exists
           if [ ! -f "dist/index.js" ]; then
             echo "❌ dist/index.js not found in branch $MAJOR_VERSION"
             exit 1
           fi
-          
+
           echo "✅ All validation checks passed"
-          
+
       - name: Create Branch Protection
         continue-on-error: true
         run: |
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
-          
+
           echo "🛡️ Setting up branch protection for $MAJOR_VERSION..."
-          
+
           # Use GitHub CLI to set branch protection rules
           gh api repos/${{ github.repository }}/branches/$MAJOR_VERSION/protection \
             --method PUT \
@@ -261,56 +261,56 @@ jobs:
             || echo "⚠️ Could not set branch protection (may require admin permissions)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Create Version Summary
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
-          
+
           cat > version_summary.md << EOF
           # Version Update Summary
-          
+
           ## 🎉 Major Version Branch Updated
-          
-          **Release:** $TAG  
-          **Major Version Branch:** $MAJOR_VERSION  
-          **Updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
-          
+
+          **Release:** $TAG
+          **Major Version Branch:** $MAJOR_VERSION
+          **Updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
           ## Usage Instructions
-          
+
           ### For Consumers (Recommended)
           Use the major version branch for automatic updates within the same major version:
           \`\`\`yaml
           - uses: ${{ github.repository }}@$MAJOR_VERSION
           \`\`\`
-          
+
           ### For Pinned Versions
           Use the specific tag for version pinning:
           \`\`\`yaml
           - uses: ${{ github.repository }}@$TAG
           \`\`\`
-          
+
           ## What Changed
           - Major version branch \`$MAJOR_VERSION\` now points to release \`$TAG\`
           - All workflows using \`@$MAJOR_VERSION\` will automatically use this release
           - Previous versions remain available via their specific tags
-          
+
           ## Validation
-          ✅ Branch points to correct commit  
-          ✅ Action files are present and valid  
-          ✅ Distribution bundle is available  
-          
+          ✅ Branch points to correct commit
+          ✅ Action files are present and valid
+          ✅ Distribution bundle is available
+
           EOF
-          
+
           echo "📋 Version update summary created"
-          
+
       - name: Notify Success
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           MAJOR_VERSION="${{ steps.version.outputs.major }}"
-          
+
           echo "🎉 Major version branch update completed successfully!"
           echo "📦 Release: $TAG"
-          echo "🏷️ Major Version: $MAJOR_VERSION" 
+          echo "🏷️ Major Version: $MAJOR_VERSION"
           echo "🔗 Repository: https://github.com/${{ github.repository }}"
           echo "📖 Usage: @$MAJOR_VERSION or @$TAG"

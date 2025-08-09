@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to verify (e.g., v1.2.3)'
+        description: "Version to verify (e.g., v1.2.3)"
         required: true
         type: string
       full_verification:
-        description: 'Run full verification suite'
+        description: "Run full verification suite"
         required: false
         default: true
         type: boolean
@@ -25,19 +25,19 @@ permissions:
   actions: read
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   verify-distribution:
     name: Verify Distribution Integrity
     runs-on: ubuntu-latest
-    
+
     outputs:
       version: ${{ steps.version.outputs.version }}
       verification-status: ${{ steps.verify.outputs.status }}
       bundle-size: ${{ steps.verify.outputs.bundle-size }}
       bundle-integrity: ${{ steps.verify.outputs.bundle-integrity }}
-      
+
     steps:
       - name: Determine Version
         id: version
@@ -47,27 +47,27 @@ jobs:
           else
             VERSION="${{ github.event.release.tag_name }}"
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Verifying distribution for version: $VERSION"
-          
+
       - name: Checkout Release Tag
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.version.outputs.version }}
           fetch-depth: 1
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          
+
       - name: Verify Distribution Files
         id: verify
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "🔍 Verifying distribution files for $VERSION..."
-          
+
           # Check required files exist
           REQUIRED_FILES=(
             "action.yml"
@@ -76,7 +76,7 @@ jobs:
             "README.md"
             "CHANGELOG.md"
           )
-          
+
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
             if [ ! -f "$file" ]; then
@@ -86,79 +86,79 @@ jobs:
               echo "✅ Found: $file"
             fi
           done
-          
+
           if [ ${#MISSING_FILES[@]} -gt 0 ]; then
             echo "status=failed" >> $GITHUB_OUTPUT
             echo "❌ Distribution verification failed: missing files"
             exit 1
           fi
-          
+
           # Verify action.yml structure
           echo "🔍 Verifying action.yml structure..."
-          
+
           # Check required fields
           if ! grep -q "name:" action.yml; then
             echo "❌ action.yml missing 'name' field"
             exit 1
           fi
-          
+
           if ! grep -q "description:" action.yml; then
-            echo "❌ action.yml missing 'description' field"  
+            echo "❌ action.yml missing 'description' field"
             exit 1
           fi
-          
+
           if ! grep -q "runs:" action.yml; then
             echo "❌ action.yml missing 'runs' field"
             exit 1
           fi
-          
+
           if ! grep -q "main.*dist/index.js" action.yml; then
             echo "❌ action.yml does not reference dist/index.js"
             exit 1
           fi
-          
+
           echo "✅ action.yml structure valid"
-          
+
           # Verify bundle
           echo "🔍 Verifying bundle integrity..."
-          
+
           if [ ! -f "dist/index.js" ]; then
             echo "❌ Bundle file dist/index.js not found"
             exit 1
           fi
-          
+
           # Check bundle size
           BUNDLE_SIZE=$(stat -c%s dist/index.js 2>/dev/null || stat -f%z dist/index.js)
           BUNDLE_SIZE_MB=$(echo "scale=2; $BUNDLE_SIZE / 1024 / 1024" | bc)
-          
+
           echo "bundle-size=${BUNDLE_SIZE_MB}MB" >> $GITHUB_OUTPUT
           echo "Bundle size: ${BUNDLE_SIZE_MB}MB"
-          
+
           # Bundle size limit check (10MB)
           if (( $(echo "$BUNDLE_SIZE_MB > 10" | bc -l) )); then
             echo "❌ Bundle size ${BUNDLE_SIZE_MB}MB exceeds 10MB limit"
             exit 1
           fi
-          
+
           echo "✅ Bundle size within limits"
-          
+
           # Verify bundle syntax
           if ! node -c dist/index.js; then
             echo "❌ Bundle syntax validation failed"
             exit 1
           fi
-          
+
           echo "✅ Bundle syntax valid"
-          
+
           # Calculate bundle integrity hash
           BUNDLE_HASH=$(sha256sum dist/index.js | cut -d' ' -f1)
           echo "bundle-integrity=$BUNDLE_HASH" >> $GITHUB_OUTPUT
           echo "Bundle SHA256: $BUNDLE_HASH"
-          
+
           # Verify source maps if present
           if [ -f "dist/index.js.map" ]; then
             echo "✅ Source map found"
-            
+
             # Basic source map validation
             if jq empty dist/index.js.map 2>/dev/null; then
               echo "✅ Source map is valid JSON"
@@ -168,26 +168,26 @@ jobs:
           else
             echo "⚠️  No source map found"
           fi
-          
+
           echo "status=passed" >> $GITHUB_OUTPUT
           echo "✅ Distribution verification passed"
-          
+
   verify-functionality:
     name: Verify Functional Integrity
     runs-on: ubuntu-latest
     needs: verify-distribution
     if: needs.verify-distribution.outputs.verification-status == 'passed'
-    
+
     strategy:
       matrix:
         operation: [deploy, diff, remove]
-        
+
     steps:
       - name: Checkout Release Tag
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.verify-distribution.outputs.version }}
-          
+
       - name: Test Action Execution
         id: test-action
         continue-on-error: true
@@ -198,11 +198,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: never
           fail-on-error: false
-          
+
       - name: Validate Action Behavior
         run: |
           echo "🧪 Validating ${{ matrix.operation }} operation behavior..."
-          
+
           # Check that action executed (even if it failed due to no SST project)
           if [ "${{ steps.test-action.outcome }}" = "failure" ]; then
             # This is expected since we don't have an SST project
@@ -210,7 +210,7 @@ jobs:
           else
             echo "✅ Action executed successfully"
           fi
-          
+
           # Verify outputs were set
           if [ -n "${{ steps.test-action.outputs.success }}" ]; then
             echo "✅ Success output set: ${{ steps.test-action.outputs.success }}"
@@ -218,14 +218,14 @@ jobs:
             echo "❌ Success output not set"
             exit 1
           fi
-          
+
           if [ -n "${{ steps.test-action.outputs.operation }}" ]; then
             echo "✅ Operation output set: ${{ steps.test-action.outputs.operation }}"
           else
-            echo "❌ Operation output not set"  
+            echo "❌ Operation output not set"
             exit 1
           fi
-          
+
           # Verify operation output matches input
           if [ "${{ steps.test-action.outputs.operation }}" = "${{ matrix.operation }}" ]; then
             echo "✅ Operation output matches input"
@@ -233,35 +233,35 @@ jobs:
             echo "❌ Operation output mismatch: expected ${{ matrix.operation }}, got ${{ steps.test-action.outputs.operation }}"
             exit 1
           fi
-          
+
           echo "✅ ${{ matrix.operation }} operation validation passed"
-          
+
   verify-cross-platform:
     name: Cross-Platform Verification
     runs-on: ${{ matrix.os }}
     needs: verify-distribution
     if: needs.verify-distribution.outputs.verification-status == 'passed' && (github.event.inputs.full_verification == 'true' || github.event.inputs.full_verification == null)
-    
+
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]  # Remove macOS to reduce cost and time
-        
+        os: [ubuntu-latest, windows-latest] # Remove macOS to reduce cost and time
+
     steps:
       - name: Checkout Release Tag
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.verify-distribution.outputs.version }}
-          
+
       - name: Test Bundle Execution on ${{ matrix.os }}
         run: |
           echo "🧪 Testing bundle execution on ${{ matrix.os }}..."
-          
+
           # Test that bundle loads without immediate errors
           timeout 10 node -e "
             try {
               require('./dist/index.js');
             } catch (error) {
-              if (error.message.includes('Input does not meet YAML') || 
+              if (error.message.includes('Input does not meet YAML') ||
                   error.message.includes('GITHUB_STEP_SUMMARY')) {
                 console.log('✅ Bundle loads correctly (expected GitHub Actions validation errors)');
                 process.exit(0);
@@ -272,59 +272,59 @@ jobs:
             }
           " || echo "✅ Bundle execution test completed"
         shell: bash
-        
+
       - name: Verify File Permissions
         if: runner.os != 'Windows'
         run: |
           echo "🔍 Checking file permissions..."
-          
+
           if [ -x "dist/index.js" ] || [ -r "dist/index.js" ]; then
             echo "✅ Bundle file has correct permissions"
           else
             echo "❌ Bundle file permissions incorrect"
             exit 1
           fi
-          
+
   verify-security:
-    name: Security Verification  
+    name: Security Verification
     runs-on: ubuntu-latest
     needs: verify-distribution
     if: needs.verify-distribution.outputs.verification-status == 'passed'
-    
+
     steps:
       - name: Checkout Release Tag
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.verify-distribution.outputs.version }}
-          
+
       - name: Security Scan of Bundle
         run: |
           echo "🔒 Running security scan on bundle..."
-          
+
           # Check for potentially dangerous patterns
           SECURITY_ISSUES=()
-          
+
           if grep -q "eval(" dist/index.js; then
             SECURITY_ISSUES+=("Found eval() usage")
           fi
-          
+
           if grep -q "Function(" dist/index.js; then
-            SECURITY_ISSUES+=("Found Function() constructor usage")  
+            SECURITY_ISSUES+=("Found Function() constructor usage")
           fi
-          
+
           if grep -q "document\.write" dist/index.js; then
             SECURITY_ISSUES+=("Found document.write usage")
           fi
-          
+
           if grep -q "innerHTML" dist/index.js; then
             SECURITY_ISSUES+=("Found innerHTML usage")
           fi
-          
+
           # Check for hardcoded secrets patterns
           if grep -qE "(password|secret|key|token).*['\"][a-zA-Z0-9]{20,}" dist/index.js; then
             SECURITY_ISSUES+=("Potential hardcoded secrets found")
           fi
-          
+
           if [ ${#SECURITY_ISSUES[@]} -gt 0 ]; then
             echo "❌ Security issues found:"
             for issue in "${SECURITY_ISSUES[@]}"; do
@@ -334,11 +334,11 @@ jobs:
           else
             echo "✅ No security issues detected"
           fi
-          
+
       - name: Verify Dependencies
         run: |
           echo "🔍 Verifying dependencies..."
-          
+
           # Check if package.json exists and is valid
           if [ -f "package.json" ]; then
             if jq empty package.json; then
@@ -347,54 +347,60 @@ jobs:
               echo "❌ package.json is invalid JSON"
               exit 1
             fi
-            
+
             # Check for known vulnerable packages (basic check)
             if jq -r '.dependencies // {} | keys[]' package.json | grep -qE "(event-stream|flatmap-stream|electron-natives)"; then
               echo "⚠️  Potentially vulnerable dependencies detected"
               # Don't fail here, just warn
             fi
-            
+
             echo "✅ Dependency verification completed"
           else
             echo "⚠️  No package.json found for dependency verification"
           fi
-          
+
   create-verification-report:
     name: Create Verification Report
     runs-on: ubuntu-latest
-    needs: [verify-distribution, verify-functionality, verify-cross-platform, verify-security]
+    needs:
+      [
+        verify-distribution,
+        verify-functionality,
+        verify-cross-platform,
+        verify-security,
+      ]
     if: always()
-    
+
     steps:
       - name: Generate Verification Report
         run: |
           VERSION="${{ needs.verify-distribution.outputs.version }}"
-          
+
           cat > verification-report.md << EOF
           # Distribution Verification Report
-          
-          **Version:** $VERSION  
-          **Verification Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
+
+          **Version:** $VERSION
+          **Verification Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           **Verification ID:** ${{ github.run_id }}
-          
+
           ## Summary
-          
+
           | Component | Status | Details |
           |-----------|--------|---------|
           | Distribution Files | ${{ needs.verify-distribution.outputs.verification-status == 'passed' && '✅ Passed' || '❌ Failed' }} | Bundle size: ${{ needs.verify-distribution.outputs.bundle-size }} |
           | Functional Tests | ${{ needs.verify-functionality.result == 'success' && '✅ Passed' || (needs.verify-functionality.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} | All operations tested |
           | Cross-Platform | ${{ needs.verify-cross-platform.result == 'success' && '✅ Passed' || (needs.verify-cross-platform.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} | Ubuntu, Windows |
           | Security Scan | ${{ needs.verify-security.result == 'success' && '✅ Passed' || '❌ Failed' }} | No security issues detected |
-          
+
           ## Distribution Details
-          
+
           - **Bundle Size:** ${{ needs.verify-distribution.outputs.bundle-size }}
           - **Bundle Integrity:** \`${{ needs.verify-distribution.outputs.bundle-integrity }}\`
           - **Node.js Compatibility:** ${{ env.NODE_VERSION }}
           - **Action Format:** GitHub Actions compatible
-          
+
           ## Verification Results
-          
+
           ### ✅ Verified Components
           - action.yml structure and references
           - dist/index.js bundle integrity and syntax
@@ -403,16 +409,16 @@ jobs:
           - Bundle size within limits (<10MB)
           - Cross-platform compatibility
           - Basic security scan
-          
+
           ### 🧪 Functional Tests
           - Deploy operation: ${{ needs.verify-functionality.result == 'success' && 'Passed' || 'Failed/Skipped' }}
           - Diff operation: ${{ needs.verify-functionality.result == 'success' && 'Passed' || 'Failed/Skipped' }}
           - Remove operation: ${{ needs.verify-functionality.result == 'success' && 'Passed' || 'Failed/Skipped' }}
-          
+
           ## Usage Validation
-          
+
           This distribution has been verified and is ready for consumption:
-          
+
           \`\`\`yaml
           - uses: ${{ github.repository }}@$VERSION
             with:
@@ -420,47 +426,47 @@ jobs:
               stage: production
               token: \${{ secrets.GITHUB_TOKEN }}
           \`\`\`
-          
+
           ## Quality Gates
-          
+
           - ✅ Bundle size under 10MB limit
           - ✅ Syntax validation passed
           - ✅ Required files present
           - ✅ Action metadata valid
           - ✅ Security scan clean
           - ✅ Cross-platform compatibility
-          
+
           ---
-          
-          **Verification Workflow:** [\#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})  
+
+          **Verification Workflow:** [\#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
           **Generated by:** Distribution Verification System
           EOF
-          
+
           echo "📋 Verification report generated"
-          
+
       - name: Upload Verification Report
         uses: actions/upload-artifact@v4
         with:
           name: distribution-verification-report-${{ needs.verify-distribution.outputs.version }}
           path: verification-report.md
           retention-days: 90
-          
+
       - name: Summary
         run: |
           VERSION="${{ needs.verify-distribution.outputs.version }}"
-          
+
           echo "## 📋 Distribution Verification Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
           echo "**Bundle Size:** ${{ needs.verify-distribution.outputs.bundle-size }}" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** ${{ needs.verify-distribution.outputs.verification-status == 'passed' && '✅ Verified' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ needs.verify-distribution.outputs.verification-status }}" = "passed" ]; then
             echo "The distribution has passed all verification checks and is ready for use." >> $GITHUB_STEP_SUMMARY
           else
             echo "The distribution failed verification and should not be used." >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Verification ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
