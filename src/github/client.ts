@@ -4,7 +4,7 @@
  */
 
 import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { tmpdir } from 'os';
 import { join } from 'node:path';
 import { DefaultArtifactClient } from '@actions/artifact';
 import * as core from '@actions/core';
