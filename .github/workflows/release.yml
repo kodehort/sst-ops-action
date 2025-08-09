@@ -85,7 +85,7 @@ jobs:
           echo "=============================="
 
           # Check if there are commits since last release
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          LAST_TAG=$(git tag --sort=-version:refname | head -1)
           echo "Last tag found: '$LAST_TAG'"
           
           if [ -z "$LAST_TAG" ]; then
