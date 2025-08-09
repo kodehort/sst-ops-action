@@ -15,7 +15,7 @@ permissions:
 
 env:
   NODE_VERSION: '20'
-  BUN_VERSION: 'latest'
+  BUN_VERSION: '1.2.19'
 
 jobs:
   quality-gates:

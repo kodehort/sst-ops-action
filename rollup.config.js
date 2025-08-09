@@ -47,12 +47,32 @@ export default {
     file: 'dist/index.js',
     format: 'es',
     sourcemap: true,
+    // Deterministic build settings
+    generatedCode: {
+      constBindings: true,
+      objectShorthand: true,
+    },
+    // Ensure consistent output across platforms
+    interop: 'default',
+    systemNullSetters: false,
+    // Additional deterministic output settings
+    indent: '  ', // Fixed indentation
+    validate: true,
+    strict: false, // Avoid 'use strict' differences
+  },
+  // Fixed tree-shaking behavior
+  treeshake: {
+    preset: 'recommended',
+    moduleSideEffects: false,
   },
   plugins: [
     json(),
     nodeResolve({
       preferBuiltins: true,
       exportConditions: ['node'],
+      // Deterministic module resolution
+      browser: false,
+      resolveOnly: [/^(?!node:)/], // Only resolve non-node built-ins
     }),
     commonjs(),
     typescript({
@@ -63,6 +83,8 @@ export default {
       mangle: {
         keep_fnames: true,
         reserved: [],
+        // Deterministic mangling
+        toplevel: false,
       },
       compress: {
         keep_fnames: true,
@@ -72,12 +94,22 @@ export default {
         unsafe_math: false,
         unsafe_proto: false,
         sequences: false,
+        // Additional deterministic compression settings
+        drop_console: false,
+        drop_debugger: false,
+        toplevel: false,
       },
       format: {
         comments: false,
         beautify: false,
+        // Ensure consistent formatting
+        semicolons: true,
+        wrap_iife: true,
       },
       sourceMap: true,
+      // Deterministic output
+      keep_fnames: true,
+      keep_classnames: true,
     }),
     generateBuildManifest(),
   ],
