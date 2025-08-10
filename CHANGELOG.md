@@ -1,3 +1,48 @@
+# Release v1.5.4
+
+**Release Date:** 2025-08-10
+**Previous Version:** v1.5.3
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix: force add dist/ files to overcome gitignore during releases (`5ac65a0`)
+- fix: commit dist files to repository instead of upload as release assets (`f21834d`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 5.21MB (5458074 bytes)
+- **Integrity Hash:** `6f8d2004d0d935d4...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v1.5.4
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_CXQRaneRizfKOZ2FtnHeh8JKvALVHb3AQsOM
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v1.5.3...v1.5.4)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v1.5.4/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v1.5.3...v1.5.4
+
+---
+
 # Release v1.5.3
 
 **Release Date:** 2025-08-10
