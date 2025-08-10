@@ -85,8 +85,17 @@ bun run prepare
 ### Build Process
 
 - Custom build script at `scripts/build.ts` bundles for distribution
-- Output to `dist/` directory with source maps and declarations
+- Output to `dist/` directory with source maps and declarations (not committed to git)
 - Uses Bun bundler for efficient packaging
+- Distribution files are built during CI/CD and attached to releases as assets
+
+### Distribution Strategy
+
+- **Development**: `dist/` folder is gitignored and built locally for testing
+- **CI Pipeline**: Builds and verifies distribution files but doesn't commit them
+- **Releases**: Distribution files are built fresh and attached as release assets
+- **Consumers**: GitHub Actions automatically downloads dist files from releases
+- **Benefits**: Cleaner git history, smaller repository, no merge conflicts on generated files
 
 ### Code Quality
 
