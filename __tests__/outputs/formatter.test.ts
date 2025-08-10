@@ -9,7 +9,7 @@ import type {
 } from '../../src/types';
 
 describe('Output Formatter - GitHub Actions Output Processing', () => {
-  describe('formatForGitHubActions', () => {
+  describe('formatOperationForGitHubActions', () => {
     describe('deploy operations', () => {
       it('should format successful deploy result correctly', () => {
         const deployResult: DeployResult = {
@@ -34,7 +34,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
             'https://console.sst.dev/test-app/staging/deployments/abc123',
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(deployResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(deployResult);
 
         expect(outputs).toEqual({
           success: 'true',
@@ -76,7 +77,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           error: 'Deployment failed due to timeout',
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(deployResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(deployResult);
 
         expect(outputs.success).toBe('false');
         expect(outputs.operation).toBe('deploy');
@@ -119,7 +121,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           ],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(diffResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(diffResult);
 
         expect(outputs).toEqual({
           success: 'true',
@@ -159,7 +162,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           changes: [],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(diffResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(diffResult);
 
         expect(outputs.success).toBe('true');
         expect(outputs.operation).toBe('diff');
@@ -187,7 +191,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           ],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(removeResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(removeResult);
 
         expect(outputs).toEqual({
           success: 'true',
@@ -229,7 +234,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           ],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(removeResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(removeResult);
 
         expect(outputs.success).toBe('true');
         expect(outputs.completion_status).toBe('partial');
@@ -259,17 +265,18 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           isPullRequest: true,
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(stageResult);
 
         expect(outputs).toEqual({
           success: 'true',
           operation: 'stage',
           stage: 'feature-branch',
           completion_status: 'complete',
-          app: 'stage-calculator',
+          app: '',
           permalink: '',
           truncated: 'false',
-          resource_changes: '0',
+          resource_changes: '',
           error: '',
           urls: '',
           resources: '',
@@ -300,7 +307,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           isPullRequest: false,
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(stageResult);
 
         expect(outputs.computed_stage).toBe('main');
         expect(outputs.ref).toBe('refs/heads/main');
@@ -325,7 +333,8 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           isPullRequest: false,
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+        const outputs =
+          OutputFormatter.formatOperationForGitHubActions(stageResult);
 
         expect(outputs.success).toBe('false');
         expect(outputs.error).toBe('Failed to compute stage from ref');
@@ -351,7 +360,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           resources: [],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(result);
+        const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
         expect(outputs.app).toBe('');
         expect(outputs.permalink).toBe('');
@@ -380,7 +389,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         circularObj.self = circularObj;
         result.urls = [circularObj];
 
-        const outputs = OutputFormatter.formatForGitHubActions(result);
+        const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
         // Should handle the error gracefully by returning empty string
         expect(outputs.urls).toBe('');
@@ -401,7 +410,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           changes: [],
         };
 
-        const outputs = OutputFormatter.formatForGitHubActions(result);
+        const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
         // All outputs should be strings
         for (const [_key, value] of Object.entries(outputs)) {

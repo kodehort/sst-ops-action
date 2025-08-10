@@ -155,6 +155,115 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+## 🎯 Operation-Specific Examples
+
+Each operation type has different input requirements and behavior patterns. Choose the right operation for your use case:
+
+### 🚀 Deploy Operation
+**Purpose**: Deploy infrastructure to AWS  
+**Stage**: Optional - auto-computed from Git context if not provided  
+**Token**: Required for infrastructure access and PR comments
+
+```yaml
+# Auto-compute stage from branch/PR name
+- name: Deploy (Auto Stage)
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: deploy
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Explicit stage name
+- name: Deploy to Production
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: deploy
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+    comment-mode: always
+    runner: npm
+```
+
+### 🔍 Diff Operation
+**Purpose**: Preview infrastructure changes without deploying  
+**Stage**: Required - need target stage to compare against  
+**Token**: Required for PR comments
+
+```yaml
+# Compare against existing stage
+- name: Preview Infrastructure Changes
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: diff
+    stage: production  # Required - what to compare against
+    token: ${{ secrets.GITHUB_TOKEN }}
+    comment-mode: always
+
+# Compare branch changes against main
+- name: PR Infrastructure Diff
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: diff
+    stage: ${{ github.base_ref || 'main' }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 🗑️ Remove Operation
+**Purpose**: Delete deployed resources for cleanup  
+**Stage**: Required - explicit stage name for safety  
+**Token**: Required for authentication and confirmation
+
+```yaml
+# Clean up PR resources
+- name: Remove PR Resources
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: remove
+    stage: pr-${{ github.event.number }}  # Required for safety
+    token: ${{ secrets.GITHUB_TOKEN }}
+    comment-mode: on-success
+
+# Production removal (requires extra confirmation)
+- name: Remove Production (Dangerous!)
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+  env:
+    CONFIRM_PRODUCTION_REMOVE: true
+```
+
+### 🎯 Stage Operation
+**Purpose**: Compute stage names from Git context (utility only)  
+**Stage**: Not applicable - computes stage as output  
+**Token**: Not required - no infrastructure access
+
+```yaml
+# Basic stage computation
+- name: Compute Stage Name
+  id: stage
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: stage
+
+# Custom stage name parameters
+- name: Compute Stage with Custom Rules
+  id: stage
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: stage
+    truncation-length: 20
+    prefix: feat-
+
+# Use computed stage in later step
+- name: Deploy with Computed Stage
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: deploy
+    stage: ${{ steps.stage.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## 📖 Usage
 
 ### Inputs

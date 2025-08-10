@@ -18,7 +18,7 @@ import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
   ValidationError,
-  validateWithContext,
+  validateOperationWithContext,
 } from './utils/validation';
 
 /**
@@ -64,6 +64,9 @@ function computeStageFromContext(
  * Parse GitHub Actions inputs into a typed structure
  */
 function parseGitHubActionsInputs() {
+  // Get the operation first to determine which inputs are needed
+  const operation = core.getInput('operation') || 'deploy';
+
   // Get raw inputs from GitHub Actions
   let stage = core.getInput('stage');
   const truncationLength = Number.parseInt(
@@ -82,23 +85,28 @@ function parseGitHubActionsInputs() {
     core.info(`📋 Using explicitly provided stage: "${stage}"`);
   }
 
-  const rawInputs = {
-    operation: core.getInput('operation') || 'deploy',
+  // Build base inputs
+  const rawInputs: Record<string, unknown> = {
+    operation,
     stage,
     token: core.getInput('token'),
     commentMode: core.getInput('comment-mode') || 'on-success',
     failOnError: core.getBooleanInput('fail-on-error') ?? true,
     maxOutputSize: core.getInput('max-output-size') || '50000',
     runner: (core.getInput('runner') || 'bun') as SSTRunner,
-    truncationLength: truncationLength.toString(),
-    prefix,
   };
+
+  // Add operation-specific inputs
+  if (operation === 'stage') {
+    rawInputs.truncationLength = truncationLength;
+    rawInputs.prefix = prefix;
+  }
 
   // Create validation context
   const validationContext = createValidationContext();
 
   // Parse and validate inputs
-  return validateWithContext(rawInputs, validationContext);
+  return validateOperationWithContext(rawInputs, validationContext);
 }
 
 /**
@@ -130,7 +138,7 @@ function handleInputValidationError(error: unknown): void {
  * Execute the SST operation and handle the result
  */
 async function executeAndHandleOperation(
-  operation: ReturnType<typeof validateWithContext>['operation'],
+  operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): Promise<void> {
   try {
@@ -152,7 +160,7 @@ async function executeAndHandleOperation(
  */
 function handleOperationResult(
   result: OperationResult,
-  operation: ReturnType<typeof validateWithContext>['operation'],
+  operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): void {
   if (result.success) {
@@ -175,7 +183,7 @@ function handleOperationResult(
  */
 function handleOperationError(
   error: unknown,
-  operation: ReturnType<typeof validateWithContext>['operation'],
+  operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -201,7 +209,7 @@ function handleOperationError(
 function handleOutputFormattingError(
   error: Error,
   message: string,
-  operation: ReturnType<typeof validateWithContext>['operation'],
+  operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): void {
   core.error(`Failed to set outputs: ${message}`);
@@ -223,7 +231,7 @@ function handleOutputFormattingError(
 function handleGenericOperationError(
   error: unknown,
   message: string,
-  operation: ReturnType<typeof validateWithContext>['operation'],
+  operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): void {
   const actionError = createSubprocessError(
@@ -292,27 +300,75 @@ function handleUnexpectedError(error: unknown): never {
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(
-  inputs: ReturnType<typeof validateWithContext>
+  inputs: ReturnType<typeof validateOperationWithContext>
 ): {
-  operation: ReturnType<typeof validateWithContext>['operation'];
+  operation: ReturnType<typeof validateOperationWithContext>['operation'];
   options: OperationOptions;
 } {
-  return {
-    operation: inputs.operation,
-    options: {
-      stage: inputs.stage,
-      token: inputs.token,
-      commentMode: inputs.commentMode,
-      failOnError: inputs.failOnError,
-      maxOutputSize: inputs.maxOutputSize,
-      runner: inputs.runner || 'bun',
-      truncationLength: inputs.truncationLength,
-      prefix: inputs.prefix,
-      environment: Object.fromEntries(
-        Object.entries(process.env).filter(([, value]) => value !== undefined)
-      ) as Record<string, string>,
-    },
-  };
+  // Handle operation-specific properties using discriminated union
+  switch (inputs.operation) {
+    case 'deploy':
+      return {
+        operation: inputs.operation,
+        options: {
+          stage: inputs.stage || '',
+          token: inputs.token,
+          commentMode: inputs.commentMode || 'on-success',
+          failOnError: inputs.failOnError !== false,
+          maxOutputSize: inputs.maxOutputSize || 50_000,
+          runner: inputs.runner || 'bun',
+          environment: Object.fromEntries(
+            Object.entries(process.env).filter(
+              ([, value]) => value !== undefined
+            )
+          ) as Record<string, string>,
+        },
+      };
+
+    case 'diff':
+    case 'remove':
+      return {
+        operation: inputs.operation,
+        options: {
+          stage: inputs.stage,
+          token: inputs.token,
+          commentMode: inputs.commentMode || 'on-success',
+          failOnError: inputs.failOnError !== false,
+          maxOutputSize: inputs.maxOutputSize || 50_000,
+          runner: inputs.runner || 'bun',
+          environment: Object.fromEntries(
+            Object.entries(process.env).filter(
+              ([, value]) => value !== undefined
+            )
+          ) as Record<string, string>,
+        },
+      };
+
+    case 'stage':
+      return {
+        operation: inputs.operation,
+        options: {
+          stage: '',
+          token: '',
+          commentMode: 'never',
+          failOnError: true,
+          maxOutputSize: 50_000,
+          runner: 'bun',
+          truncationLength: inputs.truncationLength || 26,
+          prefix: inputs.prefix || 'pr-',
+          environment: Object.fromEntries(
+            Object.entries(process.env).filter(
+              ([, value]) => value !== undefined
+            )
+          ) as Record<string, string>,
+        },
+      };
+
+    default: {
+      const _exhaustive: never = inputs;
+      throw new Error('Unsupported operation type');
+    }
+  }
 }
 
 /**
@@ -344,7 +400,8 @@ function logOperationSummary(result: OperationResult): void {
  */
 function setGitHubActionsOutputs(result: OperationResult): void {
   try {
-    const formattedOutputs = OutputFormatter.formatForGitHubActions(result);
+    const formattedOutputs =
+      OutputFormatter.formatOperationForGitHubActions(result);
 
     // Validate outputs before setting them
     OutputFormatter.validateOutputs(formattedOutputs);
@@ -371,11 +428,19 @@ export async function run(): Promise<void> {
     core.info('🚀 Starting SST Operations Action');
 
     // 1. Parse and validate GitHub Actions inputs
-    let inputs: ReturnType<typeof validateWithContext>;
+    let inputs: ReturnType<typeof validateOperationWithContext>;
     try {
       inputs = parseGitHubActionsInputs();
+      let stage: string;
+      if (inputs.operation === 'stage') {
+        stage = 'computed';
+      } else if (inputs.operation === 'deploy') {
+        stage = inputs.stage || 'auto';
+      } else {
+        stage = inputs.stage;
+      }
       core.info(
-        `📝 Parsed inputs: ${inputs.operation} operation on stage "${inputs.stage}"`
+        `📝 Parsed inputs: ${inputs.operation} operation on stage "${stage}"`
       );
     } catch (error) {
       handleInputValidationError(error);

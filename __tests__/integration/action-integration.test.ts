@@ -23,7 +23,7 @@ vi.mock('../../src/operations/router', () => ({
 }));
 vi.mock('../../src/outputs/formatter', () => ({
   OutputFormatter: {
-    formatForGitHubActions: vi.fn(),
+    formatOperationForGitHubActions: vi.fn(),
     validateOutputs: vi.fn(),
   },
 }));
@@ -40,7 +40,7 @@ vi.mock('../../src/utils/validation', async (importOriginal) => {
     await importOriginal<typeof import('../../src/utils/validation')>();
   return {
     ...original,
-    validateWithContext: vi.fn(),
+    validateOperationWithContext: vi.fn(),
     createValidationContext: vi.fn(),
   };
 });
@@ -93,7 +93,7 @@ async function executeAction(env: Record<string, string>) {
   vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
@@ -109,7 +109,7 @@ async function executeAction(env: Record<string, string>) {
 
   // Mock output formatter - ensure it returns the formatted outputs that setOutput will use
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
-  vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
+  vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
@@ -187,7 +187,7 @@ async function executeActionWithFailure(
   vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
@@ -208,7 +208,7 @@ async function executeActionWithFailure(
 
   // Mock output formatter for failure
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
-  vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
+  vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
@@ -281,7 +281,7 @@ async function executeActionWithFailureAndContinue(
   vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
@@ -302,7 +302,7 @@ async function executeActionWithFailureAndContinue(
 
   // Mock output formatter for failure
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
-  vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
+  vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
@@ -371,9 +371,11 @@ async function _executeActionWithValidationError(
   );
 
   // Mock validation to throw an error
-  vi.spyOn(validationModule, 'validateWithContext').mockImplementation(() => {
-    throw new Error(errorMessage);
-  });
+  vi.spyOn(validationModule, 'validateOperationWithContext').mockImplementation(
+    () => {
+      throw new Error(errorMessage);
+    }
+  );
 
   // Mock error handler for validation errors
   const { handleError } = await import('../../src/errors/error-handler');
@@ -437,7 +439,7 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateWithContext').mockReturnValue({
+  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
     operation: operation as any,
     stage,
     token: env.INPUT_TOKEN || 'fake-token',
@@ -455,7 +457,7 @@ async function executeActionWithTruncation(env: Record<string, string>) {
 
   // Mock output formatter
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
-  vi.mocked(OutputFormatter.formatForGitHubActions).mockReturnValue(
+  vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {

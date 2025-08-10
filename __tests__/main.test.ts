@@ -67,7 +67,10 @@ describe('Main Entry Point - Action Execution', () => {
     } as any);
 
     // Spy on and mock the output formatter
-    vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockReturnValue({
+    vi.spyOn(
+      OutputFormatter,
+      'formatOperationForGitHubActions'
+    ).mockReturnValue({
       success: 'true',
       operation: 'deploy',
       stage: 'staging',
@@ -165,9 +168,9 @@ describe('Main Entry Point - Action Execution', () => {
           }),
         })
       );
-      expect(OutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
-        mockResult
-      );
+      expect(
+        OutputFormatter.formatOperationForGitHubActions
+      ).toHaveBeenCalledWith(mockResult);
       expect(core.setOutput).toHaveBeenCalledTimes(15); // All outputs
       expect(core.info).toHaveBeenCalledWith(
         '✅ SST deploy operation completed successfully'
@@ -432,9 +435,9 @@ describe('Main Entry Point - Action Execution', () => {
 
       await run();
 
-      expect(OutputFormatter.formatForGitHubActions).toHaveBeenCalledWith(
-        mockResult
-      );
+      expect(
+        OutputFormatter.formatOperationForGitHubActions
+      ).toHaveBeenCalledWith(mockResult);
       expect(OutputFormatter.validateOutputs).toHaveBeenCalled();
       expect(core.setOutput).toHaveBeenCalledWith('success', 'true');
       expect(core.setOutput).toHaveBeenCalledWith('operation', 'deploy');
@@ -485,11 +488,12 @@ describe('Main Entry Point - Action Execution', () => {
       vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
         mockResult
       );
-      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockImplementation(
-        () => {
-          throw new Error('Output formatting failed');
-        }
-      );
+      vi.spyOn(
+        OutputFormatter,
+        'formatOperationForGitHubActions'
+      ).mockImplementation(() => {
+        throw new Error('Output formatting failed');
+      });
 
       await run();
 
@@ -570,7 +574,10 @@ describe('Main Entry Point - Action Execution', () => {
       };
 
       // Override the formatter mock to return production-specific outputs
-      vi.spyOn(OutputFormatter, 'formatForGitHubActions').mockReturnValue({
+      vi.spyOn(
+        OutputFormatter,
+        'formatOperationForGitHubActions'
+      ).mockReturnValue({
         success: 'true',
         operation: 'deploy',
         stage: 'production',
