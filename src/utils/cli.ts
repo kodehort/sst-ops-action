@@ -298,13 +298,21 @@ export class SSTCLIExecutor {
       });
 
       if (options.timeout) {
+        let timeoutId: NodeJS.Timeout | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
+          timeoutId = setTimeout(() => {
             reject(new Error(`Command timeout after ${options.timeout}ms`));
           }, options.timeout);
         });
 
-        exitCode = await Promise.race([execPromise, timeoutPromise]);
+        try {
+          exitCode = await Promise.race([execPromise, timeoutPromise]);
+        } finally {
+          // Always clear the timeout to prevent event loop hanging
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+        }
       } else {
         exitCode = await execPromise;
       }
