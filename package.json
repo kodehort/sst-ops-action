@@ -1,6 +1,6 @@
 {
   "name": "sst-operations-action",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "A unified GitHub Action for SST operations: deploy, diff, and remove",
   "main": "dist/index.js",
   "scripts": {
