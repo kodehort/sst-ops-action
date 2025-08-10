@@ -87,7 +87,7 @@ jobs:
           # Check if there are commits since last release
           LAST_TAG=$(git tag --sort=-version:refname | head -1)
           echo "Last tag found: '$LAST_TAG'"
-          
+
           if [ -z "$LAST_TAG" ]; then
             COMMITS_SINCE_LAST=$(git rev-list --count HEAD)
             echo "No last tag found, counting all commits from HEAD"
@@ -171,7 +171,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          bun-version: '1.2.19'
+          bun-version: "1.2.19"
           cache-key-suffix: -release
 
       - name: Run Quality Gates
@@ -241,7 +241,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          bun-version: '1.2.19'
+          bun-version: "1.2.19"
           cache-key-suffix: -release
 
       - name: Download Build Artifacts
@@ -253,7 +253,7 @@ jobs:
       - name: Verify Build Artifacts
         run: |
           echo "🔍 Verifying downloaded build artifacts..."
-          
+
           # Check if dist files exist in artifacts
           if [ ! -f "dist/index.js" ]; then
             echo "⚠️ dist/index.js not found in artifacts, rebuilding..."
@@ -261,19 +261,19 @@ jobs:
           else
             echo "✅ dist/index.js found in artifacts"
           fi
-          
+
           if [ ! -f "dist/build-manifest.json" ]; then
             echo "⚠️ build-manifest.json missing, this may affect changelog generation"
           else
             echo "✅ build-manifest.json found"
           fi
-          
+
           # Final verification that required files exist
           if [ ! -f "dist/index.js" ]; then
             echo "❌ Critical: dist/index.js still missing after rebuild attempt"
             exit 1
           fi
-          
+
           echo "✅ Build artifacts verified"
 
       - name: Update Version
@@ -461,7 +461,7 @@ jobs:
         id: create-release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           tag_name: v${{ needs.determine-release.outputs.new-version }}
           name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
@@ -505,7 +505,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          bun-version: '1.2.19'
+          bun-version: "1.2.19"
 
       - name: Build Distribution for Validation
         run: |
