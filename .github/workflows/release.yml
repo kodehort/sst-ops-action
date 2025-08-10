@@ -458,11 +458,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify Token Permissions
+        run: |
+          echo "🔍 Verifying GitHub token permissions..."
+          
+          # Test token access
+          gh auth status || echo "⚠️ Auth status check failed"
+          
+          # Check repository permissions
+          gh api user/repos --jq '.[] | select(.full_name == "${{ github.repository }}") | {name, permissions}' || echo "⚠️ Could not check repo permissions"
+          
+          # Check if we can read releases
+          gh release list --limit 1 || echo "⚠️ Cannot read existing releases"
+          
+          echo "✅ Token verification completed"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         id: create-release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ github.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ needs.determine-release.outputs.new-version }}
           name: "SST Ops Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
@@ -474,6 +491,55 @@ jobs:
             ./dist/build-manifest.json
             ./action.yml
             ./package.json
+        continue-on-error: true
+
+      - name: Handle Release Creation Failure
+        if: steps.create-release.outcome == 'failure'
+        run: |
+          echo "❌ Release creation failed, attempting fallback approach..."
+          
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          # Try creating the release using gh CLI instead
+          echo "🔄 Attempting release creation via gh CLI..."
+          
+          gh release create "v${NEW_VERSION}" \
+            --title "SST Ops Action v${NEW_VERSION}" \
+            --notes-file ./RELEASE_NOTES.md \
+            --draft=false \
+            --prerelease=${{ github.event.inputs.prerelease == 'true' }} \
+            ./dist/index.js \
+            ./dist/index.js.map \
+            ./dist/build-manifest.json \
+            ./action.yml \
+            ./package.json || {
+              echo "❌ Fallback release creation also failed"
+              echo "🔍 Checking if release was partially created..."
+              gh release view "v${NEW_VERSION}" || echo "No release found"
+              exit 1
+            }
+          
+          echo "✅ Release created successfully via fallback method"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Release Creation
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
+          
+          echo "🔍 Verifying release was created successfully..."
+          
+          # Check if release exists
+          RELEASE_URL=$(gh release view "v${NEW_VERSION}" --json url --jq '.url' 2>/dev/null || echo "")
+          
+          if [ -z "$RELEASE_URL" ]; then
+            echo "❌ Release verification failed - no release found"
+            exit 1
+          fi
+          
+          echo "✅ Release verified: $RELEASE_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Major Version Tag
         run: |
