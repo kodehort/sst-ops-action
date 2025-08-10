@@ -402,15 +402,14 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
 
-          # Add all changed files
-          git add package.json CHANGELOG.md dist/
+          # Add all changed files (excluding dist/ which is now built on-demand)
+          git add package.json CHANGELOG.md
 
           # Commit changes
           git commit -m "chore(release): v${NEW_VERSION} [skip ci]
 
           - Update package.json version to ${NEW_VERSION}
-          - Update CHANGELOG.md with release notes
-          - Update production bundle"
+          - Update CHANGELOG.md with release notes"
 
           # Create annotated tag
           git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
@@ -439,6 +438,9 @@ jobs:
           files: |
             ./dist/index.js
             ./dist/index.js.map
+            ./dist/build-manifest.json
+            ./action.yml
+            ./package.json
 
       - name: Update Major Version Tag
         run: |

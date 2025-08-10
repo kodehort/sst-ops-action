@@ -45,3 +45,6 @@ dependency-graph.svg
 .sst
 .open-next
 .vercel
+
+# Distribution files (generated during CI/CD)
+dist/
