@@ -1,3 +1,38 @@
+# Release v1.4.0
+
+**Release Date:** 2025-08-10
+**Previous Version:** v1.3.1
+
+## 🚀 What's New
+
+
+### ✨ Features
+
+- feat: migrate from committed dist files to release assets (`eefc030`)
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v1.4.0
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_2L7pQ8F4d2s7H3G8r3pCAjWsB17qhA1We2KW
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v1.3.1...v1.4.0)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v1.4.0/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v1.3.1...v1.4.0
+
+---
+
 # Release v1.3.1
 
 **Release Date:** 2025-08-09
