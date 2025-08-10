@@ -23,7 +23,7 @@ export const ActionInputsSchema = z.object({
     .string()
     .default('deploy')
     .refine((val) => isValidOperation(val), {
-      message: 'Invalid operation. Must be one of: deploy, diff, remove',
+      message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
     })
     .transform((val) => val as SSTOperation),
 
@@ -74,6 +74,32 @@ export const ActionInputsSchema = z.object({
       }
     )
     .transform((val) => val as SSTRunner),
+
+  truncationLength: z
+    .number()
+    .or(
+      z.string().transform((val) => {
+        const parsed = Number.parseInt(val, 10);
+        if (Number.isNaN(parsed)) {
+          throw new Error('truncation-length must be a valid number');
+        }
+        return parsed;
+      })
+    )
+    .refine((val) => val > 0 && val <= 100, {
+      message: 'Truncation length must be between 1 and 100 characters',
+    })
+    .default(26),
+
+  prefix: z
+    .string()
+    .refine((val) => val.length <= 10, {
+      message: 'Prefix must be 10 characters or less',
+    })
+    .refine((val) => /^[a-z0-9-]*$/.test(val), {
+      message: 'Prefix must contain only lowercase letters, numbers, and hyphens',
+    })
+    .default('pr-'),
 });
 
 /**

@@ -9,6 +9,7 @@ import type {
   DiffResult,
   OperationResult,
   RemoveResult,
+  StageResult,
 } from '../types';
 
 // Export the main function as default
@@ -39,6 +40,10 @@ export interface StandardizedOutputs {
   planned_changes: string; // Number for diff operations
   resources_removed: string; // Number for remove operations
   removed_resources: string; // JSON array for remove operations
+  computed_stage: string; // Computed stage name for stage operations
+  ref: string; // Git ref for stage operations
+  event_name: string; // GitHub event name for stage operations
+  is_pull_request: string; // Whether event is a pull request for stage operations
 }
 
 /**
@@ -72,6 +77,10 @@ export function formatForGitHubActions(
   outputs.planned_changes = '';
   outputs.resources_removed = '';
   outputs.removed_resources = '';
+  outputs.computed_stage = '';
+  outputs.ref = '';
+  outputs.event_name = '';
+  outputs.is_pull_request = '';
 
   // Operation-specific outputs
   switch (result.operation) {
@@ -81,6 +90,8 @@ export function formatForGitHubActions(
       return formatDiffOutputs(result as DiffResult, outputs);
     case 'remove':
       return formatRemoveOutputs(result as RemoveResult, outputs);
+    case 'stage':
+      return formatStageOutputs(result as StageResult, outputs);
     default:
       return outputs;
   }
@@ -124,6 +135,21 @@ function formatRemoveOutputs(
   outputs.resource_changes = String(result.resourcesRemoved || 0);
   outputs.resources_removed = String(result.resourcesRemoved || 0);
   outputs.removed_resources = safeStringify(result.removedResources || []);
+
+  return outputs;
+}
+
+/**
+ * Format stage-specific outputs
+ */
+function formatStageOutputs(
+  result: StageResult,
+  outputs: Record<string, string>
+): Record<string, string> {
+  outputs.computed_stage = result.computedStage || '';
+  outputs.ref = result.ref || '';
+  outputs.event_name = result.eventName || '';
+  outputs.is_pull_request = String(result.isPullRequest);
 
   return outputs;
 }
@@ -182,10 +208,18 @@ function validateFieldValues(outputs: Record<string, string>): void {
  * Validate boolean field values
  */
 function validateBooleanFields(outputs: Record<string, string>): void {
-  const booleanFields = [{ name: 'success' }, { name: 'truncated' }];
+  const booleanFields = [
+    { name: 'success' },
+    { name: 'truncated' },
+    { name: 'is_pull_request' },
+  ];
 
   for (const { name } of booleanFields) {
-    if (!(outputs[name] && ['true', 'false'].includes(outputs[name]))) {
+    if (
+      outputs[name] &&
+      outputs[name] !== '' &&
+      !['true', 'false'].includes(outputs[name])
+    ) {
       throw new Error(
         `Invalid '${name}' value: '${outputs[name] ?? 'undefined'}'. Must be 'true' or 'false'.`
       );
@@ -198,7 +232,7 @@ function validateBooleanFields(outputs: Record<string, string>): void {
  */
 function validateEnumFields(outputs: Record<string, string>): void {
   const enumFields = [
-    { name: 'operation', validValues: ['deploy', 'diff', 'remove'] },
+    { name: 'operation', validValues: ['deploy', 'diff', 'remove', 'stage'] },
     {
       name: 'completion_status',
       validValues: ['complete', 'partial', 'failed'],
@@ -276,6 +310,10 @@ export function getExpectedFields(): string[] {
     'planned_changes',
     'resources_removed',
     'removed_resources',
+    'computed_stage',
+    'ref',
+    'event_name',
+    'is_pull_request',
   ];
 }
 
@@ -320,6 +358,21 @@ export function validateOperationConsistency(
       }
       if (!outputs.removed_resources) {
         outputs.removed_resources = '[]';
+      }
+      break;
+    case 'stage':
+      // Stage operations should have computed_stage, ref, event_name, and is_pull_request
+      if (!outputs.computed_stage) {
+        outputs.computed_stage = '';
+      }
+      if (!outputs.ref) {
+        outputs.ref = '';
+      }
+      if (!outputs.event_name) {
+        outputs.event_name = '';
+      }
+      if (!outputs.is_pull_request) {
+        outputs.is_pull_request = 'false';
       }
       break;
     default:

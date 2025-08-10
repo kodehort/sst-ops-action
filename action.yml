@@ -8,7 +8,7 @@ branding:
 
 inputs:
   operation:
-    description: "SST operation to perform (deploy, diff, remove)"
+    description: "SST operation to perform (deploy, diff, remove, stage)"
     required: false
     default: "deploy"
   token:
@@ -33,6 +33,14 @@ inputs:
     description: "Package manager/runner to use for SST commands (bun, npm, pnpm, yarn, or 'sst' for direct binary)"
     required: false
     default: "bun"
+  truncation-length:
+    description: "Maximum length for computed stage names (stage operation only)"
+    required: false
+    default: "26"
+  prefix:
+    description: "Prefix to add when stage name starts with a number (stage operation only)"
+    required: false
+    default: "pr-"
 
 outputs:
   success:
@@ -55,6 +63,14 @@ outputs:
     description: "Whether the operation output was truncated"
   diff_summary:
     description: "Summary of planned changes (diff only)"
+  computed_stage:
+    description: "The computed stage name (stage only)"
+  ref:
+    description: "The Git ref used for stage calculation (stage only)"
+  event_name:
+    description: "The GitHub event name (stage only)"
+  is_pull_request:
+    description: "Whether the event is a pull request (stage only)"
 
 runs:
   using: "node20"

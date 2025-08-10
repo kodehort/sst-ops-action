@@ -5,14 +5,15 @@
 [![GitHub release](https://img.shields.io/github/release/kodehort/sst-ops-action.svg)](https://github.com/kodehort/sst-ops-action/releases/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A unified, production-ready GitHub Action for **SST (Serverless Stack)** operations: deploy, diff, and remove. This action consolidates functionality from multiple composite actions into a single, maintainable, and distributable solution.
+A unified, production-ready GitHub Action for **SST (Serverless Stack)** operations: deploy, diff, remove, and stage. This action consolidates functionality from multiple composite actions into a single, maintainable, and distributable solution.
 
 ## ✨ Features
 
-- 🚀 **Multi-Operation Support** - Deploy, diff, and remove operations in one action
+- 🚀 **Multi-Operation Support** - Deploy, diff, remove, and stage operations in one action
 - 📝 **Automated PR Comments** - Rich markdown comments with deployment status and changes
 - 🔍 **Infrastructure Diff** - See planned changes before deployment
 - 🧹 **Resource Cleanup** - Automated removal of staging environments
+- 🎯 **Stage Calculation** - Automatic stage name computation from Git branches
 - ⚙️ **Configurable Runtime** - Support for Bun, npm, pnpm, Yarn, or direct SST CLI
 - 📊 **GitHub Integration** - Workflow summaries, artifacts, and status reporting
 
@@ -79,31 +80,68 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+### Dynamic Stage Calculation
+
+```yaml
+name: Smart Deploy
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Calculate stage name from current branch/PR
+      - name: Calculate Stage
+        id: stage
+        uses: kodehort/sst-ops-action@v1
+        with:
+          operation: stage
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Use calculated stage for deployment
+      - name: Deploy
+        uses: kodehort/sst-ops-action@v1
+        with:
+          operation: deploy
+          stage: ${{ steps.stage.outputs.computed_stage }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## 📖 Usage
 
 ### Inputs
 
 | Input | Description | Required | Default | Example |
 |-------|-------------|----------|---------|---------|
-| `operation` | SST operation to perform | No | `deploy` | `deploy`, `diff`, `remove` |
+| `operation` | SST operation to perform | No | `deploy` | `deploy`, `diff`, `remove`, `stage` |
 | `stage` | SST stage to operate on | Yes | - | `production`, `staging`, `pr-123` |
 | `token` | GitHub token for authentication | Yes | - | `${{ secrets.GITHUB_TOKEN }}` |
 | `runner` | Package manager/runtime for SST commands | No | `bun` | `bun`, `npm`, `pnpm`, `yarn`, `sst` |
 | `comment-mode` | When to create PR comments | No | `on-success` | `always`, `on-success`, `on-failure`, `never` |
 | `fail-on-error` | Whether to fail the workflow on errors | No | `true` | `true`, `false` |
 | `max-output-size` | Maximum output size in bytes | No | `50000` | `100000` |
+| `truncation-length` | Maximum length for computed stage names (stage operation only) | No | `26` | `15`, `50` |
+| `prefix` | Prefix for stage names starting with numbers (stage operation only) | No | `pr-` | `fix-`, `issue-` |
 
 ### Outputs
 
 | Output | Description | Type | Example |
 |--------|-------------|------|---------|
 | `success` | Whether the operation completed successfully | String | `"true"`, `"false"` |
-| `operation` | The operation that was performed | String | `"deploy"`, `"diff"`, `"remove"` |
+| `operation` | The operation that was performed | String | `"deploy"`, `"diff"`, `"remove"`, `"stage"` |
 | `stage` | The stage that was operated on | String | `"production"`, `"staging"` |
 | `app` | The SST app name | String | `"my-app"` |
 | `resource_changes` | Number of resource changes | String | `"5"` |
 | `urls` | Deployed URLs (deploy only) | JSON String | `["https://api.example.com"]` |
 | `diff_summary` | Diff summary (diff only) | String | `"3 resources to create, 1 to update"` |
+| `computed_stage` | Computed stage name (stage only) | String | `"feature-branch"` |
+| `ref` | Git reference (stage only) | String | `"refs/heads/main"` |
+| `event_name` | GitHub event type (stage only) | String | `"push"`, `"pull_request"` |
+| `is_pull_request` | Whether from pull request (stage only) | String | `"true"`, `"false"` |
 | `completion_status` | Final operation status | String | `"success"`, `"failed"`, `"partial"` |
 | `permalink` | SST Console permalink | String | `"https://console.sst.dev/..."` |
 | `truncated` | Whether output was truncated | String | `"false"` |
@@ -187,6 +225,62 @@ Removes all resources for the specified stage.
 - Cost optimization
 - Resource cleanup
 
+### Stage Operation
+
+Calculates SST stage name from Git branch or pull request information.
+
+```yaml
+- uses: kodehort/sst-ops-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# With custom configuration
+- uses: kodehort/sst-ops-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    truncation-length: 15
+    prefix: fix-
+```
+
+**Features:**
+- ✅ Automatic stage name computation from Git references
+- ✅ Configurable truncation length (default: 26 characters)
+- ✅ Configurable prefix (default: `pr-`)
+- ✅ Branch name sanitization and normalization
+- ✅ Pull request and push event support
+- ✅ Fallback stage handling for edge cases
+- ✅ No SST CLI dependency required
+
+**Use Cases:**
+- Dynamic stage name generation
+- Consistent branch-to-stage mapping
+- Multi-environment workflows
+- Pull request preview environments
+- Branch-based deployments
+
+**Stage Computation Rules:**
+- Removes path prefixes (`refs/heads/`, `feature/`)
+- Converts to lowercase
+- Replaces non-alphanumeric characters with hyphens
+- Truncates to configurable length (default: 26 characters)
+- Prefixes numeric branches with configurable prefix (default: `pr-`)
+- Applies truncation including the prefix
+- Removes leading/trailing hyphens after truncation
+
+**Examples:**
+| Branch | Event | Computed Stage | Notes |
+|--------|-------|----------------|--------|
+| `main` | push | `main` | Default behavior |
+| `feature/user-auth` | push | `user-auth` | Prefix removed |
+| `feature/new-api` | pull_request | `new-api` | Same for PR events |
+| `123-hotfix` | push | `pr-123-hotfix` | Default prefix `pr-` |
+| `123-hotfix` | push | `fix-123-hotfix` | Custom prefix `fix-` |
+| `refs/heads/develop` | push | `develop` | Git prefix stripped |
+| `very-long-branch-name` | push | `very-long-branch-name-that` | Default truncation (26) |
+| `very-long-branch-name` | push | `very-long-branc` | Custom truncation (15) |
+
 ## 🔧 Configuration Examples
 
 ### Complete Production Workflow
@@ -258,12 +352,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Calculate stage name from PR branch
+      - name: Calculate Stage
+        id: stage-calc
+        uses: kodehort/sst-ops-action@v1
+        with:
+          operation: stage
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Show Infrastructure Changes
         id: diff
         uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
-          stage: staging
+          stage: ${{ steps.stage-calc.outputs.computed_stage }}
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: always
           fail-on-error: false
@@ -273,7 +375,7 @@ jobs:
         uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
-          stage: pr-${{ github.event.number }}
+          stage: ${{ steps.stage-calc.outputs.computed_stage }}
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: on-success
 ```

@@ -33,6 +33,8 @@ function parseGitHubActionsInputs() {
     failOnError: core.getBooleanInput('fail-on-error') ?? true,
     maxOutputSize: core.getInput('max-output-size') || '50000',
     runner: (core.getInput('runner') || 'bun') as SSTRunner,
+    truncationLength: core.getInput('truncation-length') || '26',
+    prefix: core.getInput('prefix') || 'pr-',
   };
 
   // Create validation context
@@ -247,6 +249,8 @@ function createOperationOptions(
       failOnError: inputs.failOnError,
       maxOutputSize: inputs.maxOutputSize,
       runner: inputs.runner || 'bun',
+      truncationLength: inputs.truncationLength,
+      prefix: inputs.prefix,
       environment: Object.fromEntries(
         Object.entries(process.env).filter(([, value]) => value !== undefined)
       ) as Record<string, string>,

@@ -10,6 +10,7 @@ import type { SSTCLIExecutor } from '../utils/cli';
 import { DeployOperation } from './deploy';
 import { DiffOperation } from './diff';
 import { RemoveOperation } from './remove';
+import { StageOperation } from './stage';
 
 /**
  * Base operation interface that all operations must implement
@@ -45,9 +46,11 @@ export class OperationFactory {
         return new DiffOperation(this.cliExecutor, this.githubClient);
       case 'remove':
         return new RemoveOperation(this.cliExecutor, this.githubClient);
+      case 'stage':
+        return new StageOperation(this.cliExecutor, this.githubClient);
       default:
         throw new Error(
-          `Unknown operation type: ${operationType}. Supported operations: deploy, diff, remove`
+          `Unknown operation type: ${operationType}. Supported operations: deploy, diff, remove, stage`
         );
     }
   }
@@ -60,7 +63,7 @@ export class OperationFactory {
   static isValidOperationType(
     operationType: string
   ): operationType is SSTOperation {
-    return ['deploy', 'diff', 'remove'].includes(operationType);
+    return ['deploy', 'diff', 'remove', 'stage'].includes(operationType);
   }
 
   /**
@@ -68,6 +71,6 @@ export class OperationFactory {
    * @returns Array of supported operation types
    */
   static getSupportedOperations(): SSTOperation[] {
-    return ['deploy', 'diff', 'remove'];
+    return ['deploy', 'diff', 'remove', 'stage'];
   }
 }

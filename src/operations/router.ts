@@ -379,6 +379,15 @@ function createFailureResult(
         resourcesRemoved: 0,
         removedResources: [],
       };
+    case 'stage':
+      return {
+        ...baseResult,
+        operation: 'stage' as const,
+        computedStage: options.stage,
+        ref: '',
+        eventName: 'unknown',
+        isPullRequest: false,
+      };
     default:
       // This should never happen but TypeScript needs it
       return {

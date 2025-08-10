@@ -18,6 +18,7 @@ export type {
   ParsedSST,
   RemoveResult,
   SSTOperation,
+  StageResult,
 } from './operations.js';
 
 // GitHub Actions types
@@ -60,6 +61,7 @@ import type {
   OperationResult,
   RemoveResult,
   SSTOperation,
+  StageResult,
 } from './operations.js';
 
 import type {
@@ -93,11 +95,15 @@ export function isRemoveResult(
   return result.operation === 'remove';
 }
 
+export function isStageResult(result: OperationResult): result is StageResult {
+  return result.operation === 'stage';
+}
+
 /**
  * Type guards for SST operations
  */
 export function isValidOperation(operation: string): operation is SSTOperation {
-  return ['deploy', 'diff', 'remove'].includes(operation);
+  return ['deploy', 'diff', 'remove', 'stage'].includes(operation);
 }
 
 export function isValidCommentMode(mode: string): mode is CommentMode {
@@ -120,7 +126,7 @@ export function validateOperation(operation: unknown): SSTOperation {
 
   if (!isValidOperation(operation)) {
     throw new Error(
-      `Invalid operation: ${operation}. Must be one of: deploy, diff, remove`
+      `Invalid operation: ${operation}. Must be one of: deploy, diff, remove, stage`
     );
   }
 
@@ -203,6 +209,9 @@ export function validateSSTOutput(
       return validateDiffOutput(obj);
     case 'remove':
       return validateRemoveOutput(obj);
+    case 'stage':
+      // Stage operation doesn't use SST output validation - it computes stage internally
+      throw new Error('Stage operation does not use SST output validation');
     default:
       throw new Error(`Unsupported operation: ${operation}`);
   }

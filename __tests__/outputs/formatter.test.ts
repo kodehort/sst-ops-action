@@ -5,6 +5,7 @@ import type {
   DiffResult,
   OperationResult,
   RemoveResult,
+  StageResult,
 } from '../../src/types';
 
 describe('Output Formatter - GitHub Actions Output Processing', () => {
@@ -52,6 +53,10 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           planned_changes: '',
           resources_removed: '',
           removed_resources: '',
+          computed_stage: '',
+          ref: '',
+          event_name: '',
+          is_pull_request: '',
         });
       });
 
@@ -132,6 +137,10 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           planned_changes: '2',
           resources_removed: '',
           removed_resources: '',
+          computed_stage: '',
+          ref: '',
+          event_name: '',
+          is_pull_request: '',
         });
       });
 
@@ -196,6 +205,10 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           planned_changes: '',
           resources_removed: '2',
           removed_resources: JSON.stringify(removeResult.removedResources),
+          computed_stage: '',
+          ref: '',
+          event_name: '',
+          is_pull_request: '',
         });
       });
 
@@ -225,6 +238,100 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         expect(outputs.removed_resources).toBe(
           JSON.stringify(removeResult.removedResources)
         );
+      });
+    });
+
+    describe('stage operations', () => {
+      it('should format successful stage result correctly', () => {
+        const stageResult: StageResult = {
+          success: true,
+          operation: 'stage',
+          stage: 'feature-branch',
+          app: 'stage-calculator',
+          rawOutput:
+            'Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch',
+          exitCode: 0,
+          truncated: false,
+          completionStatus: 'complete',
+          computedStage: 'feature-branch',
+          ref: 'feature/branch',
+          eventName: 'pull_request',
+          isPullRequest: true,
+        };
+
+        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+
+        expect(outputs).toEqual({
+          success: 'true',
+          operation: 'stage',
+          stage: 'feature-branch',
+          completion_status: 'complete',
+          app: 'stage-calculator',
+          permalink: '',
+          truncated: 'false',
+          resource_changes: '0',
+          error: '',
+          urls: '',
+          resources: '',
+          diff_summary: '',
+          planned_changes: '',
+          resources_removed: '',
+          removed_resources: '',
+          computed_stage: 'feature-branch',
+          ref: 'feature/branch',
+          event_name: 'pull_request',
+          is_pull_request: 'true',
+        });
+      });
+
+      it('should format stage result for push event', () => {
+        const stageResult: StageResult = {
+          success: true,
+          operation: 'stage',
+          stage: 'main',
+          app: 'stage-calculator',
+          rawOutput: 'Stage computation successful',
+          exitCode: 0,
+          truncated: false,
+          completionStatus: 'complete',
+          computedStage: 'main',
+          ref: 'refs/heads/main',
+          eventName: 'push',
+          isPullRequest: false,
+        };
+
+        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+
+        expect(outputs.computed_stage).toBe('main');
+        expect(outputs.ref).toBe('refs/heads/main');
+        expect(outputs.event_name).toBe('push');
+        expect(outputs.is_pull_request).toBe('false');
+      });
+
+      it('should handle stage result with missing optional fields', () => {
+        const stageResult: StageResult = {
+          success: false,
+          operation: 'stage',
+          stage: 'fallback',
+          app: 'stage-calculator',
+          rawOutput: 'Stage computation failed',
+          exitCode: 1,
+          truncated: false,
+          error: 'Failed to compute stage from ref',
+          completionStatus: 'failed',
+          computedStage: 'fallback',
+          ref: '',
+          eventName: 'push',
+          isPullRequest: false,
+        };
+
+        const outputs = OutputFormatter.formatForGitHubActions(stageResult);
+
+        expect(outputs.success).toBe('false');
+        expect(outputs.error).toBe('Failed to compute stage from ref');
+        expect(outputs.computed_stage).toBe('fallback');
+        expect(outputs.ref).toBe('');
+        expect(outputs.is_pull_request).toBe('false');
       });
     });
 
@@ -369,7 +476,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
       }).toThrow(
-        "Invalid 'operation' value: 'invalid-operation'. Must be one of: deploy, diff, remove."
+        "Invalid 'operation' value: 'invalid-operation'. Must be one of: deploy, diff, remove, stage."
       );
     });
 
@@ -470,7 +577,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       expect(fields).toContain('urls');
       expect(fields).toContain('diff_summary');
       expect(fields).toContain('resources_removed');
-      expect(fields.length).toBe(15);
+      expect(fields.length).toBe(19);
     });
 
     it('should return required field names', () => {
@@ -541,6 +648,33 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
         expect(outputs.urls).toBe('[{"name":"API","url":"https://api.com"}]');
         expect(outputs.resources).toBe('[{"type":"Function","name":"MyFunc"}]');
+      });
+
+      it('should set default values for stage operations', () => {
+        const outputs: Record<string, string> = {};
+
+        OutputFormatter.validateOperationConsistency(outputs, 'stage');
+
+        expect(outputs.computed_stage).toBe('');
+        expect(outputs.ref).toBe('');
+        expect(outputs.event_name).toBe('');
+        expect(outputs.is_pull_request).toBe('false');
+      });
+
+      it('should preserve existing stage values if already set', () => {
+        const outputs: Record<string, string> = {
+          computed_stage: 'feature-branch',
+          ref: 'feature/branch',
+          event_name: 'pull_request',
+          is_pull_request: 'true',
+        };
+
+        OutputFormatter.validateOperationConsistency(outputs, 'stage');
+
+        expect(outputs.computed_stage).toBe('feature-branch');
+        expect(outputs.ref).toBe('feature/branch');
+        expect(outputs.event_name).toBe('pull_request');
+        expect(outputs.is_pull_request).toBe('true');
       });
     });
   });
