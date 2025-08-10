@@ -14,6 +14,7 @@ import type { SSTRunner } from './cli.js';
 
 // Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
+const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 
 /**
  * Zod schema for validating all GitHub Actions inputs
@@ -29,12 +30,14 @@ export const ActionInputsSchema = z.object({
 
   stage: z
     .string()
-    .min(1, 'Stage cannot be empty')
+    .optional()
     .refine(
-      (val) => STAGE_VALIDATION_PATTERN.test(val.trim()),
+      (val) =>
+        !val ||
+        (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())),
       'Stage must contain only alphanumeric characters, hyphens, and underscores'
     )
-    .transform((val) => val.trim()),
+    .transform((val) => val?.trim() || ''),
 
   token: z.string().min(1, 'Token cannot be empty'),
 
@@ -96,8 +99,9 @@ export const ActionInputsSchema = z.object({
     .refine((val) => val.length <= 10, {
       message: 'Prefix must be 10 characters or less',
     })
-    .refine((val) => /^[a-z0-9-]*$/.test(val), {
-      message: 'Prefix must contain only lowercase letters, numbers, and hyphens',
+    .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
+      message:
+        'Prefix must contain only lowercase letters, numbers, and hyphens',
     })
     .default('pr-'),
 });
@@ -174,9 +178,10 @@ function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
 
     case 'stage':
       return [
-        'Stage must be a non-empty string',
-        'Use only alphanumeric characters, hyphens, and underscores',
+        'Stage is optional - will be computed from Git context if not provided',
+        'If provided, use only alphanumeric characters, hyphens, and underscores',
         'Examples: "production", "staging", "dev-123", "pr-456"',
+        'Leave empty to auto-compute from branch/PR context',
       ];
 
     case 'token':

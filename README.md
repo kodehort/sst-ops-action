@@ -10,16 +10,37 @@ A unified, production-ready GitHub Action for **SST (Serverless Stack)** operati
 ## ✨ Features
 
 - 🚀 **Multi-Operation Support** - Deploy, diff, remove, and stage operations in one action
+- 🤖 **Automatic Stage Inference** - Automatically compute stage names from Git context (branches, PRs)
 - 📝 **Automated PR Comments** - Rich markdown comments with deployment status and changes
 - 🔍 **Infrastructure Diff** - See planned changes before deployment
 - 🧹 **Resource Cleanup** - Automated removal of staging environments
-- 🎯 **Stage Calculation** - Automatic stage name computation from Git branches
+- 🎯 **Stage Calculation** - Manual stage name computation from Git branches (when needed)
 - ⚙️ **Configurable Runtime** - Support for Bun, npm, pnpm, Yarn, or direct SST CLI
 - 📊 **GitHub Integration** - Workflow summaries, artifacts, and status reporting
 
 ## 🚀 Quick Start
 
-### Basic Deploy
+### Basic Deploy (Automatic Stage)
+
+```yaml
+name: Deploy
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kodehort/sst-ops-action@v1
+        with:
+          operation: deploy
+          # Stage automatically computed from branch/PR name
+          token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Basic Deploy (Explicit Stage)
 
 ```yaml
 name: Deploy to Staging
@@ -55,7 +76,7 @@ jobs:
       - uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
-          stage: staging
+          # Stage automatically computed from PR branch name
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: always
 ```
@@ -80,7 +101,30 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Dynamic Stage Calculation
+### Automatic Stage Inference
+
+```yaml
+name: Auto-Deploy
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Stage is automatically computed from Git context
+      - name: Deploy
+        uses: kodehort/sst-ops-action@v1
+        with:
+          operation: deploy
+          # No stage input - automatically computed from branch/PR
+          token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Dynamic Stage Calculation (Legacy)
 
 ```yaml
 name: Smart Deploy
@@ -94,7 +138,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # Calculate stage name from current branch/PR
+      # Calculate stage name from current branch/PR (alternative approach)
       - name: Calculate Stage
         id: stage
         uses: kodehort/sst-ops-action@v1
@@ -118,7 +162,7 @@ jobs:
 | Input | Description | Required | Default | Example |
 |-------|-------------|----------|---------|---------|
 | `operation` | SST operation to perform | No | `deploy` | `deploy`, `diff`, `remove`, `stage` |
-| `stage` | SST stage to operate on | Yes | - | `production`, `staging`, `pr-123` |
+| `stage` | SST stage to operate on (auto-computed from Git context if not provided) | No | - | `production`, `staging`, `pr-123` |
 | `token` | GitHub token for authentication | Yes | - | `${{ secrets.GITHUB_TOKEN }}` |
 | `runner` | Package manager/runtime for SST commands | No | `bun` | `bun`, `npm`, `pnpm`, `yarn`, `sst` |
 | `comment-mode` | When to create PR comments | No | `on-success` | `always`, `on-success`, `on-failure`, `never` |
@@ -260,6 +304,12 @@ Calculates SST stage name from Git branch or pull request information.
 - Pull request preview environments
 - Branch-based deployments
 
+**Automatic Stage Inference:**
+- When `stage` input is not provided, the action automatically computes it from Git context
+- Works with both push events (branch names) and pull request events (PR branch names)
+- Uses the same computation rules as the manual stage operation
+- Fallback to 'main' if no usable Git context is available
+
 **Stage Computation Rules:**
 - Removes path prefixes (`refs/heads/`, `feature/`)
 - Converts to lowercase
@@ -270,16 +320,17 @@ Calculates SST stage name from Git branch or pull request information.
 - Removes leading/trailing hyphens after truncation
 
 **Examples:**
-| Branch | Event | Computed Stage | Notes |
-|--------|-------|----------------|--------|
-| `main` | push | `main` | Default behavior |
-| `feature/user-auth` | push | `user-auth` | Prefix removed |
-| `feature/new-api` | pull_request | `new-api` | Same for PR events |
-| `123-hotfix` | push | `pr-123-hotfix` | Default prefix `pr-` |
-| `123-hotfix` | push | `fix-123-hotfix` | Custom prefix `fix-` |
-| `refs/heads/develop` | push | `develop` | Git prefix stripped |
-| `very-long-branch-name` | push | `very-long-branch-name-that` | Default truncation (26) |
-| `very-long-branch-name` | push | `very-long-branc` | Custom truncation (15) |
+| Branch | Event | Computed Stage | Auto/Manual | Notes |
+|--------|-------|----------------|-------------|--------|
+| `main` | push | `main` | Auto | Automatic inference |
+| `feature/user-auth` | push | `user-auth` | Auto | Prefix removed |
+| `feature/new-api` | pull_request | `new-api` | Auto | Same for PR events |
+| `123-hotfix` | push | `pr-123-hotfix` | Auto | Default prefix `pr-` |
+| `123-hotfix` | push | `fix-123-hotfix` | Manual | Custom prefix `fix-` |
+| `refs/heads/develop` | push | `develop` | Auto | Git prefix stripped |
+| `very-long-branch-name` | push | `very-long-branch-name-that` | Auto | Default truncation (26) |
+| `very-long-branch-name` | push | `very-long-branc` | Manual | Custom truncation (15) |
+| N/A | N/A | `production` | Manual | Explicit stage override |
 
 ## 🔧 Configuration Examples
 
@@ -322,7 +373,7 @@ jobs:
         uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
-          stage: production
+          stage: production  # Explicit stage for production
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: never
           fail-on-error: true
@@ -352,30 +403,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Calculate stage name from PR branch
-      - name: Calculate Stage
-        id: stage-calc
-        uses: kodehort/sst-ops-action@v1
-        with:
-          operation: stage
-          token: ${{ secrets.GITHUB_TOKEN }}
-
+      # Show infrastructure changes (stage auto-computed from PR branch)
       - name: Show Infrastructure Changes
         id: diff
         uses: kodehort/sst-ops-action@v1
         with:
           operation: diff
-          stage: ${{ steps.stage-calc.outputs.computed_stage }}
+          # Stage automatically computed from PR branch name
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: always
           fail-on-error: false
 
+      # Deploy preview environment (stage auto-computed from PR branch)
       - name: Deploy Preview Environment
         if: contains(github.event.pull_request.labels.*.name, 'deploy-preview')
         uses: kodehort/sst-ops-action@v1
         with:
           operation: deploy
-          stage: ${{ steps.stage-calc.outputs.computed_stage }}
+          # Stage automatically computed from PR branch name
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: on-success
 ```

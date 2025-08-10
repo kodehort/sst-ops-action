@@ -226,12 +226,12 @@ describe('Stage Operation - Stage Computation Integration', () => {
 
     it('should handle GitHub integration errors gracefully', async () => {
       // Mock GitHub client methods to throw errors
-      mockGitHubClient.createOrUpdateComment = vi.fn().mockRejectedValue(
-        new Error('GitHub API error')
-      );
-      mockGitHubClient.createWorkflowSummary = vi.fn().mockRejectedValue(
-        new Error('GitHub API error')
-      );
+      mockGitHubClient.createOrUpdateComment = vi
+        .fn()
+        .mockRejectedValue(new Error('GitHub API error'));
+      mockGitHubClient.createWorkflowSummary = vi
+        .fn()
+        .mockRejectedValue(new Error('GitHub API error'));
 
       Object.assign(github.context, {
         eventName: 'push',
@@ -317,6 +317,63 @@ describe('Stage Operation - Stage Computation Integration', () => {
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe('branch-name');
+    });
+  });
+
+  describe('Stage Inference Integration', () => {
+    it('should work with empty stage input (automatic inference)', async () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/feature-auto-stage',
+        },
+      });
+
+      // Use empty stage to test inference
+      mockOptions.stage = '';
+
+      const result = await stageOperation.execute(mockOptions);
+
+      expect(result.success).toBe(true);
+      expect(result.computedStage).toBe('feature-auto-stage');
+      expect(result.stage).toBe('feature-auto-stage');
+    });
+
+    it('should prefer explicit stage over inference when provided', async () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/feature-branch',
+        },
+      });
+
+      // Explicit stage should be used as fallback, but computed stage is from Git context
+      mockOptions.stage = 'explicit-stage';
+
+      const result = await stageOperation.execute(mockOptions);
+
+      expect(result.success).toBe(true);
+      // Stage operation always computes from Git context, uses fallback only when computation fails
+      expect(result.computedStage).toBe('feature-branch');
+      expect(result.stage).toBe('feature-branch');
+    });
+
+    it('should handle fallback when Git context provides no usable ref', async () => {
+      Object.assign(github.context, {
+        eventName: 'workflow_dispatch',
+        payload: {},
+        ref: undefined,
+      });
+
+      // Empty stage with no usable Git context should use fallback
+      mockOptions.stage = 'fallback-stage';
+
+      const result = await stageOperation.execute(mockOptions);
+
+      expect(result.success).toBe(true);
+      // Should use fallback stage when Git context provides no usable ref
+      expect(result.computedStage).toBe('fallback-stage');
+      expect(result.stage).toBe('fallback-stage');
     });
   });
 

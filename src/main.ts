@@ -12,6 +12,7 @@ import {
 } from './errors/error-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
+import { StageParser } from './parsers/stage-parser';
 import type { OperationOptions, OperationResult } from './types';
 import type { SSTRunner } from './utils/cli';
 import {
@@ -21,20 +22,76 @@ import {
 } from './utils/validation';
 
 /**
+ * Compute stage name from GitHub context when not explicitly provided
+ */
+function computeStageFromContext(
+  fallbackStage = 'main',
+  truncationLength = 26,
+  prefix = 'pr-'
+): string {
+  try {
+    const parser = new StageParser();
+    const result = parser.parse(
+      '',
+      fallbackStage,
+      0,
+      undefined,
+      truncationLength,
+      prefix
+    );
+
+    if (result.success && result.computedStage) {
+      core.info(
+        `🎯 Computed stage from Git context: "${result.computedStage}"`
+      );
+      return result.computedStage;
+    }
+
+    core.warning(
+      `⚠️ Failed to compute stage from Git context, using fallback: "${fallbackStage}"`
+    );
+    return fallbackStage;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    core.warning(
+      `⚠️ Stage computation failed: ${message}, using fallback: "${fallbackStage}"`
+    );
+    return fallbackStage;
+  }
+}
+
+/**
  * Parse GitHub Actions inputs into a typed structure
  */
 function parseGitHubActionsInputs() {
   // Get raw inputs from GitHub Actions
+  let stage = core.getInput('stage');
+  const truncationLength = Number.parseInt(
+    core.getInput('truncation-length') || '26',
+    10
+  );
+  const prefix = core.getInput('prefix') || 'pr-';
+
+  // Compute stage from Git context if not explicitly provided
+  if (!stage || stage.trim() === '') {
+    stage = computeStageFromContext('main', truncationLength, prefix);
+    core.info(
+      `📋 Stage input was empty, computed from Git context: "${stage}"`
+    );
+  } else {
+    core.info(`📋 Using explicitly provided stage: "${stage}"`);
+  }
+
   const rawInputs = {
     operation: core.getInput('operation') || 'deploy',
-    stage: core.getInput('stage'),
+    stage,
     token: core.getInput('token'),
     commentMode: core.getInput('comment-mode') || 'on-success',
     failOnError: core.getBooleanInput('fail-on-error') ?? true,
     maxOutputSize: core.getInput('max-output-size') || '50000',
     runner: (core.getInput('runner') || 'bun') as SSTRunner,
-    truncationLength: core.getInput('truncation-length') || '26',
-    prefix: core.getInput('prefix') || 'pr-',
+    truncationLength: truncationLength.toString(),
+    prefix,
   };
 
   // Create validation context

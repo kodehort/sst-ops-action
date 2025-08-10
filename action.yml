@@ -15,8 +15,8 @@ inputs:
     description: "GitHub token for authentication"
     required: true
   stage:
-    description: "SST stage to operate on"
-    required: true
+    description: "SST stage to operate on (optional - will be computed from Git context if not provided)"
+    required: false
   comment-mode:
     description: "When to post PR comments (always, on-success, on-failure, never)"
     required: false

@@ -18,7 +18,7 @@ Complete reference documentation for all inputs, outputs, and behavior of the SS
 
 ```yaml
 name: 'SST Operations Action'
-description: 'A unified GitHub Action for SST operations: deploy, diff, and remove'
+description: 'A unified GitHub Action for SST operations: deploy, diff, remove, and stage'
 author: 'Kodehort'
 branding:
   icon: 'cloud'
@@ -83,9 +83,9 @@ All inputs are defined in `action.yml` and processed by the action's validation 
 
 ### `stage`
 
-**Description:** SST stage to operate on  
-**Required:** Yes (except for `stage` operation)  
-**Default:** None  
+**Description:** SST stage to operate on (automatically computed from Git context if not provided)  
+**Required:** No  
+**Default:** Auto-computed from Git context (branch/PR name)  
 **Type:** String  
 
 **Valid Format:**
@@ -96,7 +96,15 @@ All inputs are defined in `action.yml` and processed by the action's validation 
 
 **Examples:**
 ```yaml
-# Simple stage names
+# Automatic stage inference (recommended)
+# Stage computed from Git context (branch/PR name)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    # No stage input - automatically computed
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Explicit stage names
 stage: production
 stage: staging
 stage: development
@@ -118,10 +126,10 @@ stage: ${{ steps.sanitize.outputs.stage }}
 - `feature-xyz` - Feature branch stages
 
 **Validation:**
-- Required input for deploy/diff/remove operations, action fails if not provided
-- Optional for `stage` operation (used as fallback if stage computation fails)
-- Must match regex: `^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$`
-- Cannot be empty string
+- Optional input for all operations (automatically computed from Git context if not provided)
+- When provided, must match regex: `^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$`
+- Cannot be empty string if explicitly provided
+- Falls back to automatic computation from branch/PR name when omitted
 
 ---
 
@@ -178,11 +186,11 @@ permissions:
 
 **Examples:**
 ```yaml
-# Show diff results in all PRs
+# Show diff results in all PRs (auto-computed stage)
 - uses: kodehort/sst-operations-action@v1
   with:
     operation: diff
-    stage: staging
+    # Stage automatically computed from PR branch name
     token: ${{ secrets.GITHUB_TOKEN }}
     comment-mode: always
 

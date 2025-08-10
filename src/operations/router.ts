@@ -133,6 +133,9 @@ function transformToUnifiedResult(
       return transformDiffResult(result as RawOperationResults['diff']);
     case 'remove':
       return transformRemoveResult(result as RawOperationResults['remove']);
+    case 'stage':
+      // Stage operation returns the result directly as it already conforms to the unified format
+      return result as OperationResult;
     default:
       throw new Error(
         `Cannot transform result for unknown operation: ${operationType}`
@@ -410,10 +413,8 @@ export function validateOperationConfig(
   operationType: SSTOperation,
   options: OperationOptions
 ): void {
-  // Basic validation
-  if (!options.stage) {
-    throw new Error('Stage is required for all operations');
-  }
+  // Basic validation - stage will be computed if not provided
+  // No need to validate stage here as it can be computed automatically
 
   // Operation-specific validation
   switch (operationType) {

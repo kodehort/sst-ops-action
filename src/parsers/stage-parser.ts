@@ -40,9 +40,23 @@ export class StageParser extends BaseParser<StageResult> {
     const context = github.context;
 
     try {
-      return this.parseSuccess(context, fallbackStage, exitCode, maxOutputSize, truncationLength, prefix);
+      return this.parseSuccess(
+        context,
+        fallbackStage,
+        exitCode,
+        maxOutputSize,
+        truncationLength,
+        prefix
+      );
     } catch (error) {
-      return this.parseError(context, fallbackStage, error, maxOutputSize, truncationLength, prefix);
+      return this.parseError(
+        context,
+        fallbackStage,
+        error,
+        maxOutputSize,
+        truncationLength,
+        prefix
+      );
     }
   }
 
@@ -64,7 +78,11 @@ export class StageParser extends BaseParser<StageResult> {
     core.debug(`Input ref: ${ref}`);
 
     // Process the ref into a stage name
-    const computedStage = this.computeStageFromRef(ref || '', truncationLength, prefix);
+    const computedStage = this.computeStageFromRef(
+      ref || '',
+      truncationLength,
+      prefix
+    );
     const finalStage = computedStage || fallbackStage;
 
     if (!finalStage) {
@@ -103,8 +121,8 @@ export class StageParser extends BaseParser<StageResult> {
     fallbackStage: string,
     error: unknown,
     maxOutputSize?: number,
-    truncationLength = 26,
-    prefix = 'pr-'
+    _truncationLength = 26,
+    _prefix = 'pr-'
   ): StageResult {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const { rawOutput, truncated } = this.formatOutput(
@@ -161,7 +179,11 @@ export class StageParser extends BaseParser<StageResult> {
    * Turn the input into a slugable value and shorten to prevent
    * overflowing the limits for Route53 or other naming constraints
    */
-  private computeStageFromRef(ref: string, truncationLength = 26, prefix = 'pr-'): string {
+  private computeStageFromRef(
+    ref: string,
+    truncationLength = 26,
+    prefix = 'pr-'
+  ): string {
     // Basic sanitization
     let stage = ref
       .replace(PATH_PREFIX_PATTERN, '') // Remove path prefix (refs/heads/, etc.)
