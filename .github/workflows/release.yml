@@ -238,11 +238,43 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Setup Environment
+        uses: ./.github/actions/setup-node-env
+        with:
+          bun-version: '1.2.19'
+          cache-key-suffix: -release
+
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
           name: release-build-${{ github.sha }}
           path: ./
+
+      - name: Verify Build Artifacts
+        run: |
+          echo "🔍 Verifying downloaded build artifacts..."
+          
+          # Check if dist files exist in artifacts
+          if [ ! -f "dist/index.js" ]; then
+            echo "⚠️ dist/index.js not found in artifacts, rebuilding..."
+            bun run build
+          else
+            echo "✅ dist/index.js found in artifacts"
+          fi
+          
+          if [ ! -f "dist/build-manifest.json" ]; then
+            echo "⚠️ build-manifest.json missing, this may affect changelog generation"
+          else
+            echo "✅ build-manifest.json found"
+          fi
+          
+          # Final verification that required files exist
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ Critical: dist/index.js still missing after rebuild attempt"
+            exit 1
+          fi
+          
+          echo "✅ Build artifacts verified"
 
       - name: Update Version
         run: |
@@ -469,6 +501,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: v${{ needs.determine-release.outputs.new-version }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-node-env
+        with:
+          bun-version: '1.2.19'
+
+      - name: Build Distribution for Validation
+        run: |
+          echo "🔨 Building distribution files for validation..."
+          bun run build
+          echo "✅ Distribution build completed"
 
       - name: Test Action Usage
         id: test-action
