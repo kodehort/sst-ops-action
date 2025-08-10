@@ -25,13 +25,14 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-  issues: write
-  actions: read
-  id-token: write
+permissions: write-all
+# permissions:
+#   contents: write
+#   packages: write
+#   pull-requests: write
+#   issues: write
+#   actions: read
+#   id-token: write
 
 jobs:
   determine-release:
@@ -463,7 +464,7 @@ jobs:
         with:
           token: ${{ github.token }}
           tag_name: v${{ needs.determine-release.outputs.new-version }}
-          name: "SST Operations Action v${{ needs.determine-release.outputs.new-version }}"
+          name: "SST Ops Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
           draft: false
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
