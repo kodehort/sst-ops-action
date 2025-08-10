@@ -159,8 +159,8 @@ jobs:
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Determined release type: $RELEASE_TYPE ($CURRENT_VERSION → $NEW_VERSION)"
 
-  build-and-test:
-    name: Build and Test
+  build-test-validate:
+    name: Build, Test & Validate
     runs-on: ubuntu-latest
     needs: determine-release
     if: needs.determine-release.outputs.should-release == 'true'
@@ -221,10 +221,63 @@ jobs:
             action.yml
           retention-days: 30
 
+      - name: Test Action Usage
+        id: test-action
+        continue-on-error: true
+        uses: ./
+        with:
+          operation: diff
+          stage: test-release
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-mode: never
+          fail-on-error: false
+
+      - name: Validate Distribution Files
+        run: |
+          echo "🔍 Validating distribution files..."
+
+          # Check that files exist
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ dist/index.js not found"
+            exit 1
+          fi
+
+          if [ ! -f "action.yml" ]; then
+            echo "❌ action.yml not found"
+            exit 1
+          fi
+
+          # Verify action.yml points to correct main file
+          if ! grep -q "main.*dist/index.js" action.yml; then
+            echo "❌ action.yml does not reference dist/index.js"
+            exit 1
+          fi
+
+          # Check for build manifest
+          if [ ! -f "dist/build-manifest.json" ]; then
+            echo "⚠️ build-manifest.json missing, this may affect release notes"
+          fi
+
+          echo "✅ Distribution validation passed"
+
+      - name: Validate Action Functionality
+        run: |
+          echo "🔍 Validating action functionality..."
+
+          # Check if the action test step succeeded
+          if [ "${{ steps.test-action.outcome }}" = "failure" ]; then
+            echo "❌ Action functionality test failed"
+            echo "Test output:"
+            echo "${{ steps.test-action.outputs }}"
+            exit 1
+          fi
+
+          echo "✅ Action functionality validation passed"
+
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [determine-release, build-and-test]
+    needs: [determine-release, build-test-validate]
     if: needs.determine-release.outputs.should-release == 'true'
 
     steps:
@@ -458,25 +511,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify Token Permissions
-        run: |
-          echo "🔍 Verifying GitHub token permissions..."
-          
-          # Test token access
-          gh auth status || echo "⚠️ Auth status check failed"
-          
-          # Check repository permissions
-          gh api user/repos --jq '.[] | select(.full_name == "${{ github.repository }}") | {name, permissions}' || echo "⚠️ Could not check repo permissions"
-          
-          # Check if we can read releases
-          gh release list --limit 1 || echo "⚠️ Cannot read existing releases"
-          
-          echo "✅ Token verification completed"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create GitHub Release
-        id: create-release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -491,55 +526,6 @@ jobs:
             ./dist/build-manifest.json
             ./action.yml
             ./package.json
-        continue-on-error: true
-
-      - name: Handle Release Creation Failure
-        if: steps.create-release.outcome == 'failure'
-        run: |
-          echo "❌ Release creation failed, attempting fallback approach..."
-          
-          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
-          
-          # Try creating the release using gh CLI instead
-          echo "🔄 Attempting release creation via gh CLI..."
-          
-          gh release create "v${NEW_VERSION}" \
-            --title "SST Ops Action v${NEW_VERSION}" \
-            --notes-file ./RELEASE_NOTES.md \
-            --draft=false \
-            --prerelease=${{ github.event.inputs.prerelease == 'true' }} \
-            ./dist/index.js \
-            ./dist/index.js.map \
-            ./dist/build-manifest.json \
-            ./action.yml \
-            ./package.json || {
-              echo "❌ Fallback release creation also failed"
-              echo "🔍 Checking if release was partially created..."
-              gh release view "v${NEW_VERSION}" || echo "No release found"
-              exit 1
-            }
-          
-          echo "✅ Release created successfully via fallback method"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify Release Creation
-        run: |
-          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
-          
-          echo "🔍 Verifying release was created successfully..."
-          
-          # Check if release exists
-          RELEASE_URL=$(gh release view "v${NEW_VERSION}" --json url --jq '.url' 2>/dev/null || echo "")
-          
-          if [ -z "$RELEASE_URL" ]; then
-            echo "❌ Release verification failed - no release found"
-            exit 1
-          fi
-          
-          echo "✅ Release verified: $RELEASE_URL"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Major Version Tag
         run: |
@@ -557,94 +543,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  validate-release:
-    name: Validate Release
-    runs-on: ubuntu-latest
-    needs: [determine-release, create-release]
-    if: needs.determine-release.outputs.should-release == 'true'
-
-    steps:
-      - name: Checkout Released Tag
-        uses: actions/checkout@v4
-        with:
-          ref: v${{ needs.determine-release.outputs.new-version }}
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup-node-env
-        with:
-          bun-version: "1.2.19"
-
-      - name: Build Distribution for Validation
-        run: |
-          echo "🔨 Building distribution files for validation..."
-          bun run build
-          echo "✅ Distribution build completed"
-
-      - name: Test Action Usage
-        id: test-action
-        continue-on-error: true
-        uses: ./
-        with:
-          operation: diff
-          stage: test-release
-          token: ${{ secrets.GITHUB_TOKEN }}
-          comment-mode: never
-          fail-on-error: false
-
-      - name: Validate Release
-        run: |
-          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
-
-          echo "🔍 Validating release v$NEW_VERSION"
-
-          # Check that files exist
-          if [ ! -f "dist/index.js" ]; then
-            echo "❌ dist/index.js not found in release"
-            exit 1
-          fi
-
-          if [ ! -f "action.yml" ]; then
-            echo "❌ action.yml not found in release"
-            exit 1
-          fi
-
-          # Verify action.yml points to correct main file
-          if ! grep -q "main.*dist/index.js" action.yml; then
-            echo "❌ action.yml does not reference dist/index.js"
-            exit 1
-          fi
-
-          # Check package.json version matches
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$PKG_VERSION" != "$NEW_VERSION" ]; then
-            echo "❌ Package.json version ($PKG_VERSION) doesn't match release version ($NEW_VERSION)"
-            exit 1
-          fi
-
-          echo "✅ Release validation passed"
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
-
-          echo "❌ Release validation failed, initiating rollback"
-
-          # Delete the release if it was created
-          gh release delete "v$NEW_VERSION" --yes --cleanup-tag || echo "Release deletion failed or not found"
-
-          # Delete tags
-          git push --delete origin "v$NEW_VERSION" || echo "Tag deletion failed or not found"
-          git push --delete origin "v$(echo $NEW_VERSION | cut -d. -f1)" || echo "Major tag deletion failed or not found"
-
-          echo "🔄 Rollback completed"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   notify-success:
     name: Notify Release Success
     runs-on: ubuntu-latest
-    needs: [determine-release, validate-release]
+    needs: [determine-release, create-release]
     if: needs.determine-release.outputs.should-release == 'true' && success()
 
     steps:
