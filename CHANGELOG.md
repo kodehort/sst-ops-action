@@ -1,3 +1,43 @@
+# Release v1.5.5
+
+**Release Date:** 2025-08-10
+**Previous Version:** v1.5.4
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 5.21MB (5458391 bytes)
+- **Integrity Hash:** `46e908413fe65efb...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v1.5.5
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_VWKukKbNgBaH88421XmkTQv580LFc83chYwk
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v1.5.4...v1.5.5)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v1.5.5/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v1.5.4...v1.5.5
+
+---
+
 # Release v1.5.4
 
 **Release Date:** 2025-08-10
