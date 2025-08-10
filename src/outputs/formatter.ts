@@ -325,6 +325,40 @@ export function getRequiredFields(): string[] {
 }
 
 /**
+ * Set default values for deploy operation outputs
+ */
+function setDeployDefaults(outputs: Record<string, string>): void {
+  outputs.urls = outputs.urls || '[]';
+  outputs.resources = outputs.resources || '[]';
+}
+
+/**
+ * Set default values for diff operation outputs
+ */
+function setDiffDefaults(outputs: Record<string, string>): void {
+  outputs.planned_changes = outputs.planned_changes || '0';
+  outputs.diff_summary = outputs.diff_summary || '';
+}
+
+/**
+ * Set default values for remove operation outputs
+ */
+function setRemoveDefaults(outputs: Record<string, string>): void {
+  outputs.resources_removed = outputs.resources_removed || '0';
+  outputs.removed_resources = outputs.removed_resources || '[]';
+}
+
+/**
+ * Set default values for stage operation outputs
+ */
+function setStageDefaults(outputs: Record<string, string>): void {
+  outputs.computed_stage = outputs.computed_stage || '';
+  outputs.ref = outputs.ref || '';
+  outputs.event_name = outputs.event_name || '';
+  outputs.is_pull_request = outputs.is_pull_request || 'false';
+}
+
+/**
  * Check if outputs are consistent with the operation type
  * Validates that operation-specific fields are set appropriately
  */
@@ -334,46 +368,16 @@ export function validateOperationConsistency(
 ): void {
   switch (operation) {
     case 'deploy':
-      // Deploy operations should have urls and resources (even if empty JSON arrays)
-      if (!outputs.urls) {
-        outputs.urls = '[]';
-      }
-      if (!outputs.resources) {
-        outputs.resources = '[]';
-      }
+      setDeployDefaults(outputs);
       break;
     case 'diff':
-      // Diff operations should have planned_changes and diff_summary
-      if (!outputs.planned_changes) {
-        outputs.planned_changes = '0';
-      }
-      if (!outputs.diff_summary) {
-        outputs.diff_summary = '';
-      }
+      setDiffDefaults(outputs);
       break;
     case 'remove':
-      // Remove operations should have resources_removed and removed_resources
-      if (!outputs.resources_removed) {
-        outputs.resources_removed = '0';
-      }
-      if (!outputs.removed_resources) {
-        outputs.removed_resources = '[]';
-      }
+      setRemoveDefaults(outputs);
       break;
     case 'stage':
-      // Stage operations should have computed_stage, ref, event_name, and is_pull_request
-      if (!outputs.computed_stage) {
-        outputs.computed_stage = '';
-      }
-      if (!outputs.ref) {
-        outputs.ref = '';
-      }
-      if (!outputs.event_name) {
-        outputs.event_name = '';
-      }
-      if (!outputs.is_pull_request) {
-        outputs.is_pull_request = 'false';
-      }
+      setStageDefaults(outputs);
       break;
     default:
       // No additional validation for unknown operations

@@ -107,15 +107,14 @@ describe('Input Validation', () => {
       expect(() => ActionInputsSchema.parse(inputs)).toThrow();
     });
 
-    it('should reject empty stage', () => {
+    it('should accept empty stage (auto-computation)', () => {
       const inputs = {
         stage: '',
         token: 'fake-token',
       };
 
-      expect(() => ActionInputsSchema.parse(inputs)).toThrow(
-        'Stage cannot be empty'
-      );
+      const result = ActionInputsSchema.parse(inputs);
+      expect(result.stage).toBe('');
     });
 
     it('should reject invalid stage characters', () => {

@@ -394,11 +394,9 @@ describe('Main Entry Point - Action Execution', () => {
       );
 
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'stage') {
-          return '';
-        }
+        // Return empty token to trigger validation error
         if (name === 'token') {
-          return 'fake-token';
+          return '';
         }
         return '';
       });
