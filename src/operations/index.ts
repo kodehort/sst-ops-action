@@ -9,3 +9,5 @@ export * from './diff';
 export { DiffOperation } from './diff';
 export * from './remove';
 export { RemoveOperation } from './remove';
+export * from './stage';
+export { StageOperation } from './stage';

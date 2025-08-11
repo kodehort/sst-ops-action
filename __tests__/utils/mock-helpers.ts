@@ -143,7 +143,7 @@ export const setupInputEnvironment = (
  * Mock validation module functions
  */
 export const createMockValidation = () => ({
-  validateWithContext: vi.fn().mockReturnValue({
+  validateOperationWithContext: vi.fn().mockReturnValue({
     operation: 'deploy',
     stage: 'test',
     token: 'fake-token',
@@ -171,7 +171,7 @@ export const createMockErrorHandler = () => ({
  * Mock output formatter functions
  */
 export const createMockOutputFormatter = () => ({
-  formatForGitHubActions: vi.fn().mockReturnValue({
+  formatOperationForGitHubActions: vi.fn().mockReturnValue({
     success: 'true',
     operation: 'deploy',
     stage: 'test',

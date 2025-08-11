@@ -7,41 +7,99 @@ import * as core from '@actions/core';
 import { OutputFormatter } from '../outputs/formatter.js';
 import type { OperationResult } from '../types/index.js';
 import {
-  type ActionInputs,
-  parseActionInputs,
+  type OperationInputsType,
+  parseOperationInputs,
   ValidationError,
 } from './validation.js';
 
 /**
+ * Parse stage operation inputs
+ */
+function parseStageInputs(): Record<string, unknown> {
+  const inputs: Record<string, unknown> = {};
+
+  const truncationLengthStr = core.getInput('truncation-length');
+  if (truncationLengthStr) {
+    inputs.truncationLength = Number.parseInt(truncationLengthStr, 10);
+  }
+
+  const prefixStr = core.getInput('prefix');
+  if (prefixStr) {
+    inputs.prefix = prefixStr;
+  }
+
+  return inputs;
+}
+
+/**
+ * Parse infrastructure operation inputs
+ */
+function parseInfrastructureInputs(): Record<string, unknown> {
+  const inputs: Record<string, unknown> = {
+    token: core.getInput('token'),
+  };
+
+  const commentMode = core.getInput('comment-mode');
+  if (commentMode) {
+    inputs.commentMode = commentMode;
+  }
+
+  const failOnErrorInput = core.getInput('fail-on-error');
+  if (failOnErrorInput) {
+    inputs.failOnError = core.getBooleanInput('fail-on-error');
+  }
+
+  const maxOutputSizeStr = core.getInput('max-output-size');
+  if (maxOutputSizeStr) {
+    inputs.maxOutputSize = Number.parseInt(maxOutputSizeStr, 10);
+  }
+
+  const runnerStr = core.getInput('runner');
+  if (runnerStr) {
+    inputs.runner = runnerStr;
+  }
+
+  return inputs;
+}
+
+/**
+ * Create validation error message for GitHub Actions
+ */
+function createValidationErrorMessage(error: ValidationError): string {
+  const message = `Input validation failed for '${error.field}': ${error.message}`;
+  const details =
+    error.suggestions.length > 0
+      ? `\n\nSuggestions:\n${error.suggestions.map((s) => `  • ${s}`).join('\n')}`
+      : '';
+  return message + details;
+}
+
+/**
  * Parse and validate all GitHub Actions inputs from the environment
  */
-export function getActionInputs(): ActionInputs {
+export function getActionInputs(): OperationInputsType {
   try {
-    const rawInputs = {
-      operation: core.getInput('operation') || undefined,
-      stage: core.getInput('stage'),
-      token: core.getInput('token'),
-      commentMode: core.getInput('comment-mode') || undefined,
-      failOnError: core.getInput('fail-on-error') || undefined,
-      maxOutputSize: core.getInput('max-output-size') || undefined,
+    // Get the operation first to determine which inputs to read
+    const operation = core.getInput('operation') || 'deploy';
+
+    // Build base inputs
+    const rawInputs: Record<string, unknown> = {
+      operation,
+      stage: core.getInput('stage') || '',
     };
 
-    // Remove undefined values to let schema defaults work
-    const cleanInputs = Object.fromEntries(
-      Object.entries(rawInputs).filter(([, value]) => value !== undefined)
-    );
+    // Add operation-specific inputs
+    if (operation === 'stage') {
+      Object.assign(rawInputs, parseStageInputs());
+    } else {
+      Object.assign(rawInputs, parseInfrastructureInputs());
+    }
 
-    return parseActionInputs(cleanInputs);
+    return parseOperationInputs(rawInputs);
   } catch (error) {
     if (error instanceof ValidationError) {
-      // Create actionable error message for GitHub Actions
-      const message = `Input validation failed for '${error.field}': ${error.message}`;
-      const details =
-        error.suggestions.length > 0
-          ? `\n\nSuggestions:\n${error.suggestions.map((s) => `  • ${s}`).join('\n')}`
-          : '';
-
-      core.setFailed(message + details);
+      const message = createValidationErrorMessage(error);
+      core.setFailed(message);
       throw error;
     }
     throw error;
@@ -55,7 +113,8 @@ export function getActionInputs(): ActionInputs {
 export function setActionOutputs(result: OperationResult): void {
   try {
     // Use OutputFormatter for consistent formatting
-    const standardizedOutputs = OutputFormatter.formatForGitHubActions(result);
+    const standardizedOutputs =
+      OutputFormatter.formatOperationForGitHubActions(result);
 
     // Validate outputs before setting
     OutputFormatter.validateOutputs(standardizedOutputs);
@@ -110,25 +169,76 @@ export function logValidationError(error: ValidationError): void {
 }
 
 /**
+ * Get stage name for logging
+ */
+function getStageForLogging(inputs: OperationInputsType): string {
+  if (inputs.operation === 'stage') {
+    return 'computed';
+  }
+  if (inputs.operation === 'deploy') {
+    return inputs.stage || 'auto';
+  }
+  return inputs.stage;
+}
+
+/**
+ * Determine token type for logging
+ */
+function getTokenType(token: string): string {
+  if (token.startsWith('ghp_')) {
+    return 'Personal Access Token';
+  }
+  if (token.startsWith('github_pat_')) {
+    return 'GitHub App Token';
+  }
+  return 'Test Token';
+}
+
+/**
+ * Log infrastructure operation inputs
+ */
+function logInfrastructureInputs(inputs: OperationInputsType): void {
+  const infraInputs = inputs as typeof inputs & {
+    token: string;
+    commentMode?: string;
+    failOnError?: boolean;
+    maxOutputSize?: number;
+  };
+
+  core.info(`💬 Comment mode: ${infraInputs.commentMode || 'on-success'}`);
+  core.info(`⚠️  Fail on error: ${infraInputs.failOnError ?? true}`);
+  core.debug(`Max output size: ${infraInputs.maxOutputSize || 50_000} bytes`);
+  core.debug(`Token type: ${getTokenType(infraInputs.token)}`);
+}
+
+/**
+ * Log stage operation inputs
+ */
+function logStageInputs(inputs: OperationInputsType): void {
+  const stageInputs = inputs as typeof inputs & {
+    truncationLength?: number;
+    prefix?: string;
+  };
+
+  core.info(`✂️  Truncation length: ${stageInputs.truncationLength || 26}`);
+  core.info(`🏷️  Prefix: ${stageInputs.prefix || 'pr-'}`);
+}
+
+/**
  * Log operation start with input summary
  */
-export function logOperationStart(inputs: ActionInputs): void {
+export function logOperationStart(inputs: OperationInputsType): void {
   core.info(`🚀 Starting SST ${inputs.operation} operation`);
-  core.info(`📍 Stage: ${inputs.stage}`);
-  core.info(`💬 Comment mode: ${inputs.commentMode}`);
-  core.info(`⚠️  Fail on error: ${inputs.failOnError}`);
 
-  // Log additional context for debugging
-  core.debug(`Max output size: ${inputs.maxOutputSize} bytes`);
-  let tokenType: string;
-  if (inputs.token.startsWith('ghp_')) {
-    tokenType = 'Personal Access Token';
-  } else if (inputs.token.startsWith('github_pat_')) {
-    tokenType = 'GitHub App Token';
+  const stage = getStageForLogging(inputs);
+  core.info(`📍 Stage: ${stage}`);
+
+  // Log operation-specific inputs
+  if (inputs.operation !== 'stage') {
+    logInfrastructureInputs(inputs);
   } else {
-    tokenType = 'Test Token';
+    logStageInputs(inputs);
   }
-  core.debug(`Token type: ${tokenType}`);
 }
 
 /**
@@ -284,10 +394,14 @@ export function createActionSummary(result: OperationResult): void {
 /**
  * Mask sensitive values in GitHub Actions logs
  */
-export function maskSensitiveValues(inputs: ActionInputs): void {
+export function maskSensitiveValues(inputs: OperationInputsType): void {
   // Mask the token to prevent accidental exposure in logs
-  if (inputs.token !== 'fake-token') {
-    core.setSecret(inputs.token);
+  // Only infrastructure operations have tokens
+  if (inputs.operation !== 'stage') {
+    const infraInputs = inputs as typeof inputs & { token: string };
+    if (infraInputs.token !== 'fake-token') {
+      core.setSecret(infraInputs.token);
+    }
   }
 }
 

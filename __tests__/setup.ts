@@ -21,20 +21,24 @@ vi.mock('@actions/core', () => ({
   },
 }));
 
-vi.mock('@actions/github', () => ({
-  context: {
-    repo: {
-      owner: 'test-owner',
-      repo: 'test-repo',
-    },
-    issue: {
-      number: 1,
-    },
-    payload: {
-      pull_request: { number: 123 },
-    },
-    eventName: 'pull_request',
+const mockContext = {
+  repo: {
+    owner: 'test-owner',
+    repo: 'test-repo',
   },
+  issue: {
+    number: 1,
+  },
+  payload: {
+    pull_request: { number: 123 },
+  },
+  eventName: 'pull_request',
+  ref: 'refs/heads/main',
+  ref_name: 'main',
+};
+
+vi.mock('@actions/github', () => ({
+  context: mockContext,
   getOctokit: vi.fn(),
 }));
 

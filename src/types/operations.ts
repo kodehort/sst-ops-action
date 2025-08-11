@@ -3,7 +3,7 @@
  * Defines the unified type system for deploy, diff, and remove operations
  */
 
-export type SSTOperation = 'deploy' | 'diff' | 'remove';
+export type SSTOperation = 'deploy' | 'diff' | 'remove' | 'stage';
 
 export type CommentMode = 'always' | 'on-success' | 'on-failure' | 'never';
 
@@ -17,6 +17,8 @@ export interface OperationOptions {
   maxOutputSize?: number;
   runner?: 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
   environment?: Record<string, string>;
+  truncationLength?: number;
+  prefix?: string;
 }
 
 export interface BaseOperationResult {
@@ -69,7 +71,19 @@ export interface RemoveResult extends BaseOperationResult {
   }>;
 }
 
-export type OperationResult = DeployResult | DiffResult | RemoveResult;
+export interface StageResult extends BaseOperationResult {
+  operation: 'stage';
+  computedStage: string;
+  ref: string;
+  eventName: string;
+  isPullRequest: boolean;
+}
+
+export type OperationResult =
+  | DeployResult
+  | DiffResult
+  | RemoveResult
+  | StageResult;
 
 export interface OperationContext {
   operation: SSTOperation;

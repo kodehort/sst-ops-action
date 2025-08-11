@@ -47,11 +47,19 @@ describe('Operation Factory - Operation Creation', () => {
       expect(typeof operation.execute).toBe('function');
     });
 
+    it('should create StageOperation for stage operation type', () => {
+      const operation = factory.createOperation('stage');
+
+      expect(operation).toBeDefined();
+      expect(operation).toHaveProperty('execute');
+      expect(typeof operation.execute).toBe('function');
+    });
+
     it('should throw error for unknown operation type', () => {
       expect(() => {
         factory.createOperation('unknown' as SSTOperation);
       }).toThrow(
-        'Unknown operation type: unknown. Supported operations: deploy, diff, remove'
+        'Unknown operation type: unknown. Supported operations: deploy, diff, remove, stage'
       );
     });
 
@@ -59,10 +67,14 @@ describe('Operation Factory - Operation Creation', () => {
       const deploy = factory.createOperation('deploy');
       const diff = factory.createOperation('diff');
       const remove = factory.createOperation('remove');
+      const stage = factory.createOperation('stage');
 
       expect(deploy).not.toBe(diff);
       expect(diff).not.toBe(remove);
       expect(deploy).not.toBe(remove);
+      expect(stage).not.toBe(deploy);
+      expect(stage).not.toBe(diff);
+      expect(stage).not.toBe(remove);
     });
   });
 
@@ -71,6 +83,7 @@ describe('Operation Factory - Operation Creation', () => {
       expect(OperationFactory.isValidOperationType('deploy')).toBe(true);
       expect(OperationFactory.isValidOperationType('diff')).toBe(true);
       expect(OperationFactory.isValidOperationType('remove')).toBe(true);
+      expect(OperationFactory.isValidOperationType('stage')).toBe(true);
     });
 
     it('should return false for invalid operation types', () => {
@@ -92,8 +105,8 @@ describe('Operation Factory - Operation Creation', () => {
     it('should return all supported operation types', () => {
       const supportedOps = OperationFactory.getSupportedOperations();
 
-      expect(supportedOps).toEqual(['deploy', 'diff', 'remove']);
-      expect(supportedOps).toHaveLength(3);
+      expect(supportedOps).toEqual(['deploy', 'diff', 'remove', 'stage']);
+      expect(supportedOps).toHaveLength(4);
     });
 
     it('should return a new array each time (not mutate original)', () => {
@@ -125,11 +138,13 @@ describe('Operation Factory - Operation Creation', () => {
       const deployOp = factory.createOperation('deploy');
       const diffOp = factory.createOperation('diff');
       const removeOp = factory.createOperation('remove');
+      const stageOp = factory.createOperation('stage');
 
       // Verify all operations have required methods
       expect(deployOp).toHaveProperty('execute');
       expect(diffOp).toHaveProperty('execute');
       expect(removeOp).toHaveProperty('execute');
+      expect(stageOp).toHaveProperty('execute');
     });
 
     it('should create operations that can handle options', () => {
@@ -147,6 +162,7 @@ describe('Operation Factory - Operation Creation', () => {
       factory.createOperation('deploy');
       factory.createOperation('diff');
       factory.createOperation('remove');
+      factory.createOperation('stage');
 
       // This would cause TypeScript compile error if uncommented:
       // factory.createOperation('invalid');
@@ -156,15 +172,18 @@ describe('Operation Factory - Operation Creation', () => {
       const deployOp = factory.createOperation('deploy');
       const diffOp = factory.createOperation('diff');
       const removeOp = factory.createOperation('remove');
+      const stageOp = factory.createOperation('stage');
 
       // All operations should have execute method
       expect(deployOp).toHaveProperty('execute');
       expect(diffOp).toHaveProperty('execute');
       expect(removeOp).toHaveProperty('execute');
+      expect(stageOp).toHaveProperty('execute');
 
       expect(typeof deployOp.execute).toBe('function');
       expect(typeof diffOp.execute).toBe('function');
       expect(typeof removeOp.execute).toBe('function');
+      expect(typeof stageOp.execute).toBe('function');
     });
   });
 });

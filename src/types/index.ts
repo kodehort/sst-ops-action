@@ -18,6 +18,7 @@ export type {
   ParsedSST,
   RemoveResult,
   SSTOperation,
+  StageResult,
 } from './operations.js';
 
 // GitHub Actions types
@@ -52,6 +53,7 @@ export type {
   SSTWebsite,
 } from './sst.js';
 
+import type { SSTRunner } from '../utils/cli.js';
 import type {
   CommentMode,
   CompletionStatus,
@@ -60,8 +62,8 @@ import type {
   OperationResult,
   RemoveResult,
   SSTOperation,
+  StageResult,
 } from './operations.js';
-
 import type {
   SSTDeployOutput,
   SSTDiffOutput,
@@ -93,11 +95,15 @@ export function isRemoveResult(
   return result.operation === 'remove';
 }
 
+export function isStageResult(result: OperationResult): result is StageResult {
+  return result.operation === 'stage';
+}
+
 /**
  * Type guards for SST operations
  */
 export function isValidOperation(operation: string): operation is SSTOperation {
-  return ['deploy', 'diff', 'remove'].includes(operation);
+  return ['deploy', 'diff', 'remove', 'stage'].includes(operation);
 }
 
 export function isValidCommentMode(mode: string): mode is CommentMode {
@@ -120,7 +126,7 @@ export function validateOperation(operation: unknown): SSTOperation {
 
   if (!isValidOperation(operation)) {
     throw new Error(
-      `Invalid operation: ${operation}. Must be one of: deploy, diff, remove`
+      `Invalid operation: ${operation}. Must be one of: deploy, diff, remove, stage`
     );
   }
 
@@ -203,6 +209,9 @@ export function validateSSTOutput(
       return validateDiffOutput(obj);
     case 'remove':
       return validateRemoveOutput(obj);
+    case 'stage':
+      // Stage operation doesn't use SST output validation - it computes stage internally
+      throw new Error('Stage operation does not use SST output validation');
     default:
       throw new Error(`Unsupported operation: ${operation}`);
   }
@@ -290,4 +299,87 @@ export function isSSTError(error: unknown): error is SSTError {
     typeof (error as SSTError).code === 'string' &&
     typeof (error as SSTError).message === 'string'
   );
+}
+
+/**
+ * Operation-specific input schemas using discriminated unions
+ * Each operation has different input requirements and validation rules
+ */
+
+/**
+ * Base schema for SST infrastructure operations (deploy, diff, remove)
+ * These operations interact with AWS and require authentication
+ */
+export interface BaseInfrastructureInputs {
+  token: string;
+  commentMode?: CommentMode;
+  failOnError?: boolean;
+  maxOutputSize?: number;
+  runner?: SSTRunner;
+}
+
+/**
+ * Deploy operation inputs - can auto-compute stage from Git context
+ */
+export interface DeployInputs extends BaseInfrastructureInputs {
+  stage?: string;
+}
+
+/**
+ * Diff operation inputs - requires explicit stage for comparison target
+ */
+export interface DiffInputs extends BaseInfrastructureInputs {
+  stage: string;
+}
+
+/**
+ * Remove operation inputs - requires explicit stage for safety
+ */
+export interface RemoveInputs extends BaseInfrastructureInputs {
+  stage: string;
+}
+
+/**
+ * Stage operation inputs - standalone utility for stage name computation
+ * No token or infrastructure access required
+ */
+export interface StageInputs {
+  truncationLength?: number;
+  prefix?: string;
+}
+
+/**
+ * Discriminated union of all operation-specific input types
+ */
+export type OperationInputs =
+  | ({ operation: 'deploy' } & DeployInputs)
+  | ({ operation: 'diff' } & DiffInputs)
+  | ({ operation: 'remove' } & RemoveInputs)
+  | ({ operation: 'stage' } & StageInputs);
+
+/**
+ * Type guards for operation input types
+ */
+export function isDeployInputs(
+  inputs: OperationInputs
+): inputs is { operation: 'deploy' } & DeployInputs {
+  return inputs.operation === 'deploy';
+}
+
+export function isDiffInputs(
+  inputs: OperationInputs
+): inputs is { operation: 'diff' } & DiffInputs {
+  return inputs.operation === 'diff';
+}
+
+export function isRemoveInputs(
+  inputs: OperationInputs
+): inputs is { operation: 'remove' } & RemoveInputs {
+  return inputs.operation === 'remove';
+}
+
+export function isStageInputs(
+  inputs: OperationInputs
+): inputs is { operation: 'stage' } & StageInputs {
+  return inputs.operation === 'stage';
 }

@@ -14,16 +14,17 @@ import type { SSTRunner } from './cli.js';
 
 // Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
+const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 
 /**
- * Zod schema for validating all GitHub Actions inputs
+ * Common field schemas used across operations
  */
-export const ActionInputsSchema = z.object({
+const CommonFieldSchemas = {
   operation: z
     .string()
     .default('deploy')
     .refine((val) => isValidOperation(val), {
-      message: 'Invalid operation. Must be one of: deploy, diff, remove',
+      message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
     })
     .transform((val) => val as SSTOperation),
 
@@ -31,10 +32,22 @@ export const ActionInputsSchema = z.object({
     .string()
     .min(1, 'Stage cannot be empty')
     .refine(
-      (val) => STAGE_VALIDATION_PATTERN.test(val.trim()),
+      (val) =>
+        val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim()),
       'Stage must contain only alphanumeric characters, hyphens, and underscores'
     )
     .transform((val) => val.trim()),
+
+  optionalStage: z
+    .string()
+    .optional()
+    .refine(
+      (val) =>
+        !val ||
+        (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())),
+      'Stage must contain only alphanumeric characters, hyphens, and underscores'
+    )
+    .transform((val) => val?.trim() || ''),
 
   token: z.string().min(1, 'Token cannot be empty'),
 
@@ -74,12 +87,95 @@ export const ActionInputsSchema = z.object({
       }
     )
     .transform((val) => val as SSTRunner),
+
+  truncationLength: z
+    .number()
+    .or(
+      z.string().transform((val) => {
+        const parsed = Number.parseInt(val, 10);
+        if (Number.isNaN(parsed)) {
+          throw new Error('truncation-length must be a valid number');
+        }
+        return parsed;
+      })
+    )
+    .refine((val) => val > 0 && val <= 100, {
+      message: 'Truncation length must be between 1 and 100 characters',
+    })
+    .default(26),
+
+  prefix: z
+    .string()
+    .refine((val) => val.length <= 10, {
+      message: 'Prefix must be 10 characters or less',
+    })
+    .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
+      message:
+        'Prefix must contain only lowercase letters, numbers, and hyphens',
+    })
+    .default('pr-'),
+};
+
+/**
+ * Base schema for SST infrastructure operations
+ */
+const BaseInfrastructureSchema = z.object({
+  token: CommonFieldSchemas.token,
+  commentMode: CommonFieldSchemas.commentMode.optional(),
+  failOnError: CommonFieldSchemas.failOnError.optional(),
+  maxOutputSize: CommonFieldSchemas.maxOutputSize.optional(),
+  runner: CommonFieldSchemas.runner.optional(),
 });
 
 /**
- * Inferred TypeScript type from the Zod schema
+ * Operation-specific input schemas using discriminated unions
  */
-export type ActionInputs = z.infer<typeof ActionInputsSchema>;
+const DeployInputsSchema = z
+  .object({
+    operation: z.literal('deploy'),
+    stage: CommonFieldSchemas.optionalStage.optional(),
+  })
+  .merge(BaseInfrastructureSchema)
+  .strict();
+
+const DiffInputsSchema = z
+  .object({
+    operation: z.literal('diff'),
+    stage: CommonFieldSchemas.stage,
+  })
+  .merge(BaseInfrastructureSchema)
+  .strict();
+
+const RemoveInputsSchema = z
+  .object({
+    operation: z.literal('remove'),
+    stage: CommonFieldSchemas.stage,
+  })
+  .merge(BaseInfrastructureSchema)
+  .strict();
+
+const StageInputsSchema = z
+  .object({
+    operation: z.literal('stage'),
+    truncationLength: CommonFieldSchemas.truncationLength.optional(),
+    prefix: CommonFieldSchemas.prefix.optional(),
+  })
+  .strict();
+
+/**
+ * Discriminated union schema for all operation types
+ */
+export const OperationInputsSchema = z.discriminatedUnion('operation', [
+  DeployInputsSchema,
+  DiffInputsSchema,
+  RemoveInputsSchema,
+  StageInputsSchema,
+]);
+
+/**
+ * Inferred TypeScript type from the operation schema
+ */
+export type OperationInputsType = z.infer<typeof OperationInputsSchema>;
 
 /**
  * Validation error with additional context for GitHub Actions
@@ -104,13 +200,13 @@ export class ValidationError extends Error {
 }
 
 /**
- * Parse and validate GitHub Actions inputs with comprehensive error handling
+ * Parse and validate operation-specific GitHub Actions inputs
  */
-export function parseActionInputs(
+export function parseOperationInputs(
   rawInputs: Record<string, unknown>
-): ActionInputs {
+): OperationInputsType {
   try {
-    return ActionInputsSchema.parse(rawInputs);
+    return OperationInputsSchema.parse(rawInputs);
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
@@ -120,7 +216,12 @@ export function parseActionInputs(
       }
 
       const fieldName = issue.path.length > 0 ? issue.path[0] : 'unknown';
-      const suggestions = generateSuggestions(String(fieldName), issue);
+      const operation = (rawInputs.operation as string) || 'unknown';
+      const suggestions = generateOperationSuggestions(
+        String(fieldName),
+        issue,
+        operation
+      );
 
       throw new ValidationError(
         issue.message,
@@ -134,32 +235,130 @@ export function parseActionInputs(
 }
 
 /**
- * Generate helpful suggestions based on validation errors
+ * Generate operation-specific helpful suggestions based on validation errors
  */
-function generateSuggestions(field: string, _issue: z.ZodIssue): string[] {
+function generateOperationSuggestions(
+  field: string,
+  _issue: z.ZodIssue,
+  operation: string
+): string[] {
   switch (field) {
     case 'operation':
       return [
-        'Valid operations are: deploy, diff, remove',
-        'Use "deploy" for deploying infrastructure',
-        'Use "diff" to preview changes without deploying',
-        'Use "remove" to clean up resources',
+        'Valid operations are: deploy, diff, remove, stage',
+        'Use "deploy" for deploying infrastructure to AWS',
+        'Use "diff" to preview infrastructure changes without deploying',
+        'Use "remove" to clean up and delete deployed resources',
+        'Use "stage" to compute stage names from Git context',
       ];
 
     case 'stage':
-      return [
-        'Stage must be a non-empty string',
-        'Use only alphanumeric characters, hyphens, and underscores',
-        'Examples: "production", "staging", "dev-123", "pr-456"',
-      ];
+      return generateStagesuggestions(operation);
 
     case 'token':
+      return generateTokenSuggestions(operation);
+
+    case 'truncationLength':
+      return [
+        'Truncation length controls maximum stage name length (1-100 characters)',
+        'Only applies to stage operations for DNS compatibility',
+        'Default is 26 characters to fit Route53 limits',
+        'Use smaller values for shorter stage names',
+      ];
+
+    case 'prefix':
+      return [
+        'Prefix is added to stage names that start with numbers',
+        'Only applies to stage operations',
+        'Must be lowercase letters, numbers, and hyphens only',
+        'Default "pr-" creates names like "pr-123" for PR #123',
+      ];
+
+    default:
+      return generateGeneralSuggestions(field);
+  }
+}
+
+/**
+ * Generate stage-specific suggestions based on operation type
+ */
+function generateStagesuggestions(operation: string): string[] {
+  switch (operation) {
+    case 'deploy':
+      return [
+        'Deploy operations can auto-compute stage from Git context',
+        'Leave empty to use branch/PR name as stage',
+        'Or provide explicit stage: "production", "staging", "dev-123"',
+        'Uses alphanumeric characters, hyphens, and underscores only',
+      ];
+    case 'diff':
+      return [
+        'Diff operations require explicit stage name',
+        'Cannot preview changes without knowing target stage',
+        'Examples: "production", "staging", "dev-123", "pr-456"',
+        'Must match an existing deployed stage for comparison',
+      ];
+    case 'remove':
+      return [
+        'Remove operations require explicit stage for safety',
+        'Will not auto-compute stage to prevent accidental deletions',
+        'Examples: "staging", "dev-123", "pr-456"',
+        'Use caution with production stages',
+      ];
+    default:
+      return [
+        'Stage must contain only alphanumeric characters, hyphens, and underscores',
+        'Examples: "production", "staging", "dev-123", "pr-456"',
+      ];
+  }
+}
+
+/**
+ * Generate token-specific suggestions based on operation type
+ */
+function generateTokenSuggestions(operation: string): string[] {
+  switch (operation) {
+    case 'deploy':
+      return [
+        'Deploy operations require GitHub token for authentication',
+        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+        'Token needed to comment on PRs and access AWS credentials',
+        'Use "fake-token" only for local testing',
+      ];
+    case 'diff':
+      return [
+        'Diff operations require GitHub token for PR comments',
+        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` for automatic token`,
+        'Token needed to post comparison results to pull requests',
+        'Use "fake-token" only for local testing',
+      ];
+    case 'remove':
+      return [
+        'Remove operations require GitHub token for confirmation',
+        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+        'Token needed for authentication and result reporting',
+        'Use "fake-token" only for local testing',
+      ];
+    case 'stage':
+      return [
+        'Stage operations do not require GitHub token',
+        'This operation only computes stage names from Git context',
+        'No infrastructure access or API calls needed',
+      ];
+    default:
       return [
         `Use a valid GitHub token (e.g., \`${'$'}{{ secrets.GITHUB_TOKEN }}\`)`,
         'Token must be provided and cannot be empty',
         'Use "fake-token" only for testing',
       ];
+  }
+}
 
+/**
+ * Generate general field suggestions
+ */
+function generateGeneralSuggestions(field: string): string[] {
+  switch (field) {
     case 'commentMode':
       return [
         'Valid comment modes are: always, on-success, on-failure, never',
@@ -217,43 +416,17 @@ export function validateInput<T>(
         throw error;
       }
 
-      const suggestions = generateSuggestions(fieldName, issue);
+      const suggestions = generateOperationSuggestions(
+        fieldName,
+        issue,
+        'unknown'
+      );
 
       throw new ValidationError(issue.message, fieldName, value, suggestions);
     }
     throw error;
   }
 }
-
-/**
- * Type-safe input validators for specific GitHub Actions input fields
- */
-export const InputValidators = {
-  operation: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.operation, 'operation'),
-
-  stage: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.stage, 'stage'),
-
-  token: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.token, 'token'),
-
-  commentMode: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.commentMode, 'commentMode'),
-
-  failOnError: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.failOnError, 'failOnError'),
-
-  maxOutputSize: (value: unknown) =>
-    validateInput(
-      value,
-      ActionInputsSchema.shape.maxOutputSize,
-      'maxOutputSize'
-    ),
-
-  runner: (value: unknown) =>
-    validateInput(value, ActionInputsSchema.shape.runner, 'runner'),
-};
 
 /**
  * Create operation-specific validation context
@@ -266,13 +439,13 @@ export interface ValidationContext {
 }
 
 /**
- * Enhanced validation with operation-specific rules
+ * Enhanced validation with operation-specific rules using discriminated unions
  */
-export function validateWithContext(
+export function validateOperationWithContext(
   rawInputs: Record<string, unknown>,
   context: Partial<ValidationContext> = {}
-): ActionInputs {
-  const inputs = parseActionInputs(rawInputs);
+): OperationInputsType {
+  const inputs = parseOperationInputs(rawInputs);
 
   // Operation-specific validation rules
   switch (inputs.operation) {
@@ -293,15 +466,7 @@ export function validateWithContext(
       break;
 
     case 'diff':
-      // Diff operations are safe but validate stage exists
-      if (!inputs.stage.trim()) {
-        throw new ValidationError(
-          'Diff operation requires a valid stage to compare against',
-          'stage',
-          inputs.stage,
-          ['Provide a stage name to show infrastructure differences for']
-        );
-      }
+      // Diff operations require explicit stage - already validated by schema
       break;
 
     case 'deploy':
@@ -322,9 +487,15 @@ export function validateWithContext(
       }
       break;
 
-    default:
-      // Default case for exhaustive checking
+    case 'stage':
+      // Stage operations are utility only - no additional validation needed
       break;
+
+    default: {
+      // Exhaustive check for TypeScript
+      const _exhaustive: never = inputs;
+      break;
+    }
   }
 
   return inputs;
