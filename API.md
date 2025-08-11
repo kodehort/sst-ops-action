@@ -18,7 +18,7 @@ Complete reference documentation for all inputs, outputs, and behavior of the SS
 
 ```yaml
 name: 'SST Operations Action'
-description: 'A unified GitHub Action for SST operations: deploy, diff, and remove'
+description: 'A unified GitHub Action for SST operations: deploy, diff, remove, and stage'
 author: 'Kodehort'
 branding:
   icon: 'cloud'
@@ -50,6 +50,7 @@ All inputs are defined in `action.yml` and processed by the action's validation 
 - `"deploy"` - Deploy SST application to specified stage
 - `"diff"` - Show infrastructure changes without deploying  
 - `"remove"` - Remove all resources for specified stage
+- `"stage"` - Calculate stage name from Git branch or pull request
 
 **Examples:**
 ```yaml
@@ -65,6 +66,12 @@ All inputs are defined in `action.yml` and processed by the action's validation 
     operation: diff
     stage: staging
     token: ${{ secrets.GITHUB_TOKEN }}
+
+# Stage calculation operation
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 **Validation:**
@@ -76,9 +83,9 @@ All inputs are defined in `action.yml` and processed by the action's validation 
 
 ### `stage`
 
-**Description:** SST stage to operate on  
-**Required:** Yes  
-**Default:** None  
+**Description:** SST stage to operate on (automatically computed from Git context if not provided)  
+**Required:** No  
+**Default:** Auto-computed from Git context (branch/PR name)  
 **Type:** String  
 
 **Valid Format:**
@@ -89,7 +96,15 @@ All inputs are defined in `action.yml` and processed by the action's validation 
 
 **Examples:**
 ```yaml
-# Simple stage names
+# Automatic stage inference (recommended)
+# Stage computed from Git context (branch/PR name)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    # No stage input - automatically computed
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Explicit stage names
 stage: production
 stage: staging
 stage: development
@@ -111,9 +126,10 @@ stage: ${{ steps.sanitize.outputs.stage }}
 - `feature-xyz` - Feature branch stages
 
 **Validation:**
-- Required input, action fails if not provided
-- Must match regex: `^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$`
-- Cannot be empty string
+- Optional input for all operations (automatically computed from Git context if not provided)
+- When provided, must match regex: `^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$`
+- Cannot be empty string if explicitly provided
+- Falls back to automatic computation from branch/PR name when omitted
 
 ---
 
@@ -170,11 +186,11 @@ permissions:
 
 **Examples:**
 ```yaml
-# Show diff results in all PRs
+# Show diff results in all PRs (auto-computed stage)
 - uses: kodehort/sst-operations-action@v1
   with:
     operation: diff
-    stage: staging
+    # Stage automatically computed from PR branch name
     token: ${{ secrets.GITHUB_TOKEN }}
     comment-mode: always
 
@@ -310,6 +326,129 @@ permissions:
 
 ---
 
+### `truncation-length`
+
+**Description:** Maximum length for computed stage names (stage operation only)  
+**Required:** No  
+**Default:** `26`  
+**Type:** Integer  
+
+**Valid Range:**
+- Minimum: `1`
+- Maximum: `100`  
+- Default: `26`
+
+**Examples:**
+```yaml
+# Default length (26 characters)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Custom length for shorter stage names
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    truncation-length: 15
+
+# Longer stage names for environments without naming constraints
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    truncation-length: 50
+```
+
+**Impact:**
+- Controls maximum length of computed stage names
+- Truncation includes any prefix
+- Trailing hyphens are cleaned up after truncation
+- Useful for services with specific naming constraints (Route53, ELBs, etc.)
+
+**When to Adjust:**
+- **Decrease** for strict naming requirements (e.g., Route53 subdomain limits)
+- **Increase** when longer, more descriptive stage names are needed
+- **Customize** based on target infrastructure constraints
+
+**Validation:**
+- Must be integer between 1 and 100
+- Values outside range are constrained to limits
+- String values automatically converted to integers
+
+---
+
+### `prefix`
+
+**Description:** Prefix to add when stage name starts with a number (stage operation only)  
+**Required:** No  
+**Default:** `"pr-"`  
+**Type:** String  
+
+**Valid Format:**
+- Maximum length: 10 characters
+- Must contain only lowercase letters, numbers, and hyphens
+- Can be empty string to disable prefixing
+
+**Examples:**
+```yaml
+# Default prefix ('pr-')
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Custom prefix for issue tracking
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    prefix: "issue-"
+
+# No prefix (empty string)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    prefix: ""
+
+# Ticket system integration
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    prefix: "ticket-"
+```
+
+**Usage Examples:**
+| Branch Name | Prefix | Result |
+|-------------|--------|--------|
+| `123-hotfix` | `pr-` | `pr-123-hotfix` |
+| `456-feature` | `fix-` | `fix-456-feature` |
+| `789-update` | `` (empty) | `789-update` |
+| `bug-123` | `issue-` | `bug-123` (no prefix, doesn't start with digit) |
+
+**Impact:**
+- Only applied when stage name starts with a digit
+- Prefix is included in truncation length calculation
+- Useful for integrating with ticket systems or issue trackers
+- Ensures valid resource names in cloud environments
+
+**When to Customize:**
+- **Issue Tracking**: Use `issue-` for GitHub issues or Jira tickets
+- **Bug Fixes**: Use `fix-` or `hotfix-` for hotfix branches
+- **No Prefix**: Use empty string when numeric names are acceptable
+- **Team Conventions**: Match your team's branch naming standards
+
+**Validation:**
+- Maximum 10 characters
+- Must match regex: `^[a-z0-9-]*$`
+- Empty string is valid (disables prefixing)
+- Invalid characters are rejected
+
+---
+
 ## Outputs
 
 All outputs are provided as strings (GitHub Actions requirement) and available for use in subsequent workflow steps.
@@ -360,6 +499,7 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 - `"deploy"` - Deploy operation was executed
 - `"diff"` - Diff operation was executed  
 - `"remove"` - Remove operation was executed
+- `"stage"` - Stage operation was executed
 
 **Usage:**
 ```yaml
@@ -374,6 +514,9 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
         ;;
       "remove")
         echo "Resource removal completed"
+        ;;
+      "stage")
+        echo "Stage calculation completed"
         ;;
     esac
 ```
@@ -552,6 +695,163 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 - Only populated for `diff` operations
 - Empty string if no changes or parsing failed
 - Human-readable format for notifications and reports
+
+---
+
+### `computed_stage` (Stage Only)
+
+**Description:** Computed stage name from Git branch or pull request  
+**Type:** String  
+**Format:** Stage name (kebab-case)  
+
+**Example Values:**
+```
+"main"
+"feature-branch"
+"user-authentication"
+"pr-123-hotfix"
+```
+
+**Usage:**
+```yaml
+- name: Calculate Stage
+  id: stage-calc
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+- name: Use Computed Stage
+  run: |
+    STAGE="${{ steps.stage-calc.outputs.computed_stage }}"
+    echo "Computed stage: $STAGE"
+    
+    # Use in subsequent operations
+    echo "DEPLOYMENT_STAGE=$STAGE" >> $GITHUB_ENV
+
+- name: Deploy with Computed Stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: ${{ steps.stage-calc.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Stage Computation Rules:**
+- Branch `main` → stage `main`
+- Branch `feature/user-auth` → stage `user-auth`
+- Branch `123-hotfix` → stage `pr-123-hotfix`
+- Pull request from `feature/api` → stage `api`
+- Maximum 26 characters for Route53 compatibility
+- Sanitized to alphanumeric + hyphens only
+
+**Notes:**
+- Only populated for `stage` operations
+- Always produces a valid stage name or uses fallback
+- Follows consistent naming conventions across environments
+
+---
+
+### `ref` (Stage Only)
+
+**Description:** Git reference that was used for stage computation  
+**Type:** String  
+**Format:** Git reference path  
+
+**Example Values:**
+```
+"refs/heads/main"
+"refs/heads/feature/user-auth"
+"feature-branch"
+""
+```
+
+**Usage:**
+```yaml
+- name: Show Git Reference
+  run: |
+    REF="${{ steps.stage-calc.outputs.ref }}"
+    echo "Computed from ref: $REF"
+    
+    # Use in commit status or notifications
+    if [ -n "$REF" ]; then
+      echo "Source: $REF" >> $GITHUB_STEP_SUMMARY
+    fi
+```
+
+**Notes:**
+- Only populated for `stage` operations
+- May be empty if ref cannot be determined
+- Useful for debugging stage computation
+
+---
+
+### `event_name` (Stage Only)
+
+**Description:** GitHub event type that triggered the workflow  
+**Type:** String  
+**Format:** GitHub event name  
+
+**Example Values:**
+```
+"push"
+"pull_request"
+"workflow_dispatch"
+"schedule"
+```
+
+**Usage:**
+```yaml
+- name: Handle Event Type
+  run: |
+    EVENT="${{ steps.stage-calc.outputs.event_name }}"
+    case "$EVENT" in
+      "pull_request")
+        echo "Processing pull request stage"
+        ;;
+      "push")
+        echo "Processing push event stage"
+        ;;
+      *)
+        echo "Processing $EVENT event stage"
+        ;;
+    esac
+```
+
+**Notes:**
+- Only populated for `stage` operations
+- Matches `github.context.eventName`
+- Useful for conditional logic based on event type
+
+---
+
+### `is_pull_request` (Stage Only)
+
+**Description:** Whether the stage was computed from a pull request  
+**Type:** String  
+**Format:** `"true"` or `"false"`  
+
+**Values:**
+- `"true"` - Stage computed from pull request context
+- `"false"` - Stage computed from push or other event
+
+**Usage:**
+```yaml
+- name: Handle Pull Request
+  run: |
+    if [ "${{ steps.stage-calc.outputs.is_pull_request }}" = "true" ]; then
+      echo "This is a pull request deployment"
+      echo "Stage: ${{ steps.stage-calc.outputs.computed_stage }}"
+      echo "Will be cleaned up when PR closes"
+    else
+      echo "This is a direct branch deployment"
+    fi
+```
+
+**Notes:**
+- Only populated for `stage` operations
+- String comparison required (`== 'true'`, not `== true`)
+- Useful for conditional cleanup workflows
 
 ---
 
@@ -784,6 +1084,96 @@ Detailed behavior for each operation type.
     fi
 ```
 
+### Stage Operation
+
+**Purpose:** Calculate stage name from Git branch or pull request information
+
+**Process:**
+1. Extract Git reference from GitHub context
+2. Apply stage computation rules and sanitization  
+3. Generate Route53-compatible stage name (≤26 characters)
+4. Provide detailed context about computation
+5. No SST CLI execution required
+
+**Typical Duration:** < 1 second
+
+**Success Conditions:**
+- Git reference successfully extracted or fallback stage available
+- Stage name passes validation rules
+- GitHub context accessible
+
+**Outputs Populated:**
+- All standard outputs
+- `computed_stage` - Final computed stage name
+- `ref` - Git reference used for computation
+- `event_name` - GitHub event type
+- `is_pull_request` - Whether from pull request context
+
+**Stage Computation Algorithm:**
+1. **Extract Reference**: Get Git ref from GitHub context based on event type
+2. **Remove Prefixes**: Strip `refs/heads/`, `feature/`, etc.
+3. **Normalize**: Convert to lowercase
+4. **Sanitize**: Replace non-alphanumeric chars with hyphens
+5. **Clean**: Remove leading/trailing hyphens
+6. **Truncate**: Limit to 26 characters for Route53
+7. **Fix Numeric**: Prefix with `pr-` if starts with digit
+
+**Example:**
+```yaml
+- name: Calculate Stage Name
+  id: stage-calc
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    stage: fallback-stage  # Optional fallback
+    truncation-length: 20  # Custom length
+    prefix: issue-  # Custom prefix
+    
+- name: Use Computed Stage
+  run: |
+    STAGE="${{ steps.stage-calc.outputs.computed_stage }}"
+    REF="${{ steps.stage-calc.outputs.ref }}"
+    IS_PR="${{ steps.stage-calc.outputs.is_pull_request }}"
+    
+    echo "Computed stage: $STAGE (from $REF)"
+    
+    if [ "$IS_PR" = "true" ]; then
+      echo "This is a pull request preview environment"
+    fi
+
+- name: Deploy to Computed Stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: ${{ steps.stage-calc.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Stage Computation Examples:**
+
+| Input Branch/Ref | Event Type | Config | Computed Stage | Notes |
+|------------------|------------|--------|---------------|--------|
+| `main` | push | Default | `main` | Direct mapping |
+| `feature/user-auth` | push | Default | `user-auth` | Prefix removed |
+| `feature/user-auth` | pull_request | Default | `user-auth` | Same result for PR |
+| `123-hotfix` | push | Default | `pr-123-hotfix` | Numeric prefix added |
+| `123-hotfix` | push | `prefix: "fix-"` | `fix-123-hotfix` | Custom prefix |
+| `123-hotfix` | push | `prefix: ""` | `123-hotfix` | No prefix |
+| `Feature_Branch_NAME` | push | Default | `feature-branch-name` | Case + chars normalized |
+| `refs/heads/develop` | push | Default | `develop` | Git prefix stripped |
+| `very-long-branch-name-that-exceeds-limits` | push | Default | `very-long-branch-name-that` | Truncated to 26 chars |
+| `very-long-branch-name-that-exceeds-limits` | push | `length: 15` | `very-long-branc` | Custom truncation |
+| `123-very-long-name-exceeds-limits` | push | `prefix: "issue-", length: 20` | `issue-123-very-long` | Custom prefix + truncation |
+| No ref available | any | Any | Uses fallback stage | Error handling |
+
+**Error Handling:**
+- Missing Git reference → Uses provided fallback stage
+- Invalid characters → Sanitized automatically  
+- Exceeds length → Truncated to 26 characters
+- Starts with number → Prefixed with `pr-`
+- GitHub context unavailable → Uses fallback with error status
+
 ---
 
 ## Examples
@@ -815,6 +1205,14 @@ Detailed behavior for each operation type.
   with:
     operation: remove
     stage: feature-branch
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+#### Stage Calculation
+```yaml
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
     token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
@@ -886,6 +1284,72 @@ Detailed behavior for each operation type.
     operation: deploy
     stage: production
     token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+#### Dynamic Stage Management
+```yaml
+- name: Calculate Dynamic Stage
+  id: stage-calc
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    stage: development  # Fallback for edge cases
+    truncation-length: 20  # Shorter stage names
+    prefix: ticket-  # Custom prefix for ticket integration
+
+- name: Conditional Deploy Based on Stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: ${{ steps.stage-calc.outputs.is_pull_request == 'true' && 'diff' || 'deploy' }}
+    stage: ${{ steps.stage-calc.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+    comment-mode: ${{ steps.stage-calc.outputs.is_pull_request == 'true' && 'always' || 'on-failure' }}
+
+- name: Cleanup Preview Environments
+  if: |
+    github.event_name == 'pull_request' && 
+    github.event.action == 'closed' &&
+    steps.stage-calc.outputs.is_pull_request == 'true'
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: remove
+    stage: ${{ steps.stage-calc.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+    fail-on-error: false  # Allow partial cleanup
+```
+
+#### Route53-Compatible Stages
+```yaml
+- name: Calculate Route53-Safe Stage
+  id: route53-stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    truncation-length: 26  # Route53 subdomain limit
+    prefix: env-    # Ensure valid DNS names
+    stage: default          # Fallback stage
+
+- name: Deploy with Route53-Safe Stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: ${{ steps.route53-stage.outputs.computed_stage }}
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+#### Short Stage Names for Resource Constraints
+```yaml
+- name: Calculate Short Stage Name
+  id: short-stage
+  uses: kodehort/sst-operations-action@v1
+  with:
+    operation: stage
+    token: ${{ secrets.GITHUB_TOKEN }}
+    truncation-length: 12  # Very short stages
+    prefix: ""      # No prefix for maximum brevity
+    stage: dev             # Short fallback
 ```
 
 ---

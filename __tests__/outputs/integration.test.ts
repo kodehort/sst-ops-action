@@ -27,7 +27,8 @@ describe('OutputFormatter Integration', () => {
           'https://console.sst.dev/my-sst-app/production/deployments/xyz789',
       };
 
-      const outputs = OutputFormatter.formatForGitHubActions(deployResult);
+      const outputs =
+        OutputFormatter.formatOperationForGitHubActions(deployResult);
 
       // Validate outputs are properly formatted
       OutputFormatter.validateOutputs(outputs);
@@ -73,7 +74,8 @@ describe('OutputFormatter Integration', () => {
         ],
       };
 
-      const outputs = OutputFormatter.formatForGitHubActions(diffResult);
+      const outputs =
+        OutputFormatter.formatOperationForGitHubActions(diffResult);
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
@@ -112,7 +114,8 @@ describe('OutputFormatter Integration', () => {
         ],
       };
 
-      const outputs = OutputFormatter.formatForGitHubActions(removeResult);
+      const outputs =
+        OutputFormatter.formatOperationForGitHubActions(removeResult);
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
@@ -148,7 +151,8 @@ describe('OutputFormatter Integration', () => {
           'AWS credentials do not have sufficient permissions to deploy to production',
       };
 
-      const outputs = OutputFormatter.formatForGitHubActions(failedResult);
+      const outputs =
+        OutputFormatter.formatOperationForGitHubActions(failedResult);
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
@@ -180,7 +184,8 @@ describe('OutputFormatter Integration', () => {
         ],
       };
 
-      const outputs = OutputFormatter.formatForGitHubActions(partialResult);
+      const outputs =
+        OutputFormatter.formatOperationForGitHubActions(partialResult);
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
@@ -235,10 +240,11 @@ describe('OutputFormatter Integration', () => {
       };
 
       const deployOutputs =
-        OutputFormatter.formatForGitHubActions(deployResult);
-      const diffOutputs = OutputFormatter.formatForGitHubActions(diffResult);
+        OutputFormatter.formatOperationForGitHubActions(deployResult);
+      const diffOutputs =
+        OutputFormatter.formatOperationForGitHubActions(diffResult);
       const removeOutputs =
-        OutputFormatter.formatForGitHubActions(removeResult);
+        OutputFormatter.formatOperationForGitHubActions(removeResult);
 
       // All should have the same required fields
       const requiredFields = OutputFormatter.getRequiredFields();

@@ -20,3 +20,6 @@ export { DiffParser } from './diff-parser';
 
 export * from './remove-parser';
 export { RemoveParser } from './remove-parser';
+
+export * from './stage-parser';
+export { StageParser } from './stage-parser';

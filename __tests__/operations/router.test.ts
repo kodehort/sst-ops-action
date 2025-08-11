@@ -70,12 +70,12 @@ describe('OperationRouter', () => {
       }).not.toThrow();
     });
 
-    it('should throw error when stage is missing', () => {
-      const invalidOptions = { ...mockOperationOptions, stage: '' };
+    it('should allow empty stage (auto-computation)', () => {
+      const optionsWithEmptyStage = { ...mockOperationOptions, stage: '' };
 
       expect(() => {
-        validateOperationConfig('deploy', invalidOptions);
-      }).toThrow('Stage is required for all operations');
+        validateOperationConfig('deploy', optionsWithEmptyStage);
+      }).not.toThrow();
     });
 
     it('should require confirmation for production remove operations', () => {
