@@ -21,7 +21,7 @@ inputs:
       GitHub token for authentication:
       • Required for: deploy, diff, remove operations (infrastructure access and PR comments)
       • Not required for: stage operation (utility only)
-      • Use: ${{ secrets.GITHUB_TOKEN }} or personal access token
+      • Use: secrets.GITHUB_TOKEN or personal access token
       • Local testing: Use "fake-token"
     required: true
   stage:
