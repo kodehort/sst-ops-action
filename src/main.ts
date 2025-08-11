@@ -85,21 +85,27 @@ function parseGitHubActionsInputs() {
     core.info(`📋 Using explicitly provided stage: "${stage}"`);
   }
 
-  // Build base inputs
-  const rawInputs: Record<string, unknown> = {
-    operation,
-    stage,
-    token: core.getInput('token'),
-    commentMode: core.getInput('comment-mode') || 'on-success',
-    failOnError: core.getBooleanInput('fail-on-error') ?? true,
-    maxOutputSize: core.getInput('max-output-size') || '50000',
-    runner: (core.getInput('runner') || 'bun') as SSTRunner,
-  };
+  // Build operation-specific inputs to avoid strict validation errors
+  let rawInputs: Record<string, unknown>;
 
-  // Add operation-specific inputs
   if (operation === 'stage') {
-    rawInputs.truncationLength = truncationLength;
-    rawInputs.prefix = prefix;
+    // Stage operation only needs these fields
+    rawInputs = {
+      operation,
+      truncationLength,
+      prefix,
+    };
+  } else {
+    // Infrastructure operations (deploy, diff, remove) need all fields
+    rawInputs = {
+      operation,
+      stage,
+      token: core.getInput('token'),
+      commentMode: core.getInput('comment-mode') || 'on-success',
+      failOnError: core.getBooleanInput('fail-on-error') ?? true,
+      maxOutputSize: core.getInput('max-output-size') || '50000',
+      runner: (core.getInput('runner') || 'bun') as SSTRunner,
+    };
   }
 
   // Create validation context

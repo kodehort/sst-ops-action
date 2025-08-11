@@ -95,7 +95,9 @@ export async function executeOperation(
 
     // Create dependencies
     const cliExecutor = new SSTCLIExecutor();
-    const githubClient = new GitHubClient(options.token);
+    // Stage operations don't require a GitHub token, use empty string as fallback
+    const token = operationType === 'stage' ? 'fake-token' : options.token;
+    const githubClient = new GitHubClient(token);
 
     // Create operation factory
     const factory = new OperationFactory(cliExecutor, githubClient);
