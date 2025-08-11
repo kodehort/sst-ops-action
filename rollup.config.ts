@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 
 // Plugin to generate enhanced build manifest with useful details for changelog and releases
@@ -49,7 +50,8 @@ function generateBuildManifest() {
 
         // Build configuration
         sourcemap: true, // We always generate sourcemaps
-        minified: false, // Currently not using terser/minification
+        minified: true, // Using terser for minification
+        treeshaken: true, // Using enhanced tree-shaking
         format: 'es',
         target: 'node20',
 
@@ -72,14 +74,41 @@ export default {
     file: 'dist/index.js',
     format: 'es',
     sourcemap: true,
+    generatedCode: 'es2015',
+    hoistTransitiveImports: false,
+    interop: 'auto',
+  },
+  treeshake: {
+    preset: 'recommended',
+    moduleSideEffects: false,
   },
   plugins: [
     typescript(),
     json(),
     nodeResolve({
       preferBuiltins: true,
+      exportConditions: ['node', 'import', 'module', 'default'],
     }),
-    commonjs(),
+    commonjs({
+      ignoreDynamicRequires: true,
+    }),
+    terser({
+      compress: {
+        ecma: 2020,
+        drop_console: false,
+        drop_debugger: true,
+        pure_funcs: [],
+      },
+      mangle: {
+        keep_classnames: true,
+        keep_fnames: /^(main|run|setup|teardown)$/,
+      },
+      format: {
+        comments: false,
+        ecma: 2020,
+      },
+      sourceMap: true,
+    }),
     generateBuildManifest(),
   ],
 };
