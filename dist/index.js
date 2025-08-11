@@ -212186,6 +212186,205 @@ class RemoveOperation {
 }
 
 /**
+ * Stage Parser Implementation
+ * Handles stage computation based on GitHub context without SST CLI execution
+ */
+// Regex patterns for stage computation
+const PATH_PREFIX_PATTERN = /.*\//;
+const NON_ALPHANUMERIC_PATTERN = /[^a-z0-9]+/g;
+const LEADING_TRAILING_HYPHENS_PATTERN = /^-+|-+$/g;
+const STARTS_WITH_DIGIT_PATTERN = /^(\d)/;
+/**
+ * Parser for stage calculation operations
+ * Computes the SST stage name from GitHub context (branch/PR)
+ */
+class StageParser extends BaseParser {
+    /**
+     * Parse stage calculation (this operation doesn't use SST CLI output)
+     * @param _output Unused for stage operation
+     * @param fallbackStage Fallback stage if computation fails
+     * @param exitCode Should always be 0 for stage operation
+     * @param maxOutputSize Maximum size for output truncation
+     * @param truncationLength Maximum length for computed stage names
+     * @param prefix Prefix to add when stage name starts with a number
+     * @returns Parsed stage result
+     */
+    parse(_output, fallbackStage, exitCode, maxOutputSize, truncationLength = 26, prefix = 'pr-') {
+        const context = githubExports.context;
+        try {
+            return this.parseSuccess(context, fallbackStage, exitCode, maxOutputSize, truncationLength, prefix);
+        }
+        catch (error) {
+            return this.parseError(context, fallbackStage, error, maxOutputSize, truncationLength, prefix);
+        }
+    }
+    /**
+     * Handle successful stage parsing
+     */
+    parseSuccess(context, fallbackStage, exitCode, maxOutputSize, truncationLength = 26, prefix = 'pr-') {
+        const ref = this.extractRef(context);
+        coreExports.debug('Computing SST stage from ref...');
+        coreExports.debug(`Event name: ${context.eventName}`);
+        coreExports.debug(`Input ref: ${ref}`);
+        // Process the ref into a stage name
+        const computedStage = this.computeStageFromRef(ref || '', truncationLength, prefix);
+        const finalStage = computedStage || fallbackStage;
+        if (!finalStage) {
+            throw new Error('Failed to generate a valid stage name from ref');
+        }
+        coreExports.debug(`Generated stage: ${finalStage}`);
+        this.logDebugInfo(context, finalStage);
+        const { rawOutput, truncated } = this.formatOutput(`Stage computation successful\nEvent: ${context.eventName}\nRef: ${ref || 'undefined'}\nComputed Stage: ${finalStage}`, maxOutputSize);
+        return {
+            success: true,
+            operation: 'stage',
+            stage: finalStage,
+            app: 'stage-calculator',
+            rawOutput,
+            exitCode,
+            truncated,
+            completionStatus: 'complete',
+            computedStage: finalStage,
+            ref: ref || '',
+            eventName: context.eventName,
+            isPullRequest: context.eventName === 'pull_request',
+        };
+    }
+    /**
+     * Handle failed stage parsing
+     */
+    parseError(context, fallbackStage, error, maxOutputSize, _truncationLength = 26, _prefix = 'pr-') {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const { rawOutput, truncated } = this.formatOutput(`Stage computation failed: ${errorMessage}`, maxOutputSize);
+        return {
+            success: false,
+            operation: 'stage',
+            stage: fallbackStage,
+            app: 'stage-calculator',
+            rawOutput,
+            exitCode: 1,
+            truncated,
+            error: errorMessage,
+            completionStatus: 'failed',
+            computedStage: fallbackStage,
+            ref: '',
+            eventName: context.eventName,
+            isPullRequest: context.eventName === 'pull_request',
+        };
+    }
+    /**
+     * Extract ref from GitHub context based on event type
+     */
+    extractRef(context) {
+        if (context.eventName === 'pull_request') {
+            return context.payload.pull_request?.head?.ref;
+        }
+        return context.payload.head_ref || context.payload.ref || context.ref;
+    }
+    /**
+     * Format and truncate output if necessary
+     */
+    formatOutput(rawOutput, maxOutputSize) {
+        const truncated = maxOutputSize ? rawOutput.length > maxOutputSize : false;
+        const finalOutput = truncated && maxOutputSize
+            ? rawOutput.substring(0, maxOutputSize)
+            : rawOutput;
+        return { rawOutput: finalOutput, truncated };
+    }
+    /**
+     * Compute stage name from a Git ref
+     * Turn the input into a slugable value and shorten to prevent
+     * overflowing the limits for Route53 or other naming constraints
+     */
+    computeStageFromRef(ref, truncationLength = 26, prefix = 'pr-') {
+        // Basic sanitization
+        let stage = ref
+            .replace(PATH_PREFIX_PATTERN, '') // Remove path prefix (refs/heads/, etc.)
+            .toLowerCase() // Convert to lowercase
+            .replace(NON_ALPHANUMERIC_PATTERN, '-') // Replace non-alphanumeric with single hyphen
+            .replace(LEADING_TRAILING_HYPHENS_PATTERN, ''); // Remove leading and trailing hyphens
+        // Handle prefix BEFORE truncation
+        if (STARTS_WITH_DIGIT_PATTERN.test(stage)) {
+            stage = prefix + stage;
+        }
+        // Apply truncation including the prefix
+        if (stage.length > truncationLength) {
+            stage = stage.substring(0, truncationLength);
+            // Clean up any trailing hyphens that might result from truncation
+            stage = stage.replace(LEADING_TRAILING_HYPHENS_PATTERN, '');
+        }
+        return stage;
+    }
+    /**
+     * Log debug information for immediate visibility
+     */
+    logDebugInfo(context, finalStage) {
+        coreExports.debug(`ref: ${context.ref || 'undefined'}`);
+        coreExports.debug(`head_ref: ${context.payload.head_ref || 'undefined'}`);
+        coreExports.debug(`event.ref: ${context.payload.ref || 'undefined'}`);
+        coreExports.debug(`base_ref: ${context.payload.base_ref || 'undefined'}`);
+        if (context.eventName === 'pull_request') {
+            coreExports.debug(`PR head ref: ${context.payload.pull_request?.head?.ref || 'undefined'}`);
+            coreExports.debug(`PR base ref: ${context.payload.pull_request?.base?.ref || 'undefined'}`);
+        }
+        coreExports.debug(`STAGE: ${finalStage}`);
+    }
+}
+
+/**
+ * Stage Operation Implementation
+ * Handles stage calculation based on GitHub context without SST CLI execution
+ */
+/**
+ * Stage operation handler for computing SST stage names
+ * Combines GitHub context processing with output formatting
+ */
+class StageOperation {
+    githubClient;
+    constructor(_sstExecutor, githubClient) {
+        // Note: Stage operation doesn't use SST CLI, but we maintain the same constructor signature
+        this.githubClient = githubClient;
+    }
+    /**
+     * Execute stage calculation operation
+     * @param options Operation configuration options
+     * @returns Parsed stage result with computed stage name
+     */
+    async execute(options) {
+        // Parse stage using GitHub context (no SST CLI execution needed)
+        const parser = new StageParser();
+        const result = parser.parse('', // No CLI output for stage operation
+        options.stage, // Use provided stage as fallback
+        0, // Stage operation should always succeed with exit code 0
+        options.maxOutputSize, options.truncationLength, options.prefix);
+        // Perform GitHub integration in parallel (non-blocking)
+        await this.performGitHubIntegration(result, options);
+        return result;
+    }
+    /**
+     * Perform GitHub integration tasks (comments and summaries)
+     * Handles errors gracefully to not fail the entire operation
+     * @param result Parsed stage result
+     * @param options Operation options
+     */
+    async performGitHubIntegration(result, options) {
+        const integrationPromises = [];
+        // Create PR comment (if enabled)
+        integrationPromises.push(this.githubClient
+            .createOrUpdateComment(result, options.commentMode || 'never')
+            .catch(() => {
+            // GitHub comment integration is non-critical, ignore errors
+        }));
+        // Create workflow summary
+        integrationPromises.push(this.githubClient.createWorkflowSummary(result).catch(() => {
+            // Workflow summary integration is non-critical, ignore errors
+        }));
+        // Wait for all GitHub integration tasks to complete
+        await Promise.allSettled(integrationPromises);
+    }
+}
+
+/**
  * Operation Factory
  * Creates operation instances based on operation type
  * Provides consistent interface for all SST operations
@@ -212215,8 +212414,10 @@ class OperationFactory {
                 return new DiffOperation(this.cliExecutor, this.githubClient);
             case 'remove':
                 return new RemoveOperation(this.cliExecutor, this.githubClient);
+            case 'stage':
+                return new StageOperation(this.cliExecutor, this.githubClient);
             default:
-                throw new Error(`Unknown operation type: ${operationType}. Supported operations: deploy, diff, remove`);
+                throw new Error(`Unknown operation type: ${operationType}. Supported operations: deploy, diff, remove, stage`);
         }
     }
     /**
@@ -212225,14 +212426,14 @@ class OperationFactory {
      * @returns true if the operation type is valid
      */
     static isValidOperationType(operationType) {
-        return ['deploy', 'diff', 'remove'].includes(operationType);
+        return ['deploy', 'diff', 'remove', 'stage'].includes(operationType);
     }
     /**
      * Get all supported operation types
      * @returns Array of supported operation types
      */
     static getSupportedOperations() {
-        return ['deploy', 'diff', 'remove'];
+        return ['deploy', 'diff', 'remove', 'stage'];
     }
 }
 
@@ -212286,6 +212487,9 @@ function transformToUnifiedResult(operationType, result, _options) {
             return transformDiffResult(result);
         case 'remove':
             return transformRemoveResult(result);
+        case 'stage':
+            // Stage operation returns the result directly as it already conforms to the unified format
+            return result;
         default:
             throw new Error(`Cannot transform result for unknown operation: ${operationType}`);
     }
@@ -212481,6 +212685,15 @@ function createFailureResult(operationType, error, options) {
                 resourcesRemoved: 0,
                 removedResources: [],
             };
+        case 'stage':
+            return {
+                ...baseResult,
+                operation: 'stage',
+                computedStage: options.stage,
+                ref: '',
+                eventName: 'unknown',
+                isPullRequest: false,
+            };
         default:
             // This should never happen but TypeScript needs it
             return {
@@ -212500,68 +212713,133 @@ function createFailureResult(operationType, error, options) {
  */
 // Export the main function as default
 /**
- * Format operation result for GitHub Actions output
- * Converts all values to strings and handles optional fields
+ * Format operation result for GitHub Actions output using discriminated unions
+ * Provides type-safe operation-specific formatting
  */
-function formatForGitHubActions(result) {
-    const outputs = {};
-    // Required fields - always set
-    outputs.success = String(result.success);
-    outputs.operation = result.operation;
-    outputs.stage = result.stage;
-    outputs.completion_status = result.completionStatus;
-    // Common optional fields - use empty string for missing values
-    outputs.app = result.app || '';
-    outputs.permalink = result.permalink || '';
-    outputs.truncated = String(result.truncated);
-    outputs.error = result.error || '';
-    // Default resource_changes
-    outputs.resource_changes = '0';
-    // Reset operation-specific fields to empty strings
-    outputs.urls = '';
-    outputs.resources = '';
-    outputs.diff_summary = '';
-    outputs.planned_changes = '';
-    outputs.resources_removed = '';
-    outputs.removed_resources = '';
-    // Operation-specific outputs
+function formatOperationForGitHubActions(result) {
     switch (result.operation) {
         case 'deploy':
-            return formatDeployOutputs(result, outputs);
+            return formatDeployOperation(result);
         case 'diff':
-            return formatDiffOutputs(result, outputs);
+            return formatDiffOperation(result);
         case 'remove':
-            return formatRemoveOutputs(result, outputs);
-        default:
-            return outputs;
+            return formatRemoveOperation(result);
+        case 'stage':
+            return formatStageOperation(result);
+        default: {
+            // Exhaustive check for TypeScript
+            const _exhaustive = result;
+            throw new Error(`Unknown operation type: ${_exhaustive.operation}`);
+        }
     }
 }
 /**
- * Format deploy-specific outputs
+ * Format deploy operation result
  */
-function formatDeployOutputs(result, outputs) {
-    outputs.resource_changes = String(result.resourceChanges || 0);
-    outputs.urls = safeStringify(result.urls || []);
-    outputs.resources = safeStringify(result.resources || []);
-    return outputs;
+function formatDeployOperation(result) {
+    return {
+        success: String(result.success),
+        operation: 'deploy',
+        stage: result.stage,
+        completion_status: result.completionStatus,
+        app: result.app || '',
+        permalink: result.permalink || '',
+        truncated: String(result.truncated),
+        error: result.error || '',
+        resource_changes: String(result.resourceChanges || 0),
+        urls: safeStringify(result.urls || []),
+        resources: safeStringify(result.resources || []),
+        // Reset other operation fields
+        diff_summary: '',
+        planned_changes: '',
+        resources_removed: '',
+        removed_resources: '',
+        computed_stage: '',
+        ref: '',
+        event_name: '',
+        is_pull_request: '',
+    };
 }
 /**
- * Format diff-specific outputs
+ * Format diff operation result
  */
-function formatDiffOutputs(result, outputs) {
-    outputs.resource_changes = String(result.plannedChanges || 0);
-    outputs.planned_changes = String(result.plannedChanges || 0);
-    outputs.diff_summary = result.changeSummary || '';
-    return outputs;
+function formatDiffOperation(result) {
+    return {
+        success: String(result.success),
+        operation: 'diff',
+        stage: result.stage,
+        completion_status: result.completionStatus,
+        app: result.app || '',
+        permalink: result.permalink || '',
+        truncated: String(result.truncated),
+        error: result.error || '',
+        resource_changes: String(result.plannedChanges || 0),
+        planned_changes: String(result.plannedChanges || 0),
+        diff_summary: result.changeSummary || '',
+        // Reset other operation fields
+        urls: '',
+        resources: '',
+        resources_removed: '',
+        removed_resources: '',
+        computed_stage: '',
+        ref: '',
+        event_name: '',
+        is_pull_request: '',
+    };
 }
 /**
- * Format remove-specific outputs
+ * Format remove operation result
  */
-function formatRemoveOutputs(result, outputs) {
-    outputs.resource_changes = String(result.resourcesRemoved || 0);
-    outputs.resources_removed = String(result.resourcesRemoved || 0);
-    outputs.removed_resources = safeStringify(result.removedResources || []);
-    return outputs;
+function formatRemoveOperation(result) {
+    return {
+        success: String(result.success),
+        operation: 'remove',
+        stage: result.stage,
+        completion_status: result.completionStatus,
+        app: result.app || '',
+        permalink: result.permalink || '',
+        truncated: String(result.truncated),
+        error: result.error || '',
+        resource_changes: String(result.resourcesRemoved || 0),
+        resources_removed: String(result.resourcesRemoved || 0),
+        removed_resources: safeStringify(result.removedResources || []),
+        // Reset other operation fields
+        urls: '',
+        resources: '',
+        diff_summary: '',
+        planned_changes: '',
+        computed_stage: '',
+        ref: '',
+        event_name: '',
+        is_pull_request: '',
+    };
+}
+/**
+ * Format stage operation result
+ */
+function formatStageOperation(result) {
+    return {
+        success: String(result.success),
+        operation: 'stage',
+        stage: result.stage,
+        completion_status: result.completionStatus,
+        computed_stage: result.computedStage || result.stage,
+        ref: result.ref || '',
+        event_name: result.eventName || '',
+        is_pull_request: String(result.isPullRequest),
+        // Infrastructure fields not applicable
+        app: '',
+        permalink: '',
+        truncated: 'false',
+        resource_changes: '',
+        error: result.error || '',
+        urls: '',
+        resources: '',
+        diff_summary: '',
+        planned_changes: '',
+        resources_removed: '',
+        removed_resources: '',
+    };
 }
 /**
  * Safely stringify JSON values with error handling
@@ -212609,9 +212887,15 @@ function validateFieldValues(outputs) {
  * Validate boolean field values
  */
 function validateBooleanFields(outputs) {
-    const booleanFields = [{ name: 'success' }, { name: 'truncated' }];
+    const booleanFields = [
+        { name: 'success' },
+        { name: 'truncated' },
+        { name: 'is_pull_request' },
+    ];
     for (const { name } of booleanFields) {
-        if (!(outputs[name] && ['true', 'false'].includes(outputs[name]))) {
+        if (outputs[name] &&
+            outputs[name] !== '' &&
+            !['true', 'false'].includes(outputs[name])) {
             throw new Error(`Invalid '${name}' value: '${outputs[name] ?? 'undefined'}'. Must be 'true' or 'false'.`);
         }
     }
@@ -212621,7 +212905,7 @@ function validateBooleanFields(outputs) {
  */
 function validateEnumFields(outputs) {
     const enumFields = [
-        { name: 'operation', validValues: ['deploy', 'diff', 'remove'] },
+        { name: 'operation', validValues: ['deploy', 'diff', 'remove', 'stage'] },
         {
             name: 'completion_status',
             validValues: ['complete', 'partial', 'failed'],
@@ -212688,6 +212972,10 @@ function getExpectedFields() {
         'planned_changes',
         'resources_removed',
         'removed_resources',
+        'computed_stage',
+        'ref',
+        'event_name',
+        'is_pull_request',
     ];
 }
 /**
@@ -212697,46 +212985,60 @@ function getRequiredFields() {
     return ['success', 'operation', 'stage', 'completion_status'];
 }
 /**
+ * Set default values for deploy operation outputs
+ */
+function setDeployDefaults(outputs) {
+    outputs.urls = outputs.urls || '[]';
+    outputs.resources = outputs.resources || '[]';
+}
+/**
+ * Set default values for diff operation outputs
+ */
+function setDiffDefaults(outputs) {
+    outputs.planned_changes = outputs.planned_changes || '0';
+    outputs.diff_summary = outputs.diff_summary || '';
+}
+/**
+ * Set default values for remove operation outputs
+ */
+function setRemoveDefaults(outputs) {
+    outputs.resources_removed = outputs.resources_removed || '0';
+    outputs.removed_resources = outputs.removed_resources || '[]';
+}
+/**
+ * Set default values for stage operation outputs
+ */
+function setStageDefaults(outputs) {
+    outputs.computed_stage = outputs.computed_stage || '';
+    outputs.ref = outputs.ref || '';
+    outputs.event_name = outputs.event_name || '';
+    outputs.is_pull_request = outputs.is_pull_request || 'false';
+}
+/**
  * Check if outputs are consistent with the operation type
  * Validates that operation-specific fields are set appropriately
  */
 function validateOperationConsistency(outputs, operation) {
     switch (operation) {
         case 'deploy':
-            // Deploy operations should have urls and resources (even if empty JSON arrays)
-            if (!outputs.urls) {
-                outputs.urls = '[]';
-            }
-            if (!outputs.resources) {
-                outputs.resources = '[]';
-            }
+            setDeployDefaults(outputs);
             break;
         case 'diff':
-            // Diff operations should have planned_changes and diff_summary
-            if (!outputs.planned_changes) {
-                outputs.planned_changes = '0';
-            }
-            if (!outputs.diff_summary) {
-                outputs.diff_summary = '';
-            }
+            setDiffDefaults(outputs);
             break;
         case 'remove':
-            // Remove operations should have resources_removed and removed_resources
-            if (!outputs.resources_removed) {
-                outputs.resources_removed = '0';
-            }
-            if (!outputs.removed_resources) {
-                outputs.removed_resources = '[]';
-            }
+            setRemoveDefaults(outputs);
+            break;
+        case 'stage':
+            setStageDefaults(outputs);
             break;
     }
 }
 /**
- * Backward compatibility namespace wrapper for the functional API
- * @deprecated Use the individual functions instead
+ * Namespace wrapper for the functional API
  */
 const OutputFormatter = {
-    formatForGitHubActions,
+    formatOperationForGitHubActions,
     validateOutputs,
     getExpectedFields,
     getRequiredFields,
@@ -214581,6 +214883,74 @@ const $ZodUnion = /*@__PURE__*/ $constructor("$ZodUnion", (inst, def) => {
         });
     };
 });
+const $ZodDiscriminatedUnion = 
+/*@__PURE__*/
+$constructor("$ZodDiscriminatedUnion", (inst, def) => {
+    $ZodUnion.init(inst, def);
+    const _super = inst._zod.parse;
+    defineLazy(inst._zod, "propValues", () => {
+        const propValues = {};
+        for (const option of def.options) {
+            const pv = option._zod.propValues;
+            if (!pv || Object.keys(pv).length === 0)
+                throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(option)}"`);
+            for (const [k, v] of Object.entries(pv)) {
+                if (!propValues[k])
+                    propValues[k] = new Set();
+                for (const val of v) {
+                    propValues[k].add(val);
+                }
+            }
+        }
+        return propValues;
+    });
+    const disc = cached(() => {
+        const opts = def.options;
+        const map = new Map();
+        for (const o of opts) {
+            const values = o._zod.propValues?.[def.discriminator];
+            if (!values || values.size === 0)
+                throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(o)}"`);
+            for (const v of values) {
+                if (map.has(v)) {
+                    throw new Error(`Duplicate discriminator value "${String(v)}"`);
+                }
+                map.set(v, o);
+            }
+        }
+        return map;
+    });
+    inst._zod.parse = (payload, ctx) => {
+        const input = payload.value;
+        if (!isObject(input)) {
+            payload.issues.push({
+                code: "invalid_type",
+                expected: "object",
+                input,
+                inst,
+            });
+            return payload;
+        }
+        const opt = disc.value.get(input?.[def.discriminator]);
+        if (opt) {
+            return opt._zod.run(payload, ctx);
+        }
+        if (def.unionFallback) {
+            return _super(payload, ctx);
+        }
+        // no matching discriminator
+        payload.issues.push({
+            code: "invalid_union",
+            errors: [],
+            note: "No matching discriminator",
+            discriminator: def.discriminator,
+            input,
+            path: [def.discriminator],
+            inst,
+        });
+        return payload;
+    };
+});
 const $ZodIntersection = /*@__PURE__*/ $constructor("$ZodIntersection", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
@@ -214675,6 +215045,29 @@ const $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
         payload.issues.push({
             code: "invalid_value",
             values,
+            input,
+            inst,
+        });
+        return payload;
+    };
+});
+const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
+    $ZodType.init(inst, def);
+    if (def.values.length === 0) {
+        throw new Error("Cannot create literal schema with no valid values");
+    }
+    inst._zod.values = new Set(def.values);
+    inst._zod.pattern = new RegExp(`^(${def.values
+        .map((o) => (typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)))
+        .join("|")})$`);
+    inst._zod.parse = (payload, _ctx) => {
+        const input = payload.value;
+        if (inst._zod.values.has(input)) {
+            return payload;
+        }
+        payload.issues.push({
+            code: "invalid_value",
+            values: def.values,
             input,
             inst,
         });
@@ -215845,6 +216238,19 @@ function union(options, params) {
         ...normalizeParams(params),
     });
 }
+const ZodDiscriminatedUnion = /*@__PURE__*/ $constructor("ZodDiscriminatedUnion", (inst, def) => {
+    ZodUnion.init(inst, def);
+    $ZodDiscriminatedUnion.init(inst, def);
+});
+function discriminatedUnion(discriminator, options, params) {
+    // const [options, params] = args;
+    return new ZodDiscriminatedUnion({
+        type: "union",
+        options,
+        discriminator,
+        ...normalizeParams(params),
+    });
+}
 const ZodIntersection = /*@__PURE__*/ $constructor("ZodIntersection", (inst, def) => {
     $ZodIntersection.init(inst, def);
     ZodType.init(inst, def);
@@ -215900,6 +216306,26 @@ function _enum(values, params) {
     return new ZodEnum({
         type: "enum",
         entries,
+        ...normalizeParams(params),
+    });
+}
+const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+    $ZodLiteral.init(inst, def);
+    ZodType.init(inst, def);
+    inst.values = new Set(def.values);
+    Object.defineProperty(inst, "value", {
+        get() {
+            if (def.values.length > 1) {
+                throw new Error("This schema contains multiple valid literal values. Use `.values` instead.");
+            }
+            return def.values[0];
+        },
+    });
+});
+function literal(value, params) {
+    return new ZodLiteral({
+        type: "literal",
+        values: Array.isArray(value) ? value : [value],
         ...normalizeParams(params),
     });
 }
@@ -216064,7 +216490,7 @@ function superRefine(fn) {
  * Type guards for SST operations
  */
 function isValidOperation(operation) {
-    return ['deploy', 'diff', 'remove'].includes(operation);
+    return ['deploy', 'diff', 'remove', 'stage'].includes(operation);
 }
 function isValidCommentMode(mode) {
     return ['always', 'on-success', 'on-failure', 'never'].includes(mode);
@@ -216090,20 +216516,26 @@ function validateMaxOutputSize(size) {
  */
 // Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
+const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 /**
- * Zod schema for validating all GitHub Actions inputs
+ * Common field schemas used across operations
  */
-const ActionInputsSchema = object({
+const CommonFieldSchemas = {
     operation: string()
         .default('deploy')
         .refine((val) => isValidOperation(val), {
-        message: 'Invalid operation. Must be one of: deploy, diff, remove',
+        message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
     })
         .transform((val) => val),
     stage: string()
         .min(1, 'Stage cannot be empty')
-        .refine((val) => STAGE_VALIDATION_PATTERN.test(val.trim()), 'Stage must contain only alphanumeric characters, hyphens, and underscores')
+        .refine((val) => val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim()), 'Stage must contain only alphanumeric characters, hyphens, and underscores')
         .transform((val) => val.trim()),
+    optionalStage: string()
+        .optional()
+        .refine((val) => !val ||
+        (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())), 'Stage must contain only alphanumeric characters, hyphens, and underscores')
+        .transform((val) => val?.trim() || ''),
     token: string().min(1, 'Token cannot be empty'),
     commentMode: string()
         .default('on-success')
@@ -216128,7 +216560,73 @@ const ActionInputsSchema = object({
         message: 'Invalid runner. Must be one of: bun, npm, pnpm, yarn, sst',
     })
         .transform((val) => val),
+    truncationLength: number()
+        .or(string().transform((val) => {
+        const parsed = Number.parseInt(val, 10);
+        if (Number.isNaN(parsed)) {
+            throw new Error('truncation-length must be a valid number');
+        }
+        return parsed;
+    }))
+        .refine((val) => val > 0 && val <= 100, {
+        message: 'Truncation length must be between 1 and 100 characters',
+    })
+        .default(26),
+    prefix: string()
+        .refine((val) => val.length <= 10, {
+        message: 'Prefix must be 10 characters or less',
+    })
+        .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
+        message: 'Prefix must contain only lowercase letters, numbers, and hyphens',
+    })
+        .default('pr-'),
+};
+/**
+ * Base schema for SST infrastructure operations
+ */
+const BaseInfrastructureSchema = object({
+    token: CommonFieldSchemas.token,
+    commentMode: CommonFieldSchemas.commentMode.optional(),
+    failOnError: CommonFieldSchemas.failOnError.optional(),
+    maxOutputSize: CommonFieldSchemas.maxOutputSize.optional(),
+    runner: CommonFieldSchemas.runner.optional(),
 });
+/**
+ * Operation-specific input schemas using discriminated unions
+ */
+const DeployInputsSchema = object({
+    operation: literal('deploy'),
+    stage: CommonFieldSchemas.optionalStage.optional(),
+})
+    .merge(BaseInfrastructureSchema)
+    .strict();
+const DiffInputsSchema = object({
+    operation: literal('diff'),
+    stage: CommonFieldSchemas.stage,
+})
+    .merge(BaseInfrastructureSchema)
+    .strict();
+const RemoveInputsSchema = object({
+    operation: literal('remove'),
+    stage: CommonFieldSchemas.stage,
+})
+    .merge(BaseInfrastructureSchema)
+    .strict();
+const StageInputsSchema = object({
+    operation: literal('stage'),
+    truncationLength: CommonFieldSchemas.truncationLength.optional(),
+    prefix: CommonFieldSchemas.prefix.optional(),
+})
+    .strict();
+/**
+ * Discriminated union schema for all operation types
+ */
+const OperationInputsSchema = discriminatedUnion('operation', [
+    DeployInputsSchema,
+    DiffInputsSchema,
+    RemoveInputsSchema,
+    StageInputsSchema,
+]);
 /**
  * Validation error with additional context for GitHub Actions
  */
@@ -216145,11 +216643,11 @@ class ValidationError extends Error {
     }
 }
 /**
- * Parse and validate GitHub Actions inputs with comprehensive error handling
+ * Parse and validate operation-specific GitHub Actions inputs
  */
-function parseActionInputs(rawInputs) {
+function parseOperationInputs(rawInputs) {
     try {
-        return ActionInputsSchema.parse(rawInputs);
+        return OperationInputsSchema.parse(rawInputs);
     }
     catch (error) {
         if (error instanceof ZodError && error.issues.length > 0) {
@@ -216159,36 +216657,126 @@ function parseActionInputs(rawInputs) {
                 throw error;
             }
             const fieldName = issue.path.length > 0 ? issue.path[0] : 'unknown';
-            const suggestions = generateSuggestions(String(fieldName));
+            const operation = rawInputs.operation || 'unknown';
+            const suggestions = generateOperationSuggestions(String(fieldName), issue, operation);
             throw new ValidationError(issue.message, String(fieldName), rawInputs[String(fieldName)], suggestions);
         }
         throw error;
     }
 }
 /**
- * Generate helpful suggestions based on validation errors
+ * Generate operation-specific helpful suggestions based on validation errors
  */
-function generateSuggestions(field, _issue) {
+function generateOperationSuggestions(field, _issue, operation) {
     switch (field) {
         case 'operation':
             return [
-                'Valid operations are: deploy, diff, remove',
-                'Use "deploy" for deploying infrastructure',
-                'Use "diff" to preview changes without deploying',
-                'Use "remove" to clean up resources',
+                'Valid operations are: deploy, diff, remove, stage',
+                'Use "deploy" for deploying infrastructure to AWS',
+                'Use "diff" to preview infrastructure changes without deploying',
+                'Use "remove" to clean up and delete deployed resources',
+                'Use "stage" to compute stage names from Git context',
+            ];
+        case 'stage':
+            return generateStagesuggestions(operation);
+        case 'token':
+            return generateTokenSuggestions(operation);
+        case 'truncationLength':
+            return [
+                'Truncation length controls maximum stage name length (1-100 characters)',
+                'Only applies to stage operations for DNS compatibility',
+                'Default is 26 characters to fit Route53 limits',
+                'Use smaller values for shorter stage names',
+            ];
+        case 'prefix':
+            return [
+                'Prefix is added to stage names that start with numbers',
+                'Only applies to stage operations',
+                'Must be lowercase letters, numbers, and hyphens only',
+                'Default "pr-" creates names like "pr-123" for PR #123',
+            ];
+        default:
+            return generateGeneralSuggestions(field);
+    }
+}
+/**
+ * Generate stage-specific suggestions based on operation type
+ */
+function generateStagesuggestions(operation) {
+    switch (operation) {
+        case 'deploy':
+            return [
+                'Deploy operations can auto-compute stage from Git context',
+                'Leave empty to use branch/PR name as stage',
+                'Or provide explicit stage: "production", "staging", "dev-123"',
+                'Uses alphanumeric characters, hyphens, and underscores only',
+            ];
+        case 'diff':
+            return [
+                'Diff operations require explicit stage name',
+                'Cannot preview changes without knowing target stage',
+                'Examples: "production", "staging", "dev-123", "pr-456"',
+                'Must match an existing deployed stage for comparison',
+            ];
+        case 'remove':
+            return [
+                'Remove operations require explicit stage for safety',
+                'Will not auto-compute stage to prevent accidental deletions',
+                'Examples: "staging", "dev-123", "pr-456"',
+                'Use caution with production stages',
+            ];
+        default:
+            return [
+                'Stage must contain only alphanumeric characters, hyphens, and underscores',
+                'Examples: "production", "staging", "dev-123", "pr-456"',
+            ];
+    }
+}
+/**
+ * Generate token-specific suggestions based on operation type
+ */
+function generateTokenSuggestions(operation) {
+    switch (operation) {
+        case 'deploy':
+            return [
+                'Deploy operations require GitHub token for authentication',
+                `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+                'Token needed to comment on PRs and access AWS credentials',
+                'Use "fake-token" only for local testing',
+            ];
+        case 'diff':
+            return [
+                'Diff operations require GitHub token for PR comments',
+                `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` for automatic token`,
+                'Token needed to post comparison results to pull requests',
+                'Use "fake-token" only for local testing',
+            ];
+        case 'remove':
+            return [
+                'Remove operations require GitHub token for confirmation',
+                `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+                'Token needed for authentication and result reporting',
+                'Use "fake-token" only for local testing',
             ];
         case 'stage':
             return [
-                'Stage must be a non-empty string',
-                'Use only alphanumeric characters, hyphens, and underscores',
-                'Examples: "production", "staging", "dev-123", "pr-456"',
+                'Stage operations do not require GitHub token',
+                'This operation only computes stage names from Git context',
+                'No infrastructure access or API calls needed',
             ];
-        case 'token':
+        default:
             return [
                 `Use a valid GitHub token (e.g., \`${'$'}{{ secrets.GITHUB_TOKEN }}\`)`,
                 'Token must be provided and cannot be empty',
                 'Use "fake-token" only for testing',
             ];
+    }
+}
+/**
+ * Generate general field suggestions
+ */
+function generateGeneralSuggestions(field) {
+    switch (field) {
         case 'commentMode':
             return [
                 'Valid comment modes are: always, on-success, on-failure, never',
@@ -216225,10 +216813,10 @@ function generateSuggestions(field, _issue) {
     }
 }
 /**
- * Enhanced validation with operation-specific rules
+ * Enhanced validation with operation-specific rules using discriminated unions
  */
-function validateWithContext(rawInputs, context = {}) {
-    const inputs = parseActionInputs(rawInputs);
+function validateOperationWithContext(rawInputs, context = {}) {
+    const inputs = parseOperationInputs(rawInputs);
     // Operation-specific validation rules
     switch (inputs.operation) {
         case 'remove':
@@ -216242,10 +216830,7 @@ function validateWithContext(rawInputs, context = {}) {
             }
             break;
         case 'diff':
-            // Diff operations are safe but validate stage exists
-            if (!inputs.stage.trim()) {
-                throw new ValidationError('Diff operation requires a valid stage to compare against', 'stage', inputs.stage, ['Provide a stage name to show infrastructure differences for']);
-            }
+            // Diff operations require explicit stage - already validated by schema
             break;
         case 'deploy':
             // Deploy operations should validate token format more strictly in production
@@ -216278,23 +216863,62 @@ function createValidationContext(env = process.env) {
  * Integrates all components: input validation, operation routing, output formatting, and error handling
  */
 /**
+ * Compute stage name from GitHub context when not explicitly provided
+ */
+function computeStageFromContext(fallbackStage = 'main', truncationLength = 26, prefix = 'pr-') {
+    try {
+        const parser = new StageParser();
+        const result = parser.parse('', fallbackStage, 0, undefined, truncationLength, prefix);
+        if (result.success && result.computedStage) {
+            coreExports.info(`🎯 Computed stage from Git context: "${result.computedStage}"`);
+            return result.computedStage;
+        }
+        coreExports.warning(`⚠️ Failed to compute stage from Git context, using fallback: "${fallbackStage}"`);
+        return fallbackStage;
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        coreExports.warning(`⚠️ Stage computation failed: ${message}, using fallback: "${fallbackStage}"`);
+        return fallbackStage;
+    }
+}
+/**
  * Parse GitHub Actions inputs into a typed structure
  */
 function parseGitHubActionsInputs() {
+    // Get the operation first to determine which inputs are needed
+    const operation = coreExports.getInput('operation') || 'deploy';
     // Get raw inputs from GitHub Actions
+    let stage = coreExports.getInput('stage');
+    const truncationLength = Number.parseInt(coreExports.getInput('truncation-length') || '26', 10);
+    const prefix = coreExports.getInput('prefix') || 'pr-';
+    // Compute stage from Git context if not explicitly provided
+    if (!stage || stage.trim() === '') {
+        stage = computeStageFromContext('main', truncationLength, prefix);
+        coreExports.info(`📋 Stage input was empty, computed from Git context: "${stage}"`);
+    }
+    else {
+        coreExports.info(`📋 Using explicitly provided stage: "${stage}"`);
+    }
+    // Build base inputs
     const rawInputs = {
-        operation: coreExports.getInput('operation') || 'deploy',
-        stage: coreExports.getInput('stage'),
+        operation,
+        stage,
         token: coreExports.getInput('token'),
         commentMode: coreExports.getInput('comment-mode') || 'on-success',
         failOnError: coreExports.getBooleanInput('fail-on-error') ?? true,
         maxOutputSize: coreExports.getInput('max-output-size') || '50000',
         runner: (coreExports.getInput('runner') || 'bun'),
     };
+    // Add operation-specific inputs
+    if (operation === 'stage') {
+        rawInputs.truncationLength = truncationLength;
+        rawInputs.prefix = prefix;
+    }
     // Create validation context
     const validationContext = createValidationContext();
     // Parse and validate inputs
-    return validateWithContext(rawInputs, validationContext);
+    return validateOperationWithContext(rawInputs, validationContext);
 }
 /**
  * Handle input validation errors with proper error conversion
@@ -216415,18 +217039,54 @@ function handleUnexpectedError(error) {
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(inputs) {
-    return {
-        operation: inputs.operation,
-        options: {
-            stage: inputs.stage,
-            token: inputs.token,
-            commentMode: inputs.commentMode,
-            failOnError: inputs.failOnError,
-            maxOutputSize: inputs.maxOutputSize,
-            runner: inputs.runner || 'bun',
-            environment: Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)),
-        },
-    };
+    // Handle operation-specific properties using discriminated union
+    switch (inputs.operation) {
+        case 'deploy':
+            return {
+                operation: inputs.operation,
+                options: {
+                    stage: inputs.stage || '',
+                    token: inputs.token,
+                    commentMode: inputs.commentMode || 'on-success',
+                    failOnError: inputs.failOnError !== false,
+                    maxOutputSize: inputs.maxOutputSize || 50_000,
+                    runner: inputs.runner || 'bun',
+                    environment: Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)),
+                },
+            };
+        case 'diff':
+        case 'remove':
+            return {
+                operation: inputs.operation,
+                options: {
+                    stage: inputs.stage,
+                    token: inputs.token,
+                    commentMode: inputs.commentMode || 'on-success',
+                    failOnError: inputs.failOnError !== false,
+                    maxOutputSize: inputs.maxOutputSize || 50_000,
+                    runner: inputs.runner || 'bun',
+                    environment: Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)),
+                },
+            };
+        case 'stage':
+            return {
+                operation: inputs.operation,
+                options: {
+                    stage: '',
+                    token: '',
+                    commentMode: 'never',
+                    failOnError: true,
+                    maxOutputSize: 50_000,
+                    runner: 'bun',
+                    truncationLength: inputs.truncationLength || 26,
+                    prefix: inputs.prefix || 'pr-',
+                    environment: Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)),
+                },
+            };
+        default: {
+            throw new Error('Unsupported operation type');
+        }
+    }
 }
 /**
  * Log operation summary information
@@ -216454,7 +217114,7 @@ function logOperationSummary(result) {
  */
 function setGitHubActionsOutputs(result) {
     try {
-        const formattedOutputs = OutputFormatter.formatForGitHubActions(result);
+        const formattedOutputs = OutputFormatter.formatOperationForGitHubActions(result);
         // Validate outputs before setting them
         OutputFormatter.validateOutputs(formattedOutputs);
         // Set all outputs
@@ -216480,7 +217140,17 @@ async function run() {
         let inputs;
         try {
             inputs = parseGitHubActionsInputs();
-            coreExports.info(`📝 Parsed inputs: ${inputs.operation} operation on stage "${inputs.stage}"`);
+            let stage;
+            if (inputs.operation === 'stage') {
+                stage = 'computed';
+            }
+            else if (inputs.operation === 'deploy') {
+                stage = inputs.stage || 'auto';
+            }
+            else {
+                stage = inputs.stage;
+            }
+            coreExports.info(`📝 Parsed inputs: ${inputs.operation} operation on stage "${stage}"`);
         }
         catch (error) {
             handleInputValidationError(error);
