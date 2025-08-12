@@ -136,8 +136,8 @@ describe('OperationFormatter', () => {
 
       const comment = formatter.formatOperationComment(diffResult);
 
-      expect(comment).toContain('No changes detected');
-      expect(comment).toContain('Your infrastructure is up to date');
+      expect(comment).toContain('✅ No Changes');
+      expect(comment).toContain('No infrastructure changes detected');
     });
 
     it('should format diff comment with breaking changes warning', () => {
@@ -314,12 +314,13 @@ describe('OperationFormatter', () => {
 
       const summary = formatter.formatOperationSummary(diffResult);
 
-      expect(summary).toContain('🔍 Infrastructure Preview');
-      expect(summary).toContain('Changes Detected | Yes');
-      expect(summary).toContain('📋 Changes Summary');
-      expect(summary).toContain(
-        '3 resources to create, 2 to update, 1 to destroy'
-      );
+      expect(summary).toContain('🔍 Infrastructure Diff Summary');
+      expect(summary).toContain('Total Changes | 6');
+      expect(summary).toContain('📋 Resource Changes');
+      expect(summary).toContain('```diff');
+      expect(summary).toContain('+ Function1 (Lambda)');
+      expect(summary).toContain('* Bucket1 (S3)');
+      expect(summary).toContain('- Table1 (DynamoDB)');
     });
 
     it('should format diff summary with no changes', () => {
@@ -339,7 +340,7 @@ describe('OperationFormatter', () => {
 
       const summary = formatter.formatOperationSummary(diffResult);
 
-      expect(summary).toContain('Changes Detected | No');
+      expect(summary).toContain('Total Changes | 0');
       expect(summary).toContain('✅ No Changes');
       expect(summary).toContain('No infrastructure changes detected');
     });

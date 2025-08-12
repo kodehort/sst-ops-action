@@ -182,17 +182,41 @@ export class OperationFormatter {
    * Format diff operation summary
    */
   private formatDiffSummary(result: DiffResult): string {
-    let summary = `### 🔍 Infrastructure Preview
+    // Count changes by type
+    const createCount = result.changes.filter(
+      (c) => c.action === 'create'
+    ).length;
+    const updateCount = result.changes.filter(
+      (c) => c.action === 'update'
+    ).length;
+    const deleteCount = result.changes.filter(
+      (c) => c.action === 'delete'
+    ).length;
+
+    let summary = `### 🔍 Infrastructure Diff Summary
 
 | Property | Value |
 |----------|-------|
-| Changes Detected | ${result.changeSummary ? 'Yes' : 'No'} |
+| App | \`${result.app}\` |
+| Stage | \`${result.stage}\` |
+| Total Changes | ${result.plannedChanges} |
+| Added Resources | ${createCount} |
+| Modified Resources | ${updateCount} |
+| Removed Resources | ${deleteCount} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
-    if (result.changeSummary) {
-      summary += `\n\n### 📋 Changes Summary
+    // Add permalink if available
+    if (result.permalink) {
+      summary += `\n| Console Link | [View Diff](${result.permalink}) |`;
+    }
 
-${result.changeSummary}`;
+    // Add the actual diff in a code block
+    if (result.plannedChanges > 0) {
+      summary += `\n\n### 📋 Resource Changes
+
+\`\`\`diff
+${this.formatDiffOutput(result)}
+\`\`\``;
     } else {
       summary += `\n\n### ✅ No Changes
 
@@ -307,10 +331,26 @@ All resources have been successfully removed.`;
    * Format diff changes section
    */
   private formatDiffChangesSection(result: DiffResult): string {
-    let section = '### 🔍 Infrastructure Changes Preview';
+    let section = `### 🔍 Infrastructure Changes Preview
 
-    if (result.changeSummary) {
-      section += `\n\n${result.changeSummary}`;
+| Property | Value |
+|----------|-------|
+| App | \`${result.app}\` |
+| Stage | \`${result.stage}\` |
+| Total Changes | ${result.plannedChanges} |
+| Summary | ${result.changeSummary} |`;
+
+    if (result.permalink) {
+      section += `\n| Console Link | [View Diff](${result.permalink}) |`;
+    }
+
+    // Add the actual diff in a code block
+    if (result.plannedChanges > 0) {
+      section += `\n\n### 📋 Resource Changes
+
+\`\`\`diff
+${this.formatDiffOutput(result)}
+\`\`\``;
 
       // Add warning for breaking changes if detected
       if (this.hasBreakingChanges(result.changeSummary)) {
@@ -318,11 +358,35 @@ All resources have been successfully removed.`;
           '\n\n⚠️ **Warning**: This diff may contain breaking changes. Please review carefully.';
       }
     } else {
-      section +=
-        '\n\n✅ **No changes detected** - Your infrastructure is up to date.';
+      section += `\n\n### ✅ No Changes
+
+No infrastructure changes detected for this operation.`;
     }
 
     return section;
+  }
+
+  /**
+   * Format diff output for display in code block
+   */
+  private formatDiffOutput(result: DiffResult): string {
+    if (!result.changes || result.changes.length === 0) {
+      return 'No changes detected';
+    }
+
+    return result.changes
+      .map((change) => {
+        let symbol: string;
+        if (change.action === 'create') {
+          symbol = '+';
+        } else if (change.action === 'delete') {
+          symbol = '-';
+        } else {
+          symbol = '*';
+        }
+        return `${symbol} ${change.name} (${change.type})`;
+      })
+      .join('\n');
   }
 
   /**

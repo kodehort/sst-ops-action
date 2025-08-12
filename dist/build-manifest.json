@@ -1,8 +1,8 @@
 {
-  "bundleSize": 2025458,
-  "bundleSizeMB": "1.93",
-  "integrity": "71314168ec94a7f32d5ee5a8a087e0b61289ba99fb8e5c2efb5047ac99d483de",
-  "buildTimestamp": "2025-08-11T19:16:18.445Z",
+  "bundleSize": 2397999,
+  "bundleSizeMB": "2.29",
+  "integrity": "c475c9f295fef33e01756e14a2bb81d3b07c05e76c687a4472570c7b502c4fba",
+  "buildTimestamp": "2025-08-12T20:00:06.838Z",
   "version": "0.2.0",
   "nodeVersion": "v20.19.4",
   "sourcemap": true,
@@ -10,6 +10,6 @@
   "treeshaken": true,
   "format": "es",
   "target": "node20",
-  "platform": "linux",
-  "arch": "x64"
+  "platform": "darwin",
+  "arch": "arm64"
 }

@@ -3,13 +3,15 @@ import type { BaseOperationResult } from '../types/operations';
 /**
  * Common regex patterns for extracting information from SST outputs
  * Moved to top-level for performance optimization
+ * Support both old format (App:) and new format (➜ App:)
  */
-const APP_INFO_PATTERN = /^App:\s+(.+)$/m;
-const STAGE_INFO_PATTERN = /^Stage:\s+(.+)$/m;
+const APP_INFO_PATTERN = /^(?:➜\s+)?App:\s+(.+)$/m;
+const STAGE_INFO_PATTERN = /^\s*Stage:\s+(.+)$/m;
 const PERMALINK_PATTERN = /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m;
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
 const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
 const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
+const DIFF_SECTION_START_PATTERN = /^✓\s+Generated\s*$/m;
 const DURATION_PATTERN = /^Duration:\s+(\d+)s$/m;
 const RESOURCE_LINE_PATTERN = /^\|\s+(.+)$/m;
 const URL_LINE_PATTERN = /^\s*(Router|Api|Web|Website):\s+(https?:\/\/.+)$/m;
@@ -37,6 +39,9 @@ export abstract class BaseParser<T extends BaseOperationResult> {
     COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
     COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
     COMPLETION_FAILED: COMPLETION_FAILED_PATTERN,
+
+    // Diff section marker
+    DIFF_SECTION_START: DIFF_SECTION_START_PATTERN,
 
     // Duration and timing
     DURATION: DURATION_PATTERN,
@@ -186,6 +191,34 @@ export abstract class BaseParser<T extends BaseOperationResult> {
 
     // Partial completion is considered successful with warnings
     return true;
+  }
+
+  /**
+   * Extract the diff section from the full SST output
+   * Skips the build output and returns only the actual diff part
+   * @param output Raw output
+   * @returns Diff section or original output if marker not found
+   */
+  protected extractDiffSection(output: string): string {
+    const lines = output.split('\n');
+    let diffStartIndex = -1;
+
+    // Find the "✓ Generated" marker
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line && this.patterns.DIFF_SECTION_START.test(line)) {
+        diffStartIndex = i + 1; // Start after the marker line
+        break;
+      }
+    }
+
+    // If we found the marker, return everything after it
+    if (diffStartIndex >= 0 && diffStartIndex < lines.length) {
+      return lines.slice(diffStartIndex).join('\n').trim();
+    }
+
+    // Fallback: return original output if no marker found
+    return output;
   }
 
   /**

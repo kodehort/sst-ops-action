@@ -3,24 +3,15 @@ import { BaseParser } from './base-parser';
 
 /**
  * Diff-specific regex patterns for parsing planned changes
+ * Based on real SST diff output format
  */
 const DIFF_PATTERNS = {
-  // Planned changes patterns
-  PLANNED_CREATE: /^\+\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-  PLANNED_UPDATE: /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
-  PLANNED_DELETE: /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/,
+  // Planned changes patterns - real SST format
+  PLANNED_CREATE: /^\+\s+(.+?)(?:\s+→\s+(.+))?$/,
+  PLANNED_UPDATE: /^\*\s+(.+?)(?:\s+→\s+(.+))?$/,
+  PLANNED_DELETE: /^-\s+(.+?)(?:\s+→\s+(.+))?$/,
 
-  // Summary patterns
-  CHANGES_PLANNED: /^(\d+)\s+changes?\s+planned$/m,
   NO_CHANGES: /^No changes$/m,
-
-  // Additional info patterns
-  COST_CHANGE: /^\s*Cost changes:/m,
-  BREAKING_CHANGES: /^\s*Breaking changes detected:/m,
-  IMPACT_BREAKING: /^\s*Impact:\s+(breaking|high)/im,
-  IMPACT_COSMETIC: /^\s*Impact:\s+(cosmetic|low|none)/im,
-
-  // Error patterns
   ERROR_MESSAGE: /^Error:\s*(.+)$/m,
   DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
 } as const;
@@ -43,17 +34,20 @@ export class DiffParser extends BaseParser<DiffResult> {
     const processedOutput = this.cleanText(output || '');
     const lines = processedOutput.split('\n');
 
-    // Parse common information from base parser
+    // Parse common information from base parser (uses full output for header info)
     const commonInfo = this.parseCommonInfo(lines);
+
+    // Extract only the diff section for parsing changes
+    const diffSection = this.extractDiffSection(processedOutput);
 
     // Determine success based on exit code and error patterns
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
-    // Parse diff-specific information
-    const changes = this.parsePlannedChanges(processedOutput);
+    // Parse diff-specific information from the diff section
+    const changes = this.parsePlannedChanges(diffSection);
     const plannedChanges = changes.length;
     const changeSummary = this.generateChangeSummary(
-      processedOutput,
+      diffSection,
       plannedChanges,
       exitCode
     );
@@ -82,6 +76,7 @@ export class DiffParser extends BaseParser<DiffResult> {
 
   /**
    * Parse planned changes from diff output
+   * Only count top-level resources, not child resources (those with →)
    */
   private parsePlannedChanges(output: string): Array<{
     type: string;
@@ -99,8 +94,18 @@ export class DiffParser extends BaseParser<DiffResult> {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
+
+      // Skip child resources (those with → arrow) to avoid double counting
+      if (trimmedLine.includes('→')) {
+        continue;
+      }
+
       const change = this.parseChangeFromLine(trimmedLine);
       if (change) {
+        // Skip stack resources and operation headers as they're not meaningful for change counts
+        if (change.type === 'Stack' || change.name === 'Diff') {
+          continue;
+        }
         changes.push(change);
       }
     }
@@ -125,17 +130,54 @@ export class DiffParser extends BaseParser<DiffResult> {
 
     for (const { regex, action } of patterns) {
       const match = line.match(regex);
-      if (match?.[1] && match[2]) {
+      if (match?.[1]) {
+        // Extract resource name and type from the full resource identifier
+        const resourceIdentifier = match[1].trim();
+        const { name, type } = this.parseResourceIdentifier(resourceIdentifier);
+
         return {
-          type: match[1] || 'unknown',
-          name: match[2] || 'unknown',
+          type,
+          name,
           action,
-          ...(match[3] && { details: match[3] }),
+          ...(match[2] && { details: match[2] }),
         };
       }
     }
 
     return null;
+  }
+
+  /**
+   * Parse resource identifier to extract name and type
+   * Handles formats like "NewHandler sst:aws:Function" or "my-app-staging pulumi:pulumi:Stack"
+   */
+  private parseResourceIdentifier(identifier: string): {
+    name: string;
+    type: string;
+  } {
+    // Split by space - last part should be the resource type
+    const parts = identifier.trim().split(' ');
+
+    if (parts.length >= 2) {
+      // Join all parts except the last one as the name
+      const name = parts.slice(0, -1).join(' ');
+      const typeString = parts.at(-1) || '';
+
+      // Extract just the resource type from the full type string (e.g., "Function" from "sst:aws:Function")
+      const typeParts = typeString.split(':');
+      const simpleType = typeParts.at(-1) || typeString;
+
+      return {
+        name: name.trim(),
+        type: simpleType || 'Unknown',
+      };
+    }
+
+    // Fallback: use the whole identifier as the name
+    return {
+      name: identifier.trim(),
+      type: 'Unknown',
+    };
   }
 
   /**
@@ -151,19 +193,12 @@ export class DiffParser extends BaseParser<DiffResult> {
       return 'No changes';
     }
 
-    // Check for explicit changes count
-    const changesMatch = output.match(this.diffPatterns.CHANGES_PLANNED);
-    if (changesMatch?.[1]) {
-      const count = Number.parseInt(changesMatch[1], 10);
-      return `${count} changes planned`;
-    }
-
     // Check for error scenarios - only return error message for actual failures with non-zero exit code
     if (exitCode !== 0 && this.diffPatterns.DIFF_FAILED.test(output)) {
       return 'Diff parsing failed - unable to determine changes';
     }
 
-    // Fallback: always use "X changes planned" format for consistency
+    // Always use "X changes planned" format for consistency
     return `${plannedChanges} changes planned`;
   }
 

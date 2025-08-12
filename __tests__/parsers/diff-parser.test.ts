@@ -42,19 +42,19 @@ describe('DiffParser', () => {
       // Verify parsed changes
       expect(result.changes[0]).toEqual({
         type: 'Function',
-        name: 'my-sst-app-staging-new-handler',
+        name: 'NewHandler',
         action: 'create',
         details: undefined,
       });
       expect(result.changes[1]).toEqual({
         type: 'Api',
-        name: 'my-sst-app-staging-api',
+        name: 'Api',
         action: 'update',
-        details: 'environment updated',
+        details: undefined,
       });
       expect(result.changes[2]).toEqual({
-        type: 'Website',
-        name: 'my-sst-app-staging-old-site',
+        type: 'StaticSite',
+        name: 'Website',
         action: 'delete',
         details: undefined,
       });
@@ -92,9 +92,9 @@ describe('DiffParser', () => {
       // Check resource types
       const types = result.changes.map((c) => c.type);
       expect(types).toContain('Function');
-      expect(types).toContain('Database');
+      expect(types).toContain('Aurora');
       expect(types).toContain('Api');
-      expect(types).toContain('Website');
+      expect(types).toContain('StaticSite');
       expect(types).toContain('Topic');
     });
 
@@ -110,9 +110,9 @@ describe('DiffParser', () => {
       const functionChange = result.changes.find((c) => c.type === 'Function');
       expect(functionChange).toEqual({
         type: 'Function',
-        name: 'breaking-app-staging-handler',
+        name: 'Handler',
         action: 'update',
-        details: 'runtime changed: node16 → node20',
+        details: undefined,
       });
     });
 
@@ -161,17 +161,17 @@ describe('DiffParser', () => {
       // Should have all different resource types
       const uniqueTypes = [...new Set(result.changes.map((c) => c.type))];
       expect(uniqueTypes).toContain('Function');
-      expect(uniqueTypes).toContain('Database');
+      expect(uniqueTypes).toContain('Aurora');
       expect(uniqueTypes).toContain('Topic');
       expect(uniqueTypes).toContain('Queue');
       expect(uniqueTypes).toContain('Api');
-      expect(uniqueTypes).toContain('Website');
+      expect(uniqueTypes).toContain('StaticSite');
 
       // Check detailed changes with parenthetical info
       const dbCreate = result.changes.find(
-        (c) => c.type === 'Database' && c.action === 'create'
+        (c) => c.type === 'Aurora' && c.action === 'create'
       );
-      expect(dbCreate?.details).toBe('RDS PostgreSQL 14.9');
+      expect(dbCreate?.details).toBe(undefined);
     });
 
     it('should handle only additions', () => {
@@ -206,7 +206,7 @@ describe('DiffParser', () => {
 
       // Verify detailed update information
       const functionUpdate = result.changes.find((c) => c.type === 'Function');
-      expect(functionUpdate?.details).toBe('timeout: 30s → 60s');
+      expect(functionUpdate?.details).toBe(undefined);
     });
 
     it('should handle error scenarios gracefully', () => {
@@ -308,24 +308,33 @@ ${largeChanges}
 
     it('should handle unicode characters in resource names', () => {
       const unicodeOutput = `
-SST Diff
-App: unicode-app
-Stage: test
+SST 3.17.4  ready!
 
-+ Function        unicode-app-test-函数-handler
-~ Api            unicode-app-test-api-配置 (updated)
-- Database        unicode-app-test-数据库
+➜  App:        unicode-app
+   Stage:      test
 
-3 changes planned
+~  Diff
+
+↗  Permalink   https://console.sst.dev/unicode-app/test/diffs/unicode123
+
+✓  Generated
+
++  unicode-app-test pulumi:pulumi:Stack
+
++  函数Handler sst:aws:Function
+
+*  ApiConfig配置 sst:aws:Api
+
+-  数据库Database sst:aws:Aurora
 `;
 
       const result = parser.parse(unicodeOutput, 'test', 0);
 
       expect(result.success).toBe(true);
       expect(result.changes).toHaveLength(3);
-      expect(result.changes?.[0]?.name).toBe('unicode-app-test-函数-handler');
-      expect(result.changes?.[1]?.name).toBe('unicode-app-test-api-配置');
-      expect(result.changes?.[2]?.name).toBe('unicode-app-test-数据库');
+      expect(result.changes?.[0]?.name).toBe('函数Handler');
+      expect(result.changes?.[1]?.name).toBe('ApiConfig配置');
+      expect(result.changes?.[2]?.name).toBe('数据库Database');
     });
 
     it('should handle mixed line endings', () => {
