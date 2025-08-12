@@ -1,0 +1,13 @@
+{
+  "name": "synthetic-complex",
+  "app": "complex-app",
+  "stage": "staging",
+  "plannedChanges": 8,
+  "changeSummary": "8 changes planned",
+  "success": true,
+  "synthetic": true,
+  "files": {
+    "comment": "examples/outputs/diff/synthetic-complex-comment.md",
+    "summary": "examples/outputs/diff/synthetic-complex-summary.md"
+  }
+}
