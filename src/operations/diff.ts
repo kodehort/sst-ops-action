@@ -1,42 +1,9 @@
 import type { GitHubClient } from '../github/client';
+import { OperationFormatter } from '../github/formatters';
 import { DiffParser } from '../parsers/diff-parser';
 import type { OperationOptions } from '../types';
+import type { DiffResult } from '../types/operations';
 import type { SSTCLIExecutor } from '../utils/cli';
-
-/**
- * Regex patterns for detecting breaking changes in diff output
- */
-const BREAKING_CHANGE_PATTERNS = [
-  /⚠️.*[Bb]reaking/,
-  /[Bb]reaking.*changes.*detected/i,
-  /[Bb]reaking.*change/i,
-  /[Ii]mpact.*[Bb]reaking/i,
-] as const;
-
-// Enhanced DiffResult interface for operation handling
-// This extends the basic DiffResult with additional properties needed for PR comments
-interface EnhancedDiffResult {
-  success: boolean;
-  stage: string;
-  plannedChanges: number;
-  changes: Array<{
-    type: string;
-    name: string;
-    action: 'create' | 'update' | 'delete';
-    details?: string;
-  }>;
-  changeSummary: string;
-  hasChanges: boolean;
-  breakingChanges: boolean;
-  costAnalysis: {
-    current: number;
-    planned: number;
-    change: number;
-    formatted: string;
-  } | null;
-  summary: string;
-  executionTime: number;
-}
 
 export interface DiffOperationResult {
   success: boolean;
@@ -50,12 +17,7 @@ export interface DiffOperationResult {
     details: string;
   }>;
   breakingChanges: boolean;
-  costAnalysis: {
-    current: number;
-    planned: number;
-    change: number;
-    formatted: string;
-  } | null;
+  costAnalysis: null;
   summary: string;
   prCommentPosted: boolean;
   executionTime: number;
@@ -137,33 +99,26 @@ export class DiffOperation {
         );
       }
 
-      // Cast to enhanced result (our implementation has these properties)
-      const diffResult = basicDiffResult as unknown as EnhancedDiffResult;
-      diffResult.hasChanges = diffResult.plannedChanges > 0;
-      diffResult.breakingChanges = this.detectBreakingChanges(
-        diffResult.changeSummary
-      );
-      diffResult.costAnalysis = null; // TODO: Parse cost data when implemented
-      diffResult.summary = diffResult.changeSummary;
-      diffResult.executionTime = executionTime;
+      // Add hasChanges property based on planned changes count
+      const hasChanges = basicDiffResult.plannedChanges > 0;
 
       // Post PR comment with diff results
-      const prCommentPosted = await this.postPRComment(diffResult);
+      const prCommentPosted = await this.postPRComment(basicDiffResult);
 
       return {
         success: true,
         stage: options.stage,
-        hasChanges: diffResult.hasChanges,
-        changesDetected: diffResult.plannedChanges,
-        changes: diffResult.changes.map((change) => ({
+        hasChanges,
+        changesDetected: basicDiffResult.plannedChanges,
+        changes: basicDiffResult.changes.map((change) => ({
           action: change.action,
           resourceType: change.type,
           resourceName: change.name,
-          details: change.details || '',
+          details: '',
         })),
-        breakingChanges: diffResult.breakingChanges,
-        costAnalysis: diffResult.costAnalysis,
-        summary: diffResult.summary,
+        breakingChanges: false,
+        costAnalysis: null,
+        summary: basicDiffResult.changeSummary,
         prCommentPosted,
         executionTime,
         metadata: {
@@ -194,165 +149,15 @@ export class DiffOperation {
     };
   }
 
-  private async postPRComment(
-    diffResult: EnhancedDiffResult
-  ): Promise<boolean> {
+  private async postPRComment(diffResult: DiffResult): Promise<boolean> {
     try {
-      const comment = this.formatPRComment(diffResult);
+      const formatter = new OperationFormatter();
+      const comment = formatter.formatOperationComment(diffResult);
       await this.githubClient.postPRComment(comment, 'diff');
       return true;
     } catch (_error) {
       return false;
     }
-  }
-
-  private formatPRComment(diffResult: EnhancedDiffResult): string {
-    if (!diffResult.hasChanges) {
-      return this.formatNoChangesComment(diffResult.stage);
-    }
-
-    const sections: string[] = [];
-
-    // Add header section
-    sections.push(this.formatHeaderSection(diffResult));
-
-    // Add summary section
-    sections.push(this.formatSummarySection(diffResult));
-
-    // Add cost analysis if available
-    if (diffResult.costAnalysis) {
-      sections.push(this.formatCostAnalysisSection(diffResult.costAnalysis));
-    }
-
-    // Add detailed changes
-    if (diffResult.changes.length > 0) {
-      sections.push(this.formatDetailedChangesSection(diffResult.changes));
-    }
-
-    // Add breaking changes warning
-    if (diffResult.breakingChanges) {
-      sections.push(this.formatBreakingChangesWarning());
-    }
-
-    return sections.join('\n\n');
-  }
-
-  private formatNoChangesComment(stage: string): string {
-    return `## 📋 No Infrastructure Changes
-
-No infrastructure changes detected for stage \`${stage}\`.
-
-✅ Your infrastructure is up to date!`;
-  }
-
-  private formatHeaderSection(diffResult: EnhancedDiffResult): string {
-    if (diffResult.breakingChanges) {
-      return `## ⚠️ **Breaking Changes Detected**
-
-**IMPORTANT**: This deployment contains breaking changes that may impact your application.`;
-    }
-    return `## 📋 Infrastructure Changes Detected
-
-Changes detected for stage \`${diffResult.stage}\`:`;
-  }
-
-  private formatSummarySection(diffResult: EnhancedDiffResult): string {
-    const changeCounts = this.getChangeCounts(diffResult.changes);
-
-    return `### 📊 Summary
-- **${diffResult.plannedChanges}** total changes planned
-- **${changeCounts.create}** resources to be created
-- **${changeCounts.update}** resources to be updated
-- **${changeCounts.delete}** resources to be deleted`;
-  }
-
-  private getChangeCounts(changes: EnhancedDiffResult['changes']) {
-    return {
-      create: changes.filter((c) => c.action === 'create').length,
-      update: changes.filter((c) => c.action === 'update').length,
-      delete: changes.filter((c) => c.action === 'delete').length,
-    };
-  }
-
-  private formatCostAnalysisSection(
-    costAnalysis: NonNullable<EnhancedDiffResult['costAnalysis']>
-  ): string {
-    const { changeIcon, changeText } = this.getCostChangeInfo(
-      costAnalysis.change
-    );
-    return `### 💰 Cost Analysis
-${changeIcon} Monthly cost ${changeText}: **${costAnalysis.formatted}**`;
-  }
-
-  private getCostChangeInfo(change: number) {
-    if (change > 0) {
-      return { changeIcon: '📈', changeText: 'increase' };
-    }
-    if (change < 0) {
-      return { changeIcon: '📉', changeText: 'decrease' };
-    }
-    return { changeIcon: '📊', changeText: 'no change' };
-  }
-
-  private formatDetailedChangesSection(
-    changes: EnhancedDiffResult['changes']
-  ): string {
-    const sections = ['### 🔄 Detailed Changes'];
-    const groupedChanges = this.groupChangesByAction(changes);
-
-    this.addChangeGroup(
-      sections,
-      groupedChanges.create,
-      '#### ➕ Resources to be Created'
-    );
-    this.addChangeGroup(
-      sections,
-      groupedChanges.update,
-      '#### 🔄 Resources to be Updated'
-    );
-    this.addChangeGroup(
-      sections,
-      groupedChanges.delete,
-      '#### ❌ Resources to be Deleted'
-    );
-
-    return sections.join('\n\n');
-  }
-
-  private groupChangesByAction(changes: EnhancedDiffResult['changes']) {
-    return {
-      create: changes.filter((c) => c.action === 'create'),
-      update: changes.filter((c) => c.action === 'update'),
-      delete: changes.filter((c) => c.action === 'delete'),
-    };
-  }
-
-  private addChangeGroup(
-    sections: string[],
-    changes: EnhancedDiffResult['changes'],
-    title: string
-  ): void {
-    if (changes.length === 0) {
-      return;
-    }
-
-    sections.push(title);
-    for (const change of changes) {
-      const details = change.details ? ` - ${change.details}` : '';
-      sections.push(`- **${change.type}** \`${change.name}\`${details}`);
-    }
-  }
-
-  private formatBreakingChangesWarning(): string {
-    return `---
-⚠️ **Please review these changes carefully before deploying to production.**`;
-  }
-
-  private detectBreakingChanges(changeSummary: string): boolean {
-    // Check for breaking change indicators in the change summary
-    return BREAKING_CHANGE_PATTERNS.some((pattern) =>
-      pattern.test(changeSummary)
-    );
   }
 
   private createFailureResult(

@@ -106,7 +106,7 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
           action: 'update',
           resourceType: 'Bucket',
           resourceName: 'MyBucket',
-          details: 'policy updated',
+          details: '',
         },
         {
           action: 'delete',
@@ -140,7 +140,7 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
       0
     );
     expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
-      expect.stringContaining('Infrastructure Changes Detected'),
+      expect.stringContaining('🔍 Infrastructure Changes Preview'),
       'diff'
     );
   });
@@ -198,12 +198,12 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     });
 
     expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
-      expect.stringContaining('No Infrastructure Changes'),
+      expect.stringContaining('No Changes'),
       'diff'
     );
   });
 
-  it('should handle breaking changes with special notification', async () => {
+  it('should handle diff with delete operations without breaking change warnings', async () => {
     const options: OperationOptions = {
       stage: 'staging',
       environment: { SST_TOKEN: 'test-token' },
@@ -212,9 +212,9 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     const mockSSTResult = {
       success: true,
       stdout: `Planned changes:
-~ Function MyFunction (breaking change detected)
+- Function MyFunction
 
-Breaking changes detected. Please review carefully.`,
+Changes detected in infrastructure.`,
       stderr: '',
       exitCode: 0,
       duration: 3000,
@@ -230,14 +230,12 @@ Breaking changes detected. Please review carefully.`,
       truncated: false,
       completionStatus: 'complete' as const,
       plannedChanges: 1,
-      changeSummary:
-        'Found 1 planned change: 1 update. ⚠️ Breaking changes detected.',
+      changeSummary: 'Found 1 planned change: 1 deletion.',
       changes: [
         {
           type: 'Function',
           name: 'MyFunction',
-          action: 'update' as const,
-          details: 'breaking change detected',
+          action: 'delete' as const,
         },
       ],
     };
@@ -248,10 +246,10 @@ Breaking changes detected. Please review carefully.`,
 
     const result = await diffOperation.execute(options);
 
-    expect(result.breakingChanges).toBe(true);
-    expect(result.summary).toContain('⚠️ Breaking changes detected');
+    expect(result.breakingChanges).toBe(false);
+    expect(result.summary).toBe('Found 1 planned change: 1 deletion.');
     expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
-      expect.stringContaining('⚠️ **Breaking Changes Detected**'),
+      expect.stringContaining('🔍 Infrastructure Changes Preview'),
       'diff'
     );
   });

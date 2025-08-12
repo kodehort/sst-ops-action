@@ -8,8 +8,8 @@
  *   bun run scripts/generate-examples.ts --validate        # Validate parsing against real outputs
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { OperationFormatter } from '../src/github/formatters.js';
 import { DiffParser } from '../src/parsers/diff-parser.js';
 import type { DiffResult } from '../src/types/operations.js';

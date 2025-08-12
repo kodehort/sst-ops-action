@@ -13,7 +13,6 @@ import type {
 import {
   createMockDeployResource,
   createMockDeployResult,
-  createMockDiffChange,
   createMockDiffResult,
   createMockResourceBatch,
   createMockSSTUrl,
@@ -138,34 +137,6 @@ describe('OperationFormatter', () => {
 
       expect(comment).toContain('✅ No Changes');
       expect(comment).toContain('No infrastructure changes detected');
-    });
-
-    it('should format diff comment with breaking changes warning', () => {
-      const diffResult = createMockDiffResult({
-        stage: 'staging',
-        app: 'my-app',
-        rawOutput: 'Diff with breaking changes',
-        plannedChanges: 2,
-        changeSummary: 'Plan: 1 to add, 1 to destroy (force-new-resource)',
-        changes: [
-          createMockDiffChange({
-            type: 'Lambda',
-            name: 'Function1',
-            action: 'create',
-          }),
-          createMockDiffChange({
-            type: 'S3',
-            name: 'Bucket1',
-            action: 'delete',
-          }),
-        ],
-      }) as DiffResult;
-
-      const comment = formatter.formatOperationComment(diffResult);
-
-      expect(comment).toContain(
-        '⚠️ **Warning**: This diff may contain breaking changes'
-      );
     });
 
     it('should format remove comment correctly', () => {

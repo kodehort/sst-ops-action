@@ -351,12 +351,6 @@ All resources have been successfully removed.`;
 \`\`\`diff
 ${this.formatDiffOutput(result)}
 \`\`\``;
-
-      // Add warning for breaking changes if detected
-      if (this.hasBreakingChanges(result.changeSummary)) {
-        section +=
-          '\n\n⚠️ **Warning**: This diff may contain breaking changes. Please review carefully.';
-      }
     } else {
       section += `\n\n### ✅ No Changes
 
@@ -492,25 +486,6 @@ No infrastructure changes detected for this operation.`;
       default:
         return type.charAt(0).toUpperCase() + type.slice(1);
     }
-  }
-
-  /**
-   * Check if diff summary contains breaking changes
-   */
-  private hasBreakingChanges(diffSummary: string): boolean {
-    const breakingIndicators = [
-      'breaking',
-      'remove',
-      'delete',
-      'destroy',
-      'replace',
-      'force-new-resource',
-    ];
-
-    const lowerSummary = diffSummary.toLowerCase();
-    return breakingIndicators.some((indicator) =>
-      lowerSummary.includes(indicator)
-    );
   }
 }
 
