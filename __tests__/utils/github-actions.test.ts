@@ -18,9 +18,14 @@ vi.mock('node:fs', () => ({
 
 const { info, debug } = vi.mocked(core);
 
+// Import mocked fs after setting up the mock
+import { readFileSync } from 'node:fs';
+const mockedReadFileSync = vi.mocked(readFileSync);
+
 describe('GitHub Actions Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedReadFileSync.mockClear();
   });
 
   describe('handleGitHubIntegrationError', () => {
@@ -102,10 +107,7 @@ describe('GitHub Actions Integration', () => {
   });
 
   describe('logActionVersion', () => {
-    it('should log version for deploy operation', async () => {
-      const { readFileSync } = await import('node:fs');
-      const mockedReadFileSync = vi.mocked(readFileSync);
-
+    it('should log version for deploy operation', () => {
       mockedReadFileSync.mockReturnValue(
         JSON.stringify({ version: '1.2.3' })
       );
@@ -117,10 +119,7 @@ describe('GitHub Actions Integration', () => {
       );
     });
 
-    it('should handle missing version in package.json', async () => {
-      const { readFileSync } = await import('node:fs');
-      const mockedReadFileSync = vi.mocked(readFileSync);
-
+    it('should handle missing version in package.json', () => {
       mockedReadFileSync.mockReturnValue(JSON.stringify({}));
 
       logActionVersion('diff');
@@ -130,10 +129,7 @@ describe('GitHub Actions Integration', () => {
       );
     });
 
-    it('should handle package.json read errors', async () => {
-      const { readFileSync } = await import('node:fs');
-      const mockedReadFileSync = vi.mocked(readFileSync);
-
+    it('should handle package.json read errors', () => {
       mockedReadFileSync.mockImplementation(() => {
         throw new Error('ENOENT: no such file or directory');
       });
@@ -148,10 +144,7 @@ describe('GitHub Actions Integration', () => {
       );
     });
 
-    it('should handle invalid JSON in package.json', async () => {
-      const { readFileSync } = await import('node:fs');
-      const mockedReadFileSync = vi.mocked(readFileSync);
-
+    it('should handle invalid JSON in package.json', () => {
       mockedReadFileSync.mockReturnValue('{ invalid json');
 
       logActionVersion('stage');
