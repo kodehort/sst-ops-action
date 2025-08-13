@@ -12,6 +12,7 @@ import {
   SST_DIFF_ONLY_ADDITIONS_OUTPUT,
   SST_DIFF_ONLY_DELETIONS_OUTPUT,
   SST_DIFF_ONLY_UPDATES_OUTPUT,
+  SST_DIFF_REAL_WORLD_OUTPUT,
   SST_DIFF_SUCCESS_OUTPUT,
 } from '@tests/fixtures/sst-diff-outputs';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -254,6 +255,28 @@ describe('DiffParser', () => {
       expect(result.plannedChanges).toBe(1);
       expect(result.changes).toHaveLength(1);
       expect(result.changes?.[0]?.action).toBe('create');
+    });
+
+    it('should parse real world SST output with environment variables', () => {
+      const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, 'dev', 0);
+
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('dev');
+      expect(result.app).toBe('kodehort-scratch');
+      expect(result.permalink).toBe('https://sst.dev/u/31550ec5');
+
+      // Should capture exactly one main resource change (the Web component)
+      expect(result.plannedChanges).toBe(1);
+      expect(result.changes.length).toBe(1);
+      expect(result.changeSummary).toBe('1 changes planned');
+
+      // Should find the Web resource with environment changes
+      const webChange = result.changes.find(
+        (c) => c.type === 'Astro' && c.name === 'Web'
+      );
+      expect(webChange).toBeDefined();
+      expect(webChange?.action).toBe('create');
     });
 
     it('should provide consistent result structure', () => {

@@ -135,6 +135,66 @@ describe('OperationFormatter', () => {
       expect(comment).toContain('No infrastructure changes detected');
     });
 
+    it('should format real-world diff with environment variables', () => {
+      const realWorldOutput = `
+SST 3.17.10  ready!
+
+➜  App:        kodehort-scratch
+   Stage:      dev
+
+~  Diff
+
+|  Info        Downloaded provider aws-6.66.2
+$ bunx --bun astro build
+
+↗  Permalink   https://sst.dev/u/31550ec5
+
+✓  Generated    
+   Router: https://dev.kodeapps.co.uk
+   Web: https://dev.kodeapps.co.uk
+   Api: https://api.dev.kodeapps.co.uk
+   ---
+   github_role_arn: arn:aws:iam::194218796960:role/dev-GithubActionRole
+
++  Web sst:aws:Astro → WebBuilder command:local:Command
+   + environment.ACTIONS_CACHE_SERVICE_V2 = True
+   + environment.INPUT_OPERATION = diff
+   + environment.INPUT_STAGE = dev
+   * environment.GITHUB_ACTION = diff
+   * environment.GITHUB_SHA = bbeb890c69910ff180191bfb
+   - environment.GITHUB_TOKEN
+`;
+
+      const diffResult: DiffResult = {
+        success: true,
+        operation: 'diff',
+        stage: 'dev',
+        app: 'kodehort-scratch',
+        rawOutput: realWorldOutput,
+        exitCode: 0,
+        truncated: false,
+        completionStatus: 'complete',
+        plannedChanges: 1,
+        changeSummary: '1 changes planned',
+        changes: [{ type: 'Astro', name: 'Web', action: 'create' }],
+      };
+
+      const comment = formatter.formatOperationComment(diffResult);
+
+      expect(comment).toContain('🔍 DIFF SUCCESS');
+      expect(comment).toContain('1 changes planned');
+      // Should contain the actual diff block with environment variables
+      expect(comment).toContain('```diff');
+      expect(comment).toContain(
+        '+  Web sst:aws:Astro → WebBuilder command:local:Command'
+      );
+      expect(comment).toContain(
+        '+ environment.ACTIONS_CACHE_SERVICE_V2 = True'
+      );
+      expect(comment).toContain('* environment.GITHUB_ACTION = diff');
+      expect(comment).toContain('- environment.GITHUB_TOKEN');
+    });
+
     it('should format remove comment correctly', () => {
       const removeResult: RemoveResult = {
         success: true,
