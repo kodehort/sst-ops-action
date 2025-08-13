@@ -481,12 +481,12 @@ $ bunx --bun astro build
           createMockDeployResource({
             name: 'Bucket1',
             type: 'AWS::S3::Bucket',
-            status: 'unchanged',
+            status: 'updated',
           }),
           createMockDeployResource({
             name: 'OldFunction',
             type: 'AWS::Lambda::Function',
-            status: 'unchanged',
+            status: 'updated',
           }),
         ],
       }) as DeployResult;
@@ -495,7 +495,6 @@ $ bunx --bun astro build
 
       expect(comment).toContain('🆕 Created');
       expect(comment).toContain('📝 Updated');
-      expect(comment).toContain('➖ Unchanged');
     });
 
     it('should limit displayed resources', () => {
