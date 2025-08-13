@@ -514,10 +514,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.GH_CI_APP_ID }}
+          private-key: ${{ secrets.GH_CI_APP_PRIVATE_KEY }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           tag_name: v${{ needs.determine-release.outputs.new-version }}
           name: "SST Ops Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
