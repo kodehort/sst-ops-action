@@ -41,7 +41,7 @@ jobs:
           # Optional: Allow Claude to run specific commands
           allowed_tools: |
             Bash(bun run:*)
-            # Bash(npm run test)
+            Bash(bun install)
             # Bash(npm run build)
 
           # Optional: Custom environment variables for Claude
