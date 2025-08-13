@@ -354,6 +354,128 @@ Shows planned infrastructure changes without deploying.
 - Change impact assessment
 - Infrastructure planning
 
+#### Example PR Comment Output
+
+When changes are detected, the action creates a structured PR comment showing the infrastructure diff:
+
+<details>
+<summary>📋 Example: Diff with Changes</summary>
+
+### 🔍 DIFF SUCCESS
+
+**Stage:** `staging`  
+**App:** `my-sst-app`  
+**Status:** `complete`
+
+### 🔍 Infrastructure Changes Preview
+
+| Property | Value |
+|----------|-------|
+| App | `my-sst-app` |
+| Stage | `staging` |
+| Total Changes | 5 |
+| Summary | 5 changes planned |
+| Console Link | [View Diff](https://console.sst.dev/my-sst-app/staging/diffs/abc123) |
+
+### 📋 Resource Changes
+
+```diff
++ AuthHandler (Function)
++ UserApi (Api)
+* ProcessorFunction (Function)
+* Database (Aurora)
+- LegacyWebsite (StaticSite)
+```
+
+### 🖥️ SST Console
+
+[View in SST Console](https://console.sst.dev/my-sst-app/staging/diffs/abc123) to see detailed resource information and logs.
+
+</details>
+
+<details>
+<summary>✅ Example: No Changes Detected</summary>
+
+### 🔍 DIFF SUCCESS
+
+**Stage:** `production`  
+**App:** `my-sst-app`  
+**Status:** `complete`
+
+### 🔍 Infrastructure Changes Preview
+
+| Property | Value |
+|----------|-------|
+| App | `my-sst-app` |
+| Stage | `production` |
+| Total Changes | 0 |
+| Summary | No changes |
+| Console Link | [View Diff](https://console.sst.dev/my-sst-app/production/diffs/nochanges456) |
+
+### ✅ No Changes
+
+No infrastructure changes detected for this operation.
+
+### 🖥️ SST Console
+
+[View in SST Console](https://console.sst.dev/my-sst-app/production/diffs/nochanges456) to see detailed resource information and logs.
+
+</details>
+
+#### Example Action Summary Output
+
+The GitHub Actions summary provides a concise overview of the diff operation:
+
+<details>
+<summary>📋 Example: Action Summary with Changes</summary>
+
+### 🔍 Infrastructure Diff Summary
+
+| Property | Value |
+|----------|-------|
+| App | `my-sst-app` |
+| Stage | `staging` |
+| Total Changes | 5 |
+| Added Resources | 2 |
+| Modified Resources | 2 |
+| Removed Resources | 1 |
+| Status | ![Success](https://img.shields.io/badge/Status-Success-green) |
+| Console Link | [View Diff](https://console.sst.dev/my-sst-app/staging/diffs/abc123) |
+
+### 📋 Resource Changes
+
+```diff
++ AuthHandler (Function)
++ UserApi (Api)
+* ProcessorFunction (Function)
+* Database (Aurora)
+- LegacyWebsite (StaticSite)
+```
+
+</details>
+
+<details>
+<summary>✅ Example: Action Summary with No Changes</summary>
+
+### 🔍 Infrastructure Diff Summary
+
+| Property | Value |
+|----------|-------|
+| App | `my-sst-app` |
+| Stage | `production` |
+| Total Changes | 0 |
+| Added Resources | 0 |
+| Modified Resources | 0 |
+| Removed Resources | 0 |
+| Status | ![Success](https://img.shields.io/badge/Status-Success-green) |
+| Console Link | [View Diff](https://console.sst.dev/my-sst-app/production/diffs/nochanges456) |
+
+### ✅ No Changes
+
+No infrastructure changes detected for this operation.
+
+</details>
+
 ### Remove Operation
 
 Removes all resources for the specified stage.

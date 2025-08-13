@@ -1,0 +1,588 @@
+SST 3.17.4  ready!
+
+➜  App:        inheritly
+   Stage:      alistairstead
+
+~  Diff
+
+|  Created     VPC sst:aws:Vpc
+|  Created     PostHogHost sst:sst:Secret
+|  Created     PostHogKey sst:sst:Secret
+|  Created     Studio sst:sst:DevCommand
+|  Created     DevPDF sst:sst:DevCommand
+|  Created     Bus sst:aws:Bus
+|  Created     OpenAuth sst:aws:Auth
+|  Created     DatabaseMigrator sst:aws:Function
+|  Created     EncryptionKey sst:sst:Secret
+|  Created     PostHogHost sst:sst:Secret (1.0s)
+|  Created     WorkspaceAssets sst:aws:Bucket
+|  Created     Email sst:aws:Email
+|  Created     default_6_66_2 pulumi:providers:aws
+|  Created     Router sst:aws:Router
+|  Created     JSXEmail sst:sst:DevCommand
+|  Created     ContactOpsEmail sst:sst:Secret
+|  Created     PostHogKey sst:sst:Secret (1.0s)
+|  Created     DockerPostgres sst:sst:DevCommand
+|  Created     Reports sst:aws:Bucket
+|  Created     Postgres sst:aws:Aurora
+|  Created     EncryptionKey sst:sst:Secret (1.0s)
+|  Created     Bus sst:aws:Bus (1.0s)
+|  Created     DatabaseMigrator sst:aws:Function (1.0s)
+|  Created     DevPDF sst:sst:DevCommand (1.0s)
+|  Created     ReferralImpressionTrackingTable sst:aws:Dynamo
+|  Created     Website sst:aws:StaticSite
+|  Created     ApiFunction sst:aws:Function
+|  Created     AuthTable sst:aws:Dynamo
+|  Created     Results sst:aws:Dynamo
+|  Created     DatabaseSeed sst:aws:Function
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber
+|  Created     DeploymentVersionUpdater sst:aws:Function
+|  Created     Urls sst:sst:Linkable
+|  Created     Dashboard sst:aws:StaticSite
+|  Created     Survey sst:aws:StaticSite
+|  Created     TrackingFunction sst:aws:Function
+|  Created     OpenAuth sst:aws:Auth → OpenAuthIssuer sst:aws:Function
+|  Created     OpenAuth sst:aws:Auth → OpenAuthStorage sst:aws:Dynamo
+|  Created     ReferralImpressionTrackingTable sst:aws:Dynamo
+|  Created     default_1_0_1 pulumi:providers:command
+|  Created     WorkspaceAssets sst:aws:Bucket
+|  Created     Router sst:aws:Router → RouterCdn sst:aws:CDN
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunction sst:aws:Function
+|  Created     Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+|  Created     Email sst:aws:Email
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssets sst:aws:Bucket
+|  Created     JSXEmail sst:sst:DevCommand
+|  Created     Survey sst:aws:StaticSite → SurveyAssets sst:aws:Bucket
+|  Created     ContactOpsEmail sst:sst:Secret
+|  Created     Reports sst:aws:Bucket
+|  Created     Postgres sst:aws:Aurora
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber
+|  Created     AuthTable sst:aws:Dynamo
+|  Created     Results sst:aws:Dynamo
+|  Created     DatabaseSeed sst:aws:Function
+$ bunx --bun vite build
+|  Created     DeploymentVersionUpdater sst:aws:Function
+|  Created     Urls sst:sst:Linkable
+|  Created     default_4_16_6 pulumi:providers:random
+|  Created     OpenAuth sst:aws:Auth → OpenAuthIssuer sst:aws:Function
+|  Created     OpenAuth sst:aws:Auth → OpenAuthStorage sst:aws:Dynamo
+|  Created     LambdaEncryptionKey random:index:RandomBytes
+vite v6.3.5 building for production...
+Generated route tree in 71ms
+transforming...
+|  Created     Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+|  Created     Bus sst:aws:Bus → BusBus aws:cloudwatch:EventBus
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunction sst:aws:Function
+|  Created     DatabaseMigrator sst:aws:Function → DatabaseMigratorLogGroup aws:cloudwatch:LogGroup
+|  Created     Router sst:aws:Router → RouterCdn sst:aws:CDN
+|  Created     Survey sst:aws:StaticSite → SurveyAssets sst:aws:Bucket
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssets sst:aws:Bucket
+|  Created     Website sst:aws:StaticSite → WebsiteBuilder command:local:Command
+|  Created     ApiFunction sst:aws:Function → ApiFunctionLogGroup aws:cloudwatch:LogGroup
+|  Created     ReferralImpressionTrackingTable sst:aws:Dynamo → ReferralImpressionTrackingTableTable aws:dynamodb:Table
+|  Created     Reports sst:aws:Bucket → ReportsBucket aws:s3:BucketV2
+|  Created     DatabaseSeed sst:aws:Function → DatabaseSeedLogGroup aws:cloudwatch:LogGroup
+|  Created     DeploymentVersionUpdater sst:aws:Function → DeploymentVersionUpdaterLogGroup aws:cloudwatch:LogGroup
+|  Created     TrackingFunction sst:aws:Function → TrackingFunctionLogGroup aws:cloudwatch:LogGroup
+|  Created     OpenAuth sst:aws:Auth → OpenAuthIssuerLogGroup aws:cloudwatch:LogGroup
+|  Created     AuthTable sst:aws:Dynamo → AuthTableTable aws:dynamodb:Table
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunctionLogGroup aws:cloudwatch:LogGroup
+|  Created     Results sst:aws:Dynamo → ResultsTable aws:dynamodb:Table
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberRule aws:cloudwatch:EventRule
+|  Created     OpenAuth sst:aws:Auth → OpenAuthStorageTable aws:dynamodb:Table
+|  Created     Website sst:aws:StaticSite → WebsiteAssetsBucket aws:s3:BucketV2
+|  Created     Survey sst:aws:StaticSite → SurveyAssetsBucket aws:s3:BucketV2
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssetsBucket aws:s3:BucketV2
+|  Created     Reports sst:aws:Bucket → ReportsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+|  Created     Reports sst:aws:Bucket → ReportsCors aws:s3:BucketCorsConfigurationV2
+|  Created     Website sst:aws:StaticSite → WebsiteAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+|  Created     Website sst:aws:StaticSite → WebsiteAssetsCors aws:s3:BucketCorsConfigurationV2
+|  Created     Survey sst:aws:StaticSite → SurveyAssetsCors aws:s3:BucketCorsConfigurationV2
+|  Created     Survey sst:aws:StaticSite → SurveyAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssetsCors aws:s3:BucketCorsConfigurationV2
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+|  Created     Reports sst:aws:Bucket → ReportsPolicy aws:s3:BucketPolicy
+|  Created     Survey sst:aws:StaticSite → SurveyAssetsPolicy aws:s3:BucketPolicy
+|  Created     Website sst:aws:StaticSite → WebsiteAssetsPolicy aws:s3:BucketPolicy
+|  Created     Dashboard sst:aws:StaticSite → DashboardAssetsPolicy aws:s3:BucketPolicy
+|  Created     TrackingFunction sst:aws:Function → TrackingFunctionRole aws:iam:Role
+|  Created     ApiFunction sst:aws:Function → ApiFunctionRole aws:iam:Role
+|  Created     DatabaseSeed sst:aws:Function → DatabaseSeedRole aws:iam:Role
+|  Created     OpenAuth sst:aws:Auth → OpenAuthIssuerRole aws:iam:Role
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunctionRole aws:iam:Role
+|  Created     DeploymentVersionUpdater sst:aws:Function → DeploymentVersionUpdaterRole aws:iam:Role
+|  Created     DatabaseMigrator sst:aws:Function → DatabaseMigratorRole aws:iam:Role
+|  Created     RouterRoute/workspace-files sst:aws:RouterBucketRoute
+|  Created     Survey sst:aws:StaticSite (1.2s)
+|  Created     Website sst:aws:StaticSite (1.3s)
+|  Created     default pulumi:providers:pulumi-nodejs
+|  Created     TrackingFunction sst:aws:Function (1.3s)
+|  Created     Dashboard sst:aws:StaticSite → DashboardRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     ApiFunction sst:aws:Function → ApiFunctionRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     TrackingFunction sst:aws:Function → TrackingFunctionRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     ApiFunction sst:aws:Function (1.3s)
+|  Created     Website sst:aws:StaticSite → WebsiteRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     Survey sst:aws:StaticSite → SurveyRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     RouterRoute/workspace-files sst:aws:RouterBucketRoute → RouterRoute/workspace-filesRoutesUpdate sst:aws:KvRoutesUpdate
+|  Created     RouterRoute/workspace-files sst:aws:RouterBucketRoute → RouterRoute/workspace-filesRouteKey sst:aws:KvKeys
+|  Created     Router sst:aws:Router (1.3s)
+|  Created     RouterRoute/workspace-files sst:aws:RouterBucketRoute
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberPermission aws:lambda:Permission
+|  Created     Studio sst:sst:DevCommand (2.3s)
+|  Created     OpenAuth sst:aws:Auth → OpenAuthIssuerUrl aws:lambda:FunctionUrl
+|  Created     TrackingFunction sst:aws:Function → TrackingFunctionUrl aws:lambda:FunctionUrl
+|  Created     DockerPostgres sst:sst:DevCommand (1.3s)
+|  Created     DatabaseMigratorInvocation aws:lambda:Invocation
+|  Created     DatabaseSeedInvocation aws:lambda:Invocation
+|  Created     DeploymentVersionUpdate aws:lambda:Invocation
+|  Created     BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberTarget aws:cloudwatch:EventTarget
+|  Created     OpenAuth sst:aws:Auth (2.3s)
+✓ 1754 modules transformed.
+|  Created     Dashboard sst:aws:StaticSite (1.3s)
+|  Created     Dashboard sst:aws:StaticSite → DashboardKvKeys sst:aws:KvKeys
+|  Created     ApiFunction sst:aws:Function → ApiFunctionUrl aws:lambda:FunctionUrl
+|  Created     TrackingFunction sst:aws:Function → TrackingFunctionRouteKey sst:aws:KvKeys
+|  Created     ApiFunction sst:aws:Function → ApiFunctionRouteKey sst:aws:KvKeys
+rendering chunks...
+computing gzip size...
+dist/index.html                        0.88 kB │ gzip:   0.46 kB
+dist/assets/index-DEg0doZY.css        80.46 kB │ gzip:  13.15 kB
+dist/assets/privacy-38WKmqxl.js        7.93 kB │ gzip:   2.66 kB
+dist/assets/referral-CNYs6r0U.js       9.74 kB │ gzip:   2.51 kB
+dist/assets/index-Dr5orugk.js         12.04 kB │ gzip:   3.60 kB
+dist/assets/Footer-D2FLP7O3.js        32.88 kB │ gzip:  11.41 kB
+dist/assets/ContactForm-BQ2Kzn5E.js   80.12 kB │ gzip:  19.96 kB
+dist/assets/index-Ym7sFwxm.js        415.56 kB │ gzip: 139.63 kB
+✓ built in 1.15s
+|  Created     Website sst:aws:StaticSite → WebsiteKvKeys sst:aws:KvKeys
+|  Created     Survey sst:aws:StaticSite → SurveyBuilder command:local:Command
+$ bunx --bun vite build
+|  Created     Website sst:aws:StaticSite → WebsiteAssetFiles sst:aws:BucketFiles
+|  Created     Website sst:aws:StaticSite → WebsiteInvalidation sst:aws:DistributionInvalidation
+vite v6.3.5 building for production...
+Generated route tree in 68ms
+transforming...
+|  Created     VPC sst:aws:Vpc (3.8s)
+✓ 3389 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            0.72 kB │ gzip:   0.38 kB
+dist/assets/index-B3ndF9tm.css            80.48 kB │ gzip:  13.93 kB
+dist/assets/index-CEV9pcFS.css           278.77 kB │ gzip:  31.75 kB
+dist/assets/index-D_Wxvt_x.js              0.06 kB │ gzip:   0.08 kB
+dist/assets/_referralCode-D_Wxvt_x.js      0.06 kB │ gzip:   0.08 kB
+dist/assets/route-BSy7c5tw.js              0.19 kB │ gzip:   0.16 kB
+dist/assets/tooltip-qbqzoeLP.js            0.84 kB │ gzip:   0.48 kB
+dist/assets/success-1aaeSteL.js            1.33 kB │ gzip:   0.66 kB
+dist/assets/section2-Ciq9UDHg.js           4.00 kB │ gzip:   1.58 kB
+dist/assets/section1-DF1COHl0.js           4.17 kB │ gzip:   1.60 kB
+dist/assets/privacy-Dr70D_ZX.js            6.24 kB │ gzip:   2.13 kB
+dist/assets/section5-Z2jFtoSM.js           6.45 kB │ gzip:   1.99 kB
+dist/assets/section4-73mwnp6K.js           7.06 kB │ gzip:   2.30 kB
+dist/assets/section3-M3gt3jkF.js           7.80 kB │ gzip:   2.58 kB
+dist/assets/Container-BZoEJinJ.js         25.11 kB │ gzip:   8.08 kB
+dist/assets/index-DIEfjKME.js            215.37 kB │ gzip:  64.85 kB
+dist/assets/index-n7x-_HLI.js          2,704.77 kB │ gzip: 650.24 kB
+✓ built in 3.24s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+|  Created     Survey sst:aws:StaticSite → SurveyKvKeys sst:aws:KvKeys
+|  Created     Survey sst:aws:StaticSite → SurveyAssetFiles sst:aws:BucketFiles
+|  Created     Survey sst:aws:StaticSite → SurveyInvalidation sst:aws:DistributionInvalidation
+
+↗  Permalink   https://sst.dev/u/184e99ca
+
+✓  Generated
+
++  inheritly-alistairstead pulumi:pulumi:Stack
+
++  VPC sst:aws:Vpc
+
++  PostHogHost sst:sst:Secret
+
++  PostHogKey sst:sst:Secret
+
++  Studio sst:sst:DevCommand
+
++  DevPDF sst:sst:DevCommand
+
++  Bus sst:aws:Bus
+
++  OpenAuth sst:aws:Auth
+
++  DatabaseMigrator sst:aws:Function
+
++  EncryptionKey sst:sst:Secret
+
++  WebsiteLinkRef sst:sst:LinkRef
+
++  PostHogHost sst:sst:Secret
+
++  WorkspaceAssets sst:aws:Bucket
+
++  Email sst:aws:Email
+
++  default_6_66_2 pulumi:providers:aws
+
++  Router sst:aws:Router
+
++  JSXEmail sst:sst:DevCommand
+
++  EmailLinkRef sst:sst:LinkRef
+
++  ContactOpsEmail sst:sst:Secret
+
++  PostHogKey sst:sst:Secret
+
++  DockerPostgres sst:sst:DevCommand
+
++  Reports sst:aws:Bucket
+
++  Postgres sst:aws:Aurora
+
++  EncryptionKey sst:sst:Secret
+
++  Bus sst:aws:Bus
+
++  DatabaseMigrator sst:aws:Function
+
++  VPCLinkRef sst:sst:LinkRef
+
++  DevPDF sst:sst:DevCommand
+
++  ReferralImpressionTrackingTable sst:aws:Dynamo
+
++  Website sst:aws:StaticSite
+
++  ApiFunction sst:aws:Function
+
++  AuthTable sst:aws:Dynamo
+
++  Results sst:aws:Dynamo
+
++  DatabaseSeed sst:aws:Function
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber
+
++  DeploymentVersionUpdater sst:aws:Function
+
++  PostgresLinkRef sst:sst:LinkRef
+
++  Urls sst:sst:Linkable
+
++  Dashboard sst:aws:StaticSite
+
++  Survey sst:aws:StaticSite
+
++  ResultsLinkRef sst:sst:LinkRef
+
++  RouterLinkRef sst:sst:LinkRef
+
++  EncryptionKeyLinkRef sst:sst:LinkRef
+
++  AuthTableLinkRef sst:sst:LinkRef
+
++  TrackingFunction sst:aws:Function
+
++  PostHogHostLinkRef sst:sst:LinkRef
+
++  BusLinkRef sst:sst:LinkRef
+
++  DatabaseMigratorLinkRef sst:sst:LinkRef
+
++  UrlsLinkRef sst:sst:LinkRef
+
++  ContactOpsEmailLinkRef sst:sst:LinkRef
+
++  DeploymentVersionUpdaterLinkRef sst:sst:LinkRef
+
++  OpenAuthLinkRef sst:sst:LinkRef
+
++  SurveyLinkRef sst:sst:LinkRef
+
++  ReferralImpressionTrackingTableLinkRef sst:sst:LinkRef
+
++  ApiFunctionLinkRef sst:sst:LinkRef
+
++  PostHogKeyLinkRef sst:sst:LinkRef
+
++  DatabaseSeedLinkRef sst:sst:LinkRef
+
++  TrackingFunctionLinkRef sst:sst:LinkRef
+
++  WorkspaceAssetsLinkRef sst:sst:LinkRef
+
++  ReportsLinkRef sst:sst:LinkRef
+
++  OpenAuth sst:aws:Auth → OpenAuthIssuer sst:aws:Function
+
++  DashboardLinkRef sst:sst:LinkRef
+
++  OpenAuth sst:aws:Auth → OpenAuthStorage sst:aws:Dynamo
+
++  OpenAuthVersion sst:sst:Version
+
++  ReferralImpressionTrackingTable sst:aws:Dynamo
+
++  default_1_0_1 pulumi:providers:command
+
++  WorkspaceAssets sst:aws:Bucket
+
++  Router sst:aws:Router → RouterCdn sst:aws:CDN
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunction sst:aws:Function
+
++  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+
++  Email sst:aws:Email
+
++  Dashboard sst:aws:StaticSite → DashboardAssets sst:aws:Bucket
+
++  JSXEmail sst:sst:DevCommand
+
++  Survey sst:aws:StaticSite → SurveyAssets sst:aws:Bucket
+
++  ContactOpsEmail sst:sst:Secret
+
++  Reports sst:aws:Bucket
+
++  Postgres sst:aws:Aurora
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber
+
++  AuthTable sst:aws:Dynamo
+
++  Results sst:aws:Dynamo
+
++  DatabaseSeed sst:aws:Function
+
++  DeploymentVersionUpdater sst:aws:Function
+
++  Urls sst:sst:Linkable
+
++  default_4_16_6 pulumi:providers:random
+
++  EncryptionKeyLinkRef sst:sst:LinkRef
+
++  PostHogHostLinkRef sst:sst:LinkRef
+
++  UrlsLinkRef sst:sst:LinkRef
+
++  ContactOpsEmailLinkRef sst:sst:LinkRef
+
++  OpenAuth sst:aws:Auth → OpenAuthIssuer sst:aws:Function
+
++  PostHogKeyLinkRef sst:sst:LinkRef
+
++  OpenAuth sst:aws:Auth → OpenAuthStorage sst:aws:Dynamo
+
++  LambdaEncryptionKey random:index:RandomBytes
+
++  OpenAuthVersion sst:sst:Version
+
++  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+
++  Bus sst:aws:Bus → BusBus aws:cloudwatch:EventBus
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunction sst:aws:Function
+
++  DatabaseMigrator sst:aws:Function → DatabaseMigratorLogGroup aws:cloudwatch:LogGroup
+
++  Router sst:aws:Router → RouterCdn sst:aws:CDN
+
++  Survey sst:aws:StaticSite → SurveyAssets sst:aws:Bucket
+
++  Dashboard sst:aws:StaticSite → DashboardAssets sst:aws:Bucket
+
++  BusLinkRef sst:sst:LinkRef
+
++  Website sst:aws:StaticSite → WebsiteBuilder command:local:Command
+
++  ApiFunction sst:aws:Function → ApiFunctionLogGroup aws:cloudwatch:LogGroup
+
++  ReferralImpressionTrackingTable sst:aws:Dynamo → ReferralImpressionTrackingTableTable aws:dynamodb:Table
+
++  Reports sst:aws:Bucket → ReportsBucket aws:s3:BucketV2
+
++  DatabaseSeed sst:aws:Function → DatabaseSeedLogGroup aws:cloudwatch:LogGroup
+
++  DeploymentVersionUpdater sst:aws:Function → DeploymentVersionUpdaterLogGroup aws:cloudwatch:LogGroup
+
++  TrackingFunction sst:aws:Function → TrackingFunctionLogGroup aws:cloudwatch:LogGroup
+
++  OpenAuth sst:aws:Auth → OpenAuthIssuerLogGroup aws:cloudwatch:LogGroup
+
++  AuthTable sst:aws:Dynamo → AuthTableTable aws:dynamodb:Table
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunctionLogGroup aws:cloudwatch:LogGroup
+
++  Results sst:aws:Dynamo → ResultsTable aws:dynamodb:Table
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberRule aws:cloudwatch:EventRule
+
++  OpenAuth sst:aws:Auth → OpenAuthStorageTable aws:dynamodb:Table
+
++  Website sst:aws:StaticSite → WebsiteAssetsBucket aws:s3:BucketV2
+
++  Survey sst:aws:StaticSite → SurveyAssetsBucket aws:s3:BucketV2
+
++  Dashboard sst:aws:StaticSite → DashboardAssetsBucket aws:s3:BucketV2
+
++  ReferralImpressionTrackingTableLinkRef sst:sst:LinkRef
+
++  Reports sst:aws:Bucket → ReportsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+
++  Reports sst:aws:Bucket → ReportsCors aws:s3:BucketCorsConfigurationV2
+
++  AuthTableLinkRef sst:sst:LinkRef
+
++  ResultsLinkRef sst:sst:LinkRef
+
++  Website sst:aws:StaticSite → WebsiteAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+
++  Website sst:aws:StaticSite → WebsiteAssetsCors aws:s3:BucketCorsConfigurationV2
+
++  Survey sst:aws:StaticSite → SurveyAssetsCors aws:s3:BucketCorsConfigurationV2
+
++  Survey sst:aws:StaticSite → SurveyAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+
++  Dashboard sst:aws:StaticSite → DashboardAssetsCors aws:s3:BucketCorsConfigurationV2
+
++  Dashboard sst:aws:StaticSite → DashboardAssetsPublicAccessBlock aws:s3:BucketPublicAccessBlock
+
++  Reports sst:aws:Bucket → ReportsPolicy aws:s3:BucketPolicy
+
++  Survey sst:aws:StaticSite → SurveyAssetsPolicy aws:s3:BucketPolicy
+
++  Website sst:aws:StaticSite → WebsiteAssetsPolicy aws:s3:BucketPolicy
+
++  Dashboard sst:aws:StaticSite → DashboardAssetsPolicy aws:s3:BucketPolicy
+
++  ReportsLinkRef sst:sst:LinkRef
+
++  EmailLinkRef sst:sst:LinkRef
+
++  WorkspaceAssetsLinkRef sst:sst:LinkRef
+
++  TrackingFunction sst:aws:Function → TrackingFunctionRole aws:iam:Role
+
++  ApiFunction sst:aws:Function → ApiFunctionRole aws:iam:Role
+
++  DatabaseSeed sst:aws:Function → DatabaseSeedRole aws:iam:Role
+
++  OpenAuth sst:aws:Auth → OpenAuthIssuerRole aws:iam:Role
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberFunctionRole aws:iam:Role
+
++  DeploymentVersionUpdater sst:aws:Function → DeploymentVersionUpdaterRole aws:iam:Role
+
++  DatabaseMigrator sst:aws:Function → DatabaseMigratorRole aws:iam:Role
+
++  RouterRoute/workspace-files sst:aws:RouterBucketRoute
+
++  Survey sst:aws:StaticSite
+
++  Website sst:aws:StaticSite
+
++  default pulumi:providers:pulumi-nodejs
+
++  WebsiteLinkRef sst:sst:LinkRef
+
++  VPCVersion sst:sst:Version
+
++  TrackingFunction sst:aws:Function
+
++  RouterLinkRef sst:sst:LinkRef
+
++  Dashboard sst:aws:StaticSite → DashboardRoutesUpdate sst:aws:KvRoutesUpdate
+
++  SurveyLinkRef sst:sst:LinkRef
+
++  ApiFunction sst:aws:Function → ApiFunctionRoutesUpdate sst:aws:KvRoutesUpdate
+
++  TrackingFunction sst:aws:Function → TrackingFunctionRoutesUpdate sst:aws:KvRoutesUpdate
+
++  ApiFunction sst:aws:Function
+
++  Website sst:aws:StaticSite → WebsiteRoutesUpdate sst:aws:KvRoutesUpdate
+
++  Survey sst:aws:StaticSite → SurveyRoutesUpdate sst:aws:KvRoutesUpdate
+
++  RouterRoute/workspace-files sst:aws:RouterBucketRoute → RouterRoute/workspace-filesRoutesUpdate sst:aws:KvRoutesUpdate
+
++  DashboardLinkRef sst:sst:LinkRef
+
++  RouterRoute/workspace-files sst:aws:RouterBucketRoute → RouterRoute/workspace-filesRouteKey sst:aws:KvKeys
+
++  Router sst:aws:Router
+
++  RouterRoute/workspace-files sst:aws:RouterBucketRoute
+
++  TrackingFunctionLinkRef sst:sst:LinkRef
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberPermission aws:lambda:Permission
+
++  Studio sst:sst:DevCommand
+
++  OpenAuth sst:aws:Auth → OpenAuthIssuerUrl aws:lambda:FunctionUrl
+
++  TrackingFunction sst:aws:Function → TrackingFunctionUrl aws:lambda:FunctionUrl
+
++  DockerPostgres sst:sst:DevCommand
+
++  DatabaseMigratorInvocation aws:lambda:Invocation
+
++  DatabaseSeedLinkRef sst:sst:LinkRef
+
++  DeploymentVersionUpdaterLinkRef sst:sst:LinkRef
+
++  DatabaseSeedInvocation aws:lambda:Invocation
+
++  DatabaseMigratorLinkRef sst:sst:LinkRef
+
++  DeploymentVersionUpdate aws:lambda:Invocation
+
++  PostgresLinkRef sst:sst:LinkRef
+
++  VPCVersion sst:sst:Version
+
++  BusSubscriberEventSubscriber sst:aws:BusLambdaSubscriber → BusSubscriberEventSubscriberTarget aws:cloudwatch:EventTarget
+
++  OpenAuth sst:aws:Auth
+
++  Dashboard sst:aws:StaticSite
+
++  Dashboard sst:aws:StaticSite → DashboardKvKeys sst:aws:KvKeys
+
++  ApiFunction sst:aws:Function → ApiFunctionUrl aws:lambda:FunctionUrl
+
++  OpenAuthLinkRef sst:sst:LinkRef
+
++  ApiFunctionLinkRef sst:sst:LinkRef
+
++  TrackingFunction sst:aws:Function → TrackingFunctionRouteKey sst:aws:KvKeys
+
++  ApiFunction sst:aws:Function → ApiFunctionRouteKey sst:aws:KvKeys
+
++  Website sst:aws:StaticSite → WebsiteKvKeys sst:aws:KvKeys
+
++  Survey sst:aws:StaticSite → SurveyBuilder command:local:Command
+
++  Website sst:aws:StaticSite → WebsiteAssetFiles sst:aws:BucketFiles
+
++  Website sst:aws:StaticSite → WebsiteInvalidation sst:aws:DistributionInvalidation
+
++  VPC sst:aws:Vpc
+
++  VPCLinkRef sst:sst:LinkRef
+
++  Survey sst:aws:StaticSite → SurveyKvKeys sst:aws:KvKeys
+
++  Survey sst:aws:StaticSite → SurveyAssetFiles sst:aws:BucketFiles
+
++  Survey sst:aws:StaticSite → SurveyInvalidation sst:aws:DistributionInvalidation
+
++  inheritly-alistairstead pulumi:pulumi:Stack

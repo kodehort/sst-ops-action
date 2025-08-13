@@ -182,17 +182,41 @@ export class OperationFormatter {
    * Format diff operation summary
    */
   private formatDiffSummary(result: DiffResult): string {
-    let summary = `### 🔍 Infrastructure Preview
+    // Count changes by type
+    const createCount = result.changes.filter(
+      (c) => c.action === 'create'
+    ).length;
+    const updateCount = result.changes.filter(
+      (c) => c.action === 'update'
+    ).length;
+    const deleteCount = result.changes.filter(
+      (c) => c.action === 'delete'
+    ).length;
+
+    let summary = `### 🔍 Infrastructure Diff Summary
 
 | Property | Value |
 |----------|-------|
-| Changes Detected | ${result.changeSummary ? 'Yes' : 'No'} |
+| App | \`${result.app}\` |
+| Stage | \`${result.stage}\` |
+| Total Changes | ${result.plannedChanges} |
+| Added Resources | ${createCount} |
+| Modified Resources | ${updateCount} |
+| Removed Resources | ${deleteCount} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
-    if (result.changeSummary) {
-      summary += `\n\n### 📋 Changes Summary
+    // Add permalink if available
+    if (result.permalink) {
+      summary += `\n| Console Link | [View Diff](${result.permalink}) |`;
+    }
 
-${result.changeSummary}`;
+    // Add the actual diff in a code block
+    if (result.plannedChanges > 0) {
+      summary += `\n\n### 📋 Resource Changes
+
+\`\`\`diff
+${this.formatDiffOutput(result)}
+\`\`\``;
     } else {
       summary += `\n\n### ✅ No Changes
 
@@ -250,8 +274,8 @@ All resources have been successfully removed.`;
 
     return `### ${icon} ${result.operation.toUpperCase()} ${status}
 
-**Stage:** \`${result.stage}\`  
-**App:** \`${result.app || 'Unknown'}\`  
+**Stage:** \`${result.stage}\`
+**App:** \`${result.app || 'Unknown'}\`
 **Status:** \`${result.completionStatus}\``;
   }
 
@@ -307,22 +331,56 @@ All resources have been successfully removed.`;
    * Format diff changes section
    */
   private formatDiffChangesSection(result: DiffResult): string {
-    let section = '### 🔍 Infrastructure Changes Preview';
+    let section = `### 🔍 Infrastructure Changes Preview
 
-    if (result.changeSummary) {
-      section += `\n\n${result.changeSummary}`;
+| Property | Value |
+|----------|-------|
+| App | \`${result.app}\` |
+| Stage | \`${result.stage}\` |
+| Total Changes | ${result.plannedChanges} |
+| Summary | ${result.changeSummary} |`;
 
-      // Add warning for breaking changes if detected
-      if (this.hasBreakingChanges(result.changeSummary)) {
-        section +=
-          '\n\n⚠️ **Warning**: This diff may contain breaking changes. Please review carefully.';
-      }
+    if (result.permalink) {
+      section += `\n| Console Link | [View Diff](${result.permalink}) |`;
+    }
+
+    // Add the actual diff in a code block
+    if (result.plannedChanges > 0) {
+      section += `\n\n### 📋 Resource Changes
+
+\`\`\`diff
+${this.formatDiffOutput(result)}
+\`\`\``;
     } else {
-      section +=
-        '\n\n✅ **No changes detected** - Your infrastructure is up to date.';
+      section += `\n\n### ✅ No Changes
+
+No infrastructure changes detected for this operation.`;
     }
 
     return section;
+  }
+
+  /**
+   * Format diff output for display in code block
+   */
+  private formatDiffOutput(result: DiffResult): string {
+    if (!result.changes || result.changes.length === 0) {
+      return 'No changes detected';
+    }
+
+    return result.changes
+      .map((change) => {
+        let symbol: string;
+        if (change.action === 'create') {
+          symbol = '+';
+        } else if (change.action === 'delete') {
+          symbol = '-';
+        } else {
+          symbol = '*';
+        }
+        return `${symbol} ${change.name} (${change.type})`;
+      })
+      .join('\n');
   }
 
   /**
@@ -429,82 +487,4 @@ All resources have been successfully removed.`;
         return type.charAt(0).toUpperCase() + type.slice(1);
     }
   }
-
-  /**
-   * Check if diff summary contains breaking changes
-   */
-  private hasBreakingChanges(diffSummary: string): boolean {
-    const breakingIndicators = [
-      'breaking',
-      'remove',
-      'delete',
-      'destroy',
-      'replace',
-      'force-new-resource',
-    ];
-
-    const lowerSummary = diffSummary.toLowerCase();
-    return breakingIndicators.some((indicator) =>
-      lowerSummary.includes(indicator)
-    );
-  }
 }
-
-/**
- * Create formatter instance with default configuration
- */
-export function createFormatter(
-  config?: Partial<FormatConfig>
-): OperationFormatter {
-  return new OperationFormatter({ ...DEFAULT_CONFIG, ...config });
-}
-
-/**
- * Quick formatting functions for common use cases
- */
-export const formatters = {
-  /**
-   * Format a simple success/failure status
-   */
-  formatStatus: (success: boolean, operation: string): string => {
-    const icon = success ? '✅' : '❌';
-    const status = success ? 'SUCCESS' : 'FAILED';
-    return `${icon} ${operation.toUpperCase()} ${status}`;
-  },
-
-  /**
-   * Format duration in human-readable format
-   */
-  formatDuration: (ms: number): string => {
-    if (ms < 1000) {
-      return `${ms}ms`;
-    }
-    if (ms < 60_000) {
-      return `${(ms / 1000).toFixed(1)}s`;
-    }
-    return `${(ms / 60_000).toFixed(1)}m`;
-  },
-
-  /**
-   * Format file size in human-readable format
-   */
-  formatSize: (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(1)}${units[unitIndex]}`;
-  },
-
-  /**
-   * Format timestamp in ISO format
-   */
-  formatTimestamp: (date: Date = new Date()): string => {
-    return date.toISOString();
-  },
-};

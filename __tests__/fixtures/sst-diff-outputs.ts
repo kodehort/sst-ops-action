@@ -1,212 +1,405 @@
 /**
  * Test fixtures for SST diff operation parsing
- * Contains realistic SST diff CLI outputs for comprehensive testing
+ * Contains realistic SST diff CLI outputs based on real SST command output
  */
 
 export const SST_DIFF_SUCCESS_OUTPUT = `
-SST Diff
-App: my-sst-app
-Stage: staging
+SST 3.17.4  ready!
 
-+ Function        my-sst-app-staging-new-handler
-~ Api            my-sst-app-staging-api (environment updated)
-- Website        my-sst-app-staging-old-site
+➜  App:        my-sst-app
+   Stage:      staging
 
-3 changes planned
+~  Diff
 
-↗  Permalink https://console.sst.dev/my-sst-app/staging/diffs/abc123
+|  Created     NewHandler sst:aws:Function
+|  Created     Api sst:aws:Api
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 150 modules transformed.
+✓ built in 0.8s
 
-Duration: 15s
+↗  Permalink   https://console.sst.dev/my-sst-app/staging/diffs/abc123
+
+✓  Generated
+
++  my-sst-app-staging pulumi:pulumi:Stack
+
++  NewHandler sst:aws:Function
+
+*  Api sst:aws:Api
+
+-  Website sst:aws:StaticSite
+
++  NewHandler sst:aws:Function → NewHandlerLogGroup aws:cloudwatch:LogGroup
+
++  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+-  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
 `;
 
 export const SST_DIFF_NO_CHANGES_OUTPUT = `
-SST Diff
-App: my-sst-app
-Stage: staging
+SST 3.17.4  ready!
+
+➜  App:        my-sst-app
+   Stage:      staging
+
+~  Diff
+
+|  No changes required
+
+↗  Permalink   https://console.sst.dev/my-sst-app/staging/diffs/nochanges123
+
+✓  Generated
 
 No changes
-
-Duration: 5s
 `;
 
 export const SST_DIFF_COMPLEX_OUTPUT = `
-SST Diff
-App: my-complex-app
-Stage: production
+SST 3.17.4  ready!
 
-+ Function        my-complex-app-production-new-auth
-+ Database        my-complex-app-production-users-db (RDS MySQL 8.0)
-~ Api            my-complex-app-production-api (environment variables updated)
-~ Website        my-complex-app-production-web (build configuration changed)
-- Function        my-complex-app-production-old-processor
-- Topic          my-complex-app-production-notifications
+➜  App:        my-complex-app
+   Stage:      production
 
-Cost changes:
-Monthly: $45.50 → $67.80 (+$22.30)
+~  Diff
 
-Breaking changes detected:
-! Database schema migration required
-! API endpoint /legacy/users will be removed
+|  Created     NewAuth sst:aws:Function
+|  Created     UsersDatabase sst:aws:Aurora
+|  Updated     Api sst:aws:Api
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 500 modules transformed.
+✓ built in 2.1s
 
-6 changes planned
+↗  Permalink   https://console.sst.dev/my-complex-app/production/diffs/xyz789
 
-↗  Permalink https://console.sst.dev/my-complex-app/production/diffs/xyz789
+✓  Generated
 
-Duration: 25s
++  my-complex-app-production pulumi:pulumi:Stack
+
++  NewAuth sst:aws:Function
+
++  UsersDatabase sst:aws:Aurora
+
+*  Api sst:aws:Api
+
+*  Website sst:aws:StaticSite
+
+-  OldProcessor sst:aws:Function
+
+-  NotificationTopic sst:aws:Topic
+
++  NewAuth sst:aws:Function → NewAuthLogGroup aws:cloudwatch:LogGroup
+
++  UsersDatabase sst:aws:Aurora → UsersDatabaseCluster aws:rds:Cluster
+
+*  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+*  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+
+-  OldProcessor sst:aws:Function → OldProcessorLogGroup aws:cloudwatch:LogGroup
+
+-  NotificationTopic sst:aws:Topic → NotificationTopicTopic aws:sns:Topic
 `;
 
 export const SST_DIFF_BREAKING_OUTPUT = `
-SST Diff
-App: breaking-app
-Stage: staging
+SST 3.17.4  ready!
 
-~ Function        breaking-app-staging-handler (runtime changed: node16 → node20)
-- Database        breaking-app-staging-legacy-db
-+ Database        breaking-app-staging-new-db (PostgreSQL 15)
+➜  App:        breaking-app
+   Stage:      staging
 
-Impact: Breaking
-! Data migration required
-! Downtime expected: ~5 minutes
+~  Diff
 
-Cost changes:
-Monthly: $120.00 → $95.00 (-$25.00)
+|  Updated     Handler sst:aws:Function
+|  Created     NewDatabase sst:aws:Aurora
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 200 modules transformed.
+✓ built in 1.2s
 
-3 changes planned
+↗  Permalink   https://console.sst.dev/breaking-app/staging/diffs/break123
 
-Duration: 18s
+✓  Generated
+
++  breaking-app-staging pulumi:pulumi:Stack
+
+*  Handler sst:aws:Function
+
+-  LegacyDatabase sst:aws:Aurora
+
++  NewDatabase sst:aws:Aurora
+
+*  Handler sst:aws:Function → HandlerFunction aws:lambda:Function
+
+-  LegacyDatabase sst:aws:Aurora → LegacyDatabaseCluster aws:rds:Cluster
+
++  NewDatabase sst:aws:Aurora → NewDatabaseCluster aws:rds:Cluster
 `;
 
 export const SST_DIFF_COSMETIC_OUTPUT = `
-SST Diff
-App: cosmetic-app
-Stage: staging
+SST 3.17.4  ready!
 
-~ Function        cosmetic-app-staging-handler (description updated)
-~ Website        cosmetic-app-staging-web (tags updated)
+➜  App:        cosmetic-app
+   Stage:      staging
 
-Impact: Cosmetic
-No functional changes
+~  Diff
 
-2 changes planned
+|  Updated     Handler sst:aws:Function
+|  Updated     Website sst:aws:StaticSite
 
-Duration: 8s
+↗  Permalink   https://console.sst.dev/cosmetic-app/staging/diffs/cosmetic123
+
+✓  Generated
+
++  cosmetic-app-staging pulumi:pulumi:Stack
+
+*  Handler sst:aws:Function
+
+*  Website sst:aws:StaticSite
+
+*  Handler sst:aws:Function → HandlerFunction aws:lambda:Function
+
+*  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
 `;
 
 export const SST_DIFF_LARGE_OUTPUT = `
-SST Diff
-App: large-app
-Stage: production
+SST 3.17.4  ready!
 
-${Array.from({ length: 25 }, (_, i) => `+ Function        large-app-production-func-${i + 1}`).join('\n')}
-${Array.from({ length: 15 }, (_, i) => `~ Api            large-app-production-api-${i + 1} (config updated)`).join('\n')}
-${Array.from({ length: 10 }, (_, i) => `- Website        large-app-production-site-${i + 1}`).join('\n')}
+➜  App:        large-app
+   Stage:      production
 
-50 changes planned
+~  Diff
 
-Duration: 45s
+|  Created     ManyFunctions sst:aws:Function
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 1000 modules transformed.
+✓ built in 5.2s
+
+↗  Permalink   https://console.sst.dev/large-app/production/diffs/large123
+
+✓  Generated
+
++  large-app-production pulumi:pulumi:Stack
+
+${Array.from({ length: 25 }, (_, i) => `+  Function${i + 1} sst:aws:Function`).join('\n\n')}
+
+${Array.from({ length: 15 }, (_, i) => `*  Api${i + 1} sst:aws:Api`).join('\n\n')}
+
+${Array.from({ length: 10 }, (_, i) => `-  Website${i + 1} sst:aws:StaticSite`).join('\n\n')}
 `;
 
 export const SST_DIFF_MALFORMED_OUTPUT = `
-SST Diff started...
+SST 3.17.4  ready!
+
+➜  App:        malformed-app
+   Stage:      staging
+
+~  Diff
+
 Invalid diff format
 Malformed resource line without proper prefix
 Error parsing changes
 `;
 
 export const SST_DIFF_ERROR_OUTPUT = `
-SST Diff
-App: error-app
-Stage: staging
+SST 3.17.4  ready!
+
+➜  App:        error-app
+   Stage:      staging
+
+~  Diff
 
 Error: Unable to generate diff
 Permission denied: cannot read current infrastructure state
-
-Duration: 3s
 `;
 
 export const SST_DIFF_EMPTY_OUTPUT = '';
 
 export const SST_DIFF_INCOMPLETE_OUTPUT = `
-SST Diff
-App: incomplete-app
-Stage: staging
+SST 3.17.4  ready!
 
-+ Function        incomplete-app-staging-new-handler
+➜  App:        incomplete-app
+   Stage:      staging
+
+~  Diff
+
+|  Created     NewHandler sst:aws:Function
+
+↗  Permalink   https://console.sst.dev/incomplete-app/staging/diffs/incomplete123
+
+✓  Generated
+
++  NewHandler sst:aws:Function
 `;
 
 // Output with mixed resource types and detailed change information
 export const SST_DIFF_MIXED_RESOURCES_OUTPUT = `
-SST Diff
-App: mixed-app
-Stage: development
+SST 3.17.4  ready!
 
-+ Function        mixed-app-development-auth-handler (Node.js 20, 512MB)
-+ Database        mixed-app-development-users-db (RDS PostgreSQL 14.9)
-+ Topic          mixed-app-development-events
-+ Queue          mixed-app-development-jobs (SQS Standard)
-~ Api            mixed-app-development-api (cors configuration updated)
-~ Website        mixed-app-development-web (CloudFront distribution settings)
-~ Function        mixed-app-development-processor (memory: 256MB → 512MB)
-- Database        mixed-app-development-legacy-db
-- Function        mixed-app-development-old-auth
-- Topic          mixed-app-development-deprecated-events
+➜  App:        mixed-app
+   Stage:      development
 
-Cost changes:
-Monthly: $78.90 → $124.50 (+$45.60)
+~  Diff
 
-10 changes planned
+|  Created     AuthHandler sst:aws:Function
+|  Created     UsersDatabase sst:aws:Aurora
+|  Created     EventsTopic sst:aws:Topic
+|  Created     JobsQueue sst:aws:Queue
+|  Updated     Api sst:aws:Api
+|  Updated     Website sst:aws:StaticSite
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 750 modules transformed.
+✓ built in 3.2s
 
-↗  Permalink https://console.sst.dev/mixed-app/development/diffs/mixed123
+↗  Permalink   https://console.sst.dev/mixed-app/development/diffs/mixed123
 
-Duration: 32s
+✓  Generated
+
++  mixed-app-development pulumi:pulumi:Stack
+
++  AuthHandler sst:aws:Function
+
++  UsersDatabase sst:aws:Aurora
+
++  EventsTopic sst:aws:Topic
+
++  JobsQueue sst:aws:Queue
+
+*  Api sst:aws:Api
+
+*  Website sst:aws:StaticSite
+
+*  Processor sst:aws:Function
+
+-  LegacyDatabase sst:aws:Aurora
+
+-  OldAuth sst:aws:Function
+
+-  DeprecatedEvents sst:aws:Topic
+
++  AuthHandler sst:aws:Function → AuthHandlerLogGroup aws:cloudwatch:LogGroup
+
++  UsersDatabase sst:aws:Aurora → UsersDatabaseCluster aws:rds:Cluster
+
++  EventsTopic sst:aws:Topic → EventsTopicTopic aws:sns:Topic
+
++  JobsQueue sst:aws:Queue → JobsQueueQueue aws:sqs:Queue
+
+*  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+*  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+
+*  Processor sst:aws:Function → ProcessorFunction aws:lambda:Function
+
+-  LegacyDatabase sst:aws:Aurora → LegacyDatabaseCluster aws:rds:Cluster
+
+-  OldAuth sst:aws:Function → OldAuthFunction aws:lambda:Function
+
+-  DeprecatedEvents sst:aws:Topic → DeprecatedEventsTopicTopic aws:sns:Topic
 `;
 
 // Output with only additions
 export const SST_DIFF_ONLY_ADDITIONS_OUTPUT = `
-SST Diff
-App: new-features-app
-Stage: staging
+SST 3.17.4  ready!
 
-+ Function        new-features-app-staging-feature-a
-+ Function        new-features-app-staging-feature-b
-+ Api            new-features-app-staging-new-api
-+ Website        new-features-app-staging-landing-page
+➜  App:        new-features-app
+   Stage:      staging
 
-4 changes planned
+~  Diff
 
-Duration: 20s
+|  Created     FeatureA sst:aws:Function
+|  Created     FeatureB sst:aws:Function
+|  Created     NewApi sst:aws:Api
+|  Created     LandingPage sst:aws:StaticSite
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 300 modules transformed.
+✓ built in 1.5s
+
+↗  Permalink   https://console.sst.dev/new-features-app/staging/diffs/additions123
+
+✓  Generated
+
++  new-features-app-staging pulumi:pulumi:Stack
+
++  FeatureA sst:aws:Function
+
++  FeatureB sst:aws:Function
+
++  NewApi sst:aws:Api
+
++  LandingPage sst:aws:StaticSite
+
++  FeatureA sst:aws:Function → FeatureALogGroup aws:cloudwatch:LogGroup
+
++  FeatureB sst:aws:Function → FeatureBLogGroup aws:cloudwatch:LogGroup
+
++  NewApi sst:aws:Api → NewApiFunction sst:aws:Function
+
++  LandingPage sst:aws:StaticSite → LandingPageAssets sst:aws:Bucket
 `;
 
 // Output with only deletions
 export const SST_DIFF_ONLY_DELETIONS_OUTPUT = `
-SST Diff
-App: cleanup-app
-Stage: staging
+SST 3.17.4  ready!
 
-- Function        cleanup-app-staging-deprecated-handler
-- Database        cleanup-app-staging-old-db
-- Topic          cleanup-app-staging-unused-events
-- Website        cleanup-app-staging-legacy-site
+➜  App:        cleanup-app
+   Stage:      staging
 
-Cost savings:
-Monthly: $89.00 → $12.00 (-$77.00)
+~  Diff
 
-4 changes planned
+↗  Permalink   https://console.sst.dev/cleanup-app/staging/diffs/deletions123
 
-Duration: 12s
+✓  Generated
+
++  cleanup-app-staging pulumi:pulumi:Stack
+
+-  DeprecatedHandler sst:aws:Function
+
+-  OldDatabase sst:aws:Aurora
+
+-  UnusedEvents sst:aws:Topic
+
+-  LegacySite sst:aws:StaticSite
+
+-  DeprecatedHandler sst:aws:Function → DeprecatedHandlerLogGroup aws:cloudwatch:LogGroup
+
+-  OldDatabase sst:aws:Aurora → OldDatabaseCluster aws:rds:Cluster
+
+-  UnusedEvents sst:aws:Topic → UnusedEventsTopicTopic aws:sns:Topic
+
+-  LegacySite sst:aws:StaticSite → LegacySiteAssets sst:aws:Bucket
 `;
 
 // Output with only updates
 export const SST_DIFF_ONLY_UPDATES_OUTPUT = `
-SST Diff
-App: updates-app
-Stage: production
+SST 3.17.4  ready!
 
-~ Function        updates-app-production-handler (timeout: 30s → 60s)
-~ Api            updates-app-production-api (rate limiting enabled)
-~ Database        updates-app-production-db (backup retention: 7d → 30d)
+➜  App:        updates-app
+   Stage:      production
 
-3 changes planned
+~  Diff
 
-Duration: 10s
+|  Updated     Handler sst:aws:Function
+|  Updated     Api sst:aws:Api
+|  Updated     Database sst:aws:Aurora
+
+↗  Permalink   https://console.sst.dev/updates-app/production/diffs/updates123
+
+✓  Generated
+
++  updates-app-production pulumi:pulumi:Stack
+
+*  Handler sst:aws:Function
+
+*  Api sst:aws:Api
+
+*  Database sst:aws:Aurora
+
+*  Handler sst:aws:Function → HandlerFunction aws:lambda:Function
+
+*  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+*  Database sst:aws:Aurora → DatabaseCluster aws:rds:Cluster
 `;

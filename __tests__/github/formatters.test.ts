@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  createFormatter,
-  formatters,
-  type OperationFormatter,
-} from '../../src/github/formatters.js';
+import { OperationFormatter } from '../../src/github/formatters.js';
 import type {
   DeployResult,
   DiffResult,
@@ -13,7 +9,6 @@ import type {
 import {
   createMockDeployResource,
   createMockDeployResult,
-  createMockDiffChange,
   createMockDiffResult,
   createMockResourceBatch,
   createMockSSTUrl,
@@ -24,7 +19,7 @@ describe('OperationFormatter', () => {
   let formatter: OperationFormatter;
 
   beforeEach(() => {
-    formatter = createFormatter();
+    formatter = new OperationFormatter();
   });
 
   describe('formatOperationComment', () => {
@@ -136,36 +131,8 @@ describe('OperationFormatter', () => {
 
       const comment = formatter.formatOperationComment(diffResult);
 
-      expect(comment).toContain('No changes detected');
-      expect(comment).toContain('Your infrastructure is up to date');
-    });
-
-    it('should format diff comment with breaking changes warning', () => {
-      const diffResult = createMockDiffResult({
-        stage: 'staging',
-        app: 'my-app',
-        rawOutput: 'Diff with breaking changes',
-        plannedChanges: 2,
-        changeSummary: 'Plan: 1 to add, 1 to destroy (force-new-resource)',
-        changes: [
-          createMockDiffChange({
-            type: 'Lambda',
-            name: 'Function1',
-            action: 'create',
-          }),
-          createMockDiffChange({
-            type: 'S3',
-            name: 'Bucket1',
-            action: 'delete',
-          }),
-        ],
-      }) as DiffResult;
-
-      const comment = formatter.formatOperationComment(diffResult);
-
-      expect(comment).toContain(
-        '⚠️ **Warning**: This diff may contain breaking changes'
-      );
+      expect(comment).toContain('✅ No Changes');
+      expect(comment).toContain('No infrastructure changes detected');
     });
 
     it('should format remove comment correctly', () => {
@@ -314,12 +281,13 @@ describe('OperationFormatter', () => {
 
       const summary = formatter.formatOperationSummary(diffResult);
 
-      expect(summary).toContain('🔍 Infrastructure Preview');
-      expect(summary).toContain('Changes Detected | Yes');
-      expect(summary).toContain('📋 Changes Summary');
-      expect(summary).toContain(
-        '3 resources to create, 2 to update, 1 to destroy'
-      );
+      expect(summary).toContain('🔍 Infrastructure Diff Summary');
+      expect(summary).toContain('Total Changes | 6');
+      expect(summary).toContain('📋 Resource Changes');
+      expect(summary).toContain('```diff');
+      expect(summary).toContain('+ Function1 (Lambda)');
+      expect(summary).toContain('* Bucket1 (S3)');
+      expect(summary).toContain('- Table1 (DynamoDB)');
     });
 
     it('should format diff summary with no changes', () => {
@@ -339,7 +307,7 @@ describe('OperationFormatter', () => {
 
       const summary = formatter.formatOperationSummary(diffResult);
 
-      expect(summary).toContain('Changes Detected | No');
+      expect(summary).toContain('Total Changes | 0');
       expect(summary).toContain('✅ No Changes');
       expect(summary).toContain('No infrastructure changes detected');
     });
@@ -490,7 +458,13 @@ describe('OperationFormatter', () => {
 
   describe('custom configuration', () => {
     it('should respect custom maxUrlsToShow configuration', () => {
-      const customFormatter = createFormatter({ maxUrlsToShow: 3 });
+      const customFormatter = new OperationFormatter({
+        includeTimestamp: true,
+        includeDuration: true,
+        includeDebugInfo: false,
+        maxUrlsToShow: 3,
+        maxResourcesToShow: 20,
+      });
 
       const deployResult = createMockDeployResult({
         stage: 'staging',
@@ -506,7 +480,13 @@ describe('OperationFormatter', () => {
     });
 
     it('should respect custom maxResourcesToShow configuration', () => {
-      const customFormatter = createFormatter({ maxResourcesToShow: 5 });
+      const customFormatter = new OperationFormatter({
+        includeTimestamp: true,
+        includeDuration: true,
+        includeDebugInfo: false,
+        maxUrlsToShow: 10,
+        maxResourcesToShow: 5,
+      });
 
       const deployResult = createMockDeployResult({
         stage: 'staging',
@@ -523,65 +503,6 @@ describe('OperationFormatter', () => {
       const comment = customFormatter.formatOperationComment(deployResult);
 
       expect(comment).toContain('... and 7 more resources');
-    });
-  });
-});
-
-describe('formatters utility functions', () => {
-  describe('formatStatus', () => {
-    it('should format success status correctly', () => {
-      const result = formatters.formatStatus(true, 'deploy');
-      expect(result).toBe('✅ DEPLOY SUCCESS');
-    });
-
-    it('should format failure status correctly', () => {
-      const result = formatters.formatStatus(false, 'remove');
-      expect(result).toBe('❌ REMOVE FAILED');
-    });
-  });
-
-  describe('formatDuration', () => {
-    it('should format milliseconds correctly', () => {
-      expect(formatters.formatDuration(500)).toBe('500ms');
-    });
-
-    it('should format seconds correctly', () => {
-      expect(formatters.formatDuration(2500)).toBe('2.5s');
-    });
-
-    it('should format minutes correctly', () => {
-      expect(formatters.formatDuration(90_000)).toBe('1.5m');
-    });
-  });
-
-  describe('formatSize', () => {
-    it('should format bytes correctly', () => {
-      expect(formatters.formatSize(500)).toBe('500.0B');
-    });
-
-    it('should format kilobytes correctly', () => {
-      expect(formatters.formatSize(1536)).toBe('1.5KB');
-    });
-
-    it('should format megabytes correctly', () => {
-      expect(formatters.formatSize(2_097_152)).toBe('2.0MB');
-    });
-
-    it('should format gigabytes correctly', () => {
-      expect(formatters.formatSize(3_221_225_472)).toBe('3.0GB');
-    });
-  });
-
-  describe('formatTimestamp', () => {
-    it('should format timestamp in ISO format', () => {
-      const date = new Date('2024-01-15T10:30:00.000Z');
-      const result = formatters.formatTimestamp(date);
-      expect(result).toBe('2024-01-15T10:30:00.000Z');
-    });
-
-    it('should use current date when no date provided', () => {
-      const result = formatters.formatTimestamp();
-      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
   });
 });

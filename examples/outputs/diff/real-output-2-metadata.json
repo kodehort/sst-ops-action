@@ -1,0 +1,1355 @@
+{
+  "name": "real-output-2",
+  "app": "inheritly",
+  "stage": "dev",
+  "plannedChanges": 268,
+  "changeSummary": "268 changes planned",
+  "success": true,
+  "changes": [
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website",
+      "name": "dir =",
+      "action": "update"
+    },
+    {
+      "type": "1754943809936",
+      "name": "triggers[0] =",
+      "action": "update"
+    },
+    {
+      "type": "Invocation",
+      "name": "DeploymentVersionUpdate",
+      "action": "create"
+    },
+    {
+      "type": "29.811Z\"}}",
+      "name": "input =",
+      "action": "update"
+    },
+    {
+      "type": "Invocation",
+      "name": "DatabaseMigratorInvocation",
+      "action": "create"
+    },
+    {
+      "type": "1754943809766",
+      "name": "input =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey",
+      "name": "dir =",
+      "action": "update"
+    },
+    {
+      "type": "1754943809910",
+      "name": "triggers[0] =",
+      "action": "update"
+    },
+    {
+      "type": "f48cbf5e793ad0266dfa0243fd87f76653f998ef68a7c49e178ca8f3edb7fe03",
+      "name": "files[0].hash =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/index.html",
+      "name": "files[0].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/favicon.svg",
+      "name": "files[1].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/favicon.ico",
+      "name": "files[2].source =",
+      "action": "update"
+    },
+    {
+      "type": "8e8cbd2157ad375a04b074cf2c40f467da2c248850975e5ed99cad083e894d83",
+      "name": "files[3].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/referral-BjXJcq9E.js",
+      "name": "files[3].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/referral-BjXJcq9E.js",
+      "name": "files[3].source =",
+      "action": "update"
+    },
+    {
+      "type": "ff1a202613f6c8b95eb70e7fa8e58137bffd60f2cc34de9b3c0dbdb89b5b8f87",
+      "name": "files[4].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/privacy-BsBkDwm0.js",
+      "name": "files[4].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/privacy-BsBkDwm0.js",
+      "name": "files[4].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/javascript;charset=UTF-8",
+      "name": "files[5].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "0d4aaebad9b8025c961e2ebe96d08ba45d71fe0acc9fa97fbd988c11c24d6416",
+      "name": "files[5].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-J9Mkwgwv.js",
+      "name": "files[5].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/index-J9Mkwgwv.js",
+      "name": "files[5].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/css;charset=UTF-8",
+      "name": "files[6].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "03e594dab258cd922dc242e829b5a10ec5cfba9ed74a528217a64748d7fce16d",
+      "name": "files[6].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-DEg0doZY.css",
+      "name": "files[6].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/index-DEg0doZY.css",
+      "name": "files[6].source =",
+      "action": "update"
+    },
+    {
+      "type": "b2153a15a80fc0aa62460ce6ab51f0cc9e57b6c79b75ec087d9a9c172625dde8",
+      "name": "files[7].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-By2sXoFz.js",
+      "name": "files[7].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/index-By2sXoFz.js",
+      "name": "files[7].source =",
+      "action": "update"
+    },
+    {
+      "type": "69b41beaf42524bdbbc77b97c3ad9111a14614af0e2e28ccfd85646a542e4648",
+      "name": "files[8].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/Footer-rW9y7s8I.js",
+      "name": "files[8].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/Footer-rW9y7s8I.js",
+      "name": "files[8].source =",
+      "action": "update"
+    },
+    {
+      "type": "4f1d743ce82b7dcde96c5f2193173c6f11ba1b6c2b5973d76cae25cf3c8c9695",
+      "name": "files[9].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/ContactForm-CLRTqEnQ.js",
+      "name": "files[9].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/website/dist/assets/ContactForm-CLRTqEnQ.js",
+      "name": "files[9].source =",
+      "action": "update"
+    },
+    {
+      "type": "c6beac5f2c1427b5d21a8a178d040d4b",
+      "name": "version =",
+      "action": "update"
+    },
+    {
+      "type": "assets/DatabaseSeed-code-c2a44b02af863286bdec207535a5ec9ff84d7d78b07a6901b0abc64623e609e1.zip",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "/aws/lambda/inheritly-dev-DatabaseSeedFunction-baubxswa/c2a44b02af863286bdec207535a5ec9ff84d7d78b07a6901b0abc64623e609e1.bundle.mjs.map",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "assets/DatabaseSeed-code-c2a44b02af863286bdec207535a5ec9ff84d7d78b07a6901b0abc64623e609e1.zip",
+      "name": "s3Key =",
+      "action": "update"
+    },
+    {
+      "type": "Invocation",
+      "name": "DatabaseSeedInvocation",
+      "action": "create"
+    },
+    {
+      "type": "1754943809896",
+      "name": "input =",
+      "action": "update"
+    },
+    {
+      "type": "assets/OpenAuthIssuer-code-a54eddb672b5be8eb8b5ff26112612453a10be23b498f75a1c4d396e9eb27660.zip",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "/aws/lambda/inheritly-dev-OpenAuthIssuerFunction-conehdom/a54eddb672b5be8eb8b5ff26112612453a10be23b498f75a1c4d396e9eb27660.bundle.mjs.map",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "assets/OpenAuthIssuer-code-a54eddb672b5be8eb8b5ff26112612453a10be23b498f75a1c4d396e9eb27660.zip",
+      "name": "s3Key =",
+      "action": "update"
+    },
+    {
+      "type": "assets/BusSubscriberEventSubscriberFunction-code-3f6b47276e6b0795afe2a9e82a6712e27d19c7ceb1946c6c01ffc48ec86e54a0.zip",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "assets/BusSubscriberEventSubscriberFunction-code-3f6b47276e6b0795afe2a9e82a6712e27d19c7ceb1946c6c01ffc48ec86e54a0.zip",
+      "name": "s3Key =",
+      "action": "update"
+    },
+    {
+      "type": "/aws/lambda/inheri-dev-BusSubscriberEventSubscriberFunctionFunction-bbaexkxf/3f6b47276e6b0795afe2a9e82a6712e27d19c7ceb1946c6c01ffc48ec86e54a0.bundle.mjs.map",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "assets/ApiFunction-code-dd27d9046149f7ab6ebb98c225f5e1aea0f8ce434bfa6d5a3527e8e8f142404b.zip",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "=",
+      "name": "description",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "environment.variables =",
+      "action": "update"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.CORS_ORIGIN",
+      "action": "update"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_APP",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_APPSYNC_HTTP",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_APPSYNC_REALTIME",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_ASSET_BUCKET",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_FUNCTION_ID",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_REGION",
+      "action": "delete"
+    },
+    {
+      "type": "Unknown",
+      "name": "environment.variables.SST_STAGE",
+      "action": "delete"
+    },
+    {
+      "type": "bundle.handler",
+      "name": "handler =",
+      "action": "update"
+    },
+    {
+      "type": "nodejs20.x",
+      "name": "runtime =",
+      "action": "update"
+    },
+    {
+      "type": "assets/ApiFunction-code-dd27d9046149f7ab6ebb98c225f5e1aea0f8ce434bfa6d5a3527e8e8f142404b.zip",
+      "name": "s3Key =",
+      "action": "update"
+    },
+    {
+      "type": "/aws/lambda/inheritly-dev-ApiFunctionFunction-eunetrob/dd27d9046149f7ab6ebb98c225f5e1aea0f8ce434bfa6d5a3527e8e8f142404b.bundle.mjs.map",
+      "name": "key =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "source =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "entries =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard",
+      "name": "dir =",
+      "action": "update"
+    },
+    {
+      "type": "1754943809798",
+      "name": "triggers[0] =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/index.html",
+      "name": "files[0].source =",
+      "action": "update"
+    },
+    {
+      "type": "a822734a42d945ceca02db7e683ea889b4f031c72a8407da2c3d4dfb48ed95c8",
+      "name": "files[10].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/success-DhXtrlo2.js",
+      "name": "files[10].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/success-DhXtrlo2.js",
+      "name": "files[10].source =",
+      "action": "update"
+    },
+    {
+      "type": "a09928192c894a73b861c0371f67e39936a30a7030e808bf75f55750b0d3e5f5",
+      "name": "files[11].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/section5-Z2jFtoSM.js",
+      "name": "files[11].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/section5-Z2jFtoSM.js",
+      "name": "files[11].source =",
+      "action": "update"
+    },
+    {
+      "type": "391b6345e0a4c3ef2adfc08b3c49458728f75145f124f13e1be062c54bea6650",
+      "name": "files[12].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/section4-73mwnp6K.js",
+      "name": "files[12].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/section4-73mwnp6K.js",
+      "name": "files[12].source =",
+      "action": "update"
+    },
+    {
+      "type": "5ccf42bdcffec8a604a83d75801b309db9d07b1bcb967b53b41f05fbe0d5eeea",
+      "name": "files[13].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/section3-M3gt3jkF.js",
+      "name": "files[13].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/section3-M3gt3jkF.js",
+      "name": "files[13].source =",
+      "action": "update"
+    },
+    {
+      "type": "95baa5920329ab65f91817aedf717f78e8c8e3f1610e03edb5227e661611ff3d",
+      "name": "files[14].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/section2-Ciq9UDHg.js",
+      "name": "files[14].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/section2-Ciq9UDHg.js",
+      "name": "files[14].source =",
+      "action": "update"
+    },
+    {
+      "type": "feabcfe654d23e47c67a83f24aeb4deb765a8bba77ffddedb6aa67ac23d758d4",
+      "name": "files[15].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/section1-DF1COHl0.js",
+      "name": "files[15].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/section1-DF1COHl0.js",
+      "name": "files[15].source =",
+      "action": "update"
+    },
+    {
+      "type": "53683102ced310ca73dd880d7e54e5d28976acd5d28ea4962ac1785b9ddc9a1c",
+      "name": "files[16].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/route-Dy4x4u8J.js",
+      "name": "files[16].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/route-Dy4x4u8J.js",
+      "name": "files[16].source =",
+      "action": "update"
+    },
+    {
+      "type": "76b1f1dc85eee5404ff540677a5153e301ca7c83fee4e2fe060c9463ed5f558d",
+      "name": "files[17].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/privacy-Cwd4W54N.js",
+      "name": "files[17].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/privacy-Cwd4W54N.js",
+      "name": "files[17].source =",
+      "action": "update"
+    },
+    {
+      "type": "c6ad03f910487c23c0730696175d516c2acdbb3497232d0afd1b3cec5c36a6cc",
+      "name": "files[18].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-DlZ2ZcLf.js",
+      "name": "files[18].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/index-DlZ2ZcLf.js",
+      "name": "files[18].source =",
+      "action": "update"
+    },
+    {
+      "type": "2820fbd43de6d6e7dda52d2a97d413f36a2a8fe5372d929e52a195acc3788af5",
+      "name": "files[19].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-D_Wxvt_x.js",
+      "name": "files[19].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/index-D_Wxvt_x.js",
+      "name": "files[19].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/robots.txt",
+      "name": "files[1].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/javascript;charset=UTF-8",
+      "name": "files[20].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "6ba09b39343172097b8250381aa26081b916d8d36bd59a8da4de2a99fbcb57d4",
+      "name": "files[20].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-CUoAQjNx.js",
+      "name": "files[20].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/index-CUoAQjNx.js",
+      "name": "files[20].source =",
+      "action": "update"
+    },
+    {
+      "type": "78993611382f7f297dcc01494b41a14b90b9ca5bf0ed64d831f5407826681bb1",
+      "name": "files[21].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-CEV9pcFS.css",
+      "name": "files[21].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/index-CEV9pcFS.css",
+      "name": "files[21].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/css;charset=UTF-8",
+      "name": "files[22].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "0abd4fc3ef5eda048f099d51a3e2273cdf6c29c26aabfc06537f5473573550b8",
+      "name": "files[22].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-B3ndF9tm.css",
+      "name": "files[22].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/index-B3ndF9tm.css",
+      "name": "files[22].source =",
+      "action": "update"
+    },
+    {
+      "type": "2820fbd43de6d6e7dda52d2a97d413f36a2a8fe5372d929e52a195acc3788af5",
+      "name": "files[23].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/_referralCode-D_Wxvt_x.js",
+      "name": "files[23].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/_referralCode-D_Wxvt_x.js",
+      "name": "files[23].source =",
+      "action": "update"
+    },
+    {
+      "type": "{",
+      "name": "files[24] =",
+      "action": "create"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/favicon.svg",
+      "name": "files[2].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/favicon.ico",
+      "name": "files[3].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/bg-right.png",
+      "name": "files[4].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/bg-left.png",
+      "name": "files[5].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/apple-touch-icon.png",
+      "name": "files[6].source =",
+      "action": "update"
+    },
+    {
+      "type": "application/octet-stream",
+      "name": "files[7].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "27d694b2f35516b2d4809acd2e99037ed7f93f2b6c612ee60a72598da71d7947",
+      "name": "files[7].hash =",
+      "action": "update"
+    },
+    {
+      "type": ".DS_Store",
+      "name": "files[7].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/.DS_Store",
+      "name": "files[7].source =",
+      "action": "update"
+    },
+    {
+      "type": "image/png",
+      "name": "files[8].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "2765acc2fa3f37ffd125676c91d6647bcfa343e989d0f2c91f19b192b08bb51c",
+      "name": "files[8].hash =",
+      "action": "update"
+    },
+    {
+      "type": "email/inheritly-logo.png",
+      "name": "files[8].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/email/inheritly-logo.png",
+      "name": "files[8].source =",
+      "action": "update"
+    },
+    {
+      "type": "1d479d5332c4b8027098653ed3fb87e197f75efdadc6b9a2c22249d2582d145f",
+      "name": "files[9].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/tooltip-qbqzoeLP.js",
+      "name": "files[9].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/survey/dist/assets/tooltip-qbqzoeLP.js",
+      "name": "files[9].source =",
+      "action": "update"
+    },
+    {
+      "type": "142cb63d4f1f7fbfbb017b930feeb673",
+      "name": "version =",
+      "action": "update"
+    },
+    {
+      "type": "d15381fd0a7cb5e8ac671ebf6ced9fed7082b81631b7364bc75f652dddda72cb",
+      "name": "files[0].hash =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/index.html",
+      "name": "files[0].source =",
+      "action": "update"
+    },
+    {
+      "type": "ab6929d5ef84b8d71e9bd54b10d5328192e2153b61dde6ea71c9536cd1dfb434",
+      "name": "files[10].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/surveys-data-grid-CQmiCsNV.js",
+      "name": "files[10].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/surveys-data-grid-CQmiCsNV.js",
+      "name": "files[10].source =",
+      "action": "update"
+    },
+    {
+      "type": "5641f48490cfd26850775ae408bd35d70a153269e5b3513d85e6ed5bc7cea3fb",
+      "name": "files[11].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/survey-api-BecTTxM4.js",
+      "name": "files[11].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/survey-api-BecTTxM4.js",
+      "name": "files[11].source =",
+      "action": "update"
+    },
+    {
+      "type": "6591cddbbdb021670a37d9ff8d6da25957628d892723a2f9536ea9340ce0acc0",
+      "name": "files[12].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/square-pen-DAUUxxkk.js",
+      "name": "files[12].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/square-pen-DAUUxxkk.js",
+      "name": "files[12].source =",
+      "action": "update"
+    },
+    {
+      "type": "c266b9d7b2d4c82f916b2af53c8271b4b4ed20997ec07dcc5c873956375b284b",
+      "name": "files[13].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/skeleton-DcNJFVSJ.js",
+      "name": "files[13].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/skeleton-DcNJFVSJ.js",
+      "name": "files[13].source =",
+      "action": "update"
+    },
+    {
+      "type": "8afd123dbcbfa38eb5ed3d0b617bb8a46a591c16801bcf0fb4199e047f0eb8d4",
+      "name": "files[14].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/shield-_uPGbkp4.js",
+      "name": "files[14].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/shield-_uPGbkp4.js",
+      "name": "files[14].source =",
+      "action": "update"
+    },
+    {
+      "type": "6931fad3a22145b350171fab00cf4126e8560d2a74333fa9b8db7052f371e839",
+      "name": "files[15].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/settings-Ttxi-UXB.js",
+      "name": "files[15].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/settings-Ttxi-UXB.js",
+      "name": "files[15].source =",
+      "action": "update"
+    },
+    {
+      "type": "83177cee79588aee4690100468a550fce371e1b31614c014c8054c10b85300f5",
+      "name": "files[16].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/reports-data-grid-TJ0ObyZ4.js",
+      "name": "files[16].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/reports-data-grid-TJ0ObyZ4.js",
+      "name": "files[16].source =",
+      "action": "update"
+    },
+    {
+      "type": "cb8cd04a7213015a50fe65dbd183a11a9a9a660ebeacaf803e7479cba03c59da",
+      "name": "files[17].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/report-api-TOVniezX.js",
+      "name": "files[17].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/report-api-TOVniezX.js",
+      "name": "files[17].source =",
+      "action": "update"
+    },
+    {
+      "type": "ff2af9da6643f33dd4547990abd08132b8ad5019f3a2f343a6d50d599fa9f61d",
+      "name": "files[18].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/referral-api-Cdd_KJ7K.js",
+      "name": "files[18].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/referral-api-Cdd_KJ7K.js",
+      "name": "files[18].source =",
+      "action": "update"
+    },
+    {
+      "type": "ac99a02e66b23fba9be1c6afaa84077b03de6a244fdc63454f4a7dc8527f200c",
+      "name": "files[19].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/progress-KSMMDaTG.js",
+      "name": "files[19].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/progress-KSMMDaTG.js",
+      "name": "files[19].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/robots.txt",
+      "name": "files[1].source =",
+      "action": "update"
+    },
+    {
+      "type": "139232ddee716d8f735d9e015958bc4843d82309a3a440734f85c7b63dc6cbd3",
+      "name": "files[20].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/plus-ilhfugSN.js",
+      "name": "files[20].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/plus-ilhfugSN.js",
+      "name": "files[20].source =",
+      "action": "update"
+    },
+    {
+      "type": "2f2daefbe749684111e204a1477c0cf987fe50a9391678d626bfd73dbe35db6f",
+      "name": "files[21].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/loader-circle-C-wdtYLO.js",
+      "name": "files[21].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/loader-circle-C-wdtYLO.js",
+      "name": "files[21].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/javascript;charset=UTF-8",
+      "name": "files[22].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "fb2a93c791c7f0f01fbc1b4246fd0f8b24164b180b60b2111e9efa56f6615684",
+      "name": "files[22].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-SsNBVmic.js",
+      "name": "files[22].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-SsNBVmic.js",
+      "name": "files[22].source =",
+      "action": "update"
+    },
+    {
+      "type": "text/css;charset=UTF-8",
+      "name": "files[23].contentType =",
+      "action": "update"
+    },
+    {
+      "type": "c8de485940776776e70a567216e4e7f410d23a99cf460fc277afbd4ddc6b400b",
+      "name": "files[23].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-HTaXj0-e.css",
+      "name": "files[23].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-HTaXj0-e.css",
+      "name": "files[23].source =",
+      "action": "update"
+    },
+    {
+      "type": "23fc586619db0045bc7b59324af90af4410bb412b419fb22ce1654ca7846f4ef",
+      "name": "files[24].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-D3W_A2EH.js",
+      "name": "files[24].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-D3W_A2EH.js",
+      "name": "files[24].source =",
+      "action": "update"
+    },
+    {
+      "type": "5e9af6454e1aa4f437656c07a53604a0c903f1421800bbbb9a0a3cd7fdee43cf",
+      "name": "files[25].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-CbI_KTT_.js",
+      "name": "files[25].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-CbI_KTT_.js",
+      "name": "files[25].source =",
+      "action": "update"
+    },
+    {
+      "type": "e6e13770e26979848c589d4327e4449fdce50b9177e962f04d9e4b09895d7478",
+      "name": "files[26].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-C-loBvLL.js",
+      "name": "files[26].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-C-loBvLL.js",
+      "name": "files[26].source =",
+      "action": "update"
+    },
+    {
+      "type": "30b69c68259f99e5b3fbedc6eebae64d13017a78bc22866b321e7ddd133e4e8b",
+      "name": "files[27].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-B9AQZ-Y-.js",
+      "name": "files[27].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-B9AQZ-Y-.js",
+      "name": "files[27].source =",
+      "action": "update"
+    },
+    {
+      "type": "1c900e3b39bb7f5af93a1f3a59172ad1934b4d2741fd0e0d1dab8658c77a1e27",
+      "name": "files[28].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/index-B0RWfP08.js",
+      "name": "files[28].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/index-B0RWfP08.js",
+      "name": "files[28].source =",
+      "action": "update"
+    },
+    {
+      "type": "0bac0e6d2c3247a0831f2ee60aa9f037c5fd3831b42b923f547c1e49db6853d5",
+      "name": "files[29].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/eye-CWOFZKhP.js",
+      "name": "files[29].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/eye-CWOFZKhP.js",
+      "name": "files[29].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/favicon.svg",
+      "name": "files[2].source =",
+      "action": "update"
+    },
+    {
+      "type": "0382aabcc2b8e7abb036edfbb53d8edcddf3e6a38b9a2f50796d0a32859415f0",
+      "name": "files[30].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/enhanced-tabs-DeIEtjwd.js",
+      "name": "files[30].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/enhanced-tabs-DeIEtjwd.js",
+      "name": "files[30].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/en-US-D8UQXs-H.js",
+      "name": "files[31].source =",
+      "action": "update"
+    },
+    {
+      "type": "a9aca969efff36cf0ac3d13155e8c14802861459137133a39574a14c827b355f",
+      "name": "files[32].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/edit-CEM6PbsW.js",
+      "name": "files[32].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/edit-CEM6PbsW.js",
+      "name": "files[32].source =",
+      "action": "update"
+    },
+    {
+      "type": "90852f341e6870c911a34cd70b3281a26f73b6d3788edf10799d7ebcb17f27ad",
+      "name": "files[33].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/download-Bd_HJln_.js",
+      "name": "files[33].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/download-Bd_HJln_.js",
+      "name": "files[33].source =",
+      "action": "update"
+    },
+    {
+      "type": "fbeb5bbd8b009fbd9dedad56d0d11c83c1dcaf98708864f33060ff088953f2c6",
+      "name": "files[34].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/create-svxWvIV6.js",
+      "name": "files[34].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/create-svxWvIV6.js",
+      "name": "files[34].source =",
+      "action": "update"
+    },
+    {
+      "type": "1d8745bb0a9982bdb04295a2afb5a44762e887ef7a5d5be6f889521c53d8ee36",
+      "name": "files[35].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/copy-C66HOjqV.js",
+      "name": "files[35].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/copy-C66HOjqV.js",
+      "name": "files[35].source =",
+      "action": "update"
+    },
+    {
+      "type": "df64f66a5855189169d880e99aec4946f1b03972e141fd58f0369db95f450468",
+      "name": "files[36].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/clock-BeijJyK8.js",
+      "name": "files[36].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/clock-BeijJyK8.js",
+      "name": "files[36].source =",
+      "action": "update"
+    },
+    {
+      "type": "008fc87cb25c13dfd7f3e2b6d4f4e529ac03219b1d12be638734b2e31d9f32e3",
+      "name": "files[37].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/client-api-7gkwCwfp.js",
+      "name": "files[37].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/client-api-7gkwCwfp.js",
+      "name": "files[37].source =",
+      "action": "update"
+    },
+    {
+      "type": "26226ce59c5a4a531dd1c6402314a4c4ec44abb4b37b7782a4f061626d7eaaa2",
+      "name": "files[38].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/circle-check-big-W79Y1VDN.js",
+      "name": "files[38].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/circle-check-big-W79Y1VDN.js",
+      "name": "files[38].source =",
+      "action": "update"
+    },
+    {
+      "type": "1026b10f958ec8abd337672ff0168a05e07aba29c102947e6e915f7abc4a736e",
+      "name": "files[39].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/circle-check-DRPYi5ld.js",
+      "name": "files[39].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/circle-check-DRPYi5ld.js",
+      "name": "files[39].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/favicon.ico",
+      "name": "files[3].source =",
+      "action": "update"
+    },
+    {
+      "type": "597482348e95bc8e98235776d5dd3f2a7054619349ebd8777900a054d4b2515a",
+      "name": "files[40].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/circle-alert-BaBNHddG.js",
+      "name": "files[40].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/circle-alert-BaBNHddG.js",
+      "name": "files[40].source =",
+      "action": "update"
+    },
+    {
+      "type": "a044fdcdeff787e189d4112e7e02df06c311c7ecb05ef1e6a5213254623be8ea",
+      "name": "files[41].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/card-CnAsZkxf.js",
+      "name": "files[41].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/card-CnAsZkxf.js",
+      "name": "files[41].source =",
+      "action": "update"
+    },
+    {
+      "type": "c7d122a09daa18cfd8cb04ec143bae3fbfe7e4e3242acf11c29be5a9824fdd77",
+      "name": "files[42].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/branding-BuEin0U5.js",
+      "name": "files[42].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/branding-BuEin0U5.js",
+      "name": "files[42].source =",
+      "action": "update"
+    },
+    {
+      "type": "f132e9a0497d6f91101306745b93bbac55f26525e7a4ba9434088af3e97c47b1",
+      "name": "files[43].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/arrow-left-S1B8rPoc.js",
+      "name": "files[43].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/arrow-left-S1B8rPoc.js",
+      "name": "files[43].source =",
+      "action": "update"
+    },
+    {
+      "type": "88e462cb1e815c2ce92b4ddf1c0270982dfc4dfd24c4b1b4b7a26e1c025f0b68",
+      "name": "files[44].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/alert-dialog-DC6VYDw1.js",
+      "name": "files[44].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/alert-dialog-DC6VYDw1.js",
+      "name": "files[44].source =",
+      "action": "update"
+    },
+    {
+      "type": "4f3b96810df1aced0821b967a81d6815dec5504773a336138fbba0416ceafcbc",
+      "name": "files[45].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/_id-CRhbv4SH.js",
+      "name": "files[45].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/_id-CRhbv4SH.js",
+      "name": "files[45].source =",
+      "action": "update"
+    },
+    {
+      "type": "4b6764aab165788f48653be319689b5745c72cd8f1bedf6f171d7895293a788a",
+      "name": "files[46].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/_id-B6C100Lp.js",
+      "name": "files[46].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/_id-B6C100Lp.js",
+      "name": "files[46].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/apple-touch-icon.png",
+      "name": "files[4].source =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/email/inheritly-logo.png",
+      "name": "files[5].source =",
+      "action": "update"
+    },
+    {
+      "type": "469b82ac0699fd8dbfb8017bed3c4afd931da4e624268de73cc03aae2337a3b2",
+      "name": "files[6].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/useWorkspaceChange-pagebwhq.js",
+      "name": "files[6].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/useWorkspaceChange-pagebwhq.js",
+      "name": "files[6].source =",
+      "action": "update"
+    },
+    {
+      "type": "a8d8391a73e947d2b45c95f50d310b6275b2cf9763f3658636591fa51e9e60fb",
+      "name": "files[7].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/theme-Cp7ZA-mH.js",
+      "name": "files[7].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/theme-Cp7ZA-mH.js",
+      "name": "files[7].source =",
+      "action": "update"
+    },
+    {
+      "type": "628ce613729f15a1fdea7cb166367535deb46a56205e2f6692790e8a0ce3a94b",
+      "name": "files[8].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/team-Dai4D4RU.js",
+      "name": "files[8].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/team-Dai4D4RU.js",
+      "name": "files[8].source =",
+      "action": "update"
+    },
+    {
+      "type": "e508dea4552332b6cc57cdef9a27d6dbb048fd12c4b7c2abf8788c76cdf5fb27",
+      "name": "files[9].hash =",
+      "action": "update"
+    },
+    {
+      "type": "assets/table-DqMf-B8z.js",
+      "name": "files[9].key =",
+      "action": "update"
+    },
+    {
+      "type": "/Users/alistairstead/dev/client/ark/inheritly/apps/dashboard/dist/assets/table-DqMf-B8z.js",
+      "name": "files[9].source =",
+      "action": "update"
+    },
+    {
+      "type": "3e595f9857ea4b972e5cbf17f9a7affc",
+      "name": "version =",
+      "action": "update"
+    }
+  ],
+  "files": {
+    "raw": "examples/outputs/diff/real-output-2-raw.txt",
+    "comment": "examples/outputs/diff/real-output-2-comment.md",
+    "summary": "examples/outputs/diff/real-output-2-summary.md"
+  }
+}

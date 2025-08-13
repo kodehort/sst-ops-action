@@ -9,10 +9,10 @@ import {
   SST_DEPLOY_SUCCESS_OUTPUT,
 } from '../fixtures/sst-outputs';
 
-// Top-level regex patterns for performance
-const APP_INFO_PATTERN = /^App:\s+(.+)$/m;
-const STAGE_INFO_PATTERN = /^Stage:\s+(.+)$/m;
-const PERMALINK_PATTERN = /^↗\s+Permalink\s+(https?:\/\/.+)$/m;
+// Top-level regex patterns for performance - updated for SST v3 format
+const APP_INFO_PATTERN = /^(?:➜\s+)?App:\s+(.+)$/m;
+const STAGE_INFO_PATTERN = /^\s*Stage:\s+(.+)$/m;
+const PERMALINK_PATTERN = /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m;
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
 const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
 const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
@@ -108,16 +108,14 @@ describe('Base Parser - Common Output Processing', () => {
       const result = parser.testParseCommonInfo(
         SST_DEPLOY_SUCCESS_OUTPUT.split('\n')
       );
-      expect(result.app).toBe('my-sst-app');
+      expect(result.app).toBe('www-kodehort-com');
     });
 
     it('should extract permalink from SST output', () => {
       const result = parser.testParseCommonInfo(
         SST_DEPLOY_SUCCESS_OUTPUT.split('\n')
       );
-      expect(result.permalink).toBe(
-        'https://console.sst.dev/my-sst-app/staging/deployments/abc123'
-      );
+      expect(result.permalink).toBe('https://sst.dev/u/1a3e112e');
     });
 
     it('should detect successful completion status', () => {
@@ -165,7 +163,7 @@ describe('Base Parser - Common Output Processing', () => {
     it('should split output into logical sections', () => {
       const sections = parser.testSplitIntoSections(SST_DEPLOY_SUCCESS_OUTPUT);
       expect(sections.length).toBeGreaterThan(1);
-      expect(sections[0]).toContain('SST Deploy');
+      expect(sections[0]).toContain('SST 3.17.10');
     });
 
     it('should handle output with no clear sections', () => {
@@ -194,11 +192,9 @@ describe('Base Parser - Common Output Processing', () => {
       expect(result.operation).toBe('deploy');
       expect(result.stage).toBe('staging');
       expect(result.exitCode).toBe(0);
-      expect(result.app).toBe('my-sst-app');
+      expect(result.app).toBe('www-kodehort-com');
       expect(result.completionStatus).toBe('complete');
-      expect(result.permalink).toBe(
-        'https://console.sst.dev/my-sst-app/staging/deployments/abc123'
-      );
+      expect(result.permalink).toBe('https://sst.dev/u/1a3e112e');
       expect(result.truncated).toBe(false);
     });
 
@@ -208,7 +204,7 @@ describe('Base Parser - Common Output Processing', () => {
       expect(result.success).toBe(false);
       expect(result.exitCode).toBe(1);
       expect(result.completionStatus).toBe('failed');
-      expect(result.app).toBe('my-sst-app');
+      expect(result.app).toBe('kodehort-scratch');
     });
 
     it('should handle partial deployment gracefully', () => {
@@ -216,7 +212,7 @@ describe('Base Parser - Common Output Processing', () => {
 
       expect(result.success).toBe(true);
       expect(result.completionStatus).toBe('partial');
-      expect(result.app).toBe('my-sst-app');
+      expect(result.app).toBe('partial-app');
     });
 
     it('should handle malformed output without throwing', () => {

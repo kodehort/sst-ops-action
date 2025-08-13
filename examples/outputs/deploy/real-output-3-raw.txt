@@ -1,0 +1,23 @@
+SST 3.17.10  ready!
+
+➜  App:        fintech-app
+   Stage:      development
+
+~  Deploy
+
+|  Created     PaymentProcessor sst:aws:Function → PaymentProcessorLambda aws:lambda:Function (3.8s)
+|  Created     UserAuth sst:aws:Auth → UserAuthIssuer sst:aws:Function (2.9s)
+|  Updated     NotificationService sst:aws:Function → NotificationServiceLambda aws:lambda:Function (4.1s)
+|  Created     TransactionDB sst:aws:Dynamo → TransactionDBTable aws:dynamodb:Table (3.7s)
+|  Error       Analytics sst:aws:Function → AnalyticsLambda aws:lambda:Function
+The role defined for the function cannot be assumed by Lambda.
+
+⚠  Partial
+   PaymentApi: https://payments.fintech-dev.local
+   UserAuth: https://auth.fintech-dev.local/v1
+   ---
+   payment_webhook: https://webhook.fintech-dev.local/payments/stripe
+   user_pool_id: us-east-1_ABC123DEF
+   payment_table_name: fintech-dev-transactions
+
+↗  Permalink   https://sst.dev/u/partial456

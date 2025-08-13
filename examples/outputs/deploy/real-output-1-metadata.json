@@ -1,0 +1,92 @@
+{
+  "name": "real-output-1",
+  "app": "e-commerce-api",
+  "stage": "production",
+  "resourceChanges": 9,
+  "success": true,
+  "completionStatus": "complete",
+  "permalink": "https://sst.dev/u/abc123def",
+  "resources": [
+    {
+      "name": "Database",
+      "type": "sst:aws:Dynamo → DatabaseTable aws:dynamodb:Table",
+      "status": "created",
+      "timing": "2.1s"
+    },
+    {
+      "name": "Queue",
+      "type": "sst:aws:Queue → QueueSqs aws:sqs:Queue",
+      "status": "created",
+      "timing": "1.3s"
+    },
+    {
+      "name": "ApiFunction",
+      "type": "sst:aws:Function → ApiFunctionLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "4.2s"
+    },
+    {
+      "name": "ApiFunction",
+      "type": "sst:aws:Function → ApiFunctionUrl aws:lambda:FunctionUrl",
+      "status": "created",
+      "timing": "0.8s"
+    },
+    {
+      "name": "Router",
+      "type": "sst:aws:Router → RouterCdn sst:aws:CDN",
+      "status": "created",
+      "timing": "15.6s"
+    },
+    {
+      "name": "Website",
+      "type": "sst:aws:StaticSite → WebsiteDistribution aws:cloudfront:Distribution",
+      "status": "updated",
+      "timing": "8.3s"
+    },
+    {
+      "name": "Auth",
+      "type": "sst:aws:Auth → AuthIssuer sst:aws:Function",
+      "status": "created",
+      "timing": "3.1s"
+    },
+    {
+      "name": "Worker",
+      "type": "sst:aws:Function → WorkerLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "2.7s"
+    },
+    {
+      "name": "Bucket",
+      "type": "sst:aws:Bucket → BucketS3 aws:s3:BucketV2",
+      "status": "created",
+      "timing": "1.9s"
+    }
+  ],
+  "urls": [
+    {
+      "name": "Api",
+      "url": "https://api.ecommerce-prod.com",
+      "type": "api"
+    },
+    {
+      "name": "Website",
+      "url": "https://ecommerce-prod.com",
+      "type": "web"
+    },
+    {
+      "name": "Auth",
+      "url": "https://auth.ecommerce-prod.com/oauth",
+      "type": "other"
+    },
+    {
+      "name": "Admin",
+      "url": "https://admin.ecommerce-prod.com",
+      "type": "other"
+    }
+  ],
+  "files": {
+    "raw": "examples/outputs/deploy/real-output-1-raw.txt",
+    "comment": "examples/outputs/deploy/real-output-1-comment.md",
+    "summary": "examples/outputs/deploy/real-output-1-summary.md"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "name": "real-output-3",
+  "app": "fintech-app",
+  "stage": "development",
+  "resourceChanges": 4,
+  "success": true,
+  "completionStatus": "partial",
+  "permalink": "https://sst.dev/u/partial456",
+  "resources": [
+    {
+      "name": "PaymentProcessor",
+      "type": "sst:aws:Function → PaymentProcessorLambda aws:lambda:Function",
+      "status": "created",
+      "timing": "3.8s"
+    },
+    {
+      "name": "UserAuth",
+      "type": "sst:aws:Auth → UserAuthIssuer sst:aws:Function",
+      "status": "created",
+      "timing": "2.9s"
+    },
+    {
+      "name": "NotificationService",
+      "type": "sst:aws:Function → NotificationServiceLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "4.1s"
+    },
+    {
+      "name": "TransactionDB",
+      "type": "sst:aws:Dynamo → TransactionDBTable aws:dynamodb:Table",
+      "status": "created",
+      "timing": "3.7s"
+    }
+  ],
+  "urls": [
+    {
+      "name": "PaymentApi",
+      "url": "https://payments.fintech-dev.local",
+      "type": "api"
+    },
+    {
+      "name": "UserAuth",
+      "url": "https://auth.fintech-dev.local/v1",
+      "type": "other"
+    },
+    {
+      "name": "payment_webhook",
+      "url": "https://webhook.fintech-dev.local/payments/stripe",
+      "type": "web"
+    }
+  ],
+  "files": {
+    "raw": "examples/outputs/deploy/real-output-3-raw.txt",
+    "comment": "examples/outputs/deploy/real-output-3-comment.md",
+    "summary": "examples/outputs/deploy/real-output-3-summary.md"
+  }
+}

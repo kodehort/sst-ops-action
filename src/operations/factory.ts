@@ -47,7 +47,7 @@ export class OperationFactory {
       case 'remove':
         return new RemoveOperation(this.cliExecutor, this.githubClient);
       case 'stage':
-        return new StageOperation(this.cliExecutor, this.githubClient);
+        return new StageOperation();
       default:
         throw new Error(
           `Unknown operation type: ${operationType}. Supported operations: deploy, diff, remove, stage`

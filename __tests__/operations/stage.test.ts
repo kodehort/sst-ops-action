@@ -94,21 +94,22 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.isPullRequest).toBe(false);
     });
 
-    it('should handle missing ref with fallback stage', async () => {
+    it('should fail when missing ref (no fallback behavior)', async () => {
       // Mock GitHub context with no ref
       Object.assign(github.context, {
         eventName: 'workflow_dispatch',
         payload: {},
       });
 
-      mockOptions.stage = 'production';
+      mockOptions.stage = 'production'; // This is ignored by stage operation
 
       const result = await stageOperation.execute(mockOptions);
 
-      expect(result.success).toBe(true);
-      expect(result.computedStage).toBe('production');
-      expect(result.stage).toBe('production');
-      expect(result.ref).toBe('');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(
+        'Failed to generate a valid stage name from Git context'
+      );
+      expect(result.exitCode).toBe(1);
     });
 
     it('should handle numeric branch names correctly', async () => {
@@ -144,7 +145,7 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.computedStage).toBe('very-long-branch-name-that');
     });
 
-    it('should handle output truncation when maxOutputSize is small', async () => {
+    it('should not truncate output (no CLI output to truncate)', async () => {
       Object.assign(github.context, {
         eventName: 'push',
         payload: {
@@ -152,13 +153,13 @@ describe('Stage Operation - Stage Computation Integration', () => {
         },
       });
 
-      mockOptions.maxOutputSize = 20;
+      mockOptions.maxOutputSize = 20; // This parameter is now ignored for stage operations
 
       const result = await stageOperation.execute(mockOptions);
 
       expect(result.success).toBe(true);
-      expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBe(20);
+      expect(result.truncated).toBe(false); // Never truncated since no real CLI output
+      expect(result.rawOutput).toContain('Stage computation successful');
     });
 
     it('should fail when no valid stage can be determined', async () => {
@@ -173,102 +174,10 @@ describe('Stage Operation - Stage Computation Integration', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe(
-        'Failed to generate a valid stage name from ref'
+        'Failed to generate a valid stage name from Git context'
       );
       expect(result.completionStatus).toBe('failed');
       expect(result.exitCode).toBe(1);
-    });
-  });
-
-  describe('GitHub Integration', () => {
-    it('should create PR comment when comment mode is enabled', async () => {
-      Object.assign(github.context, {
-        eventName: 'pull_request',
-        payload: {
-          pull_request: {
-            head: {
-              ref: 'feature-branch',
-            },
-          },
-        },
-      });
-
-      mockOptions.commentMode = 'always';
-
-      await stageOperation.execute(mockOptions);
-
-      expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operation: 'stage',
-          computedStage: 'feature-branch',
-        }),
-        'always'
-      );
-    });
-
-    it('should create workflow summary', async () => {
-      Object.assign(github.context, {
-        eventName: 'push',
-        payload: {
-          ref: 'refs/heads/main',
-        },
-      });
-
-      await stageOperation.execute(mockOptions);
-
-      expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operation: 'stage',
-          computedStage: 'main',
-        })
-      );
-    });
-
-    it('should handle GitHub integration errors gracefully', async () => {
-      // Mock GitHub client methods to throw errors
-      mockGitHubClient.createOrUpdateComment = vi
-        .fn()
-        .mockRejectedValue(new Error('GitHub API error'));
-      mockGitHubClient.createWorkflowSummary = vi
-        .fn()
-        .mockRejectedValue(new Error('GitHub API error'));
-
-      Object.assign(github.context, {
-        eventName: 'push',
-        payload: {
-          ref: 'refs/heads/main',
-        },
-      });
-
-      // Should not throw despite GitHub integration failures
-      const result = await stageOperation.execute(mockOptions);
-
-      expect(result.success).toBe(true);
-      expect(result.computedStage).toBe('main');
-    });
-
-    it('should not create PR comment when comment mode is never', async () => {
-      Object.assign(github.context, {
-        eventName: 'pull_request',
-        payload: {
-          pull_request: {
-            head: {
-              ref: 'feature-branch',
-            },
-          },
-        },
-      });
-
-      mockOptions.commentMode = 'never';
-
-      await stageOperation.execute(mockOptions);
-
-      expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operation: 'stage',
-        }),
-        'never'
-      );
     });
   });
 
@@ -358,22 +267,23 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.stage).toBe('feature-branch');
     });
 
-    it('should handle fallback when Git context provides no usable ref', async () => {
+    it('should fail when Git context provides no usable ref (no fallback)', async () => {
       Object.assign(github.context, {
         eventName: 'workflow_dispatch',
         payload: {},
         ref: undefined,
       });
 
-      // Empty stage with no usable Git context should use fallback
-      mockOptions.stage = 'fallback-stage';
+      // Stage operation should fail when no Git context is available
+      mockOptions.stage = 'fallback-stage'; // This is ignored
 
       const result = await stageOperation.execute(mockOptions);
 
-      expect(result.success).toBe(true);
-      // Should use fallback stage when Git context provides no usable ref
-      expect(result.computedStage).toBe('fallback-stage');
-      expect(result.stage).toBe('fallback-stage');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(
+        'Failed to generate a valid stage name from Git context'
+      );
+      expect(result.exitCode).toBe(1);
     });
   });
 

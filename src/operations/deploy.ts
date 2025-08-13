@@ -7,6 +7,7 @@ import type { GitHubClient } from '../github/client';
 import { DeployParser } from '../parsers/deploy-parser';
 import type { DeployResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
+import { handleGitHubIntegrationError } from '../utils/github-actions';
 
 /**
  * Deploy operation handler for SST deployments
@@ -33,7 +34,6 @@ export class DeployOperation {
       'deploy',
       options.stage,
       {
-        env: this.buildEnvironment(options),
         timeout: this.defaultTimeout,
         maxOutputSize: options.maxOutputSize,
         runner: options.runner,
@@ -56,20 +56,6 @@ export class DeployOperation {
   }
 
   /**
-   * Build environment variables for SST CLI execution
-   * @param options Operation options containing configuration
-   * @returns Environment variables object
-   */
-  buildEnvironment(options: OperationOptions): Record<string, string> {
-    return {
-      SST_TOKEN: options.token || '',
-      NODE_ENV: 'production',
-      CI: 'true',
-      GITHUB_ACTIONS: 'true',
-    };
-  }
-
-  /**
    * Perform GitHub integration tasks (comments and summaries)
    * Handles errors gracefully to not fail the entire operation
    * @param result Parsed deployment result
@@ -85,16 +71,16 @@ export class DeployOperation {
     integrationPromises.push(
       this.githubClient
         .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch(() => {
-          // GitHub comment integration is non-critical, ignore errors
-        })
+        .catch((error) => handleGitHubIntegrationError(error, 'comment'))
     );
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result).catch(() => {
-        // Workflow summary integration is non-critical, ignore errors
-      })
+      this.githubClient
+        .createWorkflowSummary(result)
+        .catch((error) =>
+          handleGitHubIntegrationError(error, 'workflow summary')
+        )
     );
 
     // Wait for all GitHub integration tasks to complete

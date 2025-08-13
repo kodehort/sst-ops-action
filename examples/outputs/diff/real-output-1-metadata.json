@@ -1,0 +1,615 @@
+{
+  "name": "real-output-1",
+  "app": "inheritly",
+  "stage": "alistairstead",
+  "plannedChanges": 120,
+  "changeSummary": "120 changes planned",
+  "success": true,
+  "changes": [
+    {
+      "type": "Vpc",
+      "name": "VPC",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "PostHogHost",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "PostHogKey",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "Studio",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "DevPDF",
+      "action": "create"
+    },
+    {
+      "type": "Bus",
+      "name": "Bus",
+      "action": "create"
+    },
+    {
+      "type": "Auth",
+      "name": "OpenAuth",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DatabaseMigrator",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "EncryptionKey",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "WebsiteLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "PostHogHost",
+      "action": "create"
+    },
+    {
+      "type": "Bucket",
+      "name": "WorkspaceAssets",
+      "action": "create"
+    },
+    {
+      "type": "Email",
+      "name": "Email",
+      "action": "create"
+    },
+    {
+      "type": "aws",
+      "name": "default_6_66_2",
+      "action": "create"
+    },
+    {
+      "type": "Router",
+      "name": "Router",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "JSXEmail",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "EmailLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "ContactOpsEmail",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "PostHogKey",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "DockerPostgres",
+      "action": "create"
+    },
+    {
+      "type": "Bucket",
+      "name": "Reports",
+      "action": "create"
+    },
+    {
+      "type": "Aurora",
+      "name": "Postgres",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "EncryptionKey",
+      "action": "create"
+    },
+    {
+      "type": "Bus",
+      "name": "Bus",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DatabaseMigrator",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "VPCLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "DevPDF",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "ReferralImpressionTrackingTable",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Website",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "ApiFunction",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "AuthTable",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "Results",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DatabaseSeed",
+      "action": "create"
+    },
+    {
+      "type": "BusLambdaSubscriber",
+      "name": "BusSubscriberEventSubscriber",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DeploymentVersionUpdater",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostgresLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Linkable",
+      "name": "Urls",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Dashboard",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Survey",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ResultsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "RouterLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "EncryptionKeyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "AuthTableLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "TrackingFunction",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostHogHostLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "BusLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DatabaseMigratorLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "UrlsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ContactOpsEmailLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DeploymentVersionUpdaterLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "OpenAuthLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "SurveyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ReferralImpressionTrackingTableLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ApiFunctionLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostHogKeyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DatabaseSeedLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "TrackingFunctionLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "WorkspaceAssetsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ReportsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DashboardLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Version",
+      "name": "OpenAuthVersion",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "ReferralImpressionTrackingTable",
+      "action": "create"
+    },
+    {
+      "type": "command",
+      "name": "default_1_0_1",
+      "action": "create"
+    },
+    {
+      "type": "Bucket",
+      "name": "WorkspaceAssets",
+      "action": "create"
+    },
+    {
+      "type": "Email",
+      "name": "Email",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "JSXEmail",
+      "action": "create"
+    },
+    {
+      "type": "Secret",
+      "name": "ContactOpsEmail",
+      "action": "create"
+    },
+    {
+      "type": "Bucket",
+      "name": "Reports",
+      "action": "create"
+    },
+    {
+      "type": "Aurora",
+      "name": "Postgres",
+      "action": "create"
+    },
+    {
+      "type": "BusLambdaSubscriber",
+      "name": "BusSubscriberEventSubscriber",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "AuthTable",
+      "action": "create"
+    },
+    {
+      "type": "Dynamo",
+      "name": "Results",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DatabaseSeed",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "DeploymentVersionUpdater",
+      "action": "create"
+    },
+    {
+      "type": "Linkable",
+      "name": "Urls",
+      "action": "create"
+    },
+    {
+      "type": "random",
+      "name": "default_4_16_6",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "EncryptionKeyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostHogHostLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "UrlsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ContactOpsEmailLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostHogKeyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "RandomBytes",
+      "name": "LambdaEncryptionKey",
+      "action": "create"
+    },
+    {
+      "type": "Version",
+      "name": "OpenAuthVersion",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "BusLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ReferralImpressionTrackingTableLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "AuthTableLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ResultsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ReportsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "EmailLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "WorkspaceAssetsLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "RouterBucketRoute",
+      "name": "RouterRoute/workspace-files",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Survey",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Website",
+      "action": "create"
+    },
+    {
+      "type": "pulumi-nodejs",
+      "name": "default",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "WebsiteLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Version",
+      "name": "VPCVersion",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "TrackingFunction",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "RouterLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "SurveyLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Function",
+      "name": "ApiFunction",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DashboardLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Router",
+      "name": "Router",
+      "action": "create"
+    },
+    {
+      "type": "RouterBucketRoute",
+      "name": "RouterRoute/workspace-files",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "TrackingFunctionLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "Studio",
+      "action": "create"
+    },
+    {
+      "type": "DevCommand",
+      "name": "DockerPostgres",
+      "action": "create"
+    },
+    {
+      "type": "Invocation",
+      "name": "DatabaseMigratorInvocation",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DatabaseSeedLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DeploymentVersionUpdaterLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Invocation",
+      "name": "DatabaseSeedInvocation",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "DatabaseMigratorLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Invocation",
+      "name": "DeploymentVersionUpdate",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "PostgresLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Version",
+      "name": "VPCVersion",
+      "action": "create"
+    },
+    {
+      "type": "Auth",
+      "name": "OpenAuth",
+      "action": "create"
+    },
+    {
+      "type": "StaticSite",
+      "name": "Dashboard",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "OpenAuthLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "ApiFunctionLinkRef",
+      "action": "create"
+    },
+    {
+      "type": "Vpc",
+      "name": "VPC",
+      "action": "create"
+    },
+    {
+      "type": "LinkRef",
+      "name": "VPCLinkRef",
+      "action": "create"
+    }
+  ],
+  "files": {
+    "raw": "examples/outputs/diff/real-output-1-raw.txt",
+    "comment": "examples/outputs/diff/real-output-1-comment.md",
+    "summary": "examples/outputs/diff/real-output-1-summary.md"
+  }
+}
