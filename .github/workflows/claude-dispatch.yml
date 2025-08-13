@@ -42,7 +42,7 @@ jobs:
           allowed_tools: |
             Bash(bun run:*)
             Bash(bun install)
-            # Bash(npm run build)
+            Bash(git:*)
 
           # Optional: Custom environment variables for Claude
           # claude_env: |
