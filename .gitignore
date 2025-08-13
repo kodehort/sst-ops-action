@@ -46,5 +46,6 @@ dependency-graph.svg
 .open-next
 .vercel
 
-# Distribution files (generated during CI/CD)
-dist/
+# Distribution files - now committed for GitHub Actions compatibility
+# Note: GitHub Actions require dist files to be in the repository
+# dist/

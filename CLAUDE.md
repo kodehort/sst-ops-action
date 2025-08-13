@@ -84,18 +84,18 @@ bun run prepare
 
 ### Build Process
 
-- Custom build script at `scripts/build.ts` bundles for distribution
-- Output to `dist/` directory with source maps and declarations (not committed to git)
-- Uses Bun bundler for efficient packaging
-- Distribution files are built during CI/CD and attached to releases as assets
+- Rollup configuration bundles TypeScript for distribution
+- Output to `dist/` directory with source maps and declarations (committed for GitHub Actions)
+- Uses Rollup bundler with terser for efficient, minified packaging
+- Distribution files are built during development and CI/CD, committed to repository for GitHub Actions compatibility
 
 ### Distribution Strategy
 
-- **Development**: `dist/` folder is gitignored and built locally for testing
-- **CI Pipeline**: Builds and verifies distribution files but doesn't commit them
-- **Releases**: Distribution files are built fresh and attached as release assets
-- **Consumers**: GitHub Actions automatically downloads dist files from releases
-- **Benefits**: Cleaner git history, smaller repository, no merge conflicts on generated files
+- **Development**: `dist/` folder is built locally for testing and committed for GitHub Actions compatibility
+- **CI Pipeline**: Builds and verifies distribution files, commits them to repository
+- **Releases**: Distribution files are committed to repository AND attached as release assets for transparency
+- **Consumers**: GitHub Actions use dist files directly from the repository (as required by GitHub Actions)
+- **Repository**: Distribution files are now committed because GitHub Actions require them in the repository itself
 
 ### Code Quality
 

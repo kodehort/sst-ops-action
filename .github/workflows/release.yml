@@ -489,14 +489,15 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
 
-          # Add all changed files (no longer adding dist files to repository)
-          git add package.json CHANGELOG.md
+          # Add all changed files including distribution files for GitHub Actions compatibility
+          git add package.json CHANGELOG.md dist/
 
           # Commit changes
           git commit -m "chore(release): v${NEW_VERSION} [skip ci]
 
           - Update package.json version to ${NEW_VERSION}
-          - Update CHANGELOG.md with release notes"
+          - Update CHANGELOG.md with release notes
+          - Add distribution files for GitHub Actions compatibility"
 
           # Create annotated tag
           git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
