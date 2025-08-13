@@ -86,6 +86,10 @@ describe('Main Entry Point - Action Execution', () => {
       planned_changes: '',
       resources_removed: '',
       removed_resources: '',
+      computed_stage: '',
+      ref: '',
+      event_name: '',
+      is_pull_request: '',
     });
 
     vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {
@@ -167,7 +171,7 @@ describe('Main Entry Point - Action Execution', () => {
       expect(
         OutputFormatter.formatOperationForGitHubActions
       ).toHaveBeenCalledWith(mockResult);
-      expect(core.setOutput).toHaveBeenCalledTimes(15); // All outputs
+      expect(core.setOutput).toHaveBeenCalledTimes(19); // All outputs
       expect(core.info).toHaveBeenCalledWith(
         '✅ SST deploy operation completed successfully'
       );
@@ -588,6 +592,10 @@ describe('Main Entry Point - Action Execution', () => {
         planned_changes: '',
         resources_removed: '',
         removed_resources: '',
+        computed_stage: '',
+        ref: '',
+        event_name: '',
+        is_pull_request: '',
       });
 
       vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(

@@ -1,0 +1,45 @@
+SST 3.17.4  ready!
+
+➜  App:        my-app
+   Stage:      localstage
+
+~  Remove
+
+|  Deleted     Bus sst:aws:Bus → BusBus aws:cloudwatch:EventBus
+|  Deleted     Urls sst:sst:Linkable
+|  Deleted     AuthTable sst:aws:Dynamo
+|  Deleted     PostHogHost sst:sst:Secret
+|  Deleted     ApiFunction sst:aws:Function
+|  Deleted     DatabaseMigrator sst:aws:Function
+|  Deleted     TrackingFunction sst:aws:Function
+|  Deleted     ReferralImpressionTrackingTable sst:aws:Dynamo
+|  Deleted     EncryptionKey sst:sst:Secret
+|  Deleted     Postgres sst:aws:Aurora
+|  Deleted     Results sst:aws:Dynamo
+|  Deleted     DockerPostgres sst:sst:DevCommand
+|  Deleted     PostHogKey sst:sst:Secret
+|  Deleted     ContactOpsEmail sst:sst:Secret
+|  Deleted     DatabaseSeed sst:aws:Function
+|  Deleted     LambdaEncryptionKey random:index:RandomBytes
+|  Deleted     OpenAuth sst:aws:Auth
+|  Deleted     RouterRoute/workspace-files sst:aws:RouterBucketRoute
+|  Deleted     DevPDF sst:sst:DevCommand
+|  Deleted     Bus sst:aws:Bus
+|  Deleted     DeploymentVersionUpdater sst:aws:Function
+|  Deleted     WorkspaceAssets sst:aws:Bucket
+|  Deleted     Studio sst:sst:DevCommand
+|  Deleted     VPC sst:aws:Vpc
+|  Deleted     Router sst:aws:Router
+|  Deleted     Email sst:aws:Email
+|  Deleted     Website sst:aws:StaticSite
+|  Deleted     Survey sst:aws:StaticSite
+|  Deleted     Dashboard sst:aws:StaticSite
+|  Deleted     JSXEmail sst:sst:DevCommand
+|  Deleted     Reports sst:aws:Bucket
+|  Deleted     default pulumi:providers:pulumi-nodejs
+|  Deleted     default_4_16_6 pulumi:providers:random
+|  Deleted     default_6_66_2 pulumi:providers:aws
+
+↗  Permalink   https://sst.dev/u/9d14bf2c
+
+✓  Removed

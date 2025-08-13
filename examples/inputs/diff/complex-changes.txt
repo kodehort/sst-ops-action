@@ -1,0 +1,44 @@
+SST 3.17.4  ready!
+
+➜  App:        my-complex-app
+   Stage:      production
+
+~  Diff
+
+|  Created     NewAuth sst:aws:Function
+|  Created     UsersDatabase sst:aws:Aurora
+|  Updated     Api sst:aws:Api
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 500 modules transformed.
+✓ built in 2.1s
+
+↗  Permalink   https://console.sst.dev/my-complex-app/production/diffs/xyz789
+
+✓  Generated
+
++  my-complex-app-production pulumi:pulumi:Stack
+
++  NewAuth sst:aws:Function
+
++  UsersDatabase sst:aws:Aurora
+
+*  Api sst:aws:Api
+
+*  Website sst:aws:StaticSite
+
+-  OldProcessor sst:aws:Function
+
+-  NotificationTopic sst:aws:Topic
+
++  NewAuth sst:aws:Function → NewAuthLogGroup aws:cloudwatch:LogGroup
+
++  UsersDatabase sst:aws:Aurora → UsersDatabaseCluster aws:rds:Cluster
+
+*  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+*  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+
+-  OldProcessor sst:aws:Function → OldProcessorLogGroup aws:cloudwatch:LogGroup
+
+-  NotificationTopic sst:aws:Topic → NotificationTopicTopic aws:sns:Topic

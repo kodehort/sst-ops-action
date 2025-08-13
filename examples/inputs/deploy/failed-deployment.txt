@@ -1,0 +1,75 @@
+SST 3.17.10  ready!
+
+➜  App:        kodehort-scratch
+   Stage:      sst-ops-actions
+
+~  Deploy
+
+|  Info        Downloaded provider vercel-1.11.0
+|  Info        Downloaded provider command-1.0.1
+|  Info        Downloaded provider tls-5.0.1
+|  Info        Downloaded provider docker-build-0.0.8
+|  Info        Downloaded provider random-4.16.6
+|  Info        Downloaded provider cloudflare-6.4.1
+|  Info        Downloaded provider aws-6.66.2
+|  Created     default_6_66_2 pulumi:providers:aws
+|  Created     Database sst:aws:Dynamo
+|  Created     Web sst:aws:Astro → WebAssets sst:aws:Bucket
+|  Created     default_4_16_6 pulumi:providers:random
+|  Created     LambdaEncryptionKey random:index:RandomBytes
+|  Created     Router sst:aws:Router → RouterCdn sst:aws:CDN
+|  Created     default_1_0_1 pulumi:providers:command
+$ bunx --bun astro build
+|  Error       Router sst:aws:Router → RouterCdnDistribution aws:cloudfront:Distribution
+resource 'E3EDFTB7D6VMW5' does not exist
+|  Created     Api sst:aws:Function → ApiLogGroup aws:cloudwatch:LogGroup
+19:50:52 [content] Syncing content
+19:50:52 [content] Synced content
+19:50:52 [types] Generated 162ms
+19:50:52 [build] output: "static"
+19:50:52 [build] mode: "static"
+19:50:52 [build] directory: /home/runner/work/scratch/scratch/apps/www/dist/
+19:50:52 [build] adapter: astro-sst
+19:50:52 [build] Collecting build info...
+19:50:52 [build] ✓ Completed in 180ms.
+19:50:52 [build] Building static entrypoints...
+19:50:53 [vite] ✓ built in 1.20s
+19:50:53 [build] ✓ Completed in 1.27s.
+
+ generating static routes
+19:50:54 ▶ src/pages/index.astro
+19:50:54   └─ /index.html (+11ms)
+19:50:54 ✓ Completed in 65ms.
+
+19:50:54 [build] 1 page(s) built in 1.53s
+19:50:54 [build] Complete!
+|  Created     Web sst:aws:Astro → WebBuilder command:local:Command (2.5s)
+|  Created     Web sst:aws:Astro → WebAssetsBucket aws:s3:BucketV2 (3.0s)
+|  Created     Database sst:aws:Dynamo → DatabaseTable aws:dynamodb:Table (15.7s)
+|  Error
+Error: invocation of aws:iam/getPolicyDocument:getPolicyDocument returned an error: grpc: the client
+    at Object.callback cratch/.sst/platform/node_modules/@pulumi/runtime/invoke.ts:311:37)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client.ts:360:26)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client-interceptors.ts:458:34)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client-interceptors.ts:419:48)
+    at ratch/.sst/platform/node_modules/@grpc/grpc-js/src/resolving-call.ts:132:24
+    at processTicksAndRejections (node:internal/process/task_queues:77:11) {
+  promise: Promise { <rejected> [Circular *1] }
+}
+
+✕  Failed
+
+Router sst:aws:Router → RouterCdnDistribution aws:cloudfront:Distribution
+resource 'E3EDFTB7D6VMW5' does not exist
+
+Error: invocation of aws:iam/getPolicyDocument:getPolicyDocument returned an error: grpc: the client
+    at Object.callback cratch/.sst/platform/node_modules/@pulumi/runtime/invoke.ts:311:37)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client.ts:360:26)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client-interceptors.ts:458:34)
+    at Object.onReceiveStatus cratch/.sst/platform/node_modules/@grpc/grpc-js/src/client-interceptors.ts:419:48)
+    at ratch/.sst/platform/node_modules/@grpc/grpc-js/src/resolving-call.ts:132:24
+    at processTicksAndRejections (node:internal/process/task_queues:77:11) {
+  promise: Promise { <rejected> [Circular *1] }
+}
+
+View more in the console: https://sst.dev/u/75c084c6

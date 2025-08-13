@@ -918,6 +918,15 @@ bun run build
 bun run validate
 ```
 
+#### Editor Configuration
+
+The project uses TypeScript path aliases for cleaner imports:
+
+- `@/*` → `./src/*` (source files)
+- `@tests/*` → `./__tests__/*` (test files)
+
+Path aliases are configured in both `tsconfig.json` and `vitest.config.ts` for consistent IDE support.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

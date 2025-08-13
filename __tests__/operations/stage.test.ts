@@ -5,24 +5,16 @@
 
 import * as github from '@actions/github';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubClient } from '../../src/github/client';
 import { StageOperation } from '../../src/operations/stage';
 import type { OperationOptions } from '../../src/types';
 
 describe('Stage Operation - Stage Computation Integration', () => {
   let stageOperation: StageOperation;
-  let mockGitHubClient: GitHubClient;
   let mockOptions: OperationOptions;
 
   beforeEach(() => {
-    // Create mock GitHub client
-    mockGitHubClient = {
-      createOrUpdateComment: vi.fn().mockResolvedValue(undefined),
-      createWorkflowSummary: vi.fn().mockResolvedValue(undefined),
-    } as unknown as GitHubClient;
-
     // Create stage operation instance
-    stageOperation = new StageOperation(null, mockGitHubClient);
+    stageOperation = new StageOperation();
 
     // Default options
     mockOptions = {
@@ -32,7 +24,6 @@ describe('Stage Operation - Stage Computation Integration', () => {
       failOnError: true,
       maxOutputSize: 1000,
       runner: 'bun',
-      environment: {},
     };
 
     // Reset mocks

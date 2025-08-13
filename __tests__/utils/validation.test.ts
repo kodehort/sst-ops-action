@@ -84,10 +84,12 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('deploy');
-        expect(result.token).toBe('ghp_test_token');
-        expect(result.stage).toBe(''); // Optional and auto-computed
-        expect(result.commentMode).toBe('on-success'); // Default
-        expect(result.failOnError).toBe(true); // Default
+        if (result.operation === 'deploy') {
+          expect(result.token).toBe('ghp_test_token');
+          expect(result.stage).toBe(''); // Optional and auto-computed
+          expect(result.commentMode).toBe('on-success'); // Default
+          expect(result.failOnError).toBe(true); // Default
+        }
       });
 
       it('should validate deploy operation with explicit stage', () => {
@@ -104,12 +106,14 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('deploy');
-        expect(result.token).toBe('ghp_test_token');
-        expect(result.stage).toBe('production');
-        expect(result.commentMode).toBe('always');
-        expect(result.failOnError).toBe(false);
-        expect(result.maxOutputSize).toBe(100_000);
-        expect(result.runner).toBe('npm');
+        if (result.operation === 'deploy') {
+          expect(result.token).toBe('ghp_test_token');
+          expect(result.stage).toBe('production');
+          expect(result.commentMode).toBe('always');
+          expect(result.failOnError).toBe(false);
+          expect(result.maxOutputSize).toBe(100_000);
+          expect(result.runner).toBe('npm');
+        }
       });
 
       it('should reject deploy operation without token', () => {
@@ -132,8 +136,10 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('diff');
-        expect(result.token).toBe('ghp_test_token');
-        expect(result.stage).toBe('staging');
+        if (result.operation === 'diff') {
+          expect(result.token).toBe('ghp_test_token');
+          expect(result.stage).toBe('staging');
+        }
       });
 
       it('should reject diff operation without stage', () => {
@@ -167,8 +173,10 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('remove');
-        expect(result.token).toBe('ghp_test_token');
-        expect(result.stage).toBe('pr-123');
+        if (result.operation === 'remove') {
+          expect(result.token).toBe('ghp_test_token');
+          expect(result.stage).toBe('pr-123');
+        }
       });
 
       it('should reject remove operation without stage', () => {
@@ -202,8 +210,10 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('stage');
-        expect(result.truncationLength).toBe(20);
-        expect(result.prefix).toBe('feat-');
+        if (result.operation === 'stage') {
+          expect(result.truncationLength).toBe(20);
+          expect(result.prefix).toBe('feat-');
+        }
       });
 
       it('should validate stage operation with defaults', () => {
@@ -214,8 +224,10 @@ describe('Input Validation', () => {
         const result = OperationInputsSchema.parse(inputs);
 
         expect(result.operation).toBe('stage');
-        expect(result.truncationLength).toBe(26); // Default
-        expect(result.prefix).toBe('pr-'); // Default
+        if (result.operation === 'stage') {
+          expect(result.truncationLength).toBe(26); // Default
+          expect(result.prefix).toBe('pr-'); // Default
+        }
       });
 
       it('should reject stage operation with infrastructure fields', () => {
@@ -249,8 +261,10 @@ describe('Input Validation', () => {
         const result = parseOperationInputs(rawInputs);
 
         expect(result.operation).toBe('deploy');
-        expect(result.token).toBe('ghp_test_token');
-        expect(result.stage).toBe('production');
+        if (result.operation === 'deploy') {
+          expect(result.token).toBe('ghp_test_token');
+          expect(result.stage).toBe('production');
+        }
       });
 
       it('should provide operation-specific error messages', () => {
@@ -282,7 +296,9 @@ describe('Input Validation', () => {
 
         const result = validateOperationWithContext(rawInputs);
         expect(result.operation).toBe('deploy');
-        expect(result.stage).toBe('staging');
+        if (result.operation === 'deploy') {
+          expect(result.stage).toBe('staging');
+        }
       });
 
       it('should reject production remove without confirmation', () => {

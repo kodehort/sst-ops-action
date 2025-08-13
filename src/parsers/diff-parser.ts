@@ -17,6 +17,12 @@ const DIFF_PATTERNS = {
 } as const;
 
 /**
+ * Regex patterns for parsing top-level resource changes
+ */
+const TOP_LEVEL_RESOURCE_PATTERN = /^([+*-])\s+([^\s].*?)(?:\s+→\s+(.+))?$/;
+const INDENTED_CHILD_PATTERN = /^\s+[+*-]/;
+
+/**
  * Parser for SST diff operation outputs
  * Extracts planned infrastructure changes without deploying
  */
@@ -76,7 +82,7 @@ export class DiffParser extends OperationParser<DiffResult> {
 
   /**
    * Parse planned changes from diff output
-   * Only count top-level resources, not child resources (those with →)
+   * Only count top-level resources, not child resources (those with →) or child properties (indented lines)
    */
   private parsePlannedChanges(output: string): Array<{
     type: string;
@@ -93,58 +99,122 @@ export class DiffParser extends OperationParser<DiffResult> {
     }> = [];
 
     for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Skip child resources (those with → arrow) to avoid double counting
-      if (trimmedLine.includes('→')) {
+      // Skip indented child properties
+      if (this.isIndentedChild(line)) {
         continue;
       }
 
-      const change = this.parseChangeFromLine(trimmedLine);
-      if (change) {
-        // Skip stack resources and operation headers as they're not meaningful for change counts
-        if (change.type === 'Stack' || change.name === 'Diff') {
-          continue;
-        }
-        changes.push(change);
+      const resourceChange = this.parseResourceChange(line);
+      if (!resourceChange) {
+        continue;
       }
+
+      // Skip stack resources and operation headers
+      if (this.shouldSkipResource(resourceChange.type, resourceChange.name)) {
+        continue;
+      }
+
+      this.addOrUpdateChange(changes, resourceChange);
     }
 
     return changes;
   }
 
   /**
-   * Parse a single change from a diff line
+   * Check if a line is an indented child property
    */
-  private parseChangeFromLine(line: string): {
+  private isIndentedChild(line: string): boolean {
+    return INDENTED_CHILD_PATTERN.test(line);
+  }
+
+  /**
+   * Parse a resource change from a line
+   */
+  private parseResourceChange(line: string): {
     type: string;
     name: string;
     action: 'create' | 'update' | 'delete';
-    details?: string;
+    hasChildResource: boolean;
   } | null {
-    const patterns = [
-      { regex: this.diffPatterns.PLANNED_CREATE, action: 'create' as const },
-      { regex: this.diffPatterns.PLANNED_UPDATE, action: 'update' as const },
-      { regex: this.diffPatterns.PLANNED_DELETE, action: 'delete' as const },
-    ];
-
-    for (const { regex, action } of patterns) {
-      const match = line.match(regex);
-      if (match?.[1]) {
-        // Extract resource name and type from the full resource identifier
-        const resourceIdentifier = match[1].trim();
-        const { name, type } = this.parseResourceIdentifier(resourceIdentifier);
-
-        return {
-          type,
-          name,
-          action,
-          ...(match[2] && { details: match[2] }),
-        };
-      }
+    const topLevelMatch = line.match(TOP_LEVEL_RESOURCE_PATTERN);
+    if (!topLevelMatch) {
+      return null;
     }
 
-    return null;
+    const [, symbol, resourceIdentifier, childResource] = topLevelMatch;
+    if (!(resourceIdentifier && symbol)) {
+      return null;
+    }
+
+    const action = this.parseAction(symbol);
+    const { name, type } = this.parseResourceIdentifier(resourceIdentifier);
+
+    return {
+      type,
+      name,
+      action,
+      hasChildResource: Boolean(childResource),
+    };
+  }
+
+  /**
+   * Parse action from symbol
+   */
+  private parseAction(symbol: string): 'create' | 'update' | 'delete' {
+    if (symbol === '+') {
+      return 'create';
+    }
+    if (symbol === '*') {
+      return 'update';
+    }
+    return 'delete';
+  }
+
+  /**
+   * Check if a resource should be skipped
+   */
+  private shouldSkipResource(type: string, name: string): boolean {
+    return type === 'Stack' || name === 'Diff';
+  }
+
+  /**
+   * Add or update a change in the changes array
+   */
+  private addOrUpdateChange(
+    changes: Array<{
+      type: string;
+      name: string;
+      action: 'create' | 'update' | 'delete';
+      details?: string;
+    }>,
+    resourceChange: {
+      type: string;
+      name: string;
+      action: 'create' | 'update' | 'delete';
+      hasChildResource: boolean;
+    }
+  ): void {
+    const { type, name, action, hasChildResource } = resourceChange;
+
+    if (hasChildResource) {
+      // Only add if we haven't seen this resource before
+      const existingChange = changes.find(
+        (c) => c.name === name && c.type === type
+      );
+      if (!existingChange) {
+        changes.push({ type, name, action });
+      }
+    } else {
+      // Override any previous entry
+      const existingIndex = changes.findIndex(
+        (c) => c.name === name && c.type === type
+      );
+      if (existingIndex >= 0) {
+        changes[existingIndex] = { type, name, action };
+      } else {
+        changes.push({ type, name, action });
+      }
+    }
   }
 
   /**

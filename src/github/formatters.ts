@@ -12,6 +12,11 @@ import type {
 } from '../types/index.js';
 
 /**
+ * Regex pattern for finding the Generated section marker
+ */
+const GENERATED_SECTION_PATTERN = /^✓\s+Generated\s*$/;
+
+/**
  * Format configuration for comments and summaries
  */
 interface FormatConfig {
@@ -368,19 +373,58 @@ No infrastructure changes detected for this operation.`;
       return 'No changes detected';
     }
 
-    return result.changes
-      .map((change) => {
-        let symbol: string;
-        if (change.action === 'create') {
-          symbol = '+';
-        } else if (change.action === 'delete') {
-          symbol = '-';
-        } else {
-          symbol = '*';
-        }
-        return `${symbol} ${change.name} (${change.type})`;
-      })
-      .join('\n');
+    // Extract the actual diff section from the raw output
+    const diffContent = this.extractDiffSection(result.rawOutput);
+
+    if (!diffContent || diffContent.trim() === '') {
+      // Fallback to simple summary if diff section extraction fails
+      return result.changes
+        .map((change) => {
+          let symbol: string;
+          if (change.action === 'create') {
+            symbol = '+';
+          } else if (change.action === 'delete') {
+            symbol = '-';
+          } else {
+            symbol = '*';
+          }
+          return `${symbol} ${change.name} (${change.type})`;
+        })
+        .join('\n');
+    }
+
+    return diffContent;
+  }
+
+  /**
+   * Extract the diff section from SST raw output
+   */
+  private extractDiffSection(rawOutput: string): string {
+    const lines = rawOutput.split('\n');
+    let diffStartIndex = -1;
+
+    // Find the "✓ Generated" marker
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line && GENERATED_SECTION_PATTERN.test(line)) {
+        diffStartIndex = i + 1;
+        break;
+      }
+    }
+
+    if (diffStartIndex === -1 || diffStartIndex >= lines.length) {
+      return '';
+    }
+
+    // Get all lines after the "✓ Generated" marker
+    const diffLines = lines.slice(diffStartIndex);
+
+    // Remove any trailing empty lines
+    while (diffLines.length > 0 && diffLines.at(-1)?.trim() === '') {
+      diffLines.pop();
+    }
+
+    return diffLines.join('\n').trim();
   }
 
   /**
