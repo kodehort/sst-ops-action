@@ -3,11 +3,13 @@
  * Handles SST remove command execution with resource cleanup tracking and GitHub integration
  */
 
+import * as core from '@actions/core';
 import type { GitHubClient } from '../github/client';
 import { RemoveParser } from '../parsers/remove-parser';
 import type { OperationOptions, RemoveResult } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
 import { handleGitHubIntegrationError } from '../utils/github-actions';
+import { logActionVersion } from '../utils/version';
 
 /**
  * Remove operation handler for SST resource cleanup
@@ -29,6 +31,9 @@ export class RemoveOperation {
    * @returns Parsed remove result with resource cleanup information
    */
   async execute(options: OperationOptions): Promise<RemoveResult> {
+    // Log action version at the start
+    logActionVersion(core.info);
+
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
       'remove',
