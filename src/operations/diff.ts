@@ -1,30 +1,12 @@
 import type { GitHubClient } from '../github/client';
-import { OperationFormatter } from '../github/formatters';
 import { DiffParser } from '../parsers/diff-parser';
-import type { OperationOptions } from '../types';
-import type { DiffResult } from '../types/operations';
+import type { DiffResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
 
-export interface DiffOperationResult {
-  success: boolean;
-  stage: string;
-  hasChanges: boolean;
-  changesDetected: number;
-  changes: Array<{
-    action: 'create' | 'update' | 'delete';
-    resourceType: string;
-    resourceName: string;
-    details: string;
-  }>;
-  summary: string;
-  error?: string;
-  metadata: {
-    cliExitCode: number;
-    parsingSuccess: boolean;
-    githubIntegration: boolean;
-  };
-}
-
+/**
+ * Diff operation handler for SST infrastructure changes
+ * Combines CLI execution, output parsing, and GitHub integration
+ */
 export class DiffOperation {
   private readonly defaultTimeout = 300_000; // 5 minutes
   private readonly sstExecutor: SSTCLIExecutor;
@@ -43,7 +25,7 @@ export class DiffOperation {
     }
   }
 
-  async execute(options: OperationOptions): Promise<DiffOperationResult> {
+  async execute(options: OperationOptions): Promise<DiffResult> {
     try {
       // Execute SST CLI command
       const cliResult = await this.sstExecutor.executeSST(
@@ -60,12 +42,7 @@ export class DiffOperation {
       if (!cliResult.success) {
         return this.createFailureResult(
           options.stage,
-          cliResult.stderr || 'Unknown CLI error',
-          {
-            cliExitCode: cliResult.exitCode,
-            parsingSuccess: false,
-            githubIntegration: false,
-          }
+          cliResult.stderr || 'Unknown CLI error'
         );
       }
 
@@ -80,77 +57,68 @@ export class DiffOperation {
       if (!basicDiffResult.success) {
         return this.createFailureResult(
           options.stage,
-          'Failed to parse SST diff output',
-          {
-            cliExitCode: cliResult.exitCode,
-            parsingSuccess: false,
-            githubIntegration: false,
-          }
+          'Failed to parse SST diff output'
         );
       }
 
-      // Add hasChanges property based on planned changes count
-      const hasChanges = basicDiffResult.plannedChanges > 0;
+      // Perform GitHub integration in parallel (non-blocking)
+      await this.performGitHubIntegration(basicDiffResult, options);
 
-      // Post PR comment with diff results
-      await this.postPRComment(basicDiffResult);
-
-      return {
-        success: true,
-        stage: options.stage,
-        hasChanges,
-        changesDetected: basicDiffResult.plannedChanges,
-        changes: basicDiffResult.changes.map((change) => ({
-          action: change.action,
-          resourceType: change.type,
-          resourceName: change.name,
-          details: '',
-        })),
-        summary: basicDiffResult.changeSummary,
-        metadata: {
-          cliExitCode: cliResult.exitCode,
-          parsingSuccess: true,
-          githubIntegration: false,
-        },
-      };
+      return basicDiffResult;
     } catch (error) {
       return this.createFailureResult(
         options.stage,
-        error instanceof Error ? error.message : 'Unknown operation error',
-        {
-          cliExitCode: -1,
-          parsingSuccess: false,
-          githubIntegration: false,
-        }
+        error instanceof Error ? error.message : 'Unknown operation error'
       );
     }
   }
 
-  private async postPRComment(diffResult: DiffResult): Promise<boolean> {
-    try {
-      const formatter = new OperationFormatter();
-      const comment = formatter.formatOperationComment(diffResult);
-      await this.githubClient.postPRComment(comment, 'diff');
-      return true;
-    } catch (_error) {
-      return false;
-    }
+  /**
+   * Perform GitHub integration tasks (comments and summaries)
+   * Handles errors gracefully to not fail the entire operation
+   * @param result Parsed diff result
+   * @param options Operation options
+   */
+  private async performGitHubIntegration(
+    result: DiffResult,
+    options: OperationOptions
+  ): Promise<void> {
+    const integrationPromises: Promise<void>[] = [];
+
+    // Create PR comment (if enabled)
+    integrationPromises.push(
+      this.githubClient
+        .createOrUpdateComment(result, options.commentMode || 'never')
+        .catch(() => {
+          // GitHub comment integration is non-critical, ignore errors
+        })
+    );
+
+    // Create workflow summary
+    integrationPromises.push(
+      this.githubClient.createWorkflowSummary(result).catch(() => {
+        // Workflow summary integration is non-critical, ignore errors
+      })
+    );
+
+    // Wait for all GitHub integration tasks to complete
+    await Promise.allSettled(integrationPromises);
   }
 
-  private createFailureResult(
-    stage: string,
-    error: string,
-    metadata: DiffOperationResult['metadata']
-  ): DiffOperationResult {
+  private createFailureResult(stage: string, error: string): DiffResult {
     return {
       success: false,
+      operation: 'diff',
       stage,
-      hasChanges: false,
-      changesDetected: 0,
-      changes: [],
-      summary: 'Failed to execute SST diff command',
+      app: 'unknown',
+      rawOutput: '',
+      exitCode: -1,
+      truncated: false,
       error,
-      metadata,
+      completionStatus: 'failed',
+      plannedChanges: 0,
+      changeSummary: 'Failed to execute SST diff command',
+      changes: [],
     };
   }
 }
