@@ -108,14 +108,9 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
         'deploy',
         'staging',
         {
-          env: expect.objectContaining({
-            SST_TOKEN: 'ghp_test_token',
-            NODE_ENV: 'production',
-            CI: 'true',
-            GITHUB_ACTIONS: 'true',
-          }),
           timeout: 900_000,
           maxOutputSize: 50_000,
+          runner: undefined,
         }
       );
 

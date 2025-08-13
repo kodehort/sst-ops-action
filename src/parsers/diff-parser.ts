@@ -1,5 +1,5 @@
 import type { DiffResult } from '../types/operations';
-import { BaseParser } from './base-parser';
+import { OperationParser } from './operation-parser';
 
 /**
  * Diff-specific regex patterns for parsing planned changes
@@ -20,7 +20,7 @@ const DIFF_PATTERNS = {
  * Parser for SST diff operation outputs
  * Extracts planned infrastructure changes without deploying
  */
-export class DiffParser extends BaseParser<DiffResult> {
+export class DiffParser extends OperationParser<DiffResult> {
   /**
    * Diff-specific regex patterns for parsing planned changes
    */

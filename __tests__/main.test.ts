@@ -161,11 +161,7 @@ describe('Main Entry Point - Action Execution', () => {
           commentMode: 'on-success',
           failOnError: true,
           maxOutputSize: 50_000,
-          environment: expect.objectContaining({
-            NODE_ENV: 'test',
-            CI: 'true',
-            GITHUB_ACTIONS: 'true',
-          }),
+          runner: 'bun',
         })
       );
       expect(
@@ -212,11 +208,9 @@ describe('Main Entry Point - Action Execution', () => {
           stage: 'production',
           token: 'ghp_test123',
           commentMode: 'always',
-          environment: expect.objectContaining({
-            NODE_ENV: 'test',
-            CI: 'true',
-            GITHUB_ACTIONS: 'true',
-          }),
+          failOnError: true,
+          maxOutputSize: 50_000,
+          runner: 'bun',
         })
       );
       expect(core.info).toHaveBeenCalledWith('📋 Found 5 planned change(s)');
@@ -264,11 +258,11 @@ describe('Main Entry Point - Action Execution', () => {
         'remove',
         expect.objectContaining({
           stage: 'staging',
-          environment: expect.objectContaining({
-            NODE_ENV: 'test',
-            CI: 'true',
-            GITHUB_ACTIONS: 'true',
-          }),
+          token: 'fake-token',
+          commentMode: 'on-success',
+          failOnError: true,
+          maxOutputSize: 50_000,
+          runner: 'bun',
         })
       );
       expect(core.info).toHaveBeenCalledWith('🗑️ Removed 7 resource(s)');
@@ -629,11 +623,7 @@ describe('Main Entry Point - Action Execution', () => {
           commentMode: 'on-success',
           failOnError: true,
           maxOutputSize: 100_000,
-          environment: expect.objectContaining({
-            NODE_ENV: 'test',
-            CI: 'true',
-            GITHUB_ACTIONS: 'true',
-          }),
+          runner: 'bun',
         })
       );
 

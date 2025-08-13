@@ -1,12 +1,12 @@
 /**
- * Stage Parser Implementation
+ * Stage Processor Implementation
  * Handles stage computation based on GitHub context without SST CLI execution
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import type { StageResult } from '../types/operations';
-import { BaseParser } from './base-parser';
+import { InputProcessor, type ProcessingOptions } from './input-processor';
 
 // Regex patterns for stage computation
 const PATH_PREFIX_PATTERN = /.*\//;
@@ -15,49 +15,47 @@ const LEADING_TRAILING_HYPHENS_PATTERN = /^-+|-+$/g;
 const STARTS_WITH_DIGIT_PATTERN = /^(\d)/;
 
 /**
- * Parser for stage calculation operations
+ * Options specific to stage processing
+ */
+export interface StageProcessingOptions extends ProcessingOptions {
+  /** Maximum length for computed stage names */
+  truncationLength?: number;
+  /** Prefix to add when stage name starts with a number */
+  prefix?: string;
+}
+
+/**
+ * Processor for stage calculation operations
  * Computes the SST stage name from GitHub context (branch/PR)
  */
-export class StageParser extends BaseParser<StageResult> {
+export class StageProcessor extends InputProcessor<StageResult> {
   /**
-   * Parse stage calculation (this operation doesn't use SST CLI output)
-   * @param _output Unused for stage operation
-   * @param fallbackStage Fallback stage if computation fails
-   * @param _exitCode Unused for stage operation (always determined internally)
-   * @param maxOutputSize Maximum size for output truncation
-   * @param truncationLength Maximum length for computed stage names
-   * @param prefix Prefix to add when stage name starts with a number
-   * @returns Parsed stage result
+   * Process stage calculation from GitHub context and options
+   * @param options Stage processing configuration
+   * @returns Computed stage result
    */
-  parse(
-    _output: string,
-    fallbackStage: string,
-    _exitCode: number,
-    maxOutputSize?: number,
-    truncationLength = 26,
-    prefix = 'pr-'
-  ): StageResult {
+  process(options: StageProcessingOptions): StageResult {
     const context = github.context;
+    const truncationLength = options.truncationLength ?? 26;
+    const prefix = options.prefix ?? 'pr-';
 
     try {
-      return this.parseSuccess(
+      return this.processSuccess(
         context,
-        fallbackStage,
-        maxOutputSize,
+        options.maxOutputSize,
         truncationLength,
         prefix
       );
     } catch (error) {
-      return this.parseError(context, fallbackStage, error, maxOutputSize);
+      return this.processError(context, error, options.maxOutputSize);
     }
   }
 
   /**
-   * Handle successful stage parsing
+   * Handle successful stage processing
    */
-  private parseSuccess(
+  private processSuccess(
     context: typeof github.context,
-    fallbackStage: string,
     maxOutputSize?: number,
     truncationLength = 26,
     prefix = 'pr-'
@@ -74,11 +72,12 @@ export class StageParser extends BaseParser<StageResult> {
       truncationLength,
       prefix
     );
-    const finalStage = computedStage || fallbackStage;
 
-    if (!finalStage) {
-      throw new Error('Failed to generate a valid stage name from ref');
+    if (!computedStage) {
+      throw new Error('Failed to generate a valid stage name from Git context');
     }
+
+    const finalStage = computedStage;
 
     core.debug(`Generated stage: ${finalStage}`);
     this.logDebugInfo(context, finalStage);
@@ -105,11 +104,10 @@ export class StageParser extends BaseParser<StageResult> {
   }
 
   /**
-   * Handle failed stage parsing
+   * Handle failed stage processing
    */
-  private parseError(
+  private processError(
     context: typeof github.context,
-    fallbackStage: string,
     error: unknown,
     maxOutputSize?: number
   ): StageResult {
@@ -122,14 +120,14 @@ export class StageParser extends BaseParser<StageResult> {
     return {
       success: false,
       operation: 'stage',
-      stage: fallbackStage,
+      stage: '',
       app: 'stage-calculator',
       rawOutput,
       exitCode: 1,
       truncated,
       error: errorMessage,
       completionStatus: 'failed',
-      computedStage: fallbackStage,
+      computedStage: '',
       ref: '',
       eventName: context.eventName,
       isPullRequest: context.eventName === 'pull_request',
@@ -141,26 +139,12 @@ export class StageParser extends BaseParser<StageResult> {
    */
   private extractRef(context: typeof github.context): string | undefined {
     if (context.eventName === 'pull_request') {
-      return context.payload.pull_request?.head?.ref;
+      return (
+        context.payload.pull_request?.head?.ref || context.payload.head_ref
+      );
     }
 
     return context.payload.head_ref || context.payload.ref || context.ref;
-  }
-
-  /**
-   * Format and truncate output if necessary
-   */
-  private formatOutput(
-    rawOutput: string,
-    maxOutputSize?: number
-  ): { rawOutput: string; truncated: boolean } {
-    const truncated = maxOutputSize ? rawOutput.length > maxOutputSize : false;
-    const finalOutput =
-      truncated && maxOutputSize
-        ? rawOutput.substring(0, maxOutputSize)
-        : rawOutput;
-
-    return { rawOutput: finalOutput, truncated };
   }
 
   /**

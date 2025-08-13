@@ -1,5 +1,5 @@
 import type { RemoveResult } from '../types/operations';
-import { BaseParser } from './base-parser';
+import { OperationParser } from './operation-parser';
 
 /**
  * Remove-specific regex patterns for parsing resource removals
@@ -24,7 +24,7 @@ const TIMEOUT_MESSAGE_PATTERN = /timeout|timed out/i;
  * Parser for SST remove operation outputs
  * Extracts resource removal information and tracks success/failure status
  */
-export class RemoveParser extends BaseParser<RemoveResult> {
+export class RemoveParser extends OperationParser<RemoveResult> {
   /**
    * Remove-specific regex patterns for parsing resource removals
    */

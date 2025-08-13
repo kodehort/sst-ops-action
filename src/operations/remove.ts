@@ -7,6 +7,7 @@ import type { GitHubClient } from '../github/client';
 import { RemoveParser } from '../parsers/remove-parser';
 import type { OperationOptions, RemoveResult } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
+import { handleGitHubIntegrationError } from '../utils/github-actions';
 
 /**
  * Remove operation handler for SST resource cleanup
@@ -69,16 +70,16 @@ export class RemoveOperation {
     integrationPromises.push(
       this.githubClient
         .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch(() => {
-          // GitHub comment integration is non-critical, ignore errors
-        })
+        .catch((error) => handleGitHubIntegrationError(error, 'comment'))
     );
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result).catch(() => {
-        // Workflow summary integration is non-critical, ignore errors
-      })
+      this.githubClient
+        .createWorkflowSummary(result)
+        .catch((error) =>
+          handleGitHubIntegrationError(error, 'workflow summary')
+        )
     );
 
     // Wait for all GitHub integration tasks to complete

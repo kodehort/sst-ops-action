@@ -2,6 +2,7 @@ import type { GitHubClient } from '../github/client';
 import { DiffParser } from '../parsers/diff-parser';
 import type { DiffResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
+import { handleGitHubIntegrationError } from '../utils/github-actions';
 
 /**
  * Diff operation handler for SST infrastructure changes
@@ -89,16 +90,16 @@ export class DiffOperation {
     integrationPromises.push(
       this.githubClient
         .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch(() => {
-          // GitHub comment integration is non-critical, ignore errors
-        })
+        .catch((error) => handleGitHubIntegrationError(error, 'comment'))
     );
 
     // Create workflow summary
     integrationPromises.push(
-      this.githubClient.createWorkflowSummary(result).catch(() => {
-        // Workflow summary integration is non-critical, ignore errors
-      })
+      this.githubClient
+        .createWorkflowSummary(result)
+        .catch((error) =>
+          handleGitHubIntegrationError(error, 'workflow summary')
+        )
     );
 
     // Wait for all GitHub integration tasks to complete

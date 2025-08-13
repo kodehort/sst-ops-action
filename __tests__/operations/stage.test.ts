@@ -94,21 +94,22 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.isPullRequest).toBe(false);
     });
 
-    it('should handle missing ref with fallback stage', async () => {
+    it('should fail when missing ref (no fallback behavior)', async () => {
       // Mock GitHub context with no ref
       Object.assign(github.context, {
         eventName: 'workflow_dispatch',
         payload: {},
       });
 
-      mockOptions.stage = 'production';
+      mockOptions.stage = 'production'; // This is ignored by stage operation
 
       const result = await stageOperation.execute(mockOptions);
 
-      expect(result.success).toBe(true);
-      expect(result.computedStage).toBe('production');
-      expect(result.stage).toBe('production');
-      expect(result.ref).toBe('');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(
+        'Failed to generate a valid stage name from Git context'
+      );
+      expect(result.exitCode).toBe(1);
     });
 
     it('should handle numeric branch names correctly', async () => {
@@ -173,7 +174,7 @@ describe('Stage Operation - Stage Computation Integration', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe(
-        'Failed to generate a valid stage name from ref'
+        'Failed to generate a valid stage name from Git context'
       );
       expect(result.completionStatus).toBe('failed');
       expect(result.exitCode).toBe(1);
@@ -266,22 +267,23 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.stage).toBe('feature-branch');
     });
 
-    it('should handle fallback when Git context provides no usable ref', async () => {
+    it('should fail when Git context provides no usable ref (no fallback)', async () => {
       Object.assign(github.context, {
         eventName: 'workflow_dispatch',
         payload: {},
         ref: undefined,
       });
 
-      // Empty stage with no usable Git context should use fallback
-      mockOptions.stage = 'fallback-stage';
+      // Stage operation should fail when no Git context is available
+      mockOptions.stage = 'fallback-stage'; // This is ignored
 
       const result = await stageOperation.execute(mockOptions);
 
-      expect(result.success).toBe(true);
-      // Should use fallback stage when Git context provides no usable ref
-      expect(result.computedStage).toBe('fallback-stage');
-      expect(result.stage).toBe('fallback-stage');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(
+        'Failed to generate a valid stage name from Git context'
+      );
+      expect(result.exitCode).toBe(1);
     });
   });
 

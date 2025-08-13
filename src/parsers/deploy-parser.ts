@@ -4,7 +4,7 @@
  */
 
 import type { DeployResult } from '../types/operations';
-import { BaseParser } from './base-parser';
+import { OperationParser } from './operation-parser';
 
 // Top-level regex patterns for better performance
 const RESOURCE_CREATED_PATTERN =
@@ -25,7 +25,7 @@ const URL_FUNCTION_PATTERN = /^\s*Function:\s+(https?:\/\/.+)$/;
 const ERROR_MESSAGE_PATTERN = /^Error:\s*(.+)$/m;
 const DEPLOYMENT_FAILED_PATTERN = /Deployment failed/;
 
-export class DeployParser extends BaseParser<DeployResult> {
+export class DeployParser extends OperationParser<DeployResult> {
   /**
    * Parse SST deploy output into structured result
    */
