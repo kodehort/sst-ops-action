@@ -12,7 +12,7 @@ import {
 } from './errors/error-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
-import { StageParser } from './parsers/stage-parser';
+import { StageProcessor } from './parsers/stage-processor';
 import type { OperationOptions, OperationResult } from './types';
 import type { SSTRunner } from './utils/cli';
 import {
@@ -30,15 +30,11 @@ function computeStageFromContext(
   prefix = 'pr-'
 ): string {
   try {
-    const parser = new StageParser();
-    const result = parser.parse(
-      '',
-      fallbackStage,
-      0,
-      undefined,
+    const processor = new StageProcessor();
+    const result = processor.process({
       truncationLength,
-      prefix
-    );
+      prefix,
+    });
 
     if (result.success && result.computedStage) {
       core.info(

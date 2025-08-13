@@ -328,20 +328,6 @@ function transformRemoveResult(
 }
 
 /**
- * Create a factory instance with standard configuration
- * @param options Operation options containing credentials and settings
- * @returns Configured OperationFactory instance
- */
-export function createOperationFactory(
-  options: OperationOptions
-): OperationFactory {
-  const cliExecutor = new SSTCLIExecutor();
-  const githubClient = new GitHubClient(options.token);
-
-  return new OperationFactory(cliExecutor, githubClient);
-}
-
-/**
  * Create a failure result for error conditions
  * @param operationType The operation that failed
  * @param error The error that occurred
@@ -408,44 +394,5 @@ function createFailureResult(
         urls: [],
         resources: [],
       } as OperationResult;
-  }
-}
-
-/**
- * Validate operation configuration before execution
- * @param operationType The operation type to validate
- * @param options The options to validate
- * @throws Error if configuration is invalid
- */
-export function validateOperationConfig(
-  operationType: SSTOperation,
-  options: OperationOptions
-): void {
-  // Basic validation - stage will be computed if not provided
-  // No need to validate stage here as it can be computed automatically
-
-  // Operation-specific validation
-  switch (operationType) {
-    case 'deploy':
-      // Deploy-specific validation
-      if (!options.token && process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'GitHub token is required for deploy operations in production environment'
-        );
-      }
-      break;
-    case 'diff':
-      // Diff-specific validation - no additional requirements currently
-      break;
-    case 'remove':
-      // Remove-specific validation
-      if (options.stage === 'production') {
-        // Note: Production removal confirmation is handled at the platform level
-        // through environment variables set in the CI/CD pipeline
-      }
-      break;
-    default:
-      // This should never happen due to earlier validation, but TypeScript requires it
-      throw new Error(`Unknown operation type: ${operationType}`);
   }
 }

@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  createFormatter,
-  formatters,
-  type OperationFormatter,
-} from '../../src/github/formatters.js';
+import { OperationFormatter } from '../../src/github/formatters.js';
 import type {
   DeployResult,
   DiffResult,
@@ -23,7 +19,7 @@ describe('OperationFormatter', () => {
   let formatter: OperationFormatter;
 
   beforeEach(() => {
-    formatter = createFormatter();
+    formatter = new OperationFormatter();
   });
 
   describe('formatOperationComment', () => {
@@ -462,7 +458,13 @@ describe('OperationFormatter', () => {
 
   describe('custom configuration', () => {
     it('should respect custom maxUrlsToShow configuration', () => {
-      const customFormatter = createFormatter({ maxUrlsToShow: 3 });
+      const customFormatter = new OperationFormatter({
+        includeTimestamp: true,
+        includeDuration: true,
+        includeDebugInfo: false,
+        maxUrlsToShow: 3,
+        maxResourcesToShow: 20,
+      });
 
       const deployResult = createMockDeployResult({
         stage: 'staging',
@@ -478,7 +480,13 @@ describe('OperationFormatter', () => {
     });
 
     it('should respect custom maxResourcesToShow configuration', () => {
-      const customFormatter = createFormatter({ maxResourcesToShow: 5 });
+      const customFormatter = new OperationFormatter({
+        includeTimestamp: true,
+        includeDuration: true,
+        includeDebugInfo: false,
+        maxUrlsToShow: 10,
+        maxResourcesToShow: 5,
+      });
 
       const deployResult = createMockDeployResult({
         stage: 'staging',
@@ -495,65 +503,6 @@ describe('OperationFormatter', () => {
       const comment = customFormatter.formatOperationComment(deployResult);
 
       expect(comment).toContain('... and 7 more resources');
-    });
-  });
-});
-
-describe('formatters utility functions', () => {
-  describe('formatStatus', () => {
-    it('should format success status correctly', () => {
-      const result = formatters.formatStatus(true, 'deploy');
-      expect(result).toBe('✅ DEPLOY SUCCESS');
-    });
-
-    it('should format failure status correctly', () => {
-      const result = formatters.formatStatus(false, 'remove');
-      expect(result).toBe('❌ REMOVE FAILED');
-    });
-  });
-
-  describe('formatDuration', () => {
-    it('should format milliseconds correctly', () => {
-      expect(formatters.formatDuration(500)).toBe('500ms');
-    });
-
-    it('should format seconds correctly', () => {
-      expect(formatters.formatDuration(2500)).toBe('2.5s');
-    });
-
-    it('should format minutes correctly', () => {
-      expect(formatters.formatDuration(90_000)).toBe('1.5m');
-    });
-  });
-
-  describe('formatSize', () => {
-    it('should format bytes correctly', () => {
-      expect(formatters.formatSize(500)).toBe('500.0B');
-    });
-
-    it('should format kilobytes correctly', () => {
-      expect(formatters.formatSize(1536)).toBe('1.5KB');
-    });
-
-    it('should format megabytes correctly', () => {
-      expect(formatters.formatSize(2_097_152)).toBe('2.0MB');
-    });
-
-    it('should format gigabytes correctly', () => {
-      expect(formatters.formatSize(3_221_225_472)).toBe('3.0GB');
-    });
-  });
-
-  describe('formatTimestamp', () => {
-    it('should format timestamp in ISO format', () => {
-      const date = new Date('2024-01-15T10:30:00.000Z');
-      const result = formatters.formatTimestamp(date);
-      expect(result).toBe('2024-01-15T10:30:00.000Z');
-    });
-
-    it('should use current date when no date provided', () => {
-      const result = formatters.formatTimestamp();
-      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
   });
 });
