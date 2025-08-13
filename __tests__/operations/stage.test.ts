@@ -145,7 +145,7 @@ describe('Stage Operation - Stage Computation Integration', () => {
       expect(result.computedStage).toBe('very-long-branch-name-that');
     });
 
-    it('should handle output truncation when maxOutputSize is small', async () => {
+    it('should not truncate output (no CLI output to truncate)', async () => {
       Object.assign(github.context, {
         eventName: 'push',
         payload: {
@@ -153,13 +153,13 @@ describe('Stage Operation - Stage Computation Integration', () => {
         },
       });
 
-      mockOptions.maxOutputSize = 20;
+      mockOptions.maxOutputSize = 20; // This parameter is now ignored for stage operations
 
       const result = await stageOperation.execute(mockOptions);
 
       expect(result.success).toBe(true);
-      expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBe(20);
+      expect(result.truncated).toBe(false); // Never truncated since no real CLI output
+      expect(result.rawOutput).toContain('Stage computation successful');
     });
 
     it('should fail when no valid stage can be determined', async () => {

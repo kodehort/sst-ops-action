@@ -38,7 +38,7 @@ describe('Stage Processor - GitHub Context Processing', () => {
         },
       });
 
-      const result = processor.process({ maxOutputSize: 1000 });
+      const result = processor.process({});
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('stage');
@@ -131,8 +131,8 @@ describe('Stage Processor - GitHub Context Processing', () => {
     });
   });
 
-  describe('Output Formatting', () => {
-    it('should truncate output when size limit is exceeded', () => {
+  describe('Output Content', () => {
+    it('should include debug information in raw output', () => {
       Object.assign(github.context, {
         eventName: 'push',
         payload: {
@@ -140,25 +140,10 @@ describe('Stage Processor - GitHub Context Processing', () => {
         },
       });
 
-      const result = processor.process({ maxOutputSize: 20 }); // Very small limit
+      const result = processor.process({});
 
       expect(result.success).toBe(true);
-      expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBeLessThanOrEqual(20);
-    });
-
-    it('should not truncate output when within size limit', () => {
-      Object.assign(github.context, {
-        eventName: 'push',
-        payload: {
-          ref: 'refs/heads/main',
-        },
-      });
-
-      const result = processor.process({ maxOutputSize: 1000 });
-
-      expect(result.success).toBe(true);
-      expect(result.truncated).toBe(false);
+      expect(result.truncated).toBe(false); // Never truncated since no CLI output
       expect(result.rawOutput).toContain('Stage computation successful');
       expect(result.rawOutput).toContain('Event: push');
       expect(result.rawOutput).toContain('Computed Stage: main');
@@ -176,7 +161,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 15,
         }); // Custom truncation length of 15
 
@@ -194,7 +178,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 50,
         }); // Custom truncation length of 50
 
@@ -213,7 +196,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 15,
           prefix: 'pr-',
         }); // Custom truncation length of 15
@@ -232,7 +214,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 12,
         }); // Truncate to 12 chars
 
@@ -252,7 +233,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 26,
           prefix: 'fix-',
         }); // Custom prefix 'fix-'
@@ -270,7 +250,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 26,
           prefix: '',
         }); // Empty prefix
@@ -288,7 +267,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 26,
           prefix: 'custom-',
         }); // Custom prefix
@@ -306,7 +284,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 20,
           prefix: 'issue-',
         }); // Custom prefix and truncation
@@ -339,7 +316,6 @@ describe('Stage Processor - GitHub Context Processing', () => {
         });
 
         const result = processor.process({
-          maxOutputSize: 1000,
           truncationLength: 20,
         }); // Only custom truncation, default prefix
 

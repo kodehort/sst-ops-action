@@ -6,7 +6,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import type { StageResult } from '../types/operations';
-import { InputProcessor, type ProcessingOptions } from './input-processor';
 
 // Regex patterns for stage computation
 const PATH_PREFIX_PATTERN = /.*\//;
@@ -17,7 +16,7 @@ const STARTS_WITH_DIGIT_PATTERN = /^(\d)/;
 /**
  * Options specific to stage processing
  */
-export interface StageProcessingOptions extends ProcessingOptions {
+export interface StageProcessingOptions {
   /** Maximum length for computed stage names */
   truncationLength?: number;
   /** Prefix to add when stage name starts with a number */
@@ -28,7 +27,7 @@ export interface StageProcessingOptions extends ProcessingOptions {
  * Processor for stage calculation operations
  * Computes the SST stage name from GitHub context (branch/PR)
  */
-export class StageProcessor extends InputProcessor<StageResult> {
+export class StageProcessor {
   /**
    * Process stage calculation from GitHub context and options
    * @param options Stage processing configuration
@@ -40,14 +39,9 @@ export class StageProcessor extends InputProcessor<StageResult> {
     const prefix = options.prefix ?? 'pr-';
 
     try {
-      return this.processSuccess(
-        context,
-        options.maxOutputSize,
-        truncationLength,
-        prefix
-      );
+      return this.processSuccess(context, truncationLength, prefix);
     } catch (error) {
-      return this.processError(context, error, options.maxOutputSize);
+      return this.processError(context, error);
     }
   }
 
@@ -56,7 +50,6 @@ export class StageProcessor extends InputProcessor<StageResult> {
    */
   private processSuccess(
     context: typeof github.context,
-    maxOutputSize?: number,
     truncationLength = 26,
     prefix = 'pr-'
   ): StageResult {
@@ -82,10 +75,7 @@ export class StageProcessor extends InputProcessor<StageResult> {
     core.debug(`Generated stage: ${finalStage}`);
     this.logDebugInfo(context, finalStage);
 
-    const { rawOutput, truncated } = this.formatOutput(
-      `Stage computation successful\nEvent: ${context.eventName}\nRef: ${ref || 'undefined'}\nComputed Stage: ${finalStage}`,
-      maxOutputSize
-    );
+    const rawOutput = `Stage computation successful\nEvent: ${context.eventName}\nRef: ${ref || 'undefined'}\nComputed Stage: ${finalStage}`;
 
     return {
       success: true,
@@ -94,7 +84,7 @@ export class StageProcessor extends InputProcessor<StageResult> {
       app: 'stage-calculator',
       rawOutput,
       exitCode: 0,
-      truncated,
+      truncated: false,
       completionStatus: 'complete',
       computedStage: finalStage,
       ref: ref || '',
@@ -108,14 +98,10 @@ export class StageProcessor extends InputProcessor<StageResult> {
    */
   private processError(
     context: typeof github.context,
-    error: unknown,
-    maxOutputSize?: number
+    error: unknown
   ): StageResult {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const { rawOutput, truncated } = this.formatOutput(
-      `Stage computation failed: ${errorMessage}`,
-      maxOutputSize
-    );
+    const rawOutput = `Stage computation failed: ${errorMessage}`;
 
     return {
       success: false,
@@ -124,7 +110,7 @@ export class StageProcessor extends InputProcessor<StageResult> {
       app: 'stage-calculator',
       rawOutput,
       exitCode: 1,
-      truncated,
+      truncated: false,
       error: errorMessage,
       completionStatus: 'failed',
       computedStage: '',

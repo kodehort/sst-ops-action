@@ -21,9 +21,6 @@ export class StageOperation {
     // Process stage using GitHub context (no SST CLI execution needed)
     const processor = new StageProcessor();
     const result = processor.process({
-      ...(options.maxOutputSize !== undefined && {
-        maxOutputSize: options.maxOutputSize,
-      }),
       truncationLength: options.truncationLength ?? 26,
       prefix: options.prefix ?? 'pr-',
     });
