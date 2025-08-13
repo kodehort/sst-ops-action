@@ -1,0 +1,15 @@
+{
+  "name": "failed-deployment",
+  "operation": "deploy",
+  "app": "kodehort-scratch",
+  "stage": "sst-ops-actions",
+  "success": false,
+  "description": "Generated from failed-deployment.txt",
+  "generatedAt": "2025-08-13T16:43:37.237Z",
+  "files": {
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/failed-deployment.txt",
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/failed-deployment.comment.md",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/failed-deployment.summary.md",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/deploy/failed-deployment.metadata.json"
+  }
+}

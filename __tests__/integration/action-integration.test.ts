@@ -537,6 +537,26 @@ function createMockOperationResult(operation: string, stage: string): any {
  * Creates mock formatted outputs for GitHub Actions
  */
 function createMockFormattedOutputs(result: any) {
+  const baseOutputs = createBaseOutputs(result);
+
+  switch (result.operation) {
+    case 'deploy':
+      return createDeployOutputs(baseOutputs, result);
+    case 'diff':
+      return createDiffOutputs(baseOutputs, result);
+    case 'remove':
+      return createRemoveOutputs(baseOutputs, result);
+    case 'stage':
+      return createStageOutputs(result);
+    default:
+      throw new Error(`Unknown operation: ${result.operation}`);
+  }
+}
+
+/**
+ * Create base outputs common to all operations
+ */
+function createBaseOutputs(result: any) {
   return {
     success: result.success ? 'true' : 'false',
     operation: result.operation,
@@ -545,14 +565,105 @@ function createMockFormattedOutputs(result: any) {
     app: result.app,
     truncated: result.truncated ? 'true' : 'false',
     error: result.error || '',
+    permalink: result.permalink || '',
+  };
+}
+
+/**
+ * Create deploy operation outputs
+ */
+function createDeployOutputs(baseOutputs: any, result: any) {
+  return {
+    ...baseOutputs,
+    operation: 'deploy',
     resource_changes: String(result.resourceChanges || ''),
     urls: JSON.stringify(result.urls || []),
     resources: JSON.stringify(result.resources || []),
+    ...getEmptyInfrastructureFields(),
+  };
+}
+
+/**
+ * Create diff operation outputs
+ */
+function createDiffOutputs(baseOutputs: any, result: any) {
+  return {
+    ...baseOutputs,
+    operation: 'diff',
+    resource_changes: String(result.plannedChanges || ''),
+    urls: '',
+    resources: '',
     diff_summary: result.changeSummary || '',
     planned_changes: String(result.plannedChanges || ''),
+    ...getEmptyInfrastructureFields(false),
+  };
+}
+
+/**
+ * Create remove operation outputs
+ */
+function createRemoveOutputs(baseOutputs: any, result: any) {
+  return {
+    ...baseOutputs,
+    operation: 'remove',
+    resource_changes: String(result.resourcesRemoved || ''),
+    urls: '',
+    resources: '',
+    diff_summary: '',
+    planned_changes: '',
     resources_removed: String(result.resourcesRemoved || ''),
     removed_resources: JSON.stringify(result.removedResources || []),
-    permalink: result.permalink || '',
+    ...getEmptyInfrastructureFields(false),
+  };
+}
+
+/**
+ * Create stage operation outputs
+ */
+function createStageOutputs(result: any) {
+  return {
+    success: result.success ? 'true' : 'false',
+    operation: 'stage',
+    stage: result.stage,
+    completion_status: result.completionStatus,
+    computed_stage: result.computedStage || result.stage,
+    ref: result.ref || '',
+    event_name: result.eventName || '',
+    is_pull_request: result.isPullRequest ? 'true' : 'false',
+    app: '',
+    permalink: '',
+    truncated: 'false',
+    resource_changes: '',
+    error: result.error || '',
+    urls: '',
+    resources: '',
+    diff_summary: '',
+    planned_changes: '',
+    resources_removed: '',
+    removed_resources: '',
+  };
+}
+
+/**
+ * Get empty infrastructure fields for operations that don't use them
+ */
+function getEmptyInfrastructureFields(includeStageFields = true) {
+  const fields: any = {
+    resources_removed: '',
+    removed_resources: '',
+  };
+
+  if (includeStageFields) {
+    fields.diff_summary = '';
+    fields.planned_changes = '';
+  }
+
+  return {
+    ...fields,
+    computed_stage: '',
+    ref: '',
+    event_name: '',
+    is_pull_request: '',
   };
 }
 

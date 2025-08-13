@@ -67,7 +67,7 @@ export const createMockDeployResource = (
   overrides: {
     name?: string;
     type?: string;
-    status?: 'created' | 'updated' | 'unchanged';
+    status?: 'created' | 'updated' | 'deleted';
   } = {}
 ) => ({
   name: 'test-resource',

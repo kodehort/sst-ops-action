@@ -87,8 +87,8 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
     mockDiffParser.parse.mockReturnValue(mockDiffResult);
-    mockGitHubClient.createOrUpdateComment.mockResolvedValue();
-    mockGitHubClient.createWorkflowSummary.mockResolvedValue();
+    mockGitHubClient.createOrUpdateComment.mockResolvedValue(undefined);
+    mockGitHubClient.createWorkflowSummary.mockResolvedValue(undefined);
 
     const result = await diffOperation.execute(options);
 
@@ -142,8 +142,8 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
     mockDiffParser.parse.mockReturnValue(mockDiffResult);
-    mockGitHubClient.createOrUpdateComment.mockResolvedValue();
-    mockGitHubClient.createWorkflowSummary.mockResolvedValue();
+    mockGitHubClient.createOrUpdateComment.mockResolvedValue(undefined);
+    mockGitHubClient.createWorkflowSummary.mockResolvedValue(undefined);
 
     const result = await diffOperation.execute(options);
 
@@ -196,8 +196,8 @@ Changes detected in infrastructure.`,
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
     mockDiffParser.parse.mockReturnValue(mockDiffResult);
-    mockGitHubClient.createOrUpdateComment.mockResolvedValue();
-    mockGitHubClient.createWorkflowSummary.mockResolvedValue();
+    mockGitHubClient.createOrUpdateComment.mockResolvedValue(undefined);
+    mockGitHubClient.createWorkflowSummary.mockResolvedValue(undefined);
 
     const result = await diffOperation.execute(options);
 

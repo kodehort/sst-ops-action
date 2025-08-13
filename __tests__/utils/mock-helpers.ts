@@ -20,11 +20,6 @@ export const createMockOperationOptions = (
   failOnError: true,
   maxOutputSize: 50_000,
   runner: 'bun',
-  environment: {
-    NODE_ENV: 'test',
-    CI: 'true',
-    GITHUB_ACTIONS: 'true',
-  },
   ...overrides,
 });
 

@@ -1,0 +1,15 @@
+{
+  "name": "no-changes",
+  "operation": "diff",
+  "app": "my-sst-app",
+  "stage": "staging",
+  "success": true,
+  "description": "Generated from no-changes.txt",
+  "generatedAt": "2025-08-13T16:43:37.236Z",
+  "files": {
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/no-changes.txt",
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.comment.md",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.summary.md",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/no-changes.metadata.json"
+  }
+}

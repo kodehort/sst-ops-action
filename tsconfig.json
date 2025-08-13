@@ -27,6 +27,6 @@
       "@tests/*": ["./__tests__/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "__tests__/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "coverage"]
 }
