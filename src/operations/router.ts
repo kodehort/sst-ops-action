@@ -32,7 +32,12 @@ interface RawOperationResults {
     error?: string;
     resourceChanges?: number;
     urls?: Array<{ name: string; url: string; type: string }>;
-    resources?: Array<{ type: string; name: string; status: string }>;
+    resources?: Array<{
+      type: string;
+      name: string;
+      status: string;
+      timing?: string;
+    }>;
     permalink?: string;
   };
   diff: {
@@ -165,15 +170,15 @@ function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
  */
 function normalizeResourceStatus(
   status: string
-): 'created' | 'updated' | 'unchanged' {
-  const validStatuses: Array<'created' | 'updated' | 'unchanged'> = [
+): 'created' | 'updated' | 'deleted' {
+  const validStatuses: Array<'created' | 'updated' | 'deleted'> = [
     'created',
     'updated',
-    'unchanged',
+    'deleted',
   ];
   return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'created' | 'updated' | 'unchanged')
-    : 'unchanged';
+    ? (status as 'created' | 'updated' | 'deleted')
+    : 'created'; // Default to created instead of unchanged
 }
 
 /**
@@ -233,6 +238,7 @@ function transformDeployResult(
       type: resource.type,
       name: resource.name,
       status: normalizeResourceStatus(resource.status),
+      ...(resource.timing && { timing: resource.timing }),
     })),
   };
 
@@ -322,20 +328,6 @@ function transformRemoveResult(
 }
 
 /**
- * Create a factory instance with standard configuration
- * @param options Operation options containing credentials and settings
- * @returns Configured OperationFactory instance
- */
-export function createOperationFactory(
-  options: OperationOptions
-): OperationFactory {
-  const cliExecutor = new SSTCLIExecutor();
-  const githubClient = new GitHubClient(options.token);
-
-  return new OperationFactory(cliExecutor, githubClient);
-}
-
-/**
  * Create a failure result for error conditions
  * @param operationType The operation that failed
  * @param error The error that occurred
@@ -402,48 +394,5 @@ function createFailureResult(
         urls: [],
         resources: [],
       } as OperationResult;
-  }
-}
-
-/**
- * Validate operation configuration before execution
- * @param operationType The operation type to validate
- * @param options The options to validate
- * @throws Error if configuration is invalid
- */
-export function validateOperationConfig(
-  operationType: SSTOperation,
-  options: OperationOptions
-): void {
-  // Basic validation - stage will be computed if not provided
-  // No need to validate stage here as it can be computed automatically
-
-  // Operation-specific validation
-  switch (operationType) {
-    case 'deploy':
-      // Deploy-specific validation
-      if (!options.token && process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'GitHub token is required for deploy operations in production environment'
-        );
-      }
-      break;
-    case 'diff':
-      // Diff-specific validation - no additional requirements currently
-      break;
-    case 'remove':
-      // Remove-specific validation
-      if (
-        options.stage === 'production' &&
-        !options.environment?.CONFIRM_PRODUCTION_REMOVE
-      ) {
-        throw new Error(
-          'Production remove operations require CONFIRM_PRODUCTION_REMOVE environment variable'
-        );
-      }
-      break;
-    default:
-      // This should never happen due to earlier validation, but TypeScript requires it
-      throw new Error(`Unknown operation type: ${operationType}`);
   }
 }

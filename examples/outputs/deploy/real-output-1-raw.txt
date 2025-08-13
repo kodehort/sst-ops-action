@@ -1,0 +1,34 @@
+SST 3.17.10  ready!
+
+➜  App:        e-commerce-api
+   Stage:      production
+
+~  Deploy
+
+$ npm run build
+15:04:46 [build] Collecting build info...
+15:04:46 [build] ✓ Completed in 164ms.
+15:04:46 [build] Building server entrypoints...
+15:04:47 [build] ✓ Completed in 975ms.
+
+|  Created     Database sst:aws:Dynamo → DatabaseTable aws:dynamodb:Table (2.1s)
+|  Created     Queue sst:aws:Queue → QueueSqs aws:sqs:Queue (1.3s)
+|  Updated     ApiFunction sst:aws:Function → ApiFunctionLambda aws:lambda:Function (4.2s)
+|  Created     ApiFunction sst:aws:Function → ApiFunctionUrl aws:lambda:FunctionUrl (0.8s)
+|  Created     Router sst:aws:Router → RouterCdn sst:aws:CDN (15.6s)
+|  Updated     Website sst:aws:StaticSite → WebsiteDistribution aws:cloudfront:Distribution (8.3s)
+|  Created     Auth sst:aws:Auth → AuthIssuer sst:aws:Function (3.1s)
+|  Updated     Worker sst:aws:Function → WorkerLambda aws:lambda:Function (2.7s)
+|  Created     Bucket sst:aws:Bucket → BucketS3 aws:s3:BucketV2 (1.9s)
+
+↗  Permalink   https://sst.dev/u/abc123def
+
+✓  Complete
+   Api: https://api.ecommerce-prod.com
+   Website: https://ecommerce-prod.com
+   Auth: https://auth.ecommerce-prod.com/oauth
+   Admin: https://admin.ecommerce-prod.com
+   ---
+   github_role_name: production-GithubActionRole
+   github_role_arn: arn:aws:iam::123456789012:role/production-GithubActionRole
+   database_endpoint: ecommerce-prod-database.cluster-xyz.us-east-1.rds.amazonaws.com

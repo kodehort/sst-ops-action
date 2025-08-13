@@ -1,0 +1,38 @@
+SST 3.17.10  ready!
+
+➜  App:        blog-platform
+   Stage:      staging
+
+~  Deploy
+
+$ bun build
+Building client assets...
+✓ 127 modules transformed.
+dist/assets/index.js        89.32 kB │ gzip: 31.45 kB
+dist/assets/styles.css      24.18 kB │ gzip:  5.72 kB
+
+|  Created     CMS sst:aws:StaticSite → CMSBuilder command:local:Command (3.2s)
+|  Updated     CMS sst:aws:StaticSite → CMSDistribution aws:cloudfront:Distribution (12.4s)
+|  Created     BlogApi sst:aws:Function → BlogApiLogGroup aws:cloudwatch:LogGroup (1.1s)
+|  Updated     BlogApi sst:aws:Function → BlogApiLambda aws:lambda:Function (5.7s)
+|  Created     BlogApi sst:aws:Function → BlogApiUrl aws:lambda:FunctionUrl (0.9s)
+|  Created     Database sst:aws:Postgres → DatabaseCluster aws:rds:Cluster (45.2s)
+|  Created     FileStorage sst:aws:Bucket → FileStorageBucket aws:s3:BucketV2 (2.3s)
+|  Created     Queue sst:aws:Queue → QueueSqs aws:sqs:Queue (1.8s)
+|  Updated     Worker sst:aws:Function → WorkerLambda aws:lambda:Function (3.4s)
+|  Created     Cache sst:aws:Redis → CacheCluster aws:elasticache:ReplicationGroup (180.7s)
+|  Created     SearchIndex sst:aws:OpenSearch → SearchDomain aws:opensearch:Domain (420.1s)
+|  Updated     Monitoring sst:aws:Function → MonitoringLambda aws:lambda:Function (2.6s)
+
+↗  Permalink   https://sst.dev/u/xyz789ghi
+
+✓  Complete
+   BlogApi: https://api.blog-staging.dev
+   CMS: https://cms.blog-staging.dev
+   Website: https://blog-staging.dev
+   Admin: https://admin.blog-staging.dev
+   ---
+   database_endpoint: blog-staging-db.cluster-abc.us-west-2.rds.amazonaws.com
+   redis_endpoint: blog-staging-cache.xyz.cache.amazonaws.com
+   search_endpoint: https://search-blog-staging.us-west-2.es.amazonaws.com
+   cdn_domain: d1a2b3c4d5e6f7.cloudfront.net

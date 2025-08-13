@@ -1,0 +1,115 @@
+{
+  "name": "real-output-2",
+  "app": "blog-platform",
+  "stage": "staging",
+  "resourceChanges": 12,
+  "success": true,
+  "completionStatus": "complete",
+  "permalink": "https://sst.dev/u/xyz789ghi",
+  "resources": [
+    {
+      "name": "CMS",
+      "type": "sst:aws:StaticSite → CMSBuilder command:local:Command",
+      "status": "created",
+      "timing": "3.2s"
+    },
+    {
+      "name": "CMS",
+      "type": "sst:aws:StaticSite → CMSDistribution aws:cloudfront:Distribution",
+      "status": "updated",
+      "timing": "12.4s"
+    },
+    {
+      "name": "BlogApi",
+      "type": "sst:aws:Function → BlogApiLogGroup aws:cloudwatch:LogGroup",
+      "status": "created",
+      "timing": "1.1s"
+    },
+    {
+      "name": "BlogApi",
+      "type": "sst:aws:Function → BlogApiLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "5.7s"
+    },
+    {
+      "name": "BlogApi",
+      "type": "sst:aws:Function → BlogApiUrl aws:lambda:FunctionUrl",
+      "status": "created",
+      "timing": "0.9s"
+    },
+    {
+      "name": "Database",
+      "type": "sst:aws:Postgres → DatabaseCluster aws:rds:Cluster",
+      "status": "created",
+      "timing": "45.2s"
+    },
+    {
+      "name": "FileStorage",
+      "type": "sst:aws:Bucket → FileStorageBucket aws:s3:BucketV2",
+      "status": "created",
+      "timing": "2.3s"
+    },
+    {
+      "name": "Queue",
+      "type": "sst:aws:Queue → QueueSqs aws:sqs:Queue",
+      "status": "created",
+      "timing": "1.8s"
+    },
+    {
+      "name": "Worker",
+      "type": "sst:aws:Function → WorkerLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "3.4s"
+    },
+    {
+      "name": "Cache",
+      "type": "sst:aws:Redis → CacheCluster aws:elasticache:ReplicationGroup",
+      "status": "created",
+      "timing": "180.7s"
+    },
+    {
+      "name": "SearchIndex",
+      "type": "sst:aws:OpenSearch → SearchDomain aws:opensearch:Domain",
+      "status": "created",
+      "timing": "420.1s"
+    },
+    {
+      "name": "Monitoring",
+      "type": "sst:aws:Function → MonitoringLambda aws:lambda:Function",
+      "status": "updated",
+      "timing": "2.6s"
+    }
+  ],
+  "urls": [
+    {
+      "name": "BlogApi",
+      "url": "https://api.blog-staging.dev",
+      "type": "api"
+    },
+    {
+      "name": "CMS",
+      "url": "https://cms.blog-staging.dev",
+      "type": "other"
+    },
+    {
+      "name": "Website",
+      "url": "https://blog-staging.dev",
+      "type": "web"
+    },
+    {
+      "name": "Admin",
+      "url": "https://admin.blog-staging.dev",
+      "type": "other"
+    },
+    {
+      "name": "search_endpoint",
+      "url": "https://search-blog-staging.us-west-2.es.amazonaws.com",
+      "type": "other"
+    }
+  ],
+  "files": {
+    "raw": "examples/outputs/deploy/real-output-2-raw.txt",
+    "comment": "examples/outputs/deploy/real-output-2-comment.md",
+    "summary": "examples/outputs/deploy/real-output-2-summary.md"
+  }
+}

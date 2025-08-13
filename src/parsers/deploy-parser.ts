@@ -4,28 +4,27 @@
  */
 
 import type { DeployResult } from '../types/operations';
-import { BaseParser } from './base-parser';
+import { OperationParser } from './operation-parser';
 
-// Top-level regex patterns for better performance
+// Real SST v3 output patterns based on actual deploy examples
 const RESOURCE_CREATED_PATTERN =
-  /^\|\s+Created\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+  /^\|\s+Created\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
 const RESOURCE_UPDATED_PATTERN =
-  /^\|\s+Updated\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-const RESOURCE_UNCHANGED_PATTERN =
-  /^\|\s+Unchanged\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-const RESOURCE_FAILED_PATTERN =
-  /^\|\s+Failed\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
+  /^\|\s+Updated\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
+const RESOURCE_DELETED_PATTERN =
+  /^\|\s+Deleted\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
+// URL patterns for final output section (not inline)
+const FINAL_URL_PATTERN = /^\s*([\w\s]+):\s+(https?:\/\/.+)$/;
 
-const URL_ROUTER_PATTERN = /^\s*Router:\s+(https?:\/\/.+)$/;
-const URL_API_PATTERN = /^\s*Api:\s+(https?:\/\/.+)$/;
-const URL_WEB_PATTERN = /^\s*Web:\s+(https?:\/\/.+)$/;
-const URL_WEBSITE_PATTERN = /^\s*Website:\s+(https?:\/\/.+)$/;
-const URL_FUNCTION_PATTERN = /^\s*Function:\s+(https?:\/\/.+)$/;
+// Error and completion patterns for real SST output
+const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
+const COMPLETION_FAILED_PATTERN = /^✕\s+Failed\s*$/m;
+const ERROR_SECTION_START_PATTERN = /^Error:/m;
+const GRPC_ERROR_PATTERN = /grpc: the client/;
+const RESOURCE_NOT_EXIST_PATTERN = /resource '([^']+)' does not exist/;
+const PIPE_PREFIX_PATTERN = /^\|\s*/;
 
-const ERROR_MESSAGE_PATTERN = /^Error:\s*(.+)$/m;
-const DEPLOYMENT_FAILED_PATTERN = /Deployment failed/;
-
-export class DeployParser extends BaseParser<DeployResult> {
+export class DeployParser extends OperationParser<DeployResult> {
   /**
    * Parse SST deploy output into structured result
    */
@@ -80,13 +79,15 @@ export class DeployParser extends BaseParser<DeployResult> {
   private parseResourceChanges(output: string): Array<{
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'unchanged';
+    status: 'created' | 'updated' | 'deleted';
+    timing?: string;
   }> {
     const lines = output.split('\n');
     const resources: Array<{
       type: string;
       name: string;
-      status: 'created' | 'updated' | 'unchanged';
+      status: 'created' | 'updated' | 'deleted';
+      timing?: string;
     }> = [];
 
     for (const line of lines) {
@@ -102,27 +103,35 @@ export class DeployParser extends BaseParser<DeployResult> {
 
   /**
    * Parse a single resource change from a deploy line
+   * Real SST format: | Created/Updated/Deleted ResourceName ResourceType (timing)
    */
   private parseResourceChangeFromLine(line: string): {
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'unchanged';
+    status: 'created' | 'updated' | 'deleted';
+    timing?: string;
   } | null {
     const patterns = [
       { regex: RESOURCE_CREATED_PATTERN, status: 'created' as const },
       { regex: RESOURCE_UPDATED_PATTERN, status: 'updated' as const },
-      { regex: RESOURCE_UNCHANGED_PATTERN, status: 'unchanged' as const },
-      { regex: RESOURCE_FAILED_PATTERN, status: 'unchanged' as const }, // Map failed to unchanged
+      { regex: RESOURCE_DELETED_PATTERN, status: 'deleted' as const },
     ];
 
     for (const { regex, status } of patterns) {
       const match = line.match(regex);
       if (match?.[1] && match[2]) {
-        return {
-          type: match[1].trim(),
-          name: match[2].trim(),
+        const result = {
+          name: match[1].trim(),
+          type: match[2].trim(),
           status,
         };
+
+        // Add timing if available
+        if (match[3]) {
+          return { ...result, timing: match[3] };
+        }
+
+        return result;
       }
     }
 
@@ -131,6 +140,7 @@ export class DeployParser extends BaseParser<DeployResult> {
 
   /**
    * Parse deployed URLs from deployment output
+   * Real SST URLs appear in final output section after completion
    */
   private parseDeployedURLs(output: string): Array<{
     name: string;
@@ -144,11 +154,23 @@ export class DeployParser extends BaseParser<DeployResult> {
       type: 'api' | 'web' | 'function' | 'other';
     }> = [];
 
+    // Look for URLs after completion marker
+    let inOutputSection = false;
+
     for (const line of lines) {
       const trimmedLine = line.trim();
-      const url = this.parseUrlFromLine(trimmedLine);
-      if (url) {
-        urls.push(url);
+
+      // Check if we're in the completion/output section
+      if (COMPLETION_SUCCESS_PATTERN.test(trimmedLine)) {
+        inOutputSection = true;
+        continue;
+      }
+
+      if (inOutputSection || this.isLikelyUrl(trimmedLine)) {
+        const url = this.parseUrlFromLine(trimmedLine);
+        if (url) {
+          urls.push(url);
+        }
       }
     }
 
@@ -157,52 +179,145 @@ export class DeployParser extends BaseParser<DeployResult> {
 
   /**
    * Parse a single URL from a deploy line
+   * Real format: ResourceName: https://example.com or generic output: key: value
    */
   private parseUrlFromLine(line: string): {
     name: string;
     url: string;
     type: 'api' | 'web' | 'function' | 'other';
   } | null {
-    const patterns = [
-      { regex: URL_ROUTER_PATTERN, name: 'Router', type: 'api' as const },
-      { regex: URL_API_PATTERN, name: 'Api', type: 'api' as const },
-      { regex: URL_WEB_PATTERN, name: 'Web', type: 'web' as const },
-      { regex: URL_WEBSITE_PATTERN, name: 'Website', type: 'web' as const },
-      {
-        regex: URL_FUNCTION_PATTERN,
-        name: 'Function',
-        type: 'function' as const,
-      },
-    ];
+    const match = line.match(FINAL_URL_PATTERN);
+    if (match?.[1] && match?.[2] && match[2].startsWith('http')) {
+      const name = match[1].trim();
+      const url = match[2].trim();
 
-    for (const { regex, name, type } of patterns) {
-      const match = line.match(regex);
-      if (match?.[1]) {
-        return {
-          name,
-          url: match[1].trim(),
-          type,
-        };
-      }
+      // Determine type based on name patterns
+      const type = this.classifyUrlType(name);
+
+      return { name, url, type };
     }
 
     return null;
   }
 
   /**
-   * Parse error messages from failed deployments
+   * Check if line likely contains a URL
    */
-  private parseErrorMessage(output: string): string | undefined {
-    const errorMatch = output.match(ERROR_MESSAGE_PATTERN);
-    if (errorMatch?.[1]) {
-      return errorMatch[1].trim();
+  private isLikelyUrl(line: string): boolean {
+    return line.includes('http://') || line.includes('https://');
+  }
+
+  /**
+   * Classify URL type based on resource name
+   */
+  private classifyUrlType(name: string): 'api' | 'web' | 'function' | 'other' {
+    const lowerName = name.toLowerCase();
+
+    if (lowerName.includes('api') || lowerName.includes('router')) {
+      return 'api';
     }
 
-    // Look for deployment failure pattern
-    if (DEPLOYMENT_FAILED_PATTERN.test(output)) {
-      return 'Deployment failed';
+    if (
+      lowerName.includes('web') ||
+      lowerName.includes('astro') ||
+      lowerName.includes('www')
+    ) {
+      return 'web';
+    }
+
+    if (lowerName.includes('function') || lowerName.includes('lambda')) {
+      return 'function';
+    }
+
+    return 'other';
+  }
+
+  /**
+   * Parse error messages from failed deployments
+   * Real SST errors include stack traces and specific failure reasons
+   */
+  private parseErrorMessage(output: string): string | undefined {
+    // Check for completion failure marker
+    if (COMPLETION_FAILED_PATTERN.test(output)) {
+      return this.extractDetailedError(output);
+    }
+
+    // Check for specific error patterns
+    const specificError = this.parseSpecificErrors(output);
+    if (specificError) {
+      return specificError;
+    }
+
+    // Look for generic Error: sections
+    return this.parseGenericErrorSections(output);
+  }
+
+  /**
+   * Parse specific known error patterns
+   */
+  private parseSpecificErrors(output: string): string | undefined {
+    // Check for resource existence errors
+    const resourceError = output.match(RESOURCE_NOT_EXIST_PATTERN);
+    if (resourceError?.[1]) {
+      return `Resource '${resourceError[1]}' does not exist`;
+    }
+
+    // Check for gRPC errors
+    if (GRPC_ERROR_PATTERN.test(output)) {
+      return 'gRPC client error occurred during deployment';
     }
 
     return;
+  }
+
+  /**
+   * Parse generic Error: sections from output
+   */
+  private parseGenericErrorSections(output: string): string | undefined {
+    const lines = output.split('\n');
+    let errorSection = false;
+    const errorLines: string[] = [];
+
+    for (const line of lines) {
+      if (ERROR_SECTION_START_PATTERN.test(line)) {
+        errorSection = true;
+        errorLines.push(line.trim());
+        continue;
+      }
+
+      if (errorSection) {
+        if (line.trim() === '' && errorLines.length > 0) {
+          break; // End of error section
+        }
+        if (line.trim()) {
+          errorLines.push(line.trim());
+        }
+      }
+    }
+
+    return errorLines.length > 0 ? errorLines.join(' ') : undefined;
+  }
+
+  /**
+   * Extract detailed error information from failed output
+   */
+  private extractDetailedError(output: string): string {
+    const lines = output.split('\n');
+    const errorMessages: string[] = [];
+
+    // Look for resource errors and main error messages
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith('|') && trimmed.includes('Error')) {
+        errorMessages.push(trimmed.replace(PIPE_PREFIX_PATTERN, ''));
+      } else if (trimmed.startsWith('Error:')) {
+        errorMessages.push(trimmed);
+      }
+    }
+
+    return errorMessages.length > 0
+      ? errorMessages.join('; ')
+      : 'Deployment failed';
   }
 }

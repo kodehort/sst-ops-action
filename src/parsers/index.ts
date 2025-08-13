@@ -1,25 +1,19 @@
 /**
  * Parser module exports
- * Provides base parser infrastructure and utilities
+ * Provides parser infrastructure and utilities for SST operations
  */
 
-// Parser utilities and helpers
-export * from './base-parser';
-export {
-  BaseParser,
-  createParsedSection,
-  type ParsedSection,
-} from './base-parser';
-
-// Operation-specific parsers
+// CLI operation parsers
 export * from './deploy-parser';
 export { DeployParser } from './deploy-parser';
-
 export * from './diff-parser';
 export { DiffParser } from './diff-parser';
+// Base parser infrastructure
+export * from './operation-parser';
+export { OperationParser } from './operation-parser';
 
 export * from './remove-parser';
 export { RemoveParser } from './remove-parser';
-
-export * from './stage-parser';
-export { StageParser } from './stage-parser';
+// Input-based processors
+export * from './stage-processor';
+export { type StageProcessingOptions, StageProcessor } from './stage-processor';
