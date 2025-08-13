@@ -7,7 +7,10 @@ import type { GitHubClient } from '../github/client';
 import { RemoveParser } from '../parsers/remove-parser';
 import type { OperationOptions, RemoveResult } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
-import { handleGitHubIntegrationError } from '../utils/github-actions';
+import {
+  handleGitHubIntegrationError,
+  logActionVersion,
+} from '../utils/github-actions';
 
 /**
  * Remove operation handler for SST resource cleanup
@@ -29,6 +32,9 @@ export class RemoveOperation {
    * @returns Parsed remove result with resource cleanup information
    */
   async execute(options: OperationOptions): Promise<RemoveResult> {
+    // Log action version at start
+    logActionVersion('remove');
+
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
       'remove',

@@ -5,6 +5,7 @@
 
 import { StageProcessor } from '../parsers/stage-processor';
 import type { OperationOptions, StageResult } from '../types';
+import { logActionVersion } from '../utils/github-actions';
 
 /**
  * Stage operation handler for computing SST stage names
@@ -18,6 +19,9 @@ export class StageOperation {
    */
   // biome-ignore lint/suspicious/useAwait: Async required for BaseOperation interface consistency
   async execute(options: OperationOptions): Promise<StageResult> {
+    // Log action version at start
+    logActionVersion('stage');
+
     // Process stage using GitHub context (no SST CLI execution needed)
     const processor = new StageProcessor();
     const result = processor.process({

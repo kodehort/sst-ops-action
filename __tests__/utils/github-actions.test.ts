@@ -1,11 +1,19 @@
 import * as core from '@actions/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { handleGitHubIntegrationError } from '../../src/utils/github-actions.js';
+import {
+  handleGitHubIntegrationError,
+  logActionVersion,
+} from '../../src/utils/github-actions.js';
 
 // Mock @actions/core functions
 vi.mock('@actions/core', () => ({
   info: vi.fn(),
   debug: vi.fn(),
+}));
+
+// Mock fs functions for version testing
+vi.mock('node:fs', () => ({
+  readFileSync: vi.fn(),
 }));
 
 const { info, debug } = vi.mocked(core);
@@ -89,6 +97,70 @@ describe('GitHub Actions Integration', () => {
 
       expect(info).toHaveBeenCalledWith(
         'GitHub custom integration integration failed - continuing with operation'
+      );
+    });
+  });
+
+  describe('logActionVersion', () => {
+    it('should log version for deploy operation', async () => {
+      const { readFileSync } = await import('node:fs');
+      const mockedReadFileSync = vi.mocked(readFileSync);
+
+      mockedReadFileSync.mockReturnValue(
+        JSON.stringify({ version: '1.2.3' })
+      );
+
+      logActionVersion('deploy');
+
+      expect(info).toHaveBeenCalledWith(
+        '🏷️ SST Operations Action v1.2.3 - deploy operation'
+      );
+    });
+
+    it('should handle missing version in package.json', async () => {
+      const { readFileSync } = await import('node:fs');
+      const mockedReadFileSync = vi.mocked(readFileSync);
+
+      mockedReadFileSync.mockReturnValue(JSON.stringify({}));
+
+      logActionVersion('diff');
+
+      expect(info).toHaveBeenCalledWith(
+        '🏷️ SST Operations Action vunknown - diff operation'
+      );
+    });
+
+    it('should handle package.json read errors', async () => {
+      const { readFileSync } = await import('node:fs');
+      const mockedReadFileSync = vi.mocked(readFileSync);
+
+      mockedReadFileSync.mockImplementation(() => {
+        throw new Error('ENOENT: no such file or directory');
+      });
+
+      logActionVersion('remove');
+
+      expect(info).toHaveBeenCalledWith(
+        '🏷️ SST Operations Action vunknown - remove operation'
+      );
+      expect(debug).toHaveBeenCalledWith(
+        'Failed to read version from package.json: ENOENT: no such file or directory'
+      );
+    });
+
+    it('should handle invalid JSON in package.json', async () => {
+      const { readFileSync } = await import('node:fs');
+      const mockedReadFileSync = vi.mocked(readFileSync);
+
+      mockedReadFileSync.mockReturnValue('{ invalid json');
+
+      logActionVersion('stage');
+
+      expect(info).toHaveBeenCalledWith(
+        '🏷️ SST Operations Action vunknown - stage operation'
+      );
+      expect(debug).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to read version from package.json:')
       );
     });
   });

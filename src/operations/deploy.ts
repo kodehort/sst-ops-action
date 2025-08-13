@@ -7,7 +7,10 @@ import type { GitHubClient } from '../github/client';
 import { DeployParser } from '../parsers/deploy-parser';
 import type { DeployResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
-import { handleGitHubIntegrationError } from '../utils/github-actions';
+import {
+  handleGitHubIntegrationError,
+  logActionVersion,
+} from '../utils/github-actions';
 
 /**
  * Deploy operation handler for SST deployments
@@ -29,6 +32,9 @@ export class DeployOperation {
    * @returns Parsed deployment result with resource and URL information
    */
   async execute(options: OperationOptions): Promise<DeployResult> {
+    // Log action version at start
+    logActionVersion('deploy');
+
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
       'deploy',
