@@ -44,8 +44,15 @@ export interface DeployResult extends BaseOperationResult {
   resources: Array<{
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'unchanged';
+    status: 'created' | 'updated' | 'deleted';
+    timing?: string;
   }>;
+  buildInfo?: {
+    framework?: string;
+    mode?: string;
+    buildTime?: string;
+    outputDir?: string;
+  };
 }
 
 export interface DiffResult extends BaseOperationResult {

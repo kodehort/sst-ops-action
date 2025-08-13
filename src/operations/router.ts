@@ -32,7 +32,18 @@ interface RawOperationResults {
     error?: string;
     resourceChanges?: number;
     urls?: Array<{ name: string; url: string; type: string }>;
-    resources?: Array<{ type: string; name: string; status: string }>;
+    resources?: Array<{
+      type: string;
+      name: string;
+      status: string;
+      timing?: string;
+    }>;
+    buildInfo?: {
+      framework?: string;
+      mode?: string;
+      buildTime?: string;
+      outputDir?: string;
+    };
     permalink?: string;
   };
   diff: {
@@ -165,15 +176,15 @@ function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
  */
 function normalizeResourceStatus(
   status: string
-): 'created' | 'updated' | 'unchanged' {
-  const validStatuses: Array<'created' | 'updated' | 'unchanged'> = [
+): 'created' | 'updated' | 'deleted' {
+  const validStatuses: Array<'created' | 'updated' | 'deleted'> = [
     'created',
     'updated',
-    'unchanged',
+    'deleted',
   ];
   return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'created' | 'updated' | 'unchanged')
-    : 'unchanged';
+    ? (status as 'created' | 'updated' | 'deleted')
+    : 'created'; // Default to created instead of unchanged
 }
 
 /**
@@ -233,11 +244,16 @@ function transformDeployResult(
       type: resource.type,
       name: resource.name,
       status: normalizeResourceStatus(resource.status),
+      ...(resource.timing && { timing: resource.timing }),
     })),
   };
 
   if (result.error !== undefined) {
     deployResult.error = result.error;
+  }
+
+  if (result.buildInfo !== undefined) {
+    deployResult.buildInfo = result.buildInfo;
   }
 
   if (result.permalink !== undefined) {

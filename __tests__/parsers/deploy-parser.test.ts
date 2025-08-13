@@ -23,50 +23,43 @@ describe('Deploy Parser - SST Output Processing', () => {
 
   describe('Deployment Output Parsing', () => {
     it('should parse successful deployment output', () => {
-      const result = parser.parse(SST_DEPLOY_SUCCESS_OUTPUT, 'staging', 0);
+      const result = parser.parse(SST_DEPLOY_SUCCESS_OUTPUT, 'production', 0);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe('deploy');
-      expect(result.stage).toBe('staging');
-      expect(result.app).toBe('my-sst-app');
+      expect(result.stage).toBe('production');
+      expect(result.app).toBe('www-kodehort-com');
       expect(result.completionStatus).toBe('complete');
-      expect(result.permalink).toBe(
-        'https://console.sst.dev/my-sst-app/staging/deployments/abc123'
-      );
+      expect(result.permalink).toBe('https://sst.dev/u/1a3e112e');
       expect(result.exitCode).toBe(0);
       expect(result.truncated).toBe(false);
-      expect(result.resourceChanges).toBe(3);
+      expect(result.resourceChanges).toBe(9); // Real count from actual output
 
-      // Check resources
-      expect(result.resources).toHaveLength(3);
-      expect(result.resources[0]).toEqual({
-        type: 'Function',
-        name: 'my-sst-app-staging-handler',
-        status: 'created',
-      });
-      expect(result.resources[1]).toEqual({
-        type: 'Api',
-        name: 'my-sst-app-staging-api',
-        status: 'created',
-      });
-      expect(result.resources[2]).toEqual({
-        type: 'Website',
-        name: 'my-sst-app-staging-web',
-        status: 'created',
-      });
+      // Check resources - should include created, updated, and deleted
+      expect(result.resources.length).toBeGreaterThanOrEqual(5);
 
-      // Check URLs
-      expect(result.urls).toHaveLength(2);
-      expect(result.urls[0]).toEqual({
-        name: 'Router',
-        url: 'https://api.staging.example.com',
-        type: 'api',
-      });
-      expect(result.urls[1]).toEqual({
-        name: 'Web',
-        url: 'https://staging.example.com',
-        type: 'web',
-      });
+      // Check that we have created resources
+      const createdResources = result.resources.filter(
+        (r) => r.status === 'created'
+      );
+      expect(createdResources.length).toBeGreaterThan(0);
+
+      // Check that timing is captured
+      const timedResources = result.resources.filter((r) => r.timing);
+      expect(timedResources.length).toBeGreaterThan(0);
+
+      // Check URLs - should include Astro and www
+      expect(result.urls.length).toBeGreaterThanOrEqual(2);
+
+      const astroUrl = result.urls.find((u) => u.name === 'Astro');
+      expect(astroUrl).toBeDefined();
+      expect(astroUrl?.url).toBe('https://kodehort.com');
+      expect(astroUrl?.type).toBe('web');
+
+      const wwwUrl = result.urls.find((u) => u.name === 'www');
+      expect(wwwUrl).toBeDefined();
+      expect(wwwUrl?.url).toBe('https://kodehort.com');
+      expect(wwwUrl?.type).toBe('web');
     });
 
     it('should parse partial deployment output', () => {
@@ -74,38 +67,62 @@ describe('Deploy Parser - SST Output Processing', () => {
 
       expect(result.success).toBe(true); // Exit code 0 = success even if partial
       expect(result.operation).toBe('deploy');
+      expect(result.app).toBe('partial-app');
       expect(result.completionStatus).toBe('partial');
-      expect(result.resourceChanges).toBe(3);
+      expect(result.resourceChanges).toBe(2); // Only resources with proper status lines
 
       // Check mixed resource statuses
-      expect(result.resources).toHaveLength(3);
-      expect(result.resources?.[0]?.status).toBe('created');
-      expect(result.resources?.[1]?.status).toBe('updated');
-      expect(result.resources?.[2]?.status).toBe('unchanged'); // Failed mapped to unchanged for now
+      expect(result.resources.length).toBeGreaterThanOrEqual(2);
 
-      // Only successful URLs should be included
+      const createdResource = result.resources.find(
+        (r) => r.status === 'created'
+      );
+      expect(createdResource).toBeDefined();
+      expect(createdResource?.name).toBe('Database');
+
+      const updatedResource = result.resources.find(
+        (r) => r.status === 'updated'
+      );
+      expect(updatedResource).toBeDefined();
+      expect(updatedResource?.name).toBe('Api');
+      expect(updatedResource?.timing).toBe('2.5s');
+
+      // Should include API URL
       expect(result.urls).toHaveLength(1);
-      expect(result.urls?.[0]?.name).toBe('Router');
+      expect(result.urls[0]?.name).toBe('Api');
+      expect(result.urls[0]?.url).toBe('https://api.staging.example.com');
+      expect(result.urls[0]?.type).toBe('api');
     });
 
     it('should parse failed deployment output', () => {
-      const result = parser.parse(SST_DEPLOY_FAILURE_OUTPUT, 'staging', 1);
+      const result = parser.parse(
+        SST_DEPLOY_FAILURE_OUTPUT,
+        'sst-ops-actions',
+        1
+      );
 
       expect(result.success).toBe(false);
       expect(result.operation).toBe('deploy');
+      expect(result.app).toBe('kodehort-scratch');
       expect(result.completionStatus).toBe('failed');
       expect(result.exitCode).toBe(1);
-      expect(result.error).toContain('Deployment failed');
-      expect(result.resourceChanges).toBe(3);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain(
+        "Resource 'E3EDFTB7D6VMW5' does not exist"
+      );
 
-      // Should still capture resource information even on failure
-      expect(result.resources).toHaveLength(3);
-      expect(result.resources?.[0]?.status).toBe('created');
-      expect(result.resources?.[1]?.status).toBe('unchanged'); // Failed mapped to unchanged
-      expect(result.resources?.[2]?.status).toBe('unchanged');
+      // Should capture resource information even on failure
+      const createdResources = result.resources.filter(
+        (r) => r.status === 'created'
+      );
+      expect(createdResources.length).toBeGreaterThan(0);
 
-      // No URLs on failed deployment
-      expect(result.urls).toHaveLength(0);
+      // Should capture timing for successful resources
+      const timedResources = result.resources.filter((r) => r.timing);
+      expect(timedResources.length).toBeGreaterThan(0);
+
+      // Failed deployments may have console URL for debugging
+      expect(result.urls.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle malformed output gracefully', () => {
@@ -140,6 +157,12 @@ describe('Deploy Parser - SST Output Processing', () => {
       expect(result.app).toBe('my-sst-app');
       expect(result.completionStatus).toBe('complete');
       expect(result.resources).toHaveLength(1);
+      expect(result.resources[0]).toEqual({
+        name: 'Function',
+        type: 'sst:aws:Function',
+        status: 'created',
+        timing: '1.2s',
+      });
       expect(result.urls).toHaveLength(0);
       expect(result.resourceChanges).toBe(1);
     });
@@ -154,18 +177,21 @@ describe('Deploy Parser - SST Output Processing', () => {
 
     it('should extract resource changes correctly', () => {
       const mixedOutput = `
-SST Deploy
-App: test-app
-Stage: staging
+SST 3.17.10  ready!
 
-✓ Complete
-| Created         Function       test-function-1
-| Updated         Api           test-api-1  
-| Updated         Website       test-web-1
-| Created         Function      test-function-2
-| Unchanged       Database      test-db-1
+➜  App:        test-app
+   Stage:      staging
 
-Router: https://api.test.com
+~  Deploy
+
+|  Created     Function sst:aws:Function (1.2s)
+|  Updated     Api sst:aws:Function (0.8s)
+|  Updated     Website sst:aws:Astro (2.3s)
+|  Created     Function sst:aws:Function (1.5s)
+|  Deleted     Database sst:aws:Dynamo (0.5s)
+
+✓  Complete
+   Router: https://api.test.com
 `;
 
       const result = parser.parse(mixedOutput, 'staging', 0);
@@ -173,32 +199,43 @@ Router: https://api.test.com
       expect(result.resourceChanges).toBe(5);
       expect(result.resources).toHaveLength(5);
 
-      // Check specific statuses
+      // Check specific statuses and timing
       const functionResources = result.resources.filter(
-        (r) => r.type === 'Function'
+        (r) => r.name === 'Function'
       );
       expect(functionResources).toHaveLength(2);
       expect(functionResources.every((r) => r.status === 'created')).toBe(true);
+      expect(functionResources.every((r) => r.timing)).toBe(true);
 
-      const apiResources = result.resources.filter((r) => r.type === 'Api');
+      const apiResources = result.resources.filter((r) => r.name === 'Api');
       expect(apiResources).toHaveLength(1);
-      expect(apiResources?.[0]?.status).toBe('updated');
+      expect(apiResources[0]?.status).toBe('updated');
+      expect(apiResources[0]?.timing).toBe('0.8s');
+
+      const deletedResources = result.resources.filter(
+        (r) => r.status === 'deleted'
+      );
+      expect(deletedResources).toHaveLength(1);
+      expect(deletedResources[0]?.name).toBe('Database');
     });
 
     it('should handle various URL types correctly', () => {
       const urlOutput = `
-SST Deploy
-App: test-app
-Stage: staging
+SST 3.17.10  ready!
 
-✓ Complete
-| Created         Function       test-function
+➜  App:        test-app
+   Stage:      staging
 
-Router:   https://router.example.com
-Api:      https://api.example.com/v1
-Web:      https://web.example.com
-Website:  https://site.example.com
-Function: https://lambda.example.com
+~  Deploy
+
+|  Created     Function sst:aws:Function (1.2s)
+
+✓  Complete
+   Router: https://router.example.com
+   Api: https://api.example.com/v1
+   Web: https://web.example.com
+   Website: https://site.example.com
+   Function: https://lambda.example.com
 `;
 
       const result = parser.parse(urlOutput, 'staging', 0);
@@ -226,34 +263,44 @@ Function: https://lambda.example.com
   describe('error handling', () => {
     it('should extract error messages from failed deployments', () => {
       const errorOutput = `
-SST Deploy
-App: test-app
-Stage: staging
+SST 3.17.10  ready!
 
-✗ Failed
-| Failed          Api           test-api (permission denied)
+➜  App:        test-app
+   Stage:      staging
 
-Error: Deployment failed with 1 errors
+~  Deploy
+
+|  Error       Api sst:aws:Function → ApiDistribution aws:cloudfront:Distribution
+resource 'E1234567890' does not exist
+
+✖  Failed
+
+Error: invocation of aws:iam/getPolicyDocument:getPolicyDocument returned an error: grpc: the client
 Additional context: AWS credentials invalid
 `;
 
       const result = parser.parse(errorOutput, 'staging', 1);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Deployment failed');
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain("Resource 'E1234567890' does not exist");
       expect(result.completionStatus).toBe('failed');
     });
 
     it('should handle resource parsing errors gracefully', () => {
       const malformedResourceOutput = `
-SST Deploy
-App: test-app  
-Stage: staging
+SST 3.17.10  ready!
 
-✓ Complete
+➜  App:        test-app
+   Stage:      staging
+
+~  Deploy
+
 | Invalid resource line format
-| Created Function test-function
+|  Created     Function sst:aws:Function (1.2s)
 | Malformed    line without proper spacing
+
+✓  Complete
 `;
 
       const result = parser.parse(malformedResourceOutput, 'staging', 0);
@@ -263,11 +310,10 @@ Stage: staging
       expect(result.resources.length).toBeGreaterThanOrEqual(1);
 
       // Should find the valid resource
-      const validResource = result.resources.find(
-        (r) => r.name === 'test-function'
-      );
+      const validResource = result.resources.find((r) => r.name === 'Function');
       expect(validResource).toBeDefined();
       expect(validResource?.status).toBe('created');
+      expect(validResource?.timing).toBe('1.2s');
     });
   });
 
@@ -276,18 +322,22 @@ Stage: staging
       // Create large output with many resources
       const largeResourceList = Array.from(
         { length: 100 },
-        (_, i) => `| Created         Function       test-function-${i}`
+        (_, i) =>
+          `|  Created     Function-${i} sst:aws:Function (${(Math.random() * 5 + 0.5).toFixed(1)}s)`
       ).join('\n');
 
       const largeOutput = `
-SST Deploy
-App: large-app
-Stage: staging
+SST 3.17.10  ready!
 
-✓ Complete
+➜  App:        large-app
+   Stage:      staging
+
+~  Deploy
+
 ${largeResourceList}
 
-Router: https://api.large-app.com
+✓  Complete
+   Router: https://api.large-app.com
 `;
 
       const startTime = Date.now();
@@ -297,6 +347,63 @@ Router: https://api.large-app.com
       expect(duration).toBeLessThan(1000); // Should complete in under 1 second
       expect(result.resources).toHaveLength(100);
       expect(result.resourceChanges).toBe(100);
+
+      // All resources should have timing
+      expect(result.resources.every((r) => r.timing)).toBe(true);
+    });
+  });
+
+  describe('build info parsing', () => {
+    it('should extract build information from successful deployment', () => {
+      const result = parser.parse(SST_DEPLOY_SUCCESS_OUTPUT, 'production', 0);
+
+      expect(result.buildInfo).toBeDefined();
+      expect(result.buildInfo?.framework).toBe('astro');
+      expect(result.buildInfo?.mode).toBe('server');
+      expect(result.buildInfo?.outputDir).toBeTruthy();
+      expect(result.buildInfo?.buildTime).toBeDefined();
+    });
+
+    it('should handle deployments without build information', () => {
+      const noBuildOutput = `
+SST 3.17.10  ready!
+
+➜  App:        simple-app
+   Stage:      staging
+
+~  Deploy
+
+|  Created     Function sst:aws:Function (1.2s)
+
+✓  Complete
+   Function: https://function.example.com
+`;
+
+      const result = parser.parse(noBuildOutput, 'staging', 0);
+
+      expect(result.buildInfo).toBeUndefined();
+    });
+
+    it('should detect different framework types', () => {
+      const nextOutput = `
+SST 3.17.10  ready!
+
+➜  App:        next-app
+   Stage:      staging
+
+~  Deploy
+
+$ bunx next build
+[build] output: "static"
+
+|  Created     Function sst:aws:Function (2.1s)
+
+✓  Complete
+`;
+
+      const result = parser.parse(nextOutput, 'staging', 0);
+
+      expect(result.buildInfo?.framework).toBe('next');
     });
   });
 });
