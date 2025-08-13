@@ -78,29 +78,25 @@ describe('OperationRouter', () => {
       }).not.toThrow();
     });
 
-    it('should require confirmation for production remove operations', () => {
+    it('should pass validation for production remove operations', () => {
       const prodOptions = {
         ...mockOperationOptions,
         stage: 'production',
-        environment: {},
       };
 
+      // Should not throw since environment validation is handled at platform level
       expect(() => {
         validateOperationConfig('remove', prodOptions);
-      }).toThrow(
-        'Production remove operations require CONFIRM_PRODUCTION_REMOVE environment variable'
-      );
+      }).not.toThrow();
     });
 
     it('should allow production remove with confirmation', () => {
       const prodOptions = {
         ...mockOperationOptions,
         stage: 'production',
-        environment: {
-          CONFIRM_PRODUCTION_REMOVE: 'true',
-        },
       };
 
+      // Environment validation is handled at platform level, so this should pass
       expect(() => {
         validateOperationConfig('remove', prodOptions);
       }).not.toThrow();

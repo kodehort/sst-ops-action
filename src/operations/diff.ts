@@ -16,11 +16,7 @@ export interface DiffOperationResult {
     resourceName: string;
     details: string;
   }>;
-  breakingChanges: boolean;
-  costAnalysis: null;
   summary: string;
-  prCommentPosted: boolean;
-  executionTime: number;
   error?: string;
   metadata: {
     cliExitCode: number;
@@ -54,15 +50,11 @@ export class DiffOperation {
         'diff',
         options.stage,
         {
-          env: this.buildEnvironment(options),
           timeout: this.defaultTimeout,
           maxOutputSize: options.maxOutputSize,
           runner: options.runner,
         }
       );
-
-      // Use the execution time from the CLI result
-      const executionTime = cliResult.duration;
 
       // Handle CLI execution failure
       if (!cliResult.success) {
@@ -73,8 +65,7 @@ export class DiffOperation {
             cliExitCode: cliResult.exitCode,
             parsingSuccess: false,
             githubIntegration: false,
-          },
-          executionTime
+          }
         );
       }
 
@@ -94,8 +85,7 @@ export class DiffOperation {
             cliExitCode: cliResult.exitCode,
             parsingSuccess: false,
             githubIntegration: false,
-          },
-          executionTime
+          }
         );
       }
 
@@ -103,7 +93,7 @@ export class DiffOperation {
       const hasChanges = basicDiffResult.plannedChanges > 0;
 
       // Post PR comment with diff results
-      const prCommentPosted = await this.postPRComment(basicDiffResult);
+      await this.postPRComment(basicDiffResult);
 
       return {
         success: true,
@@ -116,15 +106,11 @@ export class DiffOperation {
           resourceName: change.name,
           details: '',
         })),
-        breakingChanges: false,
-        costAnalysis: null,
         summary: basicDiffResult.changeSummary,
-        prCommentPosted,
-        executionTime,
         metadata: {
           cliExitCode: cliResult.exitCode,
           parsingSuccess: true,
-          githubIntegration: prCommentPosted,
+          githubIntegration: false,
         },
       };
     } catch (error) {
@@ -135,18 +121,9 @@ export class DiffOperation {
           cliExitCode: -1,
           parsingSuccess: false,
           githubIntegration: false,
-        },
-        0 // Execution time not available in case of unexpected error
+        }
       );
     }
-  }
-
-  private buildEnvironment(options: OperationOptions): Record<string, string> {
-    return {
-      ...options.environment,
-      NODE_ENV: 'production',
-      CI: 'true',
-    };
   }
 
   private async postPRComment(diffResult: DiffResult): Promise<boolean> {
@@ -163,8 +140,7 @@ export class DiffOperation {
   private createFailureResult(
     stage: string,
     error: string,
-    metadata: DiffOperationResult['metadata'],
-    executionTime: number
+    metadata: DiffOperationResult['metadata']
   ): DiffOperationResult {
     return {
       success: false,
@@ -172,11 +148,7 @@ export class DiffOperation {
       hasChanges: false,
       changesDetected: 0,
       changes: [],
-      breakingChanges: false,
-      costAnalysis: null,
       summary: 'Failed to execute SST diff command',
-      prCommentPosted: false,
-      executionTime,
       error,
       metadata,
     };

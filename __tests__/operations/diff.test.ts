@@ -33,7 +33,6 @@ describe('Diff Operation - Change Analysis Workflows', () => {
   it('should execute diff operation successfully with changes detected', async () => {
     const options: OperationOptions = {
       stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
       maxOutputSize: 1_000_000,
     };
 
@@ -115,21 +114,16 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
           details: '',
         },
       ],
-      breakingChanges: false,
-      costAnalysis: null,
       summary:
         'Found 3 planned changes: 1 creation, 1 update, 1 deletion. Cost increase: +$22.30 monthly.',
-      prCommentPosted: true,
-      executionTime: 5000,
       metadata: {
         cliExitCode: 0,
         parsingSuccess: true,
-        githubIntegration: true,
+        githubIntegration: false,
       },
     });
 
     expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith('diff', 'staging', {
-      env: { SST_TOKEN: 'test-token', NODE_ENV: 'production', CI: 'true' },
       timeout: 300_000, // 5 minutes
       maxOutputSize: 1_000_000,
     });
@@ -148,7 +142,6 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
   it('should handle diff operation with no changes detected', async () => {
     const options: OperationOptions = {
       stage: 'production',
-      environment: { SST_TOKEN: 'test-token' },
     };
 
     const mockSSTResult = {
@@ -185,15 +178,11 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
       hasChanges: false,
       changesDetected: 0,
       changes: [],
-      breakingChanges: false,
-      costAnalysis: null,
       summary: 'No changes detected.',
-      prCommentPosted: true,
-      executionTime: 2000,
       metadata: {
         cliExitCode: 0,
         parsingSuccess: true,
-        githubIntegration: true,
+        githubIntegration: false,
       },
     });
 
@@ -206,7 +195,6 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
   it('should handle diff with delete operations without breaking change warnings', async () => {
     const options: OperationOptions = {
       stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
     };
 
     const mockSSTResult = {
@@ -246,7 +234,6 @@ Changes detected in infrastructure.`,
 
     const result = await diffOperation.execute(options);
 
-    expect(result.breakingChanges).toBe(false);
     expect(result.summary).toBe('Found 1 planned change: 1 deletion.');
     expect(mockGitHubClient.postPRComment).toHaveBeenCalledWith(
       expect.stringContaining('🔍 Infrastructure Changes Preview'),
@@ -257,7 +244,6 @@ Changes detected in infrastructure.`,
   it('should handle SST CLI execution failure', async () => {
     const options: OperationOptions = {
       stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
     };
 
     const mockSSTResult = {
@@ -278,11 +264,7 @@ Changes detected in infrastructure.`,
       hasChanges: false,
       changesDetected: 0,
       changes: [],
-      breakingChanges: false,
-      costAnalysis: null,
       summary: 'Failed to execute SST diff command',
-      prCommentPosted: false,
-      executionTime: 1000,
       error: 'Authentication failed: Invalid SST token',
       metadata: {
         cliExitCode: 1,
@@ -298,7 +280,6 @@ Changes detected in infrastructure.`,
   it('should handle GitHub API failure gracefully', async () => {
     const options: OperationOptions = {
       stage: 'staging',
-      environment: { SST_TOKEN: 'test-token' },
     };
 
     const mockSSTResult = {
@@ -340,7 +321,6 @@ Changes detected in infrastructure.`,
     const result = await diffOperation.execute(options);
 
     expect(result.success).toBe(true);
-    expect(result.prCommentPosted).toBe(false);
     expect(result.metadata.githubIntegration).toBe(false);
     expect(result.hasChanges).toBe(true);
   });

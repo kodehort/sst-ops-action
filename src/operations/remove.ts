@@ -33,7 +33,6 @@ export class RemoveOperation {
       'remove',
       options.stage,
       {
-        env: this.buildEnvironment(options),
         timeout: this.defaultTimeout,
         maxOutputSize: options.maxOutputSize,
         runner: options.runner,
@@ -52,21 +51,6 @@ export class RemoveOperation {
     await this.performGitHubIntegration(result, options);
 
     return result;
-  }
-
-  /**
-   * Build environment variables for SST CLI execution
-   * @param options Operation options containing configuration
-   * @returns Environment variables object
-   */
-  buildEnvironment(options: OperationOptions): Record<string, string> {
-    return {
-      SST_TOKEN: options.token || '',
-      NODE_ENV: 'production',
-      CI: 'true',
-      GITHUB_ACTIONS: 'true',
-      SST_REMOVE_CONFIRM: 'true', // Auto-confirm removal for CI environments
-    };
   }
 
   /**

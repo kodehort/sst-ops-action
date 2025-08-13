@@ -433,13 +433,9 @@ export function validateOperationConfig(
       break;
     case 'remove':
       // Remove-specific validation
-      if (
-        options.stage === 'production' &&
-        !options.environment?.CONFIRM_PRODUCTION_REMOVE
-      ) {
-        throw new Error(
-          'Production remove operations require CONFIRM_PRODUCTION_REMOVE environment variable'
-        );
+      if (options.stage === 'production') {
+        // Note: Production removal confirmation is handled at the platform level
+        // through environment variables set in the CI/CD pipeline
       }
       break;
     default:

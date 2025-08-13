@@ -16,7 +16,6 @@ export interface OperationOptions {
   failOnError?: boolean;
   maxOutputSize?: number;
   runner?: 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
-  environment?: Record<string, string>;
   truncationLength?: number;
   prefix?: string;
 }

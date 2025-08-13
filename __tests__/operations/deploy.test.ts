@@ -344,36 +344,10 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
     });
   });
 
-  describe('Environment Configuration', () => {
-    it('should build correct environment variables', () => {
-      const env = deployOperation.buildEnvironment(mockOperationOptions);
-
-      expect(env).toEqual({
-        SST_TOKEN: 'ghp_test_token',
-        NODE_ENV: 'production',
-        CI: 'true',
-        GITHUB_ACTIONS: 'true',
-      });
-    });
-
-    it('should handle missing token gracefully', () => {
-      const optionsWithoutToken: OperationOptions = {
-        ...mockOperationOptions,
-        token: '',
-      };
-
-      const env = deployOperation.buildEnvironment(optionsWithoutToken);
-
-      expect(env.SST_TOKEN).toBe('');
-      expect(env.NODE_ENV).toBe('production');
-    });
-  });
-
   describe('Migration Compatibility', () => {
     it('should maintain same interface as composite action for seamless migration', async () => {
       // Verify that the operation interface matches what composite actions expect
       expect(deployOperation).toHaveProperty('execute');
-      expect(deployOperation).toHaveProperty('buildEnvironment');
 
       // Verify execute method signature
       expect(typeof deployOperation.execute).toBe('function');

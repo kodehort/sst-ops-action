@@ -323,11 +323,6 @@ function createOperationOptions(
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || 'bun',
-          environment: Object.fromEntries(
-            Object.entries(process.env).filter(
-              ([, value]) => value !== undefined
-            )
-          ) as Record<string, string>,
         },
       };
 
@@ -342,11 +337,6 @@ function createOperationOptions(
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || 'bun',
-          environment: Object.fromEntries(
-            Object.entries(process.env).filter(
-              ([, value]) => value !== undefined
-            )
-          ) as Record<string, string>,
         },
       };
 
@@ -362,11 +352,6 @@ function createOperationOptions(
           runner: 'bun',
           truncationLength: inputs.truncationLength || 26,
           prefix: inputs.prefix || 'pr-',
-          environment: Object.fromEntries(
-            Object.entries(process.env).filter(
-              ([, value]) => value !== undefined
-            )
-          ) as Record<string, string>,
         },
       };
 

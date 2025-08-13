@@ -271,35 +271,6 @@ describe('RemoveOperation', () => {
     });
   });
 
-  describe('buildEnvironment', () => {
-    it('should build environment variables for remove operation', () => {
-      // Act
-      const env = removeOperation.buildEnvironment(defaultOptions);
-
-      // Assert
-      expect(env).toEqual({
-        SST_TOKEN: 'fake-token',
-        NODE_ENV: 'production',
-        CI: 'true',
-        GITHUB_ACTIONS: 'true',
-        SST_REMOVE_CONFIRM: 'true',
-      });
-    });
-
-    it('should handle missing token', () => {
-      // Arrange
-      const optionsWithoutToken = { ...defaultOptions };
-      delete optionsWithoutToken.token;
-
-      // Act
-      const env = removeOperation.buildEnvironment(optionsWithoutToken);
-
-      // Assert
-      expect(env.SST_TOKEN).toBe('');
-      expect(env.SST_REMOVE_CONFIRM).toBe('true');
-    });
-  });
-
   describe('GitHub integration', () => {
     it('should perform GitHub integration tasks', async () => {
       // Arrange
@@ -406,10 +377,6 @@ describe('RemoveOperation', () => {
         'remove',
         'test-stage',
         expect.objectContaining({
-          env: expect.objectContaining({
-            SST_TOKEN: 'fake-token',
-            SST_REMOVE_CONFIRM: 'true',
-          }),
           timeout: 900_000, // 15 minutes
           maxOutputSize: 50_000,
         })
