@@ -24,21 +24,6 @@ const GRPC_ERROR_PATTERN = /grpc: the client/;
 const RESOURCE_NOT_EXIST_PATTERN = /resource '([^']+)' does not exist/;
 const PIPE_PREFIX_PATTERN = /^\|\s*/;
 
-// Build patterns for framework detection and build info
-const BUILD_COMMAND_PATTERN = /^\$ (.+)$/m;
-const ASTRO_BUILD_MODE_PATTERN = /\[build\] mode: "(\w+)"/;
-const ASTRO_BUILD_OUTPUT_PATTERN = /\[build\] output: "(\w+)"/;
-const BUILD_DIRECTORY_PATTERN = /\[build\] directory: (.+)$/m;
-const BUILD_COMPLETED_PATTERN = /\[build\] .+ built in ([\d.]+s)/;
-const VITE_BUILD_TIME_PATTERN = /\[vite\] ✓ built in ([\d.]+s)/;
-const FRAMEWORK_PATTERNS = {
-  astro: /(bunx.*astro build|astro build)/,
-  next: /(bunx.*next build|next build)/,
-  vite: /(bunx.*vite build|vite build)/,
-  webpack: /webpack/,
-  nuxt: /(bunx.*nuxt build|nuxt build)/,
-};
-
 export class DeployParser extends OperationParser<DeployResult> {
   /**
    * Parse SST deploy output into structured result
@@ -64,7 +49,6 @@ export class DeployParser extends OperationParser<DeployResult> {
     const resources = this.parseResourceChanges(processedOutput);
     const urls = this.parseDeployedURLs(processedOutput);
     const error = this.parseErrorMessage(processedOutput);
-    const buildInfo = this.parseBuildInfo(processedOutput);
 
     // Determine success based on exit code (primary) and patterns (secondary)
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
@@ -84,7 +68,6 @@ export class DeployParser extends OperationParser<DeployResult> {
       resourceChanges: resources.length,
       resources,
       urls,
-      ...(buildInfo && { buildInfo }),
     };
 
     return result;
@@ -336,112 +319,5 @@ export class DeployParser extends OperationParser<DeployResult> {
     return errorMessages.length > 0
       ? errorMessages.join('; ')
       : 'Deployment failed';
-  }
-
-  /**
-   * Parse build information from deployment output
-   * Extracts framework, mode, build time, and output directory
-   */
-  private parseBuildInfo(output: string):
-    | {
-        framework?: string;
-        mode?: string;
-        buildTime?: string;
-        outputDir?: string;
-      }
-    | undefined {
-    const buildInfo: {
-      framework?: string;
-      mode?: string;
-      buildTime?: string;
-      outputDir?: string;
-    } = {};
-
-    // Detect framework and parse framework-specific info
-    this.detectFramework(output, buildInfo);
-    this.parseFrameworkSpecificInfo(output, buildInfo);
-    this.parseBuildTiming(output, buildInfo);
-
-    // Return buildInfo only if we found something useful
-    return Object.keys(buildInfo).length > 0 ? buildInfo : undefined;
-  }
-
-  /**
-   * Detect framework from build command
-   */
-  private detectFramework(
-    output: string,
-    buildInfo: {
-      framework?: string;
-      mode?: string;
-      buildTime?: string;
-      outputDir?: string;
-    }
-  ): void {
-    const buildCommandMatch = output.match(BUILD_COMMAND_PATTERN);
-    if (buildCommandMatch?.[1]) {
-      const command = buildCommandMatch[1];
-      for (const [framework, pattern] of Object.entries(FRAMEWORK_PATTERNS)) {
-        if (pattern.test(command)) {
-          buildInfo.framework = framework;
-          break;
-        }
-      }
-    }
-  }
-
-  /**
-   * Parse framework-specific build information
-   */
-  private parseFrameworkSpecificInfo(
-    output: string,
-    buildInfo: {
-      framework?: string;
-      mode?: string;
-      buildTime?: string;
-      outputDir?: string;
-    }
-  ): void {
-    // Extract Astro-specific build information
-    if (buildInfo.framework === 'astro' || output.includes('astro build')) {
-      buildInfo.framework = 'astro';
-
-      const modeMatch = output.match(ASTRO_BUILD_MODE_PATTERN);
-      if (modeMatch?.[1]) {
-        buildInfo.mode = modeMatch[1];
-      }
-
-      const outputMatch = output.match(ASTRO_BUILD_OUTPUT_PATTERN);
-      if (outputMatch?.[1]) {
-        buildInfo.mode = buildInfo.mode || outputMatch[1];
-      }
-
-      const dirMatch = output.match(BUILD_DIRECTORY_PATTERN);
-      if (dirMatch?.[1]) {
-        buildInfo.outputDir = dirMatch[1].trim();
-      }
-    }
-  }
-
-  /**
-   * Parse build timing information
-   */
-  private parseBuildTiming(
-    output: string,
-    buildInfo: {
-      framework?: string;
-      mode?: string;
-      buildTime?: string;
-      outputDir?: string;
-    }
-  ): void {
-    const astroTimeMatch = output.match(BUILD_COMPLETED_PATTERN);
-    const viteTimeMatch = output.match(VITE_BUILD_TIME_PATTERN);
-
-    if (astroTimeMatch?.[1]) {
-      buildInfo.buildTime = astroTimeMatch[1];
-    } else if (viteTimeMatch?.[1]) {
-      buildInfo.buildTime = viteTimeMatch[1];
-    }
   }
 }

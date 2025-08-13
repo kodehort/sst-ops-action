@@ -38,12 +38,6 @@ interface RawOperationResults {
       status: string;
       timing?: string;
     }>;
-    buildInfo?: {
-      framework?: string;
-      mode?: string;
-      buildTime?: string;
-      outputDir?: string;
-    };
     permalink?: string;
   };
   diff: {
@@ -250,10 +244,6 @@ function transformDeployResult(
 
   if (result.error !== undefined) {
     deployResult.error = result.error;
-  }
-
-  if (result.buildInfo !== undefined) {
-    deployResult.buildInfo = result.buildInfo;
   }
 
   if (result.permalink !== undefined) {

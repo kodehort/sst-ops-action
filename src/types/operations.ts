@@ -47,12 +47,6 @@ export interface DeployResult extends BaseOperationResult {
     status: 'created' | 'updated' | 'deleted';
     timing?: string;
   }>;
-  buildInfo?: {
-    framework?: string;
-    mode?: string;
-    buildTime?: string;
-    outputDir?: string;
-  };
 }
 
 export interface DiffResult extends BaseOperationResult {
