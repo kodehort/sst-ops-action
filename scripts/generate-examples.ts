@@ -14,10 +14,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { OperationFormatter } from '../src/github/formatters.js';
 import { DiffParser } from '../src/parsers/diff-parser.js';
-import type { DiffResult } from '../src/types/operations.js';
+import { DeployParser } from '../src/parsers/deploy-parser.js';
+import type { DiffResult, DeployResult } from '../src/types/operations.js';
 
 const formatter = new OperationFormatter();
 const diffParser = new DiffParser();
+const deployParser = new DeployParser();
 
 // Top-level regex patterns for performance
 const APP_REGEX = /➜\s+App:\s+(.+)/;
@@ -138,6 +140,88 @@ function generateDiffExamples() {
 
     const metadataFile = `examples/outputs/diff/${name}-metadata.json`;
     writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));
+  }
+}
+
+/**
+ * Generate deploy examples from existing raw outputs
+ */
+function generateDeployExamples() {
+  ensureDir('examples/outputs/deploy');
+
+  // Define deploy examples from existing files
+  const deployOutputs = [
+    {
+      name: 'real-output-1',
+      stage: 'production',
+      app: 'e-commerce-api'
+    },
+    {
+      name: 'real-output-2', 
+      stage: 'staging',
+      app: 'blog-platform'
+    },
+    {
+      name: 'real-output-3',
+      stage: 'development',
+      app: 'fintech-app'
+    }
+  ];
+
+  for (const { name, stage } of deployOutputs) {
+    try {
+      const rawFile = `examples/outputs/deploy/${name}-raw.txt`;
+      const raw = readFileSync(rawFile, 'utf8');
+      
+      // Parse the deploy output (exit code 0 for success, 1 for errors)
+      const exitCode = raw.includes('✗  Failed') ? 1 : 0;
+      const parsed = deployParser.parse(raw, stage, exitCode);
+      
+      // Generate formatted outputs
+      const comment = formatter.formatOperationComment(parsed);
+      const summary = formatter.formatOperationSummary(parsed);
+      
+      // Save files
+      const commentFile = `examples/outputs/deploy/${name}-comment.md`;
+      const summaryFile = `examples/outputs/deploy/${name}-summary.md`;
+      
+      writeFileSync(commentFile, comment);
+      writeFileSync(summaryFile, summary);
+      
+      // Create metadata
+      const metadata = {
+        name,
+        app: parsed.app,
+        stage: parsed.stage,
+        resourceChanges: parsed.resourceChanges,
+        success: parsed.success,
+        completionStatus: parsed.completionStatus,
+        permalink: parsed.permalink,
+        resources: parsed.resources.map((r) => ({
+          name: r.name,
+          type: r.type,
+          status: r.status,
+          timing: r.timing
+        })),
+        urls: parsed.urls.map((u) => ({
+          name: u.name,
+          url: u.url,
+          type: u.type
+        })),
+        files: {
+          raw: rawFile,
+          comment: commentFile,
+          summary: summaryFile
+        }
+      };
+      
+      const metadataFile = `examples/outputs/deploy/${name}-metadata.json`;
+      writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));
+      
+      console.log(`✅ Generated deploy example ${name}`);
+    } catch (error) {
+      console.error(`❌ Failed to generate deploy example ${name}:`, error);
+    }
   }
 }
 
@@ -283,8 +367,14 @@ function main() {
   }
 
   if (operation === 'all' || operation === 'diff') {
+    console.log('🔍 Generating diff examples...');
     generateDiffExamples();
     generateSyntheticExamples();
+  }
+
+  if (operation === 'all' || operation === 'deploy') {
+    console.log('🚀 Generating deploy examples...');
+    generateDeployExamples();
   }
 }
 

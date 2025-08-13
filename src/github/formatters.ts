@@ -274,8 +274,8 @@ All resources have been successfully removed.`;
 
     return `### ${icon} ${result.operation.toUpperCase()} ${status}
 
-**Stage:** \`${result.stage}\`  
-**App:** \`${result.app || 'Unknown'}\`  
+**Stage:** \`${result.stage}\`
+**App:** \`${result.app || 'Unknown'}\`
 **Status:** \`${result.completionStatus}\``;
   }
 
