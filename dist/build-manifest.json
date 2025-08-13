@@ -1,9 +1,9 @@
 {
-  "bundleSize": 2023176,
+  "bundleSize": 2023433,
   "bundleSizeMB": "1.93",
-  "integrity": "f30fb6148317fd296ea5eec95d59e9dd26995ae15efc91573c10e94be382807f",
-  "buildTimestamp": "2025-08-13T19:57:10.352Z",
-  "version": "0.2.6",
+  "integrity": "916556190809fa7a275cdb9ac44036c41c8af4a86c0c0f791f2ef176f0b43b83",
+  "buildTimestamp": "2025-08-13T20:04:10.741Z",
+  "version": "0.2.7",
   "nodeVersion": "v20.19.4",
   "sourcemap": true,
   "minified": true,

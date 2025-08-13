@@ -1,8 +1,10 @@
+import * as core from '@actions/core';
 import type { GitHubClient } from '../github/client';
 import { DiffParser } from '../parsers/diff-parser';
 import type { DiffResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
 import { handleGitHubIntegrationError } from '../utils/github-actions';
+import { logActionVersion } from '../utils/version';
 
 /**
  * Diff operation handler for SST infrastructure changes
@@ -28,6 +30,9 @@ export class DiffOperation {
 
   async execute(options: OperationOptions): Promise<DiffResult> {
     try {
+      // Log action version at the start
+      logActionVersion(core.info);
+
       // Execute SST CLI command
       const cliResult = await this.sstExecutor.executeSST(
         'diff',
