@@ -1,0 +1,15 @@
+{
+  "name": "environment-variables",
+  "operation": "diff",
+  "app": "kodehort-scratch",
+  "stage": "dev",
+  "success": true,
+  "description": "Generated from environment-variables.txt",
+  "generatedAt": "2025-08-13T16:43:37.237Z",
+  "files": {
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/environment-variables.txt",
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.comment.md",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.summary.md",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/environment-variables.metadata.json"
+  }
+}

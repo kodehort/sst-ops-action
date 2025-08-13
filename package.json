@@ -15,6 +15,10 @@
     "lint:fix": "bunx ultracite@latest lint --fix",
     "validate": "bun run typecheck && bun run lint && bun run test",
     "dev": "bunx @github/local-action run . src/main.ts .env",
+    "snapshots:generate": "bun run scripts/generate-snapshots.ts",
+    "snapshots:generate:force": "bun run scripts/generate-snapshots.ts --force",
+    "snapshots:validate": "bun run scripts/generate-snapshots.ts --validate",
+    "test:snapshots": "vitest run __tests__/snapshots/",
     "prepare": "lefthook install"
   },
   "repository": {

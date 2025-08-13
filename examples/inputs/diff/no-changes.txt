@@ -1,0 +1,14 @@
+SST 3.17.4  ready!
+
+➜  App:        my-sst-app
+   Stage:      staging
+
+~  Diff
+
+|  No changes required
+
+↗  Permalink   https://console.sst.dev/my-sst-app/staging/diffs/nochanges123
+
+✓  Generated
+
+No changes
