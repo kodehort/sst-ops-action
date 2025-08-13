@@ -20,6 +20,7 @@ const { info, debug } = vi.mocked(core);
 
 // Import mocked fs after setting up the mock
 import { readFileSync } from 'node:fs';
+
 const mockedReadFileSync = vi.mocked(readFileSync);
 
 describe('GitHub Actions Integration', () => {
@@ -108,9 +109,7 @@ describe('GitHub Actions Integration', () => {
 
   describe('logActionVersion', () => {
     it('should log version for deploy operation', () => {
-      mockedReadFileSync.mockReturnValue(
-        JSON.stringify({ version: '1.2.3' })
-      );
+      mockedReadFileSync.mockReturnValue(JSON.stringify({ version: '1.2.3' }));
 
       logActionVersion('deploy');
 
