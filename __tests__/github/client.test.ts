@@ -24,6 +24,17 @@ const mockOctokit = {
   },
 };
 
+// Mock github module
+vi.mock('@actions/github', () => ({
+  getOctokit: vi.fn(),
+  context: {
+    repo: { owner: 'test-owner', repo: 'test-repo' },
+    payload: {
+      pull_request: { number: 123 },
+    },
+  },
+}));
+
 // Mock summary
 const mockSummary = {
   addHeading: vi.fn().mockReturnThis(),
@@ -42,9 +53,8 @@ describe('GitHub Client - API Integration', () => {
     // Setup default mock behaviors
     mockOctokit.rest.issues.listComments.mockResolvedValue({ data: [] } as any);
 
-    // Reset github mock to return our mock octokit
-    const mockGetOctokit = github.getOctokit as any;
-    mockGetOctokit.mockReturnValue(mockOctokit);
+    // Setup github mock
+    (github.getOctokit as any).mockReturnValue(mockOctokit);
 
     // Setup core summary mock - core is already mocked in setup.ts
     (core as any).summary = mockSummary as any;
@@ -86,7 +96,7 @@ describe('GitHub Client - API Integration', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         issue_number: 123,
-        body: expect.stringContaining('SST DEPLOY SUCCESS'),
+        body: expect.stringContaining('🚀 DEPLOY SUCCESS'),
       });
     });
 
@@ -117,7 +127,7 @@ describe('GitHub Client - API Integration', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         issue_number: 123,
-        body: expect.stringContaining('SST DEPLOY FAILED'),
+        body: expect.stringContaining('❌ DEPLOY FAILED'),
       });
     });
 
@@ -200,7 +210,7 @@ describe('GitHub Client - API Integration', () => {
         2
       );
       expect(mockSummary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('operation completed successfully')
+        expect.stringContaining('🔍 Infrastructure Diff Summary')
       );
       expect(mockSummary.write).toHaveBeenCalled();
     });
@@ -217,7 +227,9 @@ describe('GitHub Client - API Integration', () => {
       await client.createWorkflowSummary(failedResult);
 
       expect(mockSummary.addRaw).toHaveBeenCalledWith(
-        expect.stringContaining('operation failed')
+        expect.stringContaining(
+          '![Failed](https://img.shields.io/badge/Status-Failed-red)'
+        )
       );
     });
 
@@ -310,7 +322,7 @@ describe('GitHub Client - API Integration', () => {
       expect(commentBody).toContain('DEPLOY SUCCESS');
       expect(commentBody).toContain('**Stage:** `production`');
       expect(commentBody).toContain('**App:** `my-app`');
-      expect(commentBody).toContain('Resource Changes:** 5');
+      expect(commentBody).toContain('**Total Changes:** 5');
       expect(commentBody).toContain('https://my-app.com');
       expect(commentBody).toContain('https://api.my-app.com');
       expect(commentBody).toContain(
@@ -340,7 +352,7 @@ describe('GitHub Client - API Integration', () => {
 
       const commentBody =
         mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
-      expect(commentBody).toContain('SST DIFF SUCCESS');
+      expect(commentBody).toContain('🔍 DIFF SUCCESS');
       expect(commentBody).toContain('3 resources to create, 2 to update');
     });
 
@@ -365,8 +377,8 @@ describe('GitHub Client - API Integration', () => {
 
       const commentBody =
         mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
-      expect(commentBody).toContain('SST REMOVE SUCCESS');
-      expect(commentBody).toContain('**Resources Removed:** 8');
+      expect(commentBody).toContain('🗑️ REMOVE SUCCESS');
+      expect(commentBody).toContain('Resources cleaned up: 8');
       expect(commentBody).toContain('All resources successfully removed');
     });
   });

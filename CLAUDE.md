@@ -47,7 +47,7 @@ bun run prepare
 - **Entry Point**: `src/main.ts` - GitHub Action entry point with basic input validation
 - **Operations**: `src/operations/` - Deploy, diff, and remove operation implementations
 - **Parsers**: `src/parsers/` - Input validation and parsing for each operation
-- **GitHub Integration**: `src/github/` - GitHub API client and comment formatters
+- **GitHub Integration**: `src/github/` - GitHub API client and unified formatting system
 - **Types**: `src/types/` - TypeScript definitions for operations, outputs, and SST structures
 - **Utilities**: `src/utils/` - CLI execution, error handling, validation helpers
 
@@ -121,3 +121,20 @@ The action interfaces with SST CLI commands and expects:
 
 Operations are designed to parse SST CLI output and extract structured information about deployments, planned changes, and resource management.
 
+### GitHub Formatting Architecture
+
+All GitHub comment and workflow summary formatting is handled by a **single source of truth**: the `OperationFormatter` class in `src/github/formatters.ts`. This ensures consistent formatting across:
+
+- **PR Comments**: Rich, operation-specific comments with status, resource changes, and action details
+- **Workflow Summaries**: Detailed summaries with infrastructure changes, resource breakdowns, and visual diff content
+- **All Operations**: Deploy, diff, and remove operations each have specialized formatting
+
+The `GitHubClient` (`src/github/client.ts`) uses the `OperationFormatter` for all content generation, eliminating formatting duplication and ensuring consistency between comments and summaries.
+
+**Key Formatting Features:**
+- Rich markdown with emojis and status badges
+- Operation-specific content (diff summaries show infrastructure changes with resource counts)
+- Formatted diff content in code blocks for diff operations
+- Resource change breakdowns with action icons
+- Console integration links
+- Consistent styling across all operations
