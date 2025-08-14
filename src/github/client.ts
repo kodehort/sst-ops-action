@@ -131,10 +131,7 @@ export class GitHubClient {
     try {
       const summaryContent = this.formatter.formatOperationSummary(result);
 
-      await core.summary
-        .addHeading(`SST ${result.operation.toUpperCase()} Summary`, 2)
-        .addRaw(summaryContent)
-        .write();
+      await core.summary.addRaw(summaryContent).write();
 
       core.info(
         `Successfully created workflow summary for ${result.operation}`
