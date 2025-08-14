@@ -26,6 +26,13 @@ concurrency:
   cancel-in-progress: false
 
 permissions: write-all
+# permissions:
+#   contents: write
+#   packages: write
+#   pull-requests: write
+#   issues: write
+#   actions: read
+#   id-token: write
 
 jobs:
   determine-release:
@@ -420,7 +427,7 @@ jobs:
           - **Format:** ES Modules for GitHub Actions
           - **Target:** Node.js 20+
           - **Source Maps:** Included for debugging
-          - **Distribution:** Files committed to repository for GitHub Actions compatibility
+          - **Distribution:** Files included in repository at tagged version
 
           EOF
           fi
@@ -482,15 +489,16 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
 
-          # Add all changed files including distribution files for GitHub Actions compatibility
-          git add package.json CHANGELOG.md dist/
+          # Add all changed files including dist/ for release (force add dist/ since it's gitignored)
+          git add package.json CHANGELOG.md
+          git add dist/
 
           # Commit changes
           git commit -m "chore(release): v${NEW_VERSION} [skip ci]
 
           - Update package.json version to ${NEW_VERSION}
           - Update CHANGELOG.md with release notes
-          - Add distribution files for GitHub Actions compatibility"
+          - Add distribution files for release v${NEW_VERSION}"
 
           # Create annotated tag
           git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
@@ -502,6 +510,8 @@ jobs:
           git push origin "v${NEW_VERSION}"
 
           echo "✅ Version committed and tagged"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -525,6 +535,8 @@ jobs:
           git push -f origin "$MAJOR_VERSION"
 
           echo "✅ Major version tag updated: $MAJOR_VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-success:
     name: Notify Release Success
