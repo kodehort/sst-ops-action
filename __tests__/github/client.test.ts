@@ -205,10 +205,7 @@ describe('GitHub Client - API Integration', () => {
     it('should create workflow summary for successful operation', async () => {
       await client.createWorkflowSummary(mockDiffResult);
 
-      expect(mockSummary.addHeading).toHaveBeenCalledWith(
-        'SST DIFF Summary',
-        2
-      );
+      expect(mockSummary.addHeading).not.toHaveBeenCalled();
       expect(mockSummary.addRaw).toHaveBeenCalledWith(
         expect.stringContaining('🔍 Infrastructure Diff Summary')
       );

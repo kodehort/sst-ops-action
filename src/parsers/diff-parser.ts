@@ -44,16 +44,16 @@ export class DiffParser extends OperationParser<DiffResult> {
     const commonInfo = this.parseCommonInfo(lines);
 
     // Extract only the diff section for parsing changes
-    const diffSection = this.extractDiffSection(processedOutput);
+    const _diffSection = this.extractDiffSection(processedOutput);
 
     // Determine success based on exit code and error patterns
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
-    // Parse diff-specific information from the diff section
-    const changes = this.parsePlannedChanges(diffSection);
+    // Parse diff-specific information from the entire output (not just diff section)
+    const changes = this.parsePlannedChanges(processedOutput);
     const plannedChanges = changes.length;
     const changeSummary = this.generateChangeSummary(
-      diffSection,
+      processedOutput,
       plannedChanges,
       exitCode
     );
