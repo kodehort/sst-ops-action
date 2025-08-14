@@ -286,6 +286,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Git Config
         run: |
@@ -537,6 +538,7 @@ jobs:
           echo "✅ Major version tag updated: $MAJOR_VERSION"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-success:
     name: Notify Release Success
