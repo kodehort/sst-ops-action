@@ -10,13 +10,8 @@ import { DefaultArtifactClient } from '@actions/artifact';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as io from '@actions/io';
-import type {
-  BaseOperationResult,
-  CommentMode,
-  DeployResult,
-  DiffResult,
-  RemoveResult,
-} from '../types/index.js';
+import type { BaseOperationResult, CommentMode } from '../types/index.js';
+import { OperationFormatter } from './formatters.js';
 
 /**
  * Comment creation options
@@ -42,6 +37,7 @@ interface ArtifactOptions {
 export class GitHubClient {
   private readonly octokit: ReturnType<typeof github.getOctokit>;
   private readonly context: typeof github.context;
+  private readonly formatter: OperationFormatter;
 
   constructor(token?: string) {
     const githubToken =
@@ -53,6 +49,7 @@ export class GitHubClient {
     }
     this.octokit = github.getOctokit(githubToken);
     this.context = github.context;
+    this.formatter = new OperationFormatter();
   }
 
   /**
@@ -132,13 +129,11 @@ export class GitHubClient {
    */
   async createWorkflowSummary(result: BaseOperationResult): Promise<void> {
     try {
-      const summaryContent = this.formatSummary(result);
+      const summaryContent = this.formatter.formatOperationSummary(result);
 
       await core.summary
         .addHeading(`SST ${result.operation.toUpperCase()} Summary`, 2)
         .addRaw(summaryContent)
-        .addSeparator()
-        .addRaw(this.formatExecutionDetails(result))
         .write();
 
       core.info(
@@ -248,182 +243,10 @@ export class GitHubClient {
    * Format comment based on operation type and result
    */
   private formatComment(result: BaseOperationResult): string {
-    const header = this.formatCommentHeader(result);
-    const content = this.formatOperationContent(result);
-    const footer = this.formatCommentFooter(result);
+    // Use OperationFormatter for the main content
+    const mainContent = this.formatter.formatOperationComment(result);
 
-    return `${header}\n\n${content}\n\n${footer}`;
-  }
-
-  /**
-   * Format comment header with status and basic info
-   */
-  private formatCommentHeader(result: BaseOperationResult): string {
-    const statusIcon = result.success ? '✅' : '❌';
-    const statusText = result.success ? 'SUCCESS' : 'FAILED';
-    const operationName = result.operation.toUpperCase();
-
-    return `## ${statusIcon} SST ${operationName} ${statusText}
-
-**Stage:** \`${result.stage}\`  
-**App:** \`${result.app || 'Unknown'}\`  
-**Status:** \`${result.completionStatus}\``;
-  }
-
-  /**
-   * Format operation-specific content
-   */
-  private formatOperationContent(result: BaseOperationResult): string {
-    switch (result.operation) {
-      case 'deploy':
-        return this.formatDeployContent(result as DeployResult);
-      case 'diff':
-        return this.formatDiffContent(result as DiffResult);
-      case 'remove':
-        return this.formatRemoveContent(result as RemoveResult);
-      default:
-        return this.formatGenericContent(result);
-    }
-  }
-
-  /**
-   * Format deploy operation content
-   */
-  private formatDeployContent(result: DeployResult): string {
-    let content = `### Deployment Results
-
-**Resource Changes:** ${result.resourceChanges || 0}`;
-
-    if (result.urls && result.urls.length > 0) {
-      content += '\n**Deployed URLs:**\n';
-      for (const url of result.urls) {
-        content += `- [${url.type}](${url.url})\n`;
-      }
-    }
-
-    if (result.permalink) {
-      content += `\n**Console:** [View in SST Console](${result.permalink})`;
-    }
-
-    return content;
-  }
-
-  /**
-   * Format diff operation content
-   */
-  private formatDiffContent(result: DiffResult): string {
-    let content = '### Infrastructure Changes Preview';
-
-    if (result.changeSummary) {
-      content += `\n\n${result.changeSummary}`;
-    } else {
-      content += '\n\nNo changes detected.';
-    }
-
-    return content;
-  }
-
-  /**
-   * Format remove operation content
-   */
-  private formatRemoveContent(result: RemoveResult): string {
-    let content = `### Resource Cleanup
-
-**Resources Removed:** ${result.resourcesRemoved || 0}`;
-
-    if (result.completionStatus === 'partial') {
-      content +=
-        '\n\n⚠️ **Partial cleanup completed.** Some resources may still exist.';
-    } else if (result.completionStatus === 'complete') {
-      content += '\n\n✅ **All resources successfully removed.**';
-    }
-
-    return content;
-  }
-
-  /**
-   * Format generic content for unknown operations
-   */
-  private formatGenericContent(result: BaseOperationResult): string {
-    return `### Operation Results
-
-**Exit Code:** ${result.exitCode}  
-**Duration:** ${this.calculateDuration(result)}ms`;
-  }
-
-  /**
-   * Format comment footer with execution details
-   */
-  private formatCommentFooter(result: BaseOperationResult): string {
-    const duration = this.calculateDuration(result);
-    const timestamp = new Date().toISOString();
-
-    let footer = `---
-*Executed at ${timestamp}*`;
-
-    if (duration) {
-      footer += ` *• Duration: ${duration}ms*`;
-    }
-
-    if (result.truncated) {
-      footer += ' *• Output truncated*';
-    }
-
-    return footer;
-  }
-
-  /**
-   * Format workflow summary content
-   */
-  private formatSummary(result: BaseOperationResult): string {
-    const statusIcon = result.success ? '✅' : '❌';
-
-    let summary = `${statusIcon} **${result.operation.toUpperCase()}** operation ${result.success ? 'completed successfully' : 'failed'}
-
-| Property | Value |
-|----------|-------|
-| Stage | \`${result.stage}\` |
-| App | \`${result.app || 'Unknown'}\` |
-| Status | \`${result.completionStatus}\` |
-| Exit Code | \`${result.exitCode}\` |`;
-
-    // Add operation-specific details
-    if (result.operation === 'deploy') {
-      const deployResult = result as DeployResult;
-      summary += `
-| Resource Changes | \`${deployResult.resourceChanges || 0}\` |`;
-
-      if (deployResult.urls && deployResult.urls.length > 0) {
-        summary += `
-| URLs | ${deployResult.urls.length} deployed |`;
-      }
-    }
-
-    if (result.permalink) {
-      summary += `
-| Console | [View in SST Console](${result.permalink}) |`;
-    }
-
-    return summary;
-  }
-
-  /**
-   * Format execution details for summary
-   */
-  private formatExecutionDetails(result: BaseOperationResult): string {
-    const duration = this.calculateDuration(result);
-
-    let details = `### Execution Details
-
-- **Duration:** ${duration}ms
-- **Truncated:** ${result.truncated ? 'Yes' : 'No'}`;
-
-    if (result.error) {
-      details += `
-- **Error:** ${result.error}`;
-    }
-
-    return details;
+    return mainContent;
   }
 
   /**
