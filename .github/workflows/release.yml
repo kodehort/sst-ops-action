@@ -25,14 +25,13 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions: write-all
-# permissions:
-#   contents: write
-#   packages: write
-#   pull-requests: write
-#   issues: write
-#   actions: read
-#   id-token: write
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  issues: write
+  actions: read
+  id-token: write
 
 jobs:
   determine-release:
@@ -509,9 +508,6 @@ jobs:
           git push origin "v${NEW_VERSION}"
 
           echo "✅ Version committed and tagged"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -520,9 +516,6 @@ jobs:
           tag_name: v${{ needs.determine-release.outputs.new-version }}
           name: "SST Ops Action v${{ needs.determine-release.outputs.new-version }}"
           body_path: ./RELEASE_NOTES.md
-          files: |
-            action.yml
-            package.json
           draft: false
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
 
@@ -538,9 +531,6 @@ jobs:
           git push -f origin "$MAJOR_VERSION"
 
           echo "✅ Major version tag updated: $MAJOR_VERSION"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-success:
     name: Notify Release Success
