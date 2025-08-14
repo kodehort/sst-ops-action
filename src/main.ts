@@ -22,6 +22,28 @@ import {
 } from './utils/validation';
 
 /**
+ * Validate and normalize SSTRunner input
+ * @param input Raw runner input from GitHub Actions
+ * @returns Valid SSTRunner type with fallback to 'bun'
+ */
+function validateSSTRunner(input: string): SSTRunner {
+  const validRunners: SSTRunner[] = ['bun', 'npm', 'pnpm', 'yarn', 'sst'];
+
+  if (validRunners.includes(input as SSTRunner)) {
+    return input as SSTRunner;
+  }
+
+  // Log warning for invalid runner and fallback to bun
+  if (input && input.trim() !== '') {
+    core.warning(
+      `⚠️ Invalid runner '${input}'. Valid options: ${validRunners.join(', ')}. Falling back to 'bun'.`
+    );
+  }
+
+  return 'bun';
+}
+
+/**
  * Compute stage name from GitHub context when not explicitly provided
  */
 function computeStageFromContext(
@@ -58,6 +80,14 @@ function computeStageFromContext(
 
 /**
  * Parse GitHub Actions inputs into a typed structure
+ *
+ * Processes raw GitHub Actions input parameters and converts them into a
+ * strongly-typed OperationOptions object. Handles stage computation from
+ * Git context when not explicitly provided, and applies operation-specific
+ * input filtering to avoid validation errors.
+ *
+ * @returns Validated OperationOptions ready for use by operation handlers
+ * @throws ValidationError if inputs don't match expected schemas
  */
 function parseGitHubActionsInputs() {
   // Get the operation first to determine which inputs are needed
@@ -100,7 +130,7 @@ function parseGitHubActionsInputs() {
       commentMode: core.getInput('comment-mode') || 'on-success',
       failOnError: core.getBooleanInput('fail-on-error') ?? true,
       maxOutputSize: core.getInput('max-output-size') || '50000',
-      runner: (core.getInput('runner') || 'bun') as SSTRunner,
+      runner: validateSSTRunner(core.getInput('runner') || 'bun'),
     };
   }
 
@@ -113,6 +143,12 @@ function parseGitHubActionsInputs() {
 
 /**
  * Handle input validation errors with proper error conversion
+ *
+ * Converts validation errors into ActionError format and handles them
+ * according to the configured error handling strategy. Provides detailed
+ * error context for debugging input validation issues.
+ *
+ * @param error The validation error that occurred during input parsing
  */
 function handleInputValidationError(error: unknown): void {
   if (error instanceof ValidationError) {
@@ -409,6 +445,16 @@ function setGitHubActionsOutputs(result: OperationResult): void {
 
 /**
  * Main entry point for the SST Operations Action
+ *
+ * Coordinates the complete action workflow: input parsing and validation,
+ * operation execution, result formatting, and error handling. Provides
+ * comprehensive error recovery and ensures consistent output formatting
+ * regardless of operation success or failure.
+ *
+ * This function represents the top-level orchestration of all SST operations,
+ * handling the integration between GitHub Actions, SST CLI, and result reporting.
+ *
+ * @returns Promise that resolves when the action completes (success or failure)
  */
 export async function run(): Promise<void> {
   try {

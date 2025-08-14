@@ -62,8 +62,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Parse common information present in all SST CLI outputs
-   * @param lines Output lines
-   * @returns Partial result with common fields
+   *
+   * Extracts standardized information that appears across all SST operations,
+   * including app name, permalink, and completion status. This provides a
+   * consistent foundation for operation-specific parsers.
+   *
+   * @param lines Array of output lines from SST CLI
+   * @returns Partial result containing common fields (app, permalink, completionStatus)
    */
   protected parseCommonInfo(lines: string[]): Partial<BaseOperationResult> {
     const fullOutput = lines.join('\n');
@@ -102,8 +107,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Split SST CLI output into logical sections for easier processing
-   * @param output Raw output string
-   * @returns Array of output sections
+   *
+   * Divides the CLI output into manageable chunks separated by double newlines.
+   * This helps isolate different phases of SST operations (build, deploy, etc.)
+   * for more targeted parsing.
+   *
+   * @param output Raw output string from SST CLI
+   * @returns Array of output sections, with empty sections filtered out
    */
   protected splitIntoSections(output: string): string[] {
     try {
@@ -116,8 +126,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Clean and normalize text for parsing
-   * @param text Raw text input
-   * @returns Cleaned text
+   *
+   * Standardizes text format by normalizing line endings, removing trailing
+   * whitespace, and reducing excessive blank lines. This ensures consistent
+   * parsing behavior across different environments and SST versions.
+   *
+   * @param text Raw text input from SST CLI
+   * @returns Cleaned and normalized text ready for pattern matching
    */
   protected cleanText(text: string): string {
     if (!text || typeof text !== 'string') {
@@ -145,9 +160,14 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Extract sections based on a start marker pattern
-   * @param lines Array of output lines
-   * @param startPattern Regex pattern that marks the start of a section
-   * @returns Array of lines from the matching section onwards
+   *
+   * Locates a specific marker in the output and returns all content that follows.
+   * This is useful for extracting operation-specific content that appears after
+   * build phases or status indicators.
+   *
+   * @param lines Array of output lines to search through
+   * @param startPattern Regex pattern that marks the start of the desired section
+   * @returns Array of lines from the matching section onwards, or empty array if not found
    */
   protected extractSectionAfterMarker(
     lines: string[],
@@ -184,10 +204,19 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     pattern: RegExp
   ): RegExpMatchArray[] {
     const matches: RegExpMatchArray[] = [];
-    const globalPattern = new RegExp(pattern.source, pattern.flags + 'g');
-    let match: RegExpMatchArray | null;
 
     try {
+      if (!pattern?.source) {
+        return matches;
+      }
+
+      // Ensure global flag is set, avoid duplicate 'g' flags
+      const flags = pattern.flags.includes('g')
+        ? pattern.flags
+        : pattern.flags + 'g';
+      const globalPattern = new RegExp(pattern.source, flags);
+      let match: RegExpMatchArray | null;
+
       // biome-ignore lint/suspicious/noAssignInExpressions: Standard regex iteration pattern
       while ((match = globalPattern.exec(output)) !== null) {
         matches.push(match);
@@ -201,8 +230,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Extract resource information from output lines
-   * @param lines Output lines
-   * @returns Array of resource entries
+   *
+   * Identifies and extracts lines that match the SST resource format (pipe-prefixed).
+   * These typically contain information about deployed infrastructure components
+   * like functions, APIs, and storage resources.
+   *
+   * @param lines Array of output lines to filter
+   * @returns Array of resource entries with pipe prefixes removed
    */
   protected extractResourceLines(lines: string[]): string[] {
     return lines
@@ -215,8 +249,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Extract URL information from output lines
-   * @param lines Output lines
-   * @returns Array of URL entries
+   *
+   * Parses lines containing URL information for deployed services.
+   * Recognizes different URL types (Router, Api, Web, Website) and extracts
+   * both the type and URL for structured access to deployed endpoints.
+   *
+   * @param lines Array of output lines to parse
+   * @returns Array of URL entries with type and url properties
    */
   protected extractUrlLines(
     lines: string[]
@@ -254,9 +293,14 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Check if output indicates a successful operation
-   * @param output Raw output
-   * @param exitCode CLI exit code
-   * @returns True if operation appears successful
+   *
+   * Determines operation success by examining both the process exit code and
+   * output content for failure indicators. Uses a conservative approach where
+   * partial completion is considered successful with warnings.
+   *
+   * @param output Raw output text to analyze for failure patterns
+   * @param exitCode Process exit code (0 = success, non-zero = failure)
+   * @returns True if operation appears successful, false otherwise
    */
   protected isSuccessfulOperation(output: string, exitCode: number): boolean {
     // Primary indicator: exit code
@@ -275,9 +319,13 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
   /**
    * Extract the diff section from the full SST output
-   * Skips the build output and returns only the actual diff part
-   * @param output Raw output
-   * @returns Diff section or original output if marker not found
+   *
+   * Isolates the actual diff content by skipping build and preparation phases.
+   * Looks for the "✓ Generated" marker that indicates the start of diff output,
+   * providing clean diff content for formatting and analysis.
+   *
+   * @param output Raw output from SST diff command
+   * @returns Diff section content, or original output if marker not found
    */
   protected extractDiffSection(output: string): string {
     const lines = output.split('\n');
