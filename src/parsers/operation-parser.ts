@@ -12,7 +12,6 @@ const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
 const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
 const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
 const DIFF_SECTION_START_PATTERN = /^✓\s+Generated\s*$/m;
-const DURATION_PATTERN = /^Duration:\s+(\d+)s$/m;
 const RESOURCE_LINE_PATTERN = /^\|\s+(.+)$/m;
 const URL_LINE_PATTERN = /^\s*(Router|Api|Web|Website):\s+(https?:\/\/.+)$/m;
 const SECTION_SEPARATOR_PATTERN = /\n\n+/;
@@ -42,9 +41,6 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
     // Diff section marker
     DIFF_SECTION_START: DIFF_SECTION_START_PATTERN,
-
-    // Duration and timing
-    DURATION: DURATION_PATTERN,
 
     // Generic resource patterns (to be extended by subclasses)
     RESOURCE_LINE: RESOURCE_LINE_PATTERN,
@@ -95,11 +91,8 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       } else if (this.patterns.COMPLETION_FAILED.test(fullOutput)) {
         result.completionStatus = 'failed';
       }
-
-      // Note: Duration is not part of BaseOperationResult type currently
-      // Can be added to specific operation result types as needed
     } catch (_error) {
-      // Duration parsing is optional - continue without it
+      // Parsing is optional - continue without it
     }
 
     return result;
