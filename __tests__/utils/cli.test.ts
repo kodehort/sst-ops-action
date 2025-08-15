@@ -184,31 +184,6 @@ describe('SST CLI Utilities - Command Execution', () => {
         expect(result.output.length).toBe(50);
       });
 
-      it('should build environment variables correctly', async () => {
-        const operation: SSTOperation = 'deploy';
-        const stage = 'staging';
-        const options: CLIOptions = {
-          env: {
-            AWS_REGION: 'us-west-2',
-            CUSTOM_VAR: 'test-value',
-          },
-        };
-
-        await executor.executeSST(operation, stage, options);
-
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', 'deploy', '--stage', 'staging'],
-          expect.objectContaining({
-            env: expect.objectContaining({
-              AWS_REGION: 'us-west-2',
-              CUSTOM_VAR: 'test-value',
-              SST_TELEMETRY_DISABLED: '1',
-              CI: '1',
-            }),
-          })
-        );
-      });
     });
 
   });
@@ -245,21 +220,6 @@ describe('SST CLI Utilities - Command Execution', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle custom working directory', async () => {
-      const operation: SSTOperation = 'deploy';
-      const stage = 'staging';
-      const customCwd = '/custom/path';
-
-      await executor.executeSST(operation, stage, { cwd: customCwd });
-
-      expect(mockExec.exec).toHaveBeenCalledWith(
-        'bun',
-        ['sst', 'deploy', '--stage', 'staging'],
-        expect.objectContaining({
-          cwd: customCwd,
-        })
-      );
-    });
 
     it('should handle custom arguments', async () => {
       const operation: SSTOperation = 'deploy';

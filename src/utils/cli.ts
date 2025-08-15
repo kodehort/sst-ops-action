@@ -43,10 +43,6 @@ export type SSTRunner = (typeof SST_RUNNERS)[number];
  * Options for CLI command execution
  */
 export interface CLIOptions {
-  /** Environment variables to pass to the command */
-  env?: Record<string, string> | undefined;
-  /** Working directory for the command */
-  cwd?: string | undefined;
   /** Timeout in milliseconds (default: 15 minutes) */
   timeout?: number | undefined;
   /** Maximum output size in bytes (default: 50KB) */
@@ -93,9 +89,6 @@ export class SSTCLIExecutor {
     const command = this.buildCommand(operation, stage, options);
 
     try {
-      // Validate environment and prerequisites
-      await this.validateEnvironment(options.cwd);
-
       // Execute the command
       const result = await this.executeCommand(command, {
         ...options,
@@ -221,16 +214,12 @@ export class SSTCLIExecutor {
     let exitCode = 0;
 
     try {
-      const env = this.buildEnvironment(options.env);
-      const cwd = options.cwd || process.cwd();
 
       // Create a timeout promise if timeout is specified
       if (!command[0]) {
         throw new Error('Command array is empty');
       }
       const execPromise = exec.exec(command[0], command.slice(1), {
-        cwd,
-        env,
         ignoreReturnCode: true,
         listeners: {
           stdout: (data: Buffer) => {
@@ -319,74 +308,7 @@ export class SSTCLIExecutor {
     };
   }
 
-  /**
-   * Build environment variables for SST CLI execution
-   */
-  private buildEnvironment(
-    customEnv?: Record<string, string>
-  ): Record<string, string> {
-    const env: Record<string, string> = {
-      ...process.env,
-      // Ensure Node.js can find modules
-      NODE_PATH: process.env.NODE_PATH || '',
-      // Set production environment for SST
-      NODE_ENV: process.env.NODE_ENV || 'production',
-      // Disable SST telemetry in CI environments
-      SST_TELEMETRY_DISABLED: '1',
-      // Ensure non-interactive mode
-      CI: '1',
-    };
 
-    // Add custom environment variables
-    if (customEnv) {
-      for (const [key, value] of Object.entries(customEnv)) {
-        if (value !== undefined) {
-          env[key] = value;
-        }
-      }
-    }
-
-    // Filter out undefined values
-    const filteredEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(env)) {
-      if (value !== undefined && value !== null) {
-        filteredEnv[key] = String(value);
-      }
-    }
-
-    return filteredEnv;
-  }
-
-  /**
-   * Validate the environment before executing SST commands
-   */
-  private async validateEnvironment(cwd?: string): Promise<void> {
-    const workingDir = cwd || process.cwd();
-
-    // Check if sst.config.ts exists
-    const configPaths = ['sst.config.ts', 'sst.config.js', 'sst.config.mjs'];
-
-    // Check all config paths in parallel for better performance
-    const configChecks = configPaths.map(async (configPath) => {
-      try {
-        await accessAsync(join(workingDir, configPath), constants.F_OK);
-        return configPath;
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(configChecks);
-    const configFound = results.some((result) => result !== null);
-
-    if (!configFound) {
-      throw new Error(
-        'SST configuration file not found. Expected one of: ' +
-          configPaths.join(', ') +
-          ` in ${workingDir}`
-      );
-    }
-  }
 
 
 }
