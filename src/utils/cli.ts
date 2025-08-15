@@ -198,10 +198,10 @@ export class SSTCLIExecutor {
         return ['pnpm', 'sst', operation];
       case 'yarn':
         return ['yarn', 'sst', operation];
-      default:
-        throw new Error(
-          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
-        );
+      default: {
+        const _exhaustive: never = runner;
+        throw new Error(`Unsupported runner: ${_exhaustive}`);
+      }
     }
   }
 
@@ -221,10 +221,10 @@ export class SSTCLIExecutor {
         return ['pnpm', 'sst', ...args];
       case 'yarn':
         return ['yarn', 'sst', ...args];
-      default:
-        throw new Error(
-          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
-        );
+      default: {
+        const _exhaustive: never = runner;
+        throw new Error(`Unsupported runner: ${_exhaustive}`);
+      }
     }
   }
 
