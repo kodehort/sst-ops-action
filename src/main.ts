@@ -13,7 +13,7 @@ import {
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
 import { StageProcessor } from './parsers/stage-processor';
-import type { OperationOptions, OperationResult } from './types';
+import type { OperationOptions, OperationResult, OperationBranchMappings, SSTOperation } from './types';
 import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
@@ -44,18 +44,80 @@ function validateSSTRunner(input: string): SSTRunner {
 }
 
 /**
+ * Parse and validate branch mappings from JSON input
+ * @param input Raw JSON string from GitHub Actions
+ * @returns Parsed OperationBranchMappings or undefined if invalid
+ */
+function parseBranchMappings(input: string): OperationBranchMappings | undefined {
+  if (!input || input.trim() === '') {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(input.trim());
+    
+    // Validate the structure
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      core.warning('⚠️ Branch mappings must be a JSON object');
+      return undefined;
+    }
+
+    const result: OperationBranchMappings = {};
+    
+    // Validate operation-specific mappings
+    for (const operation of ['deploy', 'diff', 'remove']) {
+      if (parsed[operation]) {
+        if (typeof parsed[operation] !== 'object' || Array.isArray(parsed[operation])) {
+          core.warning(`⚠️ Branch mapping for '${operation}' must be an object`);
+          continue;
+        }
+        
+        // Validate branch pattern mappings
+        const operationMappings: Record<string, string> = {};
+        for (const [branch, environment] of Object.entries(parsed[operation])) {
+          if (typeof environment === 'string') {
+            operationMappings[branch] = environment;
+          } else {
+            core.warning(`⚠️ Environment for branch '${branch}' in '${operation}' must be a string`);
+          }
+        }
+        
+        if (Object.keys(operationMappings).length > 0) {
+          result[operation as keyof OperationBranchMappings] = operationMappings;
+        }
+      }
+    }
+
+    core.debug(`Parsed branch mappings: ${JSON.stringify(result)}`);
+    return Object.keys(result).length > 0 ? result : undefined;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    core.warning(`⚠️ Invalid branch mappings JSON: ${message}`);
+    return undefined;
+  }
+}
+
+/**
  * Compute stage name from GitHub context when not explicitly provided
  */
 function computeStageFromContext(
   fallbackStage = 'main',
   truncationLength = 26,
-  prefix = 'pr-'
+  prefix = 'pr-',
+  operation?: SSTOperation,
+  branchMappings?: OperationBranchMappings
 ): string {
   try {
     const processor = new StageProcessor();
+    
+    // Get operation-specific branch mappings
+    const operationBranchMappings = operation && branchMappings ? branchMappings[operation] : undefined;
+    
     const result = processor.process({
       truncationLength,
       prefix,
+      operation,
+      branchMappings: operationBranchMappings,
     });
 
     if (result.success && result.computedStage) {
@@ -100,10 +162,14 @@ function parseGitHubActionsInputs() {
     10
   );
   const prefix = core.getInput('prefix') || 'pr-';
+  const branchMappingsInput = core.getInput('branch-mappings');
+
+  // Parse branch mappings
+  const branchMappings = parseBranchMappings(branchMappingsInput);
 
   // Compute stage from Git context if not explicitly provided
   if (!stage || stage.trim() === '') {
-    stage = computeStageFromContext('main', truncationLength, prefix);
+    stage = computeStageFromContext('main', truncationLength, prefix, operation as SSTOperation, branchMappings);
     core.info(
       `📋 Stage input was empty, computed from Git context: "${stage}"`
     );
@@ -131,6 +197,7 @@ function parseGitHubActionsInputs() {
       failOnError: core.getBooleanInput('fail-on-error') ?? true,
       maxOutputSize: core.getInput('max-output-size') || '50000',
       runner: validateSSTRunner(core.getInput('runner') || 'bun'),
+      branchMappings,
     };
   }
 
@@ -338,7 +405,8 @@ function handleUnexpectedError(error: unknown): never {
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(
-  inputs: ReturnType<typeof validateOperationWithContext>
+  inputs: ReturnType<typeof validateOperationWithContext>,
+  branchMappings?: OperationBranchMappings
 ): {
   operation: ReturnType<typeof validateOperationWithContext>['operation'];
   options: OperationOptions;
@@ -355,6 +423,7 @@ function createOperationOptions(
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || 'bun',
+          branchMappings,
         },
       };
 
@@ -369,6 +438,7 @@ function createOperationOptions(
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || 'bun',
+          branchMappings,
         },
       };
 
@@ -384,6 +454,7 @@ function createOperationOptions(
           runner: 'bun',
           truncationLength: inputs.truncationLength || 26,
           prefix: inputs.prefix || 'pr-',
+          branchMappings,
         },
       };
 
@@ -480,8 +551,8 @@ export async function run(): Promise<void> {
       return; // Early return after handling validation error
     }
 
-    // 2. Create operation options
-    const { operation, options } = createOperationOptions(inputs);
+    // 2. Create operation options  
+    const { operation, options } = createOperationOptions(inputs, branchMappings);
 
     // 3. Execute the SST operation and handle results
     await executeAndHandleOperation(operation, options);
