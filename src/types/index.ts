@@ -49,6 +49,7 @@ export type {
 } from './sst.js';
 
 import type { SSTRunner } from '../utils/cli.js';
+import { SST_RUNNERS } from '../utils/cli.js';
 import type {
   CommentMode,
   CompletionStatus,
@@ -382,3 +383,9 @@ export function isStageInputs(
 ): inputs is { operation: 'stage' } & StageInputs {
   return inputs.operation === 'stage';
 }
+
+/**
+ * Re-export constants for convenient access
+ */
+export { SST_OPERATIONS } from './operations.js';
+export { SST_RUNNERS } from '../utils/cli.js';

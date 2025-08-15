@@ -17,6 +17,7 @@ import { StageProcessor } from './parsers/stage-processor';
 import type { OperationOptions, OperationResult, SSTOperation } from './types';
 import { SST_OPERATIONS } from './types/operations';
 import type { SSTRunner } from './utils/cli';
+import { SST_RUNNERS } from './utils/cli';
 import {
   createValidationContext,
   ValidationError,
@@ -65,7 +66,7 @@ function validateOperation(input: string): SSTOperation {
  * @returns Valid SSTRunner type with fallback to 'bun'
  */
 function validateSSTRunner(input: string): SSTRunner {
-  const validRunners: SSTRunner[] = ['bun', 'npm', 'pnpm', 'yarn', 'sst'];
+  const validRunners = SST_RUNNERS;
 
   if (validRunners.includes(input as SSTRunner)) {
     return input as SSTRunner;

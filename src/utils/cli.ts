@@ -36,7 +36,8 @@ export interface CLIResult {
 /**
  * Supported package managers/runners for SST commands
  */
-export type SSTRunner = 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
+export const SST_RUNNERS = ['bun', 'npm', 'pnpm', 'yarn', 'sst'] as const;
+export type SSTRunner = (typeof SST_RUNNERS)[number];
 
 /**
  * Options for CLI command execution

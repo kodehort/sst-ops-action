@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { OperationOptions } from '../../src/types';
-import { SSTCLIExecutor, type SSTRunner } from '../../src/utils/cli';
+import { SSTCLIExecutor, SST_RUNNERS, type SSTRunner } from '../../src/utils/cli';
 
 describe('Configurable Runner', () => {
   describe('CLI Command Building', () => {
@@ -112,16 +112,10 @@ describe('Configurable Runner', () => {
 
   describe('Runner Validation', () => {
     it('should validate supported runners', () => {
-      const supportedRunners: SSTRunner[] = [
-        'bun',
-        'npm',
-        'pnpm',
-        'yarn',
-        'sst',
-      ];
+      const supportedRunners = SST_RUNNERS;
 
       for (const runner of supportedRunners) {
-        expect(['bun', 'npm', 'pnpm', 'yarn', 'sst']).toContain(runner);
+        expect(SST_RUNNERS).toContain(runner);
       }
     });
 

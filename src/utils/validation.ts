@@ -11,8 +11,8 @@ import {
   validateMaxOutputSize,
 } from '../types/index.js';
 import type { SSTRunner } from './cli.js';
+import { SST_RUNNERS } from './cli.js';
 
-// Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 
@@ -81,9 +81,9 @@ const CommonFieldSchemas = {
     .default('bun')
     .refine(
       (val): val is SSTRunner =>
-        ['bun', 'npm', 'pnpm', 'yarn', 'sst'].includes(val),
+        SST_RUNNERS.includes(val as SSTRunner),
       {
-        message: 'Invalid runner. Must be one of: bun, npm, pnpm, yarn, sst',
+        message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(', ')}`,
       }
     )
     .transform((val) => val as SSTRunner),
