@@ -78,19 +78,16 @@ describe('Error Handler - Error Processing', () => {
         'Error: Permission denied'
       );
 
-      expect(error).toEqual({
-        type: 'subprocess_error',
-        message: 'Deploy failed with exit code 1',
-        shouldFailAction: true,
-        originalError: undefined,
-        details: {
-          operation: 'deploy',
-          stage: 'production',
-          exitCode: 1,
-          stdout: 'Deploy output',
-          stderr: 'Error: Permission denied',
-        },
-      });
+      expect(error.type).toBe('subprocess_error');
+      expect(error.message).toBe('Deploy failed with exit code 1');
+      expect(error.shouldFailAction).toBe(true);
+      expect(error.details?.operation).toBe('deploy');
+      expect(error.details?.stage).toBe('production');
+      expect(error.details?.exitCode).toBe(1);
+      expect(error.details?.stdout).toBe('Deploy output');
+      expect(error.details?.stderr).toBe('Error: Permission denied');
+      expect(error.details?.metadata).toBeDefined();
+      expect(error.details?.metadata?.timestamp).toBeDefined();
     });
 
     it('should create subprocess error with original error', () => {
@@ -121,17 +118,14 @@ describe('Error Handler - Error Processing', () => {
         '{"invalid": json}'
       );
 
-      expect(error).toEqual({
-        type: 'output_parsing',
-        message: 'Invalid JSON in output',
-        shouldFailAction: false, // Parsing errors don't fail the action
-        originalError: undefined,
-        details: {
-          operation: 'diff',
-          stage: 'staging',
-          stdout: '{"invalid": json}',
-        },
-      });
+      expect(error.type).toBe('output_parsing');
+      expect(error.message).toBe('Invalid JSON in output');
+      expect(error.shouldFailAction).toBe(false);
+      expect(error.details?.operation).toBe('diff');
+      expect(error.details?.stage).toBe('staging');
+      expect(error.details?.stdout).toBe('{"invalid": json}');
+      expect(error.details?.metadata).toBeDefined();
+      expect(error.details?.metadata?.timestamp).toBeDefined();
     });
   });
 

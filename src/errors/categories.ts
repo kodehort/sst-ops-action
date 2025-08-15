@@ -12,6 +12,20 @@ export type ErrorType =
   | 'output_parsing';
 
 /**
+ * Enhanced operation metadata for error context
+ */
+export interface OperationMetadata {
+  timestamp: string;
+  workflowId?: string;
+  runId?: number;
+  runNumber?: number;
+  actor?: string;
+  eventName?: string;
+  ref?: string;
+  sha?: string;
+}
+
+/**
  * Simplified error information structure
  */
 export interface ActionError {
@@ -27,5 +41,6 @@ export interface ActionError {
     stderr?: string;
     field?: string;
     value?: unknown;
+    metadata?: OperationMetadata;
   };
 }

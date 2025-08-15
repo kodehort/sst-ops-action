@@ -123,10 +123,23 @@ export async function executeOperation(
 
 /**
  * Transform operation-specific results to unified OperationResult format
- * @param operationType The operation that was executed
- * @param result The raw result from the operation
- * @param options Original operation options
- * @returns Unified OperationResult
+ *
+ * This function acts as a bridge between raw operation results and the unified
+ * OperationResult type that the action outputs. It handles type normalization,
+ * field mapping, and ensures consistent structure across all operation types.
+ *
+ * @param operationType The operation that was executed ('deploy' | 'diff' | 'remove' | 'stage')
+ * @param result The raw result from the operation handler
+ * @param options Original operation options used for the execution
+ * @returns Unified OperationResult with normalized types and consistent fields
+ *
+ * @example
+ * ```typescript
+ * const rawResult = await deployOperation.execute(options);
+ * const unifiedResult = transformToUnifiedResult('deploy', rawResult, options);
+ * console.log(unifiedResult.operation); // 'deploy'
+ * console.log(unifiedResult.success); // boolean
+ * ```
  */
 function transformToUnifiedResult(
   operationType: SSTOperation,
@@ -152,6 +165,12 @@ function transformToUnifiedResult(
 
 /**
  * Type guard to ensure URL type is valid
+ *
+ * Normalizes URL types to one of the allowed values. Invalid types are mapped to 'other'
+ * to maintain type safety while handling unexpected SST CLI output variations.
+ *
+ * @param type Raw URL type from SST CLI output
+ * @returns Normalized URL type that matches the TypeScript union type
  */
 function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
   const validTypes: Array<'function' | 'api' | 'web' | 'other'> = [
@@ -167,6 +186,12 @@ function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
 
 /**
  * Type guard to ensure resource status is valid
+ *
+ * Normalizes resource status values to ensure type safety. Unknown statuses
+ * default to 'created' to provide a safe fallback behavior.
+ *
+ * @param status Raw resource status from SST CLI output
+ * @returns Normalized resource status ('created' | 'updated' | 'deleted')
  */
 function normalizeResourceStatus(
   status: string
@@ -183,6 +208,12 @@ function normalizeResourceStatus(
 
 /**
  * Type guard to ensure diff action is valid
+ *
+ * Normalizes diff action types for consistent handling. Unknown actions
+ * default to 'update' as the most common operation type.
+ *
+ * @param action Raw diff action from SST CLI output
+ * @returns Normalized diff action ('create' | 'update' | 'delete')
  */
 function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
   const validActions: Array<'create' | 'update' | 'delete'> = [
@@ -197,6 +228,12 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
 
 /**
  * Type guard to ensure remove status is valid
+ *
+ * Normalizes remove operation status values. Unknown statuses default
+ * to 'failed' to err on the side of caution for removal operations.
+ *
+ * @param status Raw remove status from SST CLI output
+ * @returns Normalized remove status ('removed' | 'failed' | 'skipped')
  */
 function normalizeRemoveStatus(
   status: string
@@ -213,6 +250,12 @@ function normalizeRemoveStatus(
 
 /**
  * Transform DeployOperation result to unified format
+ *
+ * Converts raw deploy operation results into the standardized DeployResult format.
+ * Handles URL type normalization, resource status validation, and optional field mapping.
+ *
+ * @param result Raw deploy operation result from the CLI
+ * @returns Standardized DeployResult with normalized types
  */
 function transformDeployResult(
   result: RawOperationResults['deploy']
@@ -255,6 +298,12 @@ function transformDeployResult(
 
 /**
  * Transform DiffOperation result to unified format
+ *
+ * Converts raw diff operation results into the standardized DiffResult format.
+ * Normalizes change actions and handles optional field mapping for diff summaries.
+ *
+ * @param result Raw diff operation result from the CLI
+ * @returns Standardized DiffResult with normalized types
  */
 function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
   const diffResult: DiffResult = {
@@ -299,6 +348,12 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
 
 /**
  * Transform RemoveOperation result to unified format
+ *
+ * Converts raw remove operation results into the standardized RemoveResult format.
+ * Handles resource status normalization and completion status mapping.
+ *
+ * @param result Raw remove operation result from the CLI
+ * @returns Standardized RemoveResult with normalized types
  */
 function transformRemoveResult(
   result: RawOperationResults['remove']
@@ -329,10 +384,24 @@ function transformRemoveResult(
 
 /**
  * Create a failure result for error conditions
- * @param operationType The operation that failed
- * @param error The error that occurred
- * @param options The original operation options
- * @returns Failure result in unified format
+ *
+ * Generates a standardized failure result when operations encounter errors.
+ * This ensures consistent error reporting across all operation types while
+ * maintaining the expected result structure for downstream processing.
+ *
+ * @param operationType The operation that failed ('deploy' | 'diff' | 'remove' | 'stage')
+ * @param error The error that occurred during execution
+ * @param options The original operation options that were being processed
+ * @returns Failure result in unified format with operation-specific default values
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   return await operation.execute(options);
+ * } catch (error) {
+ *   return createFailureResult('deploy', error as Error, options);
+ * }
+ * ```
  */
 function createFailureResult(
   operationType: SSTOperation,
