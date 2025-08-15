@@ -5,7 +5,7 @@
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import type { StageResult, SSTOperation, BranchEnvironmentMapping } from '../types/operations';
+import type { StageResult } from '../types/operations';
 
 // Regex patterns for stage computation
 const PATH_PREFIX_PATTERN = /.*\//;
@@ -21,10 +21,6 @@ export interface StageProcessingOptions {
   truncationLength?: number;
   /** Prefix to add when stage name starts with a number */
   prefix?: string;
-  /** Operation type for branch mapping lookup */
-  operation?: SSTOperation;
-  /** Branch to environment mappings for the operation */
-  branchMappings?: BranchEnvironmentMapping;
 }
 
 /**
@@ -43,7 +39,7 @@ export class StageProcessor {
     const prefix = options.prefix ?? 'pr-';
 
     try {
-      return this.processSuccess(context, truncationLength, prefix, options);
+      return this.processSuccess(context, truncationLength, prefix);
     } catch (error) {
       return this.processError(context, error);
     }
@@ -55,8 +51,7 @@ export class StageProcessor {
   private processSuccess(
     context: typeof github.context,
     truncationLength = 26,
-    prefix = 'pr-',
-    options?: StageProcessingOptions
+    prefix = 'pr-'
   ): StageResult {
     const ref = this.extractRef(context);
 
@@ -64,38 +59,18 @@ export class StageProcessor {
     core.debug(`Event name: ${context.eventName}`);
     core.debug(`Input ref: ${ref}`);
 
-    // Try to resolve stage from branch mappings first
-    let finalStage: string;
-    if (options?.branchMappings && options.operation && ref) {
-      const mappedStage = this.resolveBranchMapping(ref, options.branchMappings);
-      if (mappedStage) {
-        finalStage = mappedStage;
-        core.info(`🎯 Resolved stage from branch mapping: "${ref}" → "${finalStage}"`);
-      } else {
-        // Fallback to computed stage name
-        const computedStage = this.computeStageFromRef(
-          ref,
-          truncationLength,
-          prefix
-        );
-        if (!computedStage) {
-          throw new Error('Failed to generate a valid stage name from Git context');
-        }
-        finalStage = computedStage;
-        core.info(`🎯 No branch mapping found, using computed stage: "${finalStage}"`);
-      }
-    } else {
-      // No branch mappings, use computed stage name
-      const computedStage = this.computeStageFromRef(
-        ref || '',
-        truncationLength,
-        prefix
-      );
-      if (!computedStage) {
-        throw new Error('Failed to generate a valid stage name from Git context');
-      }
-      finalStage = computedStage;
+    // Process the ref into a stage name
+    const computedStage = this.computeStageFromRef(
+      ref || '',
+      truncationLength,
+      prefix
+    );
+
+    if (!computedStage) {
+      throw new Error('Failed to generate a valid stage name from Git context');
     }
+
+    const finalStage = computedStage;
 
     core.debug(`Generated stage: ${finalStage}`);
     this.logDebugInfo(context, finalStage);
@@ -188,38 +163,6 @@ export class StageProcessor {
     }
 
     return stage;
-  }
-
-  /**
-   * Resolve branch name to environment using branch mappings
-   * @param ref Git reference (branch name)
-   * @param branchMappings Branch to environment mappings
-   * @returns Mapped environment name or null if no mapping found
-   */
-  private resolveBranchMapping(
-    ref: string,
-    branchMappings: BranchEnvironmentMapping
-  ): string | null {
-    // Clean the ref to get just the branch name (remove refs/heads/ prefix)
-    const branchName = ref.replace(/^refs\/heads\//, '');
-    
-    core.debug(`Resolving branch mapping for: "${branchName}"`);
-    core.debug(`Available mappings: ${JSON.stringify(branchMappings)}`);
-
-    // Try exact match first
-    if (branchMappings[branchName]) {
-      core.debug(`Found exact match: "${branchName}" → "${branchMappings[branchName]}"`);
-      return branchMappings[branchName];
-    }
-
-    // Try wildcard match
-    if (branchMappings['*']) {
-      core.debug(`Using wildcard mapping: "*" → "${branchMappings['*']}"`);
-      return branchMappings['*'];
-    }
-
-    core.debug('No branch mapping found');
-    return null;
   }
 
   /**

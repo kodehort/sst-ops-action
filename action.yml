@@ -89,15 +89,6 @@ inputs:
       • Only applies to stage operations - ignored by other operations
     required: false
     default: "pr-"
-  branch-mappings:
-    description: |
-      JSON configuration for mapping git branches to SST environments:
-      • Format: JSON object with operation-specific mappings
-      • Example: '{"deploy": {"main": "production", "develop": "staging"}, "diff": {"*": "development"}}'
-      • Supports exact branch names and "*" wildcard for catch-all
-      • Enables trunk-based development without environment-named branches
-      • Priority: exact match > wildcard > computed stage name
-    required: false
 
 outputs:
   success:
