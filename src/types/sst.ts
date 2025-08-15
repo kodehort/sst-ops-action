@@ -25,49 +25,6 @@ export interface SSTResource {
   outputs?: Record<string, unknown>;
 }
 
-export interface SSTFunction extends SSTResource {
-  type: 'Function';
-  properties: {
-    runtime: string;
-    handler: string;
-    size?: number;
-    timeout?: number;
-    memory?: number;
-    environment?: Record<string, string>;
-  };
-  outputs: {
-    arn: string;
-    name: string;
-    url?: string;
-  };
-}
-
-export interface SSTApi extends SSTResource {
-  type: 'Api';
-  outputs: {
-    url: string;
-    customDomainUrl?: string;
-    restApiId: string;
-  };
-}
-
-export interface SSTWebsite extends SSTResource {
-  type: 'StaticSite' | 'NextjsSite' | 'AstroSite' | 'RemixSite';
-  outputs: {
-    url: string;
-    customDomainUrl?: string;
-    distributionId: string;
-    bucketName: string;
-  };
-}
-
-export interface SSTDatabase extends SSTResource {
-  type: 'Table';
-  outputs: {
-    tableName: string;
-    tableArn: string;
-  };
-}
 
 export interface SSTUrl {
   name: string;
@@ -75,18 +32,12 @@ export interface SSTUrl {
   type: 'api' | 'web' | 'function' | 'other';
 }
 
-export type SSTResourceTypes =
-  | SSTFunction
-  | SSTApi
-  | SSTWebsite
-  | SSTDatabase
-  | SSTResource;
 
 export interface SSTDeployOutput {
   app: string;
   stage: string;
   region: string;
-  resources: SSTResourceTypes[];
+  resources: SSTResource[];
   outputs: Record<string, unknown>;
   urls: Array<{
     name: string;

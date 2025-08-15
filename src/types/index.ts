@@ -36,21 +36,16 @@ export type {
 
 // SST CLI types
 export type {
-  SSTApi,
   SSTCommandResult,
   SSTConfig,
-  SSTDatabase,
   SSTDeployOutput,
   SSTDiffOutput,
   SSTError,
-  SSTFunction,
   SSTParsePatterns,
   SSTRemoveOutput,
   SSTResource,
-  SSTResourceTypes,
   SSTUrl,
   SSTValidationResult,
-  SSTWebsite,
 } from './sst.js';
 
 import type { SSTRunner } from '../utils/cli.js';
