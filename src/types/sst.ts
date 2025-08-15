@@ -25,13 +25,11 @@ export interface SSTResource {
   outputs?: Record<string, unknown>;
 }
 
-
 export interface SSTUrl {
   name: string;
   url: string;
   type: 'api' | 'web' | 'function' | 'other';
 }
-
 
 export interface SSTDeployOutput {
   app: string;

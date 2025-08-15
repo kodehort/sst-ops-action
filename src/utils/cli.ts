@@ -3,13 +3,8 @@
  * Provides reliable SST CLI command execution for all operation types
  */
 
-import { access, constants } from 'node:fs';
-import { join } from 'node:path';
-import { promisify } from 'node:util';
 import * as exec from '@actions/exec';
 import type { SSTOperation } from '../types/index.js';
-
-const accessAsync = promisify(access);
 
 /**
  * Result of executing a CLI command
@@ -64,7 +59,6 @@ export interface SSTCommandResult extends CLIResult {
   /** Operation that was performed */
   operation: SSTOperation;
 }
-
 
 /**
  * SST CLI executor with comprehensive error handling and timeout management
@@ -198,7 +192,6 @@ export class SSTCLIExecutor {
     }
   }
 
-
   /**
    * Execute a command with timeout and output capture
    */
@@ -214,8 +207,6 @@ export class SSTCLIExecutor {
     let exitCode = 0;
 
     try {
-
-      // Create a timeout promise if timeout is specified
       if (!command[0]) {
         throw new Error('Command array is empty');
       }
@@ -260,7 +251,6 @@ export class SSTCLIExecutor {
         try {
           exitCode = await Promise.race([execPromise, timeoutPromise]);
         } finally {
-          // Always clear the timeout to prevent event loop hanging
           if (timeoutId) {
             clearTimeout(timeoutId);
           }
@@ -307,10 +297,6 @@ export class SSTCLIExecutor {
       truncated,
     };
   }
-
-
-
-
 }
 
 /**

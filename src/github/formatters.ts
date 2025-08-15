@@ -62,7 +62,7 @@ export class OperationFormatter {
       case 'stage':
         return this.formatGenericComment(result);
       default: {
-        const _exhaustive: never = result;
+        const _exhaustive: never = result.operation;
         return this.formatGenericComment(result);
       }
     }
@@ -82,7 +82,7 @@ export class OperationFormatter {
       case 'stage':
         return this.formatGenericSummary(result);
       default: {
-        const _exhaustive: never = result;
+        const _exhaustive: never = result.operation;
         return this.formatGenericSummary(result);
       }
     }

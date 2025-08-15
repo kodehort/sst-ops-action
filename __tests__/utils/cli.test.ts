@@ -183,9 +183,7 @@ describe('SST CLI Utilities - Command Execution', () => {
         expect(result.truncated).toBe(true);
         expect(result.output.length).toBe(50);
       });
-
     });
-
   });
 
   describe('Factory Functions', () => {
@@ -220,7 +218,6 @@ describe('SST CLI Utilities - Command Execution', () => {
   });
 
   describe('Edge Cases', () => {
-
     it('should handle custom arguments', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';

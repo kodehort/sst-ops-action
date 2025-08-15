@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 import type { OperationOptions } from '../../src/types';
-import { SSTCLIExecutor, SST_RUNNERS, type SSTRunner } from '../../src/utils/cli';
+import {
+  SST_RUNNERS,
+  SSTCLIExecutor,
+  type SSTRunner,
+} from '../../src/utils/cli';
 
 describe('Configurable Runner', () => {
   describe('CLI Command Building', () => {
@@ -130,5 +134,4 @@ describe('Configurable Runner', () => {
       }).toThrow('Unsupported runner: invalid-runner');
     });
   });
-
 });
