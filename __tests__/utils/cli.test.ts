@@ -211,69 +211,6 @@ describe('SST CLI Utilities - Command Execution', () => {
       });
     });
 
-    describe('checkSSTAvailability', () => {
-      it('should detect available SST CLI', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stdout) {
-              options.listeners.stdout(Buffer.from('2.41.3\n'));
-            }
-            return 0;
-          }
-        );
-
-        const result = await executor.checkSSTAvailability();
-
-        expect(result.available).toBe(true);
-        expect(result.version).toBe('2.41.3');
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', '--version'],
-          expect.any(Object)
-        );
-      });
-
-      it('should handle SST CLI error response', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stderr) {
-              options.listeners.stderr(Buffer.from('Command not found\n'));
-            }
-            return 1;
-          }
-        );
-
-        const result = await executor.checkSSTAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.error).toContain('SST CLI check failed with exit code 1');
-      });
-    });
-
-    describe('getProjectInfo', () => {
-      it('should extract project information', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stdout) {
-              options.listeners.stdout(
-                Buffer.from('App: my-app\nStage: production\n')
-              );
-            }
-            return 0;
-          }
-        );
-
-        const result = await executor.getProjectInfo();
-
-        expect(result.app).toBe('my-app');
-        expect(result.stage).toBe('production');
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', 'env'],
-          expect.any(Object)
-        );
-      });
-    });
   });
 
   describe('Factory Functions', () => {

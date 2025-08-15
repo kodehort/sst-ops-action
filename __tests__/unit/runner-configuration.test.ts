@@ -131,40 +131,4 @@ describe('Configurable Runner', () => {
     });
   });
 
-  describe('Utility Commands', () => {
-    it('should build utility commands for different runners', () => {
-      const executor = new SSTCLIExecutor();
-      const buildUtilityCommand = (executor as any).buildUtilityCommand.bind(
-        executor
-      );
-
-      // Test version command with different runners
-      expect(buildUtilityCommand('bun', ['--version'])).toEqual([
-        'bun',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('npm', ['--version'])).toEqual([
-        'npm',
-        'run',
-        'sst',
-        '--',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('pnpm', ['--version'])).toEqual([
-        'pnpm',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('yarn', ['--version'])).toEqual([
-        'yarn',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('sst', ['--version'])).toEqual([
-        'sst',
-        '--version',
-      ]);
-    });
-  });
 });

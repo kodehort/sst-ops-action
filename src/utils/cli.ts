@@ -205,28 +205,6 @@ export class SSTCLIExecutor {
     }
   }
 
-  /**
-   * Build a command array for utility operations like --version
-   */
-  private buildUtilityCommand(runner: SSTRunner, args: string[]): string[] {
-    switch (runner) {
-      case 'sst':
-        // Direct SST binary execution
-        return ['sst', ...args];
-      case 'bun':
-        return ['bun', 'sst', ...args];
-      case 'npm':
-        return ['npm', 'run', 'sst', '--', ...args];
-      case 'pnpm':
-        return ['pnpm', 'sst', ...args];
-      case 'yarn':
-        return ['yarn', 'sst', ...args];
-      default: {
-        const _exhaustive: never = runner;
-        throw new Error(`Unsupported runner: ${_exhaustive}`);
-      }
-    }
-  }
 
   /**
    * Execute a command with timeout and output capture
@@ -410,101 +388,7 @@ export class SSTCLIExecutor {
     }
   }
 
-  /**
-   * Check if SST CLI is available in the environment
-   */
-  async checkSSTAvailability(runner: SSTRunner = 'bun'): Promise<{
-    available: boolean;
-    version?: string;
-    error?: string;
-  }> {
-    try {
-      const versionCommand = this.buildUtilityCommand(runner, ['--version']);
-      const result = await this.executeCommand(versionCommand, {
-        timeout: 30_000, // 30 seconds
-        maxOutputSize: 1024, // 1KB
-      });
 
-      if (result.exitCode === 0) {
-        const version = result.stdout.trim();
-        return { available: true, version };
-      }
-
-      return {
-        available: false,
-        error: `SST CLI check failed with exit code ${result.exitCode}: ${result.stderr}`,
-      };
-    } catch (error) {
-      return {
-        available: false,
-        error: `SST CLI not available: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
-
-  /**
-   * Parse SST environment output to extract app and stage information
-   */
-  private parseProjectInfo(stdout: string): { app?: string; stage?: string } {
-    const lines = stdout.split('\n');
-    const info: { app?: string; stage?: string } = {};
-
-    for (const line of lines) {
-      if (line.includes('App:')) {
-        const appValue = line.split(':')[1]?.trim();
-        if (appValue) {
-          info.app = appValue;
-        }
-      }
-      if (line.includes('Stage:')) {
-        const stageValue = line.split(':')[1]?.trim();
-        if (stageValue) {
-          info.stage = stageValue;
-        }
-      }
-    }
-
-    return info;
-  }
-
-  /**
-   * Execute SST environment command to get project information
-   */
-  private async executeProjectInfoCommand(
-    runner: SSTRunner,
-    cwd?: string
-  ): Promise<CLIResult> {
-    const envCommand = this.buildUtilityCommand(runner, ['env']);
-    return await this.executeCommand(envCommand, {
-      cwd,
-      timeout: 30_000, // 30 seconds
-      maxOutputSize: 4096, // 4KB
-    });
-  }
-
-  /**
-   * Get SST project information
-   */
-  async getProjectInfo(
-    cwd?: string,
-    runner: SSTRunner = 'bun'
-  ): Promise<{ app?: string; stage?: string; error?: string }> {
-    try {
-      const result = await this.executeProjectInfoCommand(runner, cwd);
-
-      if (result.exitCode === 0) {
-        return this.parseProjectInfo(result.stdout);
-      }
-
-      return {
-        error: `Failed to get project info: ${result.stderr || 'Unknown error'}`,
-      };
-    } catch (error) {
-      return {
-        error: `Failed to get project info: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
 }
 
 /**
