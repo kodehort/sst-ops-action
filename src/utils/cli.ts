@@ -69,27 +69,6 @@ export interface SSTCommandResult extends CLIResult {
   operation: SSTOperation;
 }
 
-/**
- * Environment configuration for SST CLI
- */
-export interface SSTEnvironment {
-  /** AWS region */
-  AWS_REGION?: string;
-  /** AWS profile */
-  AWS_PROFILE?: string;
-  /** AWS access key ID */
-  AWS_ACCESS_KEY_ID?: string;
-  /** AWS secret access key */
-  AWS_SECRET_ACCESS_KEY?: string;
-  /** AWS session token */
-  AWS_SESSION_TOKEN?: string;
-  /** SST configuration */
-  SST_CONFIG?: string;
-  /** Node environment */
-  NODE_ENV?: string;
-  /** Additional environment variables */
-  [key: string]: string | undefined;
-}
 
 /**
  * SST CLI executor with comprehensive error handling and timeout management
