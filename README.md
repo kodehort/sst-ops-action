@@ -11,7 +11,6 @@ A unified, production-ready GitHub Action for **SST (Serverless Stack)** operati
 
 - 🚀 **Multi-Operation Support** - Deploy, diff, remove, and stage operations in one action
 - 🤖 **Automatic Stage Inference** - Automatically compute stage names from Git context (branches, PRs)
-- 🗺️ **Branch-to-Environment Mapping** - Configure branch patterns to map to specific SST environments
 - 📝 **Automated PR Comments** - Rich markdown comments with deployment status and changes
 - 🔍 **Infrastructure Diff** - See planned changes before deployment
 - 🧹 **Resource Cleanup** - Automated removal of staging environments
@@ -280,7 +279,6 @@ Each operation type has different input requirements and behavior patterns. Choo
 | `max-output-size` | Maximum output size in bytes | No | `50000` | `100000` |
 | `truncation-length` | Maximum length for computed stage names (stage operation only) | No | `26` | `15`, `50` |
 | `prefix` | Prefix for stage names starting with numbers (stage operation only) | No | `pr-` | `fix-`, `issue-` |
-| `branch-mappings` | JSON configuration for mapping git branches to SST environments | No | - | See [Branch Mappings](#branch-mappings) |
 
 ### Outputs
 
@@ -752,121 +750,6 @@ Choose your preferred package manager or runtime for executing SST commands:
 | `pnpm` | Efficient package management | `pnpm sst <operation>` | SST installed as dependency |
 | `yarn` | Yarn-based projects | `yarn sst <operation>` | SST installed as dependency |
 | `sst` | Direct CLI usage | `sst <operation>` | SST CLI globally installed |
-
-### Branch Mappings
-
-Configure branch-to-environment mappings to enable trunk-based development and remove the need for environment-named branches. This feature allows you to map git branch names to specific SST environments for different operations.
-
-#### Basic Branch Mapping
-
-```yaml
-- name: Deploy with Branch Mapping
-  uses: kodehort/sst-ops-action@v1
-  with:
-    operation: deploy
-    token: ${{ secrets.GITHUB_TOKEN }}
-    branch-mappings: |
-      {
-        "deploy": {
-          "main": "production",
-          "develop": "staging",
-          "*": "preview"
-        }
-      }
-```
-
-#### Operation-Specific Mappings
-
-Different operations can have different environment mappings:
-
-```yaml
-- name: Advanced Branch Mapping
-  uses: kodehort/sst-ops-action@v1
-  with:
-    operation: deploy
-    token: ${{ secrets.GITHUB_TOKEN }}
-    branch-mappings: |
-      {
-        "deploy": {
-          "main": "production",
-          "develop": "staging",
-          "feature/user-auth": "auth-testing",
-          "*": "preview"
-        },
-        "diff": {
-          "main": "staging",
-          "*": "development"
-        },
-        "remove": {
-          "main": "production"
-        }
-      }
-```
-
-#### Trunk-Based Development Example
-
-```yaml
-name: Trunk-Based Deployment
-on:
-  push:
-  pull_request:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy based on branch
-        uses: kodehort/sst-ops-action@v1
-        with:
-          operation: deploy
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch-mappings: |
-            {
-              "deploy": {
-                "main": "production",
-                "*": "preview-env"
-              },
-              "diff": {
-                "main": "production",
-                "*": "staging"
-              }
-            }
-```
-
-#### Mapping Rules
-
-| Rule | Description | Priority | Example |
-|------|-------------|----------|---------|
-| **Exact Match** | Branch name matches exactly | Highest | `"main": "production"` |
-| **Wildcard** | Catch-all for unmapped branches | Medium | `"*": "preview"` |
-| **Computed Stage** | Fallback to auto-computed stage name | Lowest | `feature/auth` → `feature-auth` |
-
-#### Configuration Format
-
-```json
-{
-  "deploy": {              // Operation-specific mapping
-    "main": "production",  // Exact branch match
-    "develop": "staging",  // Another exact match
-    "feature/auth": "auth-test",  // Feature branch mapping
-    "*": "preview"         // Wildcard for unmapped branches
-  },
-  "diff": {
-    "*": "development"     // All diff operations use development
-  },
-  "remove": {
-    "cleanup/*": "temp"    // Only cleanup branches can remove temp env
-  }
-}
-```
-
-**Benefits:**
-- 🎯 **Trunk-Based Development**: Use any branch names without matching environment names
-- 🔄 **Flexible Workflows**: Different operations can target different environments  
-- 🚀 **Preview Environments**: Automatically create preview environments for feature branches
-- 🛡️ **Safety**: Control which branches can deploy to production
-- 📝 **Clear Intent**: Explicit mapping makes deployment targets obvious
 
 ### Error Handling
 

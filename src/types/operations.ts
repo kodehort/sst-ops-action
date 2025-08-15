@@ -9,28 +9,6 @@ export type CommentMode = 'always' | 'on-success' | 'on-failure' | 'never';
 
 export type CompletionStatus = 'complete' | 'partial' | 'failed';
 
-/**
- * Branch to environment mapping configuration
- * Maps git branch names to SST environment names
- */
-export interface BranchEnvironmentMapping {
-  /** Map of branch patterns to environment names */
-  [branchPattern: string]: string;
-}
-
-/**
- * Operation-specific branch environment mappings
- * Allows different mappings for deploy vs diff operations
- */
-export interface OperationBranchMappings {
-  /** Branch mappings for deploy operations */
-  deploy?: BranchEnvironmentMapping;
-  /** Branch mappings for diff operations */
-  diff?: BranchEnvironmentMapping;
-  /** Branch mappings for remove operations */
-  remove?: BranchEnvironmentMapping;
-}
-
 export interface OperationOptions {
   stage: string;
   token?: string;
@@ -40,7 +18,6 @@ export interface OperationOptions {
   runner?: 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
   truncationLength?: number;
   prefix?: string;
-  branchMappings?: OperationBranchMappings;
 }
 
 export interface BaseOperationResult {
