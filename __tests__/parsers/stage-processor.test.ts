@@ -6,6 +6,7 @@
 import * as github from '@actions/github';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StageProcessor } from '../../src/parsers/stage-processor';
+import type { BranchEnvironmentMapping, SSTOperation } from '../../src/types/operations';
 
 describe('Stage Processor - GitHub Context Processing', () => {
   let processor: StageProcessor;
@@ -323,6 +324,257 @@ describe('Stage Processor - GitHub Context Processing', () => {
         expect(result.computedStage).toBe('pr-987-another-numer'); // Should use default 'pr-' prefix
         expect(result.computedStage.length).toBe(20);
       });
+    });
+  });
+
+  describe('Branch to Environment Mapping', () => {
+    const createMockBranchMappings = (): BranchEnvironmentMapping => ({
+      'main': 'production',
+      'develop': 'staging',
+      'feature/user-auth': 'development',
+      '*': 'pr-env'
+    });
+
+    it('should resolve exact branch match for deploy operation', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/main',
+        },
+      });
+
+      const branchMappings = createMockBranchMappings();
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('production');
+      expect(result.computedStage).toBe('production');
+      expect(result.ref).toBe('refs/heads/main');
+    });
+
+    it('should resolve exact branch match for develop branch', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/develop',
+        },
+      });
+
+      const branchMappings = createMockBranchMappings();
+      const result = processor.process({
+        operation: 'diff' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('staging');
+      expect(result.computedStage).toBe('staging');
+    });
+
+    it('should resolve exact branch match for feature branch', () => {
+      Object.assign(github.context, {
+        eventName: 'pull_request',
+        payload: {
+          pull_request: {
+            head: {
+              ref: 'feature/user-auth',
+            },
+          },
+        },
+      });
+
+      const branchMappings = createMockBranchMappings();
+      const result = processor.process({
+        operation: 'diff' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('development');
+      expect(result.computedStage).toBe('development');
+      expect(result.ref).toBe('feature/user-auth');
+    });
+
+    it('should fall back to wildcard mapping for unmapped branches', () => {
+      Object.assign(github.context, {
+        eventName: 'pull_request',
+        payload: {
+          pull_request: {
+            head: {
+              ref: 'feature/unmapped-branch',
+            },
+          },
+        },
+      });
+
+      const branchMappings = createMockBranchMappings();
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('pr-env');
+      expect(result.computedStage).toBe('pr-env');
+    });
+
+    it('should fall back to computed stage when no branch mapping found', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/unmapped-branch',
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {
+        'main': 'production',
+        'develop': 'staging',
+      }; // No wildcard
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('unmapped-branch'); // Falls back to computed stage
+      expect(result.computedStage).toBe('unmapped-branch');
+    });
+
+    it('should work without branch mappings (backward compatibility)', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/feature-branch',
+        },
+      });
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        // No branchMappings provided
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('feature-branch');
+      expect(result.computedStage).toBe('feature-branch');
+    });
+
+    it('should handle empty branch mappings', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/test-branch',
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {}; // Empty mappings
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('test-branch'); // Falls back to computed stage
+      expect(result.computedStage).toBe('test-branch');
+    });
+
+    it('should handle branch names with path prefixes correctly', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/main',
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {
+        'main': 'production', // Should match just 'main', not 'refs/heads/main'
+      };
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('production');
+      expect(result.computedStage).toBe('production');
+    });
+
+    it('should prioritize exact match over wildcard', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/main',
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {
+        'main': 'production',
+        '*': 'default-env',
+      };
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('production'); // Exact match should take priority
+      expect(result.computedStage).toBe('production');
+    });
+
+    it('should handle special characters in branch names', () => {
+      Object.assign(github.context, {
+        eventName: 'pull_request',
+        payload: {
+          pull_request: {
+            head: {
+              ref: 'feature/JIRA-123_fix-bug',
+            },
+          },
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {
+        'feature/JIRA-123_fix-bug': 'test-environment',
+        '*': 'default-env',
+      };
+
+      const result = processor.process({
+        operation: 'diff' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('test-environment');
+      expect(result.computedStage).toBe('test-environment');
+    });
+
+    it('should handle case-sensitive branch matching', () => {
+      Object.assign(github.context, {
+        eventName: 'push',
+        payload: {
+          ref: 'refs/heads/Main', // Capital M
+        },
+      });
+
+      const branchMappings: BranchEnvironmentMapping = {
+        'main': 'production', // lowercase
+        'Main': 'production-alt', // uppercase
+      };
+
+      const result = processor.process({
+        operation: 'deploy' as SSTOperation,
+        branchMappings,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe('production-alt'); // Should match exact case
+      expect(result.computedStage).toBe('production-alt');
     });
   });
 });
