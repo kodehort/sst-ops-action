@@ -348,16 +348,6 @@ describe('Main Entry Point - Action Execution', () => {
 
   describe('Input Validation Workflows', () => {
     it('should handle input validation errors', async () => {
-      // Temporarily use real error handling functions for this test
-      const {
-        handleError: realHandleError,
-        fromValidationError: realFromValidationError,
-      } = (await vi.importActual('../src/errors/error-handler')) as any;
-      vi.mocked(handleError).mockImplementation(realHandleError as any);
-      vi.mocked(fromValidationError).mockImplementation(
-        realFromValidationError as any
-      );
-
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
         if (name === 'operation') {
           return 'invalid-operation';
@@ -371,16 +361,14 @@ describe('Main Entry Point - Action Execution', () => {
         return '';
       });
 
-      // Let the real validation run - it should throw ValidationError for 'invalid-operation'
-      // The error handling will then call fromValidationError and handleError
-
+      // Invalid operation should throw immediately and be handled by handleUnexpectedError
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('🔴 unknown input_validation:')
+        expect.stringContaining(
+          '❌ Invalid operation. Must be one of: deploy, diff, remove, stage'
+        )
       );
-      expect(vi.mocked(fromValidationError)).toHaveBeenCalled();
-      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
     it('should validate required inputs', async () => {
@@ -395,6 +383,12 @@ describe('Main Entry Point - Action Execution', () => {
       );
 
       vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+        if (name === 'operation') {
+          return 'deploy';
+        }
+        if (name === 'stage') {
+          return 'test-stage'; // Provide a valid stage to avoid stage computation failure
+        }
         // Return empty token to trigger validation error
         if (name === 'token') {
           return '';
@@ -408,6 +402,66 @@ describe('Main Entry Point - Action Execution', () => {
         expect.stringContaining('🔴 unknown input_validation:')
       );
       expect(vi.mocked(handleError)).toHaveBeenCalled();
+    });
+
+    it('should throw when operation input is missing', async () => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+        if (name === 'operation') {
+          return '';
+        }
+        return '';
+      });
+
+      await run();
+
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining('❌ Operation is required and cannot be empty')
+      );
+    });
+
+    it('should throw when operation input is invalid', async () => {
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+        if (name === 'operation') {
+          return 'invalid-op';
+        }
+        return '';
+      });
+
+      await run();
+
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          '❌ Invalid operation. Must be one of: deploy, diff, remove, stage'
+        )
+      );
+    });
+
+    it('should throw when stage computation fails', async () => {
+      // Mock the StageProcessor to fail
+      const { StageProcessor } = (await vi.importActual(
+        '../src/parsers/stage-processor'
+      )) as any;
+      vi.spyOn(StageProcessor.prototype, 'process').mockReturnValue({
+        success: false,
+        error: 'Failed to generate a valid stage name from Git context',
+        exitCode: 1,
+      });
+
+      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+        if (name === 'operation') {
+          return 'deploy';
+        }
+        if (name === 'stage') {
+          return ''; // Empty stage to trigger computation
+        }
+        return '';
+      });
+
+      await run();
+
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining('❌ Failed to compute stage from Git context')
+      );
     });
   });
 

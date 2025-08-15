@@ -64,6 +64,7 @@ import type {
   SSTOperation,
   StageResult,
 } from './operations.js';
+import { SST_OPERATIONS } from './operations.js';
 import type {
   SSTDeployOutput,
   SSTDiffOutput,
@@ -103,7 +104,7 @@ export function isStageResult(result: OperationResult): result is StageResult {
  * Type guards for SST operations
  */
 export function isValidOperation(operation: string): operation is SSTOperation {
-  return ['deploy', 'diff', 'remove', 'stage'].includes(operation);
+  return SST_OPERATIONS.includes(operation as SSTOperation);
 }
 
 export function isValidCommentMode(mode: string): mode is CommentMode {
@@ -212,8 +213,11 @@ export function validateSSTOutput(
     case 'stage':
       // Stage operation doesn't use SST output validation - it computes stage internally
       throw new Error('Stage operation does not use SST output validation');
-    default:
-      throw new Error(`Unsupported operation: ${operation}`);
+    default: {
+      // Exhaustive check for TypeScript
+      const _exhaustive: never = operation;
+      throw new Error(`Unsupported operation: ${_exhaustive}`);
+    }
   }
 }
 

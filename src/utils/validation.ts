@@ -22,7 +22,7 @@ const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 const CommonFieldSchemas = {
   operation: z
     .string()
-    .default('deploy')
+    .min(1, 'Operation is required and cannot be empty')
     .refine((val) => isValidOperation(val), {
       message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
     })

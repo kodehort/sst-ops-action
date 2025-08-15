@@ -11,6 +11,7 @@ import type {
   RemoveResult,
   StageResult,
 } from '../types';
+import { SST_OPERATIONS } from '../types/operations';
 
 // Export the main function as default
 export { formatOperationForGitHubActions as default };
@@ -381,7 +382,7 @@ function validateBooleanFields(outputs: Record<string, string>): void {
  */
 function validateEnumFields(outputs: Record<string, string>): void {
   const enumFields = [
-    { name: 'operation', validValues: ['deploy', 'diff', 'remove', 'stage'] },
+    { name: 'operation', validValues: [...SST_OPERATIONS] },
     {
       name: 'completion_status',
       validValues: ['complete', 'partial', 'failed'],

@@ -4,6 +4,7 @@
  */
 
 import * as core from '@actions/core';
+import * as z from 'zod/v4';
 import {
   createInputValidationError,
   createSubprocessError,
@@ -13,13 +14,50 @@ import {
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
 import { StageProcessor } from './parsers/stage-processor';
-import type { OperationOptions, OperationResult } from './types';
+import type { OperationOptions, OperationResult, SSTOperation } from './types';
+import { SST_OPERATIONS } from './types/operations';
 import type { SSTRunner } from './utils/cli';
 import {
   createValidationContext,
   ValidationError,
   validateOperationWithContext,
 } from './utils/validation';
+
+/**
+ * Zod schema for operation validation
+ */
+const OperationSchema = z
+  .string()
+  .min(1, 'Operation is required and cannot be empty')
+  .refine(
+    (val): val is SSTOperation => SST_OPERATIONS.includes(val as SSTOperation),
+    {
+      message: `Invalid operation. Must be one of: ${SST_OPERATIONS.join(', ')}`,
+    }
+  )
+  .transform((val) => val as SSTOperation);
+
+/**
+ * Validate operation input using Zod schema
+ * @param input Raw operation input from GitHub Actions
+ * @returns Valid SSTOperation
+ * @throws Error if operation is invalid or missing
+ */
+function validateOperation(input: string): SSTOperation {
+  const result = OperationSchema.safeParse(input);
+
+  if (result.success) {
+    return result.data;
+  }
+
+  const errorMessage = result.error.issues
+    .map((issue) => issue.message)
+    .join('; ');
+
+  core.error(`❌ ${errorMessage}`);
+
+  throw new Error(errorMessage);
+}
 
 /**
  * Validate and normalize SSTRunner input
@@ -45,37 +83,27 @@ function validateSSTRunner(input: string): SSTRunner {
 
 /**
  * Compute stage name from GitHub context when not explicitly provided
+ * @throws {Error} When stage cannot be computed from Git context - this is an unrecoverable scenario
  */
 function computeStageFromContext(
-  fallbackStage = 'main',
   truncationLength = 26,
   prefix = 'pr-'
 ): string {
-  try {
-    const processor = new StageProcessor();
-    const result = processor.process({
-      truncationLength,
-      prefix,
-    });
+  const processor = new StageProcessor();
+  const result = processor.process({
+    truncationLength,
+    prefix,
+  });
 
-    if (result.success && result.computedStage) {
-      core.info(
-        `🎯 Computed stage from Git context: "${result.computedStage}"`
-      );
-      return result.computedStage;
-    }
-
-    core.warning(
-      `⚠️ Failed to compute stage from Git context, using fallback: "${fallbackStage}"`
-    );
-    return fallbackStage;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    core.warning(
-      `⚠️ Stage computation failed: ${message}, using fallback: "${fallbackStage}"`
-    );
-    return fallbackStage;
+  if (result.success && result.computedStage) {
+    core.info(`🎯 Computed stage from Git context: "${result.computedStage}"`);
+    return result.computedStage;
   }
+
+  // This is an unrecoverable scenario - throw and exit
+  const errorMessage = `Failed to compute stage from Git context: ${result.error || 'Unknown error'}`;
+  core.error(`❌ ${errorMessage}`);
+  throw new Error(errorMessage);
 }
 
 /**
@@ -88,10 +116,14 @@ function computeStageFromContext(
  *
  * @returns Validated OperationOptions ready for use by operation handlers
  * @throws ValidationError if inputs don't match expected schemas
+ * @throws Error if operation input is missing or invalid - this is an unrecoverable scenario
  */
 function parseGitHubActionsInputs() {
   // Get the operation first to determine which inputs are needed
-  const operation = core.getInput('operation') || 'deploy';
+  const operationInput = core.getInput('operation');
+
+  // Validate operation using Zod schema - this is an unrecoverable scenario if missing/invalid
+  const operation = validateOperation(operationInput);
 
   // Get raw inputs from GitHub Actions
   let stage = core.getInput('stage');
@@ -103,7 +135,7 @@ function parseGitHubActionsInputs() {
 
   // Compute stage from Git context if not explicitly provided
   if (!stage || stage.trim() === '') {
-    stage = computeStageFromContext('main', truncationLength, prefix);
+    stage = computeStageFromContext(truncationLength, prefix);
     core.info(
       `📋 Stage input was empty, computed from Git context: "${stage}"`
     );
@@ -169,7 +201,6 @@ function handleInputValidationError(error: unknown): void {
       failOnError: true,
     });
   }
-  // Don't re-throw - let the function return normally
 }
 
 /**

@@ -181,9 +181,14 @@ export class SSTCLIExecutor {
         // Auto-confirm removal to avoid interactive prompts
         command.push('--yes');
         break;
-      default:
-        // Should never reach here due to TypeScript union types
-        throw new Error(`Unsupported operation: ${operation}`);
+      case 'stage':
+        // Stage operation doesn't use SST CLI - handled separately
+        break;
+      default: {
+        // Exhaustive check for TypeScript
+        const _exhaustive: never = operation;
+        throw new Error(`Unsupported operation: ${_exhaustive}`);
+      }
     }
 
     // Add any additional arguments

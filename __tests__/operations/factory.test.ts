@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GitHubClient } from '../../src/github/client';
 import { OperationFactory } from '../../src/operations/factory';
 import type { SSTOperation } from '../../src/types';
+import { SST_OPERATIONS } from '../../src/types/operations';
 import type { SSTCLIExecutor } from '../../src/utils/cli';
 
 const mockSSTExecutor = {
@@ -58,9 +59,7 @@ describe('Operation Factory - Operation Creation', () => {
     it('should throw error for unknown operation type', () => {
       expect(() => {
         factory.createOperation('unknown' as SSTOperation);
-      }).toThrow(
-        'Unknown operation type: unknown. Supported operations: deploy, diff, remove, stage'
-      );
+      }).toThrow('Unknown operation type: unknown');
     });
 
     it('should create different instances for each operation type', () => {
@@ -105,7 +104,7 @@ describe('Operation Factory - Operation Creation', () => {
     it('should return all supported operation types', () => {
       const supportedOps = OperationFactory.getSupportedOperations();
 
-      expect(supportedOps).toEqual(['deploy', 'diff', 'remove', 'stage']);
+      expect(supportedOps).toEqual([...SST_OPERATIONS]);
       expect(supportedOps).toHaveLength(4);
     });
 

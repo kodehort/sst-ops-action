@@ -3,7 +3,17 @@
  * Defines the unified type system for deploy, diff, and remove operations
  */
 
-export type SSTOperation = 'deploy' | 'diff' | 'remove' | 'stage';
+/**
+ * Array of all supported SST operations - single source of truth
+ * Used to derive the SSTOperation type and validate operation values
+ */
+export const SST_OPERATIONS = ['deploy', 'diff', 'remove', 'stage'] as const;
+
+/**
+ * Union type of all supported SST operations
+ * Derived from SST_OPERATIONS constant to ensure consistency
+ */
+export type SSTOperation = (typeof SST_OPERATIONS)[number];
 
 export type CommentMode = 'always' | 'on-success' | 'on-failure' | 'never';
 

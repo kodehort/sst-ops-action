@@ -14,8 +14,9 @@ inputs:
       • 'diff': Preview infrastructure changes (requires explicit stage for comparison)
       • 'remove': Delete deployed resources (requires explicit stage for safety)
       • 'stage': Compute stage name from Git context (utility operation, no infrastructure access)
-    required: false
-    default: "deploy"
+      
+      This input is required - no default operation is provided to prevent dangerous failure states.
+    required: true
   token:
     description: |
       GitHub token for authentication:
