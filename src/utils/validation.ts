@@ -79,13 +79,9 @@ const CommonFieldSchemas = {
   runner: z
     .string()
     .default('bun')
-    .refine(
-      (val): val is SSTRunner =>
-        SST_RUNNERS.includes(val as SSTRunner),
-      {
-        message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(', ')}`,
-      }
-    )
+    .refine((val): val is SSTRunner => SST_RUNNERS.includes(val as SSTRunner), {
+      message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(', ')}`,
+    })
     .transform((val) => val as SSTRunner),
 
   truncationLength: z
@@ -135,7 +131,7 @@ const DeployInputsSchema = z
     operation: z.literal('deploy'),
     stage: CommonFieldSchemas.optionalStage.optional(),
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const DiffInputsSchema = z
@@ -143,7 +139,7 @@ const DiffInputsSchema = z
     operation: z.literal('diff'),
     stage: CommonFieldSchemas.stage,
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const RemoveInputsSchema = z
@@ -151,7 +147,7 @@ const RemoveInputsSchema = z
     operation: z.literal('remove'),
     stage: CommonFieldSchemas.stage,
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const StageInputsSchema = z
