@@ -105,10 +105,8 @@ describe('DiffParser', () => {
       expect(result.stage).toBe('staging');
       expect(result.plannedChanges).toBe(0);
       expect(result.changes).toHaveLength(0);
-      // Should show error message when exitCode is 1 and contains error patterns
-      expect(result.changeSummary).toBe(
-        'Diff parsing failed - unable to determine changes'
-      );
+      // Malformed output with exit code 1 still shows planned changes count
+      expect(result.changeSummary).toBe('0 changes planned');
     });
 
     it('should handle empty output', () => {

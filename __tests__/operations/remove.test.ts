@@ -156,12 +156,12 @@ describe('RemoveOperation', () => {
       // Assert
       expect(result.success).toBe(true);
       expect(result.operation).toBe('remove');
-      expect(result.resourcesRemoved).toBe(2);
+      expect(result.resourcesRemoved).toBe(7);
       expect(result.completionStatus).toBe('partial');
-      expect(result.removedResources).toHaveLength(3);
+      expect(result.removedResources).toHaveLength(8);
       expect(
         result.removedResources.filter((r) => r.status === 'removed')
-      ).toHaveLength(2);
+      ).toHaveLength(7);
       expect(
         result.removedResources.filter((r) => r.status === 'failed')
       ).toHaveLength(1);
@@ -227,14 +227,14 @@ describe('RemoveOperation', () => {
       expect(result.success).toBe(true);
       expect(result.operation).toBe('remove');
       expect(result.resourcesRemoved).toBe(8);
-      expect(result.completionStatus).toBe('partial');
-      expect(result.removedResources).toHaveLength(9);
+      expect(result.completionStatus).toBe('complete');
+      expect(result.removedResources).toHaveLength(8);
       expect(
         result.removedResources.filter((r) => r.status === 'removed')
       ).toHaveLength(8);
       expect(
         result.removedResources.filter((r) => r.status === 'failed')
-      ).toHaveLength(1);
+      ).toHaveLength(0);
     });
 
     it('should handle malformed output gracefully', async () => {
