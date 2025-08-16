@@ -35,7 +35,7 @@ Before troubleshooting, verify these prerequisites:
 
 **Required:**
 - ✅ SST project with valid configuration
-- ✅ AWS credentials configured  
+- ✅ AWS credentials configured
 - ✅ GitHub token with appropriate permissions
 - ✅ Node.js 20+ environment (handled automatically)
 
@@ -53,14 +53,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Environment Check
         run: |
           echo "Node version: $(node --version)"
           echo "NPM version: $(npm --version)"
           echo "Working directory: $(pwd)"
           echo "SST config exists: $([ -f sst.config.ts ] && echo 'Yes' || echo 'No')"
-          
+
       - name: AWS Credentials Check
         run: |
           if [ -n "$AWS_ACCESS_KEY_ID" ]; then
@@ -68,7 +68,7 @@ jobs:
           else
             echo "❌ AWS_ACCESS_KEY_ID not set"
           fi
-          
+
           if [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
             echo "✅ AWS_SECRET_ACCESS_KEY is set"
           else
@@ -77,7 +77,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          
+
       - name: Test Action
         id: test
         uses: kodehort/sst-operations-action@v1
@@ -87,7 +87,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-mode: never
           fail-on-error: false
-          
+
       - name: Results
         run: |
           echo "Action completed: ${{ steps.test.outputs.success }}"
@@ -117,16 +117,16 @@ Error: Process completed with exit code 127
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  
+
   - name: Setup Node.js
     uses: actions/setup-node@v4
     with:
       node-version: '20'
       cache: 'npm'
-      
+
   - name: Install Dependencies
     run: npm ci  # This installs SST CLI from package.json
-    
+
   - name: SST Operations
     uses: kodehort/sst-operations-action@v1
     with:
@@ -139,7 +139,7 @@ steps:
 ```yaml
 - name: Install SST CLI
   run: npm install -g @serverless-stack/cli
-  
+
 - name: Verify Installation
   run: sst --version
 ```
@@ -303,7 +303,7 @@ Error: Bad credentials
 ```yaml
 permissions:
   contents: read          # Read repository
-  issues: write          # Comment on issues  
+  issues: write          # Comment on issues
   pull-requests: write   # Comment on PRs
   actions: write         # Upload artifacts
 ```
@@ -356,7 +356,7 @@ Error: Invalid stage name: "feature/new-api"
     # Convert branch name to valid stage name
     STAGE=$(echo "${{ github.head_ref }}" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
     echo "stage=$STAGE" >> $GITHUB_OUTPUT
-    
+
 - name: Deploy
   uses: kodehort/sst-operations-action@v1
   with:
@@ -389,7 +389,7 @@ Warning: Resource changes could not be determined
     stage: staging
     token: ${{ secrets.GITHUB_TOKEN }}
     max-output-size: 100000  # Increase limit for debugging
-    
+
 - name: Debug Outputs
   run: |
     echo "Success: '${{ steps.deploy.outputs.success }}'"
@@ -542,7 +542,7 @@ Error: Resource with identifier [xyz] already exists
     operation: deploy
     stage: staging
     token: ${{ secrets.GITHUB_TOKEN }}
-    
+
 - name: Upload Debug Artifacts
   if: failure()
   uses: actions/upload-artifact@v4
@@ -562,16 +562,16 @@ Error: Resource with identifier [xyz] already exists
   run: |
     echo "1. Checking SST installation..."
     which sst || echo "SST not in PATH"
-    
+
     echo "2. Checking SST version..."
     sst --version || echo "SST version check failed"
-    
+
     echo "3. Checking SST config..."
     cat sst.config.ts || cat sst.config.js || echo "No SST config found"
-    
+
     echo "4. Testing SST diff..."
     sst diff --stage staging || echo "SST diff failed"
-    
+
     echo "5. Checking AWS credentials..."
     aws sts get-caller-identity || echo "AWS credentials invalid"
 ```
@@ -592,12 +592,12 @@ Error: Resource with identifier [xyz] already exists
     echo "URLs: '${{ steps.deploy.outputs.urls }}'"
     echo "Permalink: '${{ steps.deploy.outputs.permalink }}'"
     echo "Truncated: '${{ steps.deploy.outputs.truncated }}'"
-    
+
     # Validate output format
     if [ "${{ steps.deploy.outputs.success }}" != "true" ] && [ "${{ steps.deploy.outputs.success }}" != "false" ]; then
       echo "❌ Invalid success output format"
     fi
-    
+
     # Check for truncated output
     if [ "${{ steps.deploy.outputs.truncated }}" = "true" ]; then
       echo "⚠️ Output was truncated, increase max-output-size"
@@ -661,7 +661,7 @@ export default {
 strategy:
   matrix:
     stage: [staging, production]
-    
+
 steps:
   - uses: kodehort/sst-operations-action@v1
     with:
@@ -704,7 +704,7 @@ steps:
   # Windows-specific path issues
   - name: Set Git Config
     run: git config --global core.autocrlf false
-    
+
   - uses: kodehort/sst-operations-action@v1
     with:
       operation: deploy
@@ -719,7 +719,7 @@ steps:
   # macOS-specific setup if needed
   - name: Install Dependencies
     run: npm ci
-    
+
   - uses: kodehort/sst-operations-action@v1
     with:
       operation: deploy
@@ -774,7 +774,7 @@ on:
       stage:
         description: 'Stage to rollback'
         required: true
-        
+
 jobs:
   rollback:
     runs-on: ubuntu-latest
@@ -782,7 +782,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.previous_commit }}  # Rollback to previous version
-          
+
       - name: Emergency Deploy
         uses: kodehort/sst-operations-action@v1
         with:
@@ -799,7 +799,7 @@ jobs:
   run: |
     # Manual cleanup if normal remove fails
     aws cloudformation delete-stack --stack-name mystack-staging --region us-east-1
-    
+
     # Wait for deletion
     aws cloudformation wait stack-delete-complete --stack-name mystack-staging --region us-east-1
 ```
@@ -866,7 +866,7 @@ sst diff --stage staging  # This will detect existing resources
 ```
 
 ### Environment
-- Node.js version: 
+- Node.js version:
 - SST version:
 - AWS region:
 ```

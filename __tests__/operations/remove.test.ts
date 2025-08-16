@@ -16,13 +16,13 @@ import { RemoveOperation } from '../../src/operations/remove';
 import type { OperationOptions, RemoveResult } from '../../src/types';
 import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
 import {
-  SST_REMOVE_COMPLEX_OUTPUT,
   SST_REMOVE_ERROR_OUTPUT,
   SST_REMOVE_MALFORMED_OUTPUT,
   SST_REMOVE_NO_RESOURCES_OUTPUT,
-  SST_REMOVE_PARTIAL_OUTPUT,
+  SST_REMOVE_PARTIAL_WITH_FAILURES_OUTPUT,
   SST_REMOVE_SUCCESS_OUTPUT,
-} from '../fixtures/sst-remove-outputs';
+  SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
+} from '../fixtures/sst-outputs';
 
 describe('RemoveOperation', () => {
   let removeOperation: RemoveOperation;
@@ -132,12 +132,12 @@ describe('RemoveOperation', () => {
     it('should handle partial removal with failures', async () => {
       // Arrange
       const mockCLIResult: SSTCommandResult = {
-        output: SST_REMOVE_PARTIAL_OUTPUT,
+        output: SST_REMOVE_PARTIAL_WITH_FAILURES_OUTPUT,
         exitCode: 0,
         duration: 45_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
-        stdout: SST_REMOVE_PARTIAL_OUTPUT,
+        stdout: SST_REMOVE_PARTIAL_WITH_FAILURES_OUTPUT,
         stderr: '',
         success: true,
         stage: 'test-stage',
@@ -202,12 +202,12 @@ describe('RemoveOperation', () => {
     it('should handle complex removal scenarios', async () => {
       // Arrange
       const mockCLIResult: SSTCommandResult = {
-        output: SST_REMOVE_COMPLEX_OUTPUT,
+        output: SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
         exitCode: 0,
         duration: 120_000,
         command: 'sst remove --stage test-stage',
         truncated: false,
-        stdout: SST_REMOVE_COMPLEX_OUTPUT,
+        stdout: SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
         stderr: '',
         success: true,
         stage: 'test-stage',

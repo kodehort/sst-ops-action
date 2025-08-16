@@ -159,72 +159,6 @@ Stage: staging
 3 changes planned
 `;
 
-export const SST_DIFF_NO_CHANGES_OUTPUT = `
-SST Diff  
-App: my-sst-app
-Stage: staging
-
-No changes
-`;
-
-// Enhanced diff outputs for comprehensive testing
-export const SST_DIFF_COMPLEX_OUTPUT = `
-SST Diff
-App: my-complex-app
-Stage: production
-
-+ Function        my-complex-app-production-new-auth
-+ Database        my-complex-app-production-users-db (RDS MySQL 8.0)
-~ Api            my-complex-app-production-api (environment variables updated)
-~ Website        my-complex-app-production-web (build configuration changed)
-- Function        my-complex-app-production-old-processor
-- Topic          my-complex-app-production-notifications
-
-  Cost changes:
-  Monthly: $45.50 → $67.80 (+$22.30)
-  
-  Breaking changes detected:
-  ! Database schema migration required
-  ! API endpoint /legacy/users will be removed
-
-6 changes planned
-
-↗  Permalink https://console.sst.dev/my-complex-app/production/diffs/xyz789
-`;
-
-export const SST_DIFF_BREAKING_OUTPUT = `
-SST Diff
-App: breaking-app
-Stage: staging
-
-~ Function        breaking-app-staging-handler (runtime changed: node16 → node20)
-- Database        breaking-app-staging-legacy-db
-+ Database        breaking-app-staging-new-db (PostgreSQL 15)
-
-  Impact: Breaking
-  ! Data migration required
-  ! Downtime expected: ~5 minutes
-  
-  Cost changes:
-  Monthly: $120.00 → $95.00 (-$25.00)
-
-3 changes planned
-`;
-
-export const SST_DIFF_COSMETIC_OUTPUT = `
-SST Diff
-App: cosmetic-app
-Stage: staging
-
-~ Function        cosmetic-app-staging-handler (description updated)
-~ Website        cosmetic-app-staging-web (tags updated)
-
-  Impact: Cosmetic
-  No functional changes
-  
-2 changes planned
-`;
-
 export const SST_DIFF_MALFORMED_OUTPUT = `
 SST Diff started...
 Invalid diff format
@@ -237,13 +171,16 @@ SST Remove
 App: my-sst-app
 Stage: staging
 
-✓ All resources removed
-| Deleted         Website       my-sst-app-staging-web
-| Deleted         Api           my-sst-app-staging-api  
-| Deleted         Function      my-sst-app-staging-handler
+- Function        my-sst-app-staging-handler
+- Api             my-sst-app-staging-api
+- Website         my-sst-app-staging-site
 
-Monthly savings: $50.00
-`;
+✓ Complete
+
+3 resources removed
+
+Permalink: https://console.sst.dev/my-sst-app/staging/removes/abc123
+`.trim();
 
 export const SST_REMOVE_PARTIAL_OUTPUT = `
 SST Remove
@@ -289,20 +226,6 @@ Stage: staging
 Error: Remove operation failed - 3 resources could not be removed
 `;
 
-export const SST_REMOVE_TIMEOUT_OUTPUT = `
-SST Remove
-App: timeout-app
-Stage: staging
-
-⚠  Remove operation timed out
-| Deleted         Website       timeout-app-staging-web
-| Deleted         Function      timeout-app-staging-handler
-! Database       timeout-app-staging-db removal timed out after 300s
-
-Partial cleanup completed
-Manual intervention may be required
-`;
-
 export const SST_REMOVE_EMPTY_STACK_OUTPUT = `
 SST Remove
 App: empty-app
@@ -317,6 +240,189 @@ SST Remove started...
 Invalid removal format
 Cannot parse resource status
 Unknown error occurred
+`;
+
+// Basic SST diff outputs (consolidated from sst-diff-outputs.ts)
+export const SST_DIFF_SUCCESS_OUTPUT = `
+SST 3.17.4  ready!
+
+➜  App:        my-sst-app
+   Stage:      staging
+
+~  Diff
+
+|  Created     NewHandler sst:aws:Function
+|  Created     Api sst:aws:Api
+$ bunx vite build
+vite v6.3.5 building for production...
+✓ 150 modules transformed.
+✓ built in 0.8s
+
+↗  Permalink   https://console.sst.dev/my-sst-app/staging/diffs/abc123
+
+✓  Generated
+
++  my-sst-app-staging pulumi:pulumi:Stack
+
++  NewHandler sst:aws:Function
+
+*  Api sst:aws:Api
+
+-  Website sst:aws:StaticSite
+
++  NewHandler sst:aws:Function → NewHandlerLogGroup aws:cloudwatch:LogGroup
+
++  Api sst:aws:Api → ApiFunction sst:aws:Function
+
+-  Website sst:aws:StaticSite → WebsiteAssets sst:aws:Bucket
+`;
+
+export const SST_DIFF_NO_CHANGES_OUTPUT = `
+SST 3.17.4  ready!
+
+➜  App:        my-sst-app
+   Stage:      staging
+
+~  Diff
+
+|  No changes required
+
+↗  Permalink   https://console.sst.dev/my-sst-app/staging/diffs/nochanges123
+
+✓  Generated
+
+No changes
+`;
+
+export const SST_DIFF_ERROR_OUTPUT = `
+SST 3.17.4  ready!
+
+➜  App:        error-app
+   Stage:      staging
+
+~  Diff
+
+Error: Unable to generate diff
+Permission denied: cannot read current infrastructure state
+`;
+
+// Real-world SST diff output with environment variables (from actual SST command)
+export const SST_DIFF_REAL_WORLD_OUTPUT = `
+SST 3.17.10  ready!
+
+➜  App:        kodehort-scratch
+   Stage:      dev
+
+~  Diff
+
+|  Info        Downloaded provider command-1.0.1
+|  Info        Downloaded provider tls-5.0.1
+|  Info        Downloaded provider docker-build-0.0.8
+|  Info        Downloaded provider random-4.16.6
+|  Info        Downloaded provider vercel-1.11.0
+|  Info        Downloaded provider cloudflare-6.4.1
+|  Info        Downloaded provider aws-6.66.2
+$ bunx --bun astro build
+|  Created     Web sst:aws:Astro → WebBuilder command:local:Command
+16:04:25 [content] Syncing content
+16:04:25 [content] Synced content
+16:04:25 [types] Generated 309ms
+16:04:25 [build] output: "static"
+16:04:25 [build] mode: "static"
+16:04:25 [build] directory: /home/runner/work/scratch/scratch/apps/www/dist/
+16:04:25 [build] adapter: astro-sst
+16:04:25 [build] Collecting build info...
+16:04:25 [build] ✓ Completed in 336ms.
+16:04:25 [build] Building static entrypoints...
+16:04:26 [vite] ✓ built in 1.13s
+16:04:26 [build] ✓ Completed in 1.25s.
+
+ generating static routes
+16:04:26 ▶ src/pages/index.astro
+16:04:26   └─ /index.html (+9ms)
+16:04:26 ✓ Completed in 52ms.
+
+16:04:26 [build] 1 page(s) built in 1.66s
+16:04:26 [build] Complete!
+|  Deleted     Web sst:aws:Astro → WebBuilder command:local:Command
+
+↗  Permalink   https://sst.dev/u/31550ec5
+
+✓  Generated    
+   Router: https://dev.kodeapps.co.uk
+   Web: https://dev.kodeapps.co.uk
+   Api: https://api.dev.kodeapps.co.uk
+   ---
+   github_role_arn: arn:aws:iam::194218796960:role/dev-GithubActionRole
+   github_role_name: dev-GithubActionRole
+
++  Web sst:aws:Astro → WebBuilder command:local:Command
+   + environment.ACTIONS_CACHE_SERVICE_V2 = True
+   + environment.ACTIONS_CACHE_URL = https://acghubeus2.actions.githubusercontent.com/YiRw6b4j0YehLWXAZlEKzBPEU9dOCzWm5vDzxOHqrSY88agxO0/
+   * environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN = ***
+   * environment.ACTIONS_ID_TOKEN_REQUEST_URL = https://run-actions-3-azure-eastus.actions.githubusercontent.com/104//idtoken/8181d81a-1c0a-482d-b87c-75c52ccd2c47/1cbd420d-c7f0-504d-8b31-81a706ca7886?api-version=2.0
+   + environment.ACTIONS_RESULTS_URL = https://results-receiver.actions.githubusercontent.com/
+   + environment.ACTIONS_RUNTIME_TOKEN = ***
+   + environment.ACTIONS_RUNTIME_URL = https://pipelinesghubeus13.actions.githubusercontent.com/YiRw6b4j0YehLWXAZlEKzBPEU9dOCzWm5vDzxOHqrSY88agxO0/
+   * environment.AWS_ACCESS_KEY_ID = ***
+   * environment.AWS_SECRET_ACCESS_KEY = ***
+   * environment.AWS_SESSION_TOKEN = ***
+   * environment.CI = 1
+   + environment.FORCE_COLOR = 3
+   * environment.GITHUB_ACTION = diff
+   - environment.GITHUB_ACTION_PATH
+   * environment.GITHUB_ACTION_REF = v0
+   * environment.GITHUB_ACTION_REPOSITORY = kodehort/sst-ops-action
+   * environment.GITHUB_BASE_REF = main
+   * environment.GITHUB_ENV = /home/runner/work/_temp/_runner_file_commands/set_env_ea5de4c1-f39c-409c-97d4-6249a970121a
+   * environment.GITHUB_EVENT_NAME = pull_request
+   * environment.GITHUB_HEAD_REF = sst-ops-actions
+   * environment.GITHUB_JOB = diff
+   * environment.GITHUB_OUTPUT = /home/runner/work/_temp/_runner_file_commands/set_output_ea5de4c1-f39c-409c-97d4-6249a970121a
+   * environment.GITHUB_PATH = /home/runner/work/_temp/_runner_file_commands/add_path_ea5de4c1-f39c-409c-97d4-6249a970121a
+   * environment.GITHUB_REF = refs/pull/164/merge
+   * environment.GITHUB_REF_NAME = 164/merge
+   * environment.GITHUB_REF_PROTECTED = false
+   * environment.GITHUB_RUN_ATTEMPT = 4
+   * environment.GITHUB_RUN_ID = 16890482111
+   * environment.GITHUB_RUN_NUMBER = 134
+   * environment.GITHUB_SHA = bbeb890c69910ff180191bfb24dfc1a0f36f6d0e
+   * environment.GITHUB_STATE = /home/runner/work/_temp/_runner_file_commands/save_state_ea5de4c1-f39c-409c-97d4-6249a970121a
+   * environment.GITHUB_STEP_SUMMARY = /home/runner/work/_temp/_runner_file_commands/step_summary_ea5de4c1-f39c-409c-97d4-6249a970121a
+   - environment.GITHUB_TOKEN
+   * environment.GITHUB_WORKFLOW_REF = kodehort/scratch/.github/workflows/ci.yml@refs/pull/164/merge
+   * environment.GITHUB_WORKFLOW_SHA = bbeb890c69910ff180191bfb24dfc1a0f36f6d0e
+   * environment.GRADLE_HOME = /usr/share/gradle-9.0.0
+   + environment.INPUT_OPERATION = diff
+   + environment.INPUT_PREFIX = pr-
+   + environment.INPUT_RUNNER = bun
+   + environment.INPUT_STAGE = dev
+   + environment.INPUT_TOKEN = ***
+   * environment.INVOCATION_ID = 46bc408d840e4374bbcf693fb6dd6c9a
+   * environment.ImageVersion = 20250804.2.0
+   * environment.JOURNAL_STREAM = 9:12598
+   + environment.NODE_ENV = production
+   + environment.NODE_PATH = 
+   * environment.PULUMI_BACKEND_URL = file:///home/runner/work/scratch/scratch/.sst/pulumi/fe675bd3657c128c31550ec5
+   + environment.PULUMI_NODEJS_DRY_RUN = true
+   * environment.PULUMI_NODEJS_ENGINE = 127.0.0.1:39009
+   * environment.PULUMI_NODEJS_MONITOR = 127.0.0.1:45135
+   * environment.PULUMI_NODEJS_SYNC = /tmp/pulumi-node-pipes2858183656
+   * environment.RUNNER_NAME = GitHub Actions 1000002487
+   * environment.RUNNER_TRACKING_ID = github_b80c6824-a1c0-4c38-9d4b-796fbd89507e
+   * environment.SHLVL = 0
+   * environment.SST_AWS_ACCESS_KEY_ID = ***
+   * environment.SST_AWS_SECRET_ACCESS_KEY = ***
+   * environment.SST_AWS_SESSION_TOKEN = ***
+   * environment.SYSTEMD_EXEC_PID = 1746
+   * environment.TURBO_TEAM = 
+   + environment.TURBO_TELEMETRY_DISABLED = 1
+   * environment.npm_config_user_agent = bun/1.2.20 npm/? node/v24.3.0 linux x64
+   + environment["INPUT_COMMENT-MODE"] = on-success
+   + environment["INPUT_FAIL-ON-ERROR"] = true
+   + environment["INPUT_MAX-OUTPUT-SIZE"] = 50000
+   + environment["INPUT_TRUNCATION-LENGTH"] = 26
+   * triggers[0] = 1755101063020
 `;
 
 export const MALFORMED_OUTPUT = `
@@ -339,31 +445,112 @@ SST 3.17.10  ready!
 ✓  Complete
 `;
 
-// Additional diff-specific test fixtures
-export const SST_DIFF_LARGE_OUTPUT = `
-SST Diff
-App: large-app
+// Enhanced remove outputs - realistic scenarios (consolidated from sst-remove-outputs.ts)
+export const SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT = `
+SST Remove
+App: complex-app
 Stage: production
 
-${Array.from({ length: 50 }, (_, i) => `+ Function        large-app-production-func-${i + 1}`).join('\n')}
-${Array.from({ length: 30 }, (_, i) => `~ Api            large-app-production-api-${i + 1} (config updated)`).join('\n')}
-${Array.from({ length: 20 }, (_, i) => `- Website        large-app-production-site-${i + 1}`).join('\n')}
+- Function        complex-app-production-auth-handler
+- Function        complex-app-production-api-handler
+- Function        complex-app-production-worker
+- Database        complex-app-production-users-db
+- Topic           complex-app-production-events
+- Queue           complex-app-production-jobs
+- Api             complex-app-production-api
+- Website         complex-app-production-web
 
-100 changes planned
+✓ Complete
+
+8 resources removed
+
+Permalink: https://console.sst.dev/complex-app/production/removes/mno345
 `;
 
-// Large remove output for performance testing
-export const SST_REMOVE_LARGE_OUTPUT = `
+export const SST_REMOVE_PARTIAL_WITH_FAILURES_OUTPUT = `
 SST Remove
-App: large-app
+App: mixed-app
 Stage: development
 
-✓ All resources removed
-${Array.from({ length: 50 }, (_, i) => `| Deleted         Function      large-app-development-func-${i + 1}`).join('\n')}
-${Array.from({ length: 30 }, (_, i) => `| Deleted         Api           large-app-development-api-${i + 1}`).join('\n')}
-${Array.from({ length: 20 }, (_, i) => `| Deleted         Website       large-app-development-site-${i + 1}`).join('\n')}
+- Function        mixed-app-dev-auth (Lambda runtime: node20)
+- Database        mixed-app-dev-users (RDS PostgreSQL 14.9)
+- Topic           mixed-app-dev-notifications (SNS topic)
+- Queue           mixed-app-dev-messages (SQS standard queue)
+- Api             mixed-app-dev-rest-api (API Gateway v2)
+× Api             mixed-app-dev-graphql-api (failed: custom domain in use)
+- Website         mixed-app-dev-frontend (CloudFront + S3)
+- Bucket          mixed-app-dev-assets (S3 bucket)
 
-Monthly savings: $1,250.75
+⚠ Partial completion
 
-100 resources removed
+7 resources removed, 1 failed
+
+Permalink: https://console.sst.dev/mixed-app/development/removes/stu901
+`;
+
+export const SST_REMOVE_ALL_FAILURES_OUTPUT = `
+SST Remove
+App: failing-app
+Stage: staging
+
+× Function        failing-app-staging-handler (failed: in use by API)
+× Database        failing-app-staging-db (failed: not empty)
+× Api             failing-app-staging-api (failed: custom domain attached)
+
+× Failed
+
+0 resources removed, 3 failed
+
+Permalink: https://console.sst.dev/failing-app/staging/removes/vwx234
+`;
+
+export const SST_REMOVE_NO_RESOURCES_OUTPUT = `
+SST Remove
+App: my-sst-app
+Stage: staging
+
+✓ Complete
+
+No resources to remove
+
+Permalink: https://console.sst.dev/my-sst-app/staging/removes/def456
+`;
+
+export const SST_REMOVE_WITH_SKIPPED_OUTPUT = `
+SST Remove
+App: skipped-app
+Stage: staging
+
+- Function        skipped-app-staging-handler
+~ Database        skipped-app-staging-db (skipped: protected resource)
+- Website         skipped-app-staging-site
+
+✓ Complete
+
+2 resources removed, 1 skipped
+
+Permalink: https://console.sst.dev/skipped-app/staging/removes/yza567
+`;
+
+export const SST_REMOVE_ERROR_OUTPUT = `
+SST Remove
+App: error-app
+Stage: staging
+
+Error: Unable to connect to AWS
+Permission denied: IAM role lacks required permissions
+
+× Failed
+
+0 resources removed
+
+Permalink: https://console.sst.dev/error-app/staging/removes/jkl012
+`;
+
+export const SST_REMOVE_INCOMPLETE_OUTPUT = `
+SST Remove
+App: incomplete-app
+Stage: staging
+
+- Function        incomplete-app-staging-handler
 `;
