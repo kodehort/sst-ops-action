@@ -1,8 +1,13 @@
 ### 🚀 DEPLOY SUCCESS
 
-**Stage:** `production`
-**App:** `www-kodehort-com`
-**Status:** `complete`
+| Property | Value |
+|----------|-------|
+| App | `www-kodehort-com` |
+| Stage | `production` |
+| Resource Changes | 4 |
+| URLs Deployed | 2 |
+| Status | ![Success](https://img.shields.io/badge/Status-Success-green) |
+| Console Link | [View Deployment](https://sst.dev/u/a1b2c3d4) |
 
 ### 📊 Resource Changes
 

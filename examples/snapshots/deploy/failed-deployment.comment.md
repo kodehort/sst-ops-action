@@ -1,8 +1,12 @@
 ### ❌ DEPLOY FAILED
 
-**Stage:** `sst-ops-actions`
-**App:** `kodehort-scratch`
-**Status:** `failed`
+| Property | Value |
+|----------|-------|
+| App | `kodehort-scratch` |
+| Stage | `sst-ops-actions` |
+| Resource Changes | 11 |
+| URLs Deployed | 1 |
+| Status | ![Failed](https://img.shields.io/badge/Status-Failed-red) |
 
 ### 📊 Resource Changes
 

@@ -59,9 +59,9 @@ describe('OperationFormatter', () => {
       const comment = formatter.formatOperationComment(deployResult);
 
       expect(comment).toContain('🚀 DEPLOY SUCCESS');
-      expect(comment).toContain('**Stage:** `production`');
-      expect(comment).toContain('**App:** `my-app`');
-      expect(comment).toContain('**Status:** `complete`');
+      expect(comment).toContain('| Stage | `production` |');
+      expect(comment).toContain('| App | `my-app` |');
+      expect(comment).toContain('| Resource Changes | 5 |');
       expect(comment).toContain('📊 Resource Changes');
       expect(comment).toContain('**Total Changes:** 5');
       expect(comment).toContain('🔗 Deployed URLs');
@@ -90,7 +90,7 @@ describe('OperationFormatter', () => {
       const comment = formatter.formatOperationComment(failedDeployResult);
 
       expect(comment).toContain('❌ DEPLOY FAILED');
-      expect(comment).toContain('**Status:** `failed`');
+      expect(comment).toContain('| Stage | `staging` |');
     });
 
     it('should format diff comment correctly', () => {
@@ -343,7 +343,7 @@ $ bunx --bun astro build
 
       expect(summary).toContain('🔍 Infrastructure Diff Summary');
       expect(summary).toContain('Total Changes | 6');
-      expect(summary).toContain('📋 Resource Changes');
+      expect(summary).toContain('📋 View Resource Changes');
       expect(summary).toContain('```diff');
       expect(summary).toContain('+ Function1 (Lambda)');
       expect(summary).toContain('* Bucket1 (S3)');

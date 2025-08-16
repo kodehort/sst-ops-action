@@ -94,8 +94,8 @@ export class OperationFormatter {
   private formatDeployComment(result: DeployResult): string {
     const sections: string[] = [];
 
-    // Status section
-    sections.push(this.formatStatusSection(result));
+    // Status section with comprehensive table
+    sections.push(this.formatDeployStatusTable(result));
 
     // Resource changes section
     if (result.resourceChanges && result.resourceChanges > 0) {
@@ -168,11 +168,18 @@ export class OperationFormatter {
   private formatDeploySummary(result: DeployResult): string {
     let summary = `### 📦 Deployment Summary
 
-| Metric | Value |
-|--------|-------|
+| Property | Value |
+|----------|-------|
+| App | \`${result.app || 'Unknown'}\` |
+| Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
 | URLs Deployed | ${result.urls?.length || 0} |
 | Status | ${this.formatStatusBadge(result)} |`;
+
+    // Add console link if available
+    if (result.permalink) {
+      summary += `\n| Console Link | [View Deployment](${result.permalink}) |`;
+    }
 
     if (result.urls && result.urls.length > 0) {
       summary += '\n\n### 🔗 Deployed URLs\n';
@@ -223,13 +230,16 @@ export class OperationFormatter {
       summary += `\n| Console Link | [View Diff](${result.permalink}) |`;
     }
 
-    // Add the actual diff in a code block
+    // Add the actual diff in a collapsible code block
     if (result.plannedChanges > 0) {
-      summary += `\n\n### 📋 Resource Changes
+      summary += `\n\n<details>
+<summary>📋 View Resource Changes</summary>
 
 \`\`\`diff
 ${this.formatDiffOutput(result)}
-\`\`\``;
+\`\`\`
+
+</details>`;
     } else {
       summary += `\n\n### ✅ No Changes
 
@@ -290,6 +300,31 @@ All resources have been successfully removed.`;
 **Stage:** \`${result.stage}\`
 **App:** \`${result.app || 'Unknown'}\`
 **Status:** \`${result.completionStatus}\``;
+  }
+
+  /**
+   * Format deploy status table section
+   */
+  private formatDeployStatusTable(result: DeployResult): string {
+    const icon = this.getStatusIcon(result);
+    const status = result.success ? 'SUCCESS' : 'FAILED';
+
+    let table = `### ${icon} ${result.operation.toUpperCase()} ${status}
+
+| Property | Value |
+|----------|-------|
+| App | \`${result.app || 'Unknown'}\` |
+| Stage | \`${result.stage}\` |
+| Resource Changes | ${result.resourceChanges || 0} |
+| URLs Deployed | ${result.urls?.length || 0} |
+| Status | ${this.formatStatusBadge(result)} |`;
+
+    // Add console link if available
+    if (result.permalink) {
+      table += `\n| Console Link | [View Deployment](${result.permalink}) |`;
+    }
+
+    return table;
   }
 
   /**
@@ -357,13 +392,16 @@ All resources have been successfully removed.`;
       section += `\n| Console Link | [View Diff](${result.permalink}) |`;
     }
 
-    // Add the actual diff in a code block
+    // Add the actual diff in a collapsible code block
     if (result.plannedChanges > 0) {
-      section += `\n\n### 📋 Resource Changes
+      section += `\n\n<details>
+<summary>📋 View Infrastructure Changes</summary>
 
 \`\`\`diff
 ${this.formatDiffOutput(result)}
-\`\`\``;
+\`\`\`
+
+</details>`;
     } else {
       section += `\n\n### ✅ No Changes
 

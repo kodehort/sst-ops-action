@@ -5,7 +5,7 @@
   "stage": "localstage",
   "success": true,
   "description": "Generated from complete-cleanup.txt",
-  "generatedAt": "2025-08-13T16:43:37.238Z",
+  "generatedAt": "2025-08-16T16:54:35.500Z",
   "files": {
     "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/remove/complete-cleanup.txt",
     "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/remove/complete-cleanup.comment.md",

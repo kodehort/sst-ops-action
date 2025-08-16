@@ -317,8 +317,8 @@ describe('GitHub Client - API Integration', () => {
       const commentBody =
         mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('DEPLOY SUCCESS');
-      expect(commentBody).toContain('**Stage:** `production`');
-      expect(commentBody).toContain('**App:** `my-app`');
+      expect(commentBody).toContain('| Stage | `production` |');
+      expect(commentBody).toContain('| App | `my-app` |');
       expect(commentBody).toContain('**Total Changes:** 5');
       expect(commentBody).toContain('https://my-app.com');
       expect(commentBody).toContain('https://api.my-app.com');
