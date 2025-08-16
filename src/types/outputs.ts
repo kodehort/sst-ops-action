@@ -10,7 +10,6 @@ export interface ActionOutputs {
   operation: SSTOperation;
   stage: string;
   resource_changes: string;
-  urls: string;
   app: string;
   completion_status: CompletionStatus;
   permalink: string;
@@ -21,7 +20,6 @@ export interface ActionOutputs {
 export interface DeployOutputs extends ActionOutputs {
   operation: 'deploy';
   resource_changes: string; // Number as string
-  urls: string; // JSON array as string
 }
 
 export interface DiffOutputs extends ActionOutputs {
@@ -93,7 +91,6 @@ export interface WorkflowSummary {
   success: boolean;
   duration: string;
   resourceChanges?: number;
-  urls?: Array<{ name: string; url: string; type: string }>;
   errors?: string[];
   warnings?: string[];
   artifacts: ArtifactInfo[];

@@ -44,7 +44,6 @@ export type {
   SSTParsePatterns,
   SSTRemoveOutput,
   SSTResource,
-  SSTUrl,
   SSTValidationResult,
 } from './sst.js';
 
@@ -223,7 +222,6 @@ function validateDeployOutput(obj: Record<string, unknown>): SSTDeployOutput {
     'region',
     'resources',
     'outputs',
-    'urls',
     'duration',
     'status',
   ];

@@ -5,7 +5,7 @@
   "stage": "dev",
   "success": true,
   "description": "Generated from environment-variables.txt",
-  "generatedAt": "2025-08-13T16:43:37.237Z",
+  "generatedAt": "2025-08-16T18:55:14.036Z",
   "files": {
     "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/environment-variables.txt",
     "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.comment.md",

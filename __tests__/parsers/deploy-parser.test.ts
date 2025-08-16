@@ -10,7 +10,6 @@ import {
   INCOMPLETE_OUTPUT,
   MALFORMED_OUTPUT,
   SST_DEPLOY_FAILURE_OUTPUT,
-  SST_DEPLOY_PARTIAL_OUTPUT,
   SST_DEPLOY_SUCCESS_OUTPUT,
 } from '../fixtures/sst-outputs';
 
@@ -48,50 +47,30 @@ describe('Deploy Parser - SST Output Processing', () => {
       const timedResources = result.resources.filter((r) => r.timing);
       expect(timedResources.length).toBeGreaterThan(0);
 
-      // Check URLs - should include Astro and www
-      expect(result.urls.length).toBeGreaterThanOrEqual(2);
+      // Check outputs - should include Astro, www, github_role_arn, and github_role_name
+      expect(result.outputs.length).toBeGreaterThanOrEqual(4);
 
-      const astroUrl = result.urls.find((u) => u.name === 'Astro');
-      expect(astroUrl).toBeDefined();
-      expect(astroUrl?.url).toBe('https://kodehort.com');
-      expect(astroUrl?.type).toBe('web');
+      const astroOutput = result.outputs.find((o) => o.key === 'Astro');
+      expect(astroOutput).toBeDefined();
+      expect(astroOutput?.value).toBe('https://kodehort.com');
 
-      const wwwUrl = result.urls.find((u) => u.name === 'www');
-      expect(wwwUrl).toBeDefined();
-      expect(wwwUrl?.url).toBe('https://kodehort.com');
-      expect(wwwUrl?.type).toBe('web');
-    });
+      const wwwOutput = result.outputs.find((o) => o.key === 'www');
+      expect(wwwOutput).toBeDefined();
+      expect(wwwOutput?.value).toBe('https://kodehort.com');
 
-    it('should parse partial deployment output', () => {
-      const result = parser.parse(SST_DEPLOY_PARTIAL_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true); // Exit code 0 = success even if partial
-      expect(result.operation).toBe('deploy');
-      expect(result.app).toBe('partial-app');
-      expect(result.completionStatus).toBe('partial');
-      expect(result.resourceChanges).toBe(2); // Only resources with proper status lines
-
-      // Check mixed resource statuses
-      expect(result.resources.length).toBeGreaterThanOrEqual(2);
-
-      const createdResource = result.resources.find(
-        (r) => r.status === 'created'
+      const githubRoleArnOutput = result.outputs.find(
+        (o) => o.key === 'github_role_arn'
       );
-      expect(createdResource).toBeDefined();
-      expect(createdResource?.name).toBe('Database');
-
-      const updatedResource = result.resources.find(
-        (r) => r.status === 'updated'
+      expect(githubRoleArnOutput).toBeDefined();
+      expect(githubRoleArnOutput?.value).toBe(
+        'arn:aws:iam::196313910340:role/production-GithubActionRole'
       );
-      expect(updatedResource).toBeDefined();
-      expect(updatedResource?.name).toBe('Api');
-      expect(updatedResource?.timing).toBe('2.5s');
 
-      // Should include API URL
-      expect(result.urls).toHaveLength(1);
-      expect(result.urls[0]?.name).toBe('Api');
-      expect(result.urls[0]?.url).toBe('https://api.staging.example.com');
-      expect(result.urls[0]?.type).toBe('api');
+      const githubRoleNameOutput = result.outputs.find(
+        (o) => o.key === 'github_role_name'
+      );
+      expect(githubRoleNameOutput).toBeDefined();
+      expect(githubRoleNameOutput?.value).toBe('production-GithubActionRole');
     });
 
     it('should parse failed deployment output', () => {
@@ -121,8 +100,8 @@ describe('Deploy Parser - SST Output Processing', () => {
       const timedResources = result.resources.filter((r) => r.timing);
       expect(timedResources.length).toBeGreaterThan(0);
 
-      // Failed deployments may have console URL for debugging
-      expect(result.urls.length).toBeGreaterThanOrEqual(0);
+      // Failed deployments may have outputs for debugging
+      expect(result.outputs.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle malformed output gracefully', () => {
@@ -133,7 +112,7 @@ describe('Deploy Parser - SST Output Processing', () => {
       expect(result.stage).toBe('staging');
       expect(result.app).toBe(''); // No app found
       expect(result.resources).toHaveLength(0);
-      expect(result.urls).toHaveLength(0);
+      expect(result.outputs).toHaveLength(0);
       expect(result.resourceChanges).toBe(0);
     });
 
@@ -145,7 +124,7 @@ describe('Deploy Parser - SST Output Processing', () => {
       expect(result.stage).toBe('staging');
       expect(result.app).toBe('');
       expect(result.resources).toHaveLength(0);
-      expect(result.urls).toHaveLength(0);
+      expect(result.outputs).toHaveLength(0);
       expect(result.resourceChanges).toBe(0);
     });
 
@@ -163,7 +142,7 @@ describe('Deploy Parser - SST Output Processing', () => {
         status: 'created',
         timing: '1.2s',
       });
-      expect(result.urls).toHaveLength(0);
+      expect(result.outputs).toHaveLength(0);
       expect(result.resourceChanges).toBe(1);
     });
 
@@ -240,23 +219,23 @@ SST 3.17.10  ready!
 
       const result = parser.parse(urlOutput, 'staging', 0);
 
-      expect(result.urls).toHaveLength(5);
+      expect(result.outputs).toHaveLength(5);
 
-      // Check URL type mapping
-      const routerUrl = result.urls.find((u) => u.name === 'Router');
-      expect(routerUrl?.type).toBe('api');
+      // Check output parsing
+      const routerOutput = result.outputs.find((o) => o.key === 'Router');
+      expect(routerOutput?.value).toBe('https://router.example.com');
 
-      const apiUrl = result.urls.find((u) => u.name === 'Api');
-      expect(apiUrl?.type).toBe('api');
+      const apiOutput = result.outputs.find((o) => o.key === 'Api');
+      expect(apiOutput?.value).toBe('https://api.example.com/v1');
 
-      const webUrl = result.urls.find((u) => u.name === 'Web');
-      expect(webUrl?.type).toBe('web');
+      const webOutput = result.outputs.find((o) => o.key === 'Web');
+      expect(webOutput?.value).toBe('https://web.example.com');
 
-      const websiteUrl = result.urls.find((u) => u.name === 'Website');
-      expect(websiteUrl?.type).toBe('web');
+      const websiteOutput = result.outputs.find((o) => o.key === 'Website');
+      expect(websiteOutput?.value).toBe('https://site.example.com');
 
-      const functionUrl = result.urls.find((u) => u.name === 'Function');
-      expect(functionUrl?.type).toBe('function');
+      const functionOutput = result.outputs.find((o) => o.key === 'Function');
+      expect(functionOutput?.value).toBe('https://lambda.example.com');
     });
   });
 

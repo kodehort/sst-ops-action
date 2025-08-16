@@ -87,9 +87,9 @@ describe('OperationRouter', () => {
           truncated: false,
         },
         resourceChanges: 3,
-        urls: [
-          { name: 'api', url: 'https://api.example.com', type: 'api' },
-          { name: 'web', url: 'https://web.example.com', type: 'web' },
+        outputs: [
+          { key: 'api', value: 'https://api.example.com' },
+          { key: 'web', value: 'https://web.example.com' },
         ],
         resources: [
           {
@@ -109,7 +109,7 @@ describe('OperationRouter', () => {
       expect(result.success).toBe(true);
       expect(result.operation).toBe('deploy');
       expect((result as DeployResult).resourceChanges).toBe(3);
-      expect((result as DeployResult).urls).toHaveLength(2);
+      expect((result as DeployResult).outputs).toHaveLength(2);
       expect((result as DeployResult).resources).toHaveLength(1);
       expect((result as DeployResult).permalink).toBe(
         'https://console.sst.dev/deploy/123'
@@ -224,13 +224,9 @@ describe('OperationRouter', () => {
         success: true,
         stage: 'test-stage',
         metadata: { app: 'test-app' },
-        urls: [
-          { name: 'valid-api', url: 'https://api.example.com', type: 'api' },
-          {
-            name: 'invalid-type',
-            url: 'https://custom.example.com',
-            type: 'custom',
-          },
+        outputs: [
+          { key: 'valid-api', value: 'https://api.example.com' },
+          { key: 'invalid-type', value: 'https://custom.example.com' },
         ],
       };
 
@@ -239,8 +235,8 @@ describe('OperationRouter', () => {
       const result = await executeOperation('deploy', defaultOptions);
 
       const deployResult = result as DeployResult;
-      expect(deployResult.urls?.[0]?.type).toBe('api');
-      expect(deployResult.urls?.[1]?.type).toBe('other'); // Should normalize to 'other'
+      expect(deployResult.outputs?.[0]?.key).toBe('valid-api');
+      expect(deployResult.outputs?.[1]?.key).toBe('invalid-type');
     });
 
     it('should normalize resource status correctly', async () => {
@@ -331,7 +327,7 @@ describe('OperationRouter', () => {
       expect((result as DeployResult).rawOutput).toBe('');
       expect((result as DeployResult).exitCode).toBe(0);
       expect((result as DeployResult).resourceChanges).toBe(0);
-      expect((result as DeployResult).urls).toEqual([]);
+      expect((result as DeployResult).outputs).toEqual([]);
       expect((result as DeployResult).resources).toEqual([]);
     });
 
@@ -379,11 +375,10 @@ describe('OperationRouter', () => {
         },
         error: 'Warning message',
         permalink: 'https://console.sst.dev/123',
-        urls: [
+        outputs: [
           {
-            name: 'api',
-            url: 'https://api.example.com',
-            type: 'function',
+            key: 'api',
+            value: 'https://api.example.com',
           },
         ],
         resources: [

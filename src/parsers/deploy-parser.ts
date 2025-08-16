@@ -1,8 +1,9 @@
 /**
  * Deploy Operation Parser
- * Parses SST deploy command output to extract resource changes and URLs
+ * Parses SST deploy command output to extract resource changes and generic outputs
  */
 
+import * as core from '@actions/core';
 import type { DeployResult } from '../types/operations';
 import { OperationParser } from './operation-parser';
 
@@ -13,8 +14,6 @@ const RESOURCE_UPDATED_PATTERN =
   /^\|\s+Updated\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
 const RESOURCE_DELETED_PATTERN =
   /^\|\s+Deleted\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
-// URL patterns for final output section (not inline)
-const FINAL_URL_PATTERN = /^\s*([\w\s]+):\s+(https?:\/\/.+)$/;
 
 // Error and completion patterns for real SST output
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
@@ -47,7 +46,7 @@ export class DeployParser extends OperationParser<DeployResult> {
 
     // Parse deploy-specific information
     const resources = this.parseResourceChanges(processedOutput);
-    const urls = this.parseDeployedURLs(processedOutput);
+    const outputs = this.parseOutputs(processedOutput);
     const error = this.parseErrorMessage(processedOutput);
 
     // Determine success based on exit code (primary) and patterns (secondary)
@@ -67,7 +66,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
       resourceChanges: resources.length,
       resources,
-      urls,
+      outputs,
     };
 
     return result;
@@ -139,22 +138,20 @@ export class DeployParser extends OperationParser<DeployResult> {
   }
 
   /**
-   * Parse deployed URLs from deployment output
-   * Real SST URLs appear in final output section after completion
+   * Parse outputs from deployment output
+   * SST outputs appear in final output section after completion as key: value pairs
    */
-  private parseDeployedURLs(output: string): Array<{
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function' | 'other';
+  private parseOutputs(output: string): Array<{
+    key: string;
+    value: string;
   }> {
     const lines = output.split('\n');
-    const urls: Array<{
-      name: string;
-      url: string;
-      type: 'api' | 'web' | 'function' | 'other';
+    const outputs: Array<{
+      key: string;
+      value: string;
     }> = [];
 
-    // Look for URLs after completion marker
+    // Look for outputs after completion marker
     let inOutputSection = false;
 
     for (const line of lines) {
@@ -166,70 +163,81 @@ export class DeployParser extends OperationParser<DeployResult> {
         continue;
       }
 
-      if (inOutputSection || this.isLikelyUrl(trimmedLine)) {
-        const url = this.parseUrlFromLine(trimmedLine);
-        if (url) {
-          urls.push(url);
+      if (inOutputSection) {
+        const outputPair = this.parseOutputFromLine(trimmedLine);
+        if (outputPair) {
+          outputs.push(outputPair);
+        } else if (trimmedLine) {
+          // Log skipped non-empty lines for debugging
+          core.debug(`Skipped output line: "${trimmedLine}" (failed parsing)`);
         }
       }
     }
 
-    return urls;
+    return outputs;
   }
 
   /**
-   * Parse a single URL from a deploy line
-   * Real format: ResourceName: https://example.com or generic output: key: value
+   * Parse a single output from a deploy line
+   *
+   * Extracts key-value pairs from SST deployment output lines. The method expects
+   * lines in the format "key: value" and handles various edge cases and formatting.
+   *
+   * **Supported Formats:**
+   * - Standard: `ApiUrl: https://api.example.com`
+   * - With spaces: `Web URL : https://web.example.com`
+   * - Mixed case: `webUrl: https://web.example.com`
+   * - Numeric values: `Port: 3000`
+   * - Boolean values: `Enabled: true`
+   *
+   * **Ignored Formats:**
+   * - Separator lines: `--- Deployment Complete ---`
+   * - Empty lines or whitespace-only lines
+   * - Lines without colons: `Invalid format line`
+   * - Lines with colon at start/end: `: value` or `key:`
+   * - Lines with empty keys or values after trimming
+   *
+   * **Error Conditions:**
+   * - Returns `null` for any line that doesn't match expected format
+   * - Handles malformed input gracefully without throwing
+   * - Ignores lines that contain '---' (deployment separators)
+   *
+   * @param line Raw output line from SST deployment
+   * @returns Parsed key-value pair or null if line doesn't match expected format
+   *
+   * @example
+   * ```typescript
+   * parseOutputFromLine("ApiUrl: https://api.example.com")
+   * // Returns: { key: "ApiUrl", value: "https://api.example.com" }
+   *
+   * parseOutputFromLine("--- Deployment Complete ---")
+   * // Returns: null (separator line ignored)
+   *
+   * parseOutputFromLine("InvalidLine")
+   * // Returns: null (no colon found)
+   * ```
    */
-  private parseUrlFromLine(line: string): {
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function' | 'other';
+  private parseOutputFromLine(line: string): {
+    key: string;
+    value: string;
   } | null {
-    const match = line.match(FINAL_URL_PATTERN);
-    if (match?.[1] && match?.[2] && match[2].startsWith('http')) {
-      const name = match[1].trim();
-      const url = match[2].trim();
+    // Ignore separator lines
+    if (line.includes('---')) {
+      return null;
+    }
 
-      // Determine type based on name patterns
-      const type = this.classifyUrlType(name);
+    // Parse key: value format
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0 && colonIndex < line.length - 1) {
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
 
-      return { name, url, type };
+      if (key && value) {
+        return { key, value };
+      }
     }
 
     return null;
-  }
-
-  /**
-   * Check if line likely contains a URL
-   */
-  private isLikelyUrl(line: string): boolean {
-    return line.includes('http://') || line.includes('https://');
-  }
-
-  /**
-   * Classify URL type based on resource name
-   */
-  private classifyUrlType(name: string): 'api' | 'web' | 'function' | 'other' {
-    const lowerName = name.toLowerCase();
-
-    if (lowerName.includes('api') || lowerName.includes('router')) {
-      return 'api';
-    }
-
-    if (
-      lowerName.includes('web') ||
-      lowerName.includes('astro') ||
-      lowerName.includes('www')
-    ) {
-      return 'web';
-    }
-
-    if (lowerName.includes('function') || lowerName.includes('lambda')) {
-      return 'function';
-    }
-
-    return 'other';
   }
 
   /**

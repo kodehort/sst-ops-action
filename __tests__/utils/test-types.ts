@@ -35,7 +35,7 @@ export type MockRemoveResult = DeepPartial<
 export type MockSSTCommandResult = DeepPartial<
   import('../../src/types/sst.js').SSTCommandResult
 >;
-export type MockSSTUrl = DeepPartial<import('../../src/types/sst.js').SSTUrl>;
+export type MockSSTOutput = DeepPartial<{ key: string; value: string }>;
 export type MockSSTResource = DeepPartial<
   import('../../src/types/sst.js').SSTResource
 >;
@@ -55,7 +55,7 @@ export const createMockDeployResult = (
   truncated: false,
   completionStatus: 'complete',
   resourceChanges: 0,
-  urls: [],
+  outputs: [],
   resources: [],
   ...overrides,
 });
@@ -124,10 +124,11 @@ export const createMockSSTCommandResult = (
   ...overrides,
 });
 
-export const createMockSSTUrl = (overrides: MockSSTUrl = {}): MockSSTUrl => ({
-  name: 'test-url',
-  type: 'web',
-  url: 'https://test.example.com',
+export const createMockSSTOutput = (
+  overrides: MockSSTOutput = {}
+): MockSSTOutput => ({
+  key: 'API',
+  value: 'https://test.example.com',
   ...overrides,
 });
 
@@ -190,17 +191,16 @@ export const createMockResourceBatch = (
 };
 
 /**
- * Create a batch of mock URLs for testing large collections
+ * Create a batch of mock outputs for testing large collections
  */
-export const createMockUrlBatch = (
+export const createMockOutputBatch = (
   count: number,
   baseOverrides: any = {}
-): MockSSTUrl[] => {
+): MockSSTOutput[] => {
   return Array.from({ length: count }, (_, i) =>
-    createMockSSTUrl({
-      name: `Service${i}`,
-      type: 'api',
-      url: `https://service${i}.example.com`,
+    createMockSSTOutput({
+      key: `Service${i}`,
+      value: `https://service${i}.example.com`,
       ...baseOverrides,
     })
   );

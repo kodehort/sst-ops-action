@@ -11,7 +11,8 @@
 | Status | ![Success](https://img.shields.io/badge/Status-Success-green) |
 | Console Link | [View Diff](https://console.sst.dev/my-complex-app/production/diffs/xyz789) |
 
-### 📋 Resource Changes
+<details>
+<summary>📋 View Resource Changes</summary>
 
 ```diff
 +  my-complex-app-production pulumi:pulumi:Stack
@@ -40,3 +41,5 @@
 
 -  NotificationTopic sst:aws:Topic → NotificationTopicTopic aws:sns:Topic
 ```
+
+</details>

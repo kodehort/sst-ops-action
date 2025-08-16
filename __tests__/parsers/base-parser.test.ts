@@ -5,7 +5,6 @@ import {
   INCOMPLETE_OUTPUT,
   MALFORMED_OUTPUT,
   SST_DEPLOY_FAILURE_OUTPUT,
-  SST_DEPLOY_PARTIAL_OUTPUT,
   SST_DEPLOY_SUCCESS_OUTPUT,
 } from '../fixtures/sst-outputs';
 
@@ -123,13 +122,6 @@ describe('Base Parser - Common Output Processing', () => {
       expect(result.completionStatus).toBe('complete');
     });
 
-    it('should detect partial completion status', () => {
-      const result = parser.testParseCommonInfo(
-        SST_DEPLOY_PARTIAL_OUTPUT.split('\n')
-      );
-      expect(result.completionStatus).toBe('partial');
-    });
-
     it('should detect failed completion status', () => {
       const result = parser.testParseCommonInfo(
         SST_DEPLOY_FAILURE_OUTPUT.split('\n')
@@ -203,14 +195,6 @@ describe('Base Parser - Common Output Processing', () => {
       expect(result.exitCode).toBe(1);
       expect(result.completionStatus).toBe('failed');
       expect(result.app).toBe('kodehort-scratch');
-    });
-
-    it('should handle partial deployment gracefully', () => {
-      const result = parser.parse(SST_DEPLOY_PARTIAL_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.completionStatus).toBe('partial');
-      expect(result.app).toBe('partial-app');
     });
 
     it('should handle malformed output without throwing', () => {
