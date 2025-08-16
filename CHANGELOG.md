@@ -1,3 +1,47 @@
+# Release v0.7.0
+
+**Release Date:** 2025-08-16
+**Previous Version:** v0.6.0
+
+## 🚀 What's New
+
+
+### ✨ Features
+
+- feat: improve input validation and code quality (#23) (`ffcdabb`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.93MB (2027360 bytes)
+- **Integrity Hash:** `a4e0c595cf7851b4...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.0
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_vArKYVjtEhJJgTx87Pn0vYt58anu6k1RUqEq
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.6.0...v0.7.0)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.0/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.6.0...v0.7.0
+
+---
+
 # Release v0.6.0
 
 **Release Date:** 2025-08-15
