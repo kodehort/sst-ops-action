@@ -1,0 +1,63 @@
+SST 3.17.10  ready!
+
+➜  App:        www-kodehort-com
+   Stage:      production
+
+~  Deploy
+
+$ bunx --bun astro build
+14:15:01 [content] Syncing content
+14:15:01 [WARN] [glob-loader] The base directory "/Users/alistairstead/dev/kodehort/kodehort.com/apps/web/src/content/post/" does not exist.
+14:15:01 [content] Synced content
+14:15:01 [types] Generated 124ms
+14:15:01 [build] output: "server"
+14:15:01 [build] mode: "server"
+14:15:01 [build] directory: /Users/alistairstead/dev/kodehort/kodehort.com/apps/web/dist/
+14:15:01 [build] adapter: astro-sst
+14:15:01 [build] Collecting build info...
+14:15:01 [build] ✓ Completed in 147ms.
+14:15:01 [build] Building server entrypoints...
+14:15:02 [WARN] [vite] "mergeRefs" is imported from external module "@solid-primitives/refs" but never used in "../../node_modules/solid-motionone/dist/index.jsx" and "../../node_modules/@kobalte/utils/dist/index.js".
+14:15:02 [vite] ✓ built in 999ms
+14:15:02 [build] ✓ Completed in 1.02s.
+
+ building client (vite)
+14:15:02 [vite] transforming...
+14:15:03 [vite] ✓ 156 modules transformed.
+14:15:03 [vite] rendering chunks...
+14:15:03 [vite] computing gzip size...
+14:15:03 [vite] dist/client/_astro/icon-512.B3K2tbJr.png   11.96 kB
+14:15:03 [vite] dist/client/_astro/fade-up.D9YuVHWa.js      0.38 kB │ gzip:   0.28 kB │ map:     1.27 kB
+14:15:03 [vite] dist/client/_astro/icon.D24DKZb0.js         2.42 kB │ gzip:   0.94 kB │ map:     3.31 kB
+14:15:03 [vite] dist/client/_astro/client.Cz33-c7d.js       5.66 kB │ gzip:   2.48 kB │ map:    29.59 kB
+14:15:03 [vite] dist/client/_astro/index.3NZ2Y4bW.js       15.16 kB │ gzip:   6.41 kB │ map:   128.68 kB
+14:15:03 [vite] dist/client/_astro/page.BiMgb0QW.js        23.35 kB │ gzip:  10.51 kB │ map:    63.29 kB
+14:15:03 [vite] dist/client/_astro/cn.BrKXTeUm.js          24.88 kB │ gzip:   7.96 kB │ map:   132.76 kB
+14:15:03 [vite] dist/client/_astro/web.CLf7LvOq.js         25.01 kB │ gzip:   9.67 kB │ map:   128.03 kB
+14:15:03 [vite] dist/client/_astro/navbar.CDe2OFev.js     354.28 kB │ gzip: 159.87 kB │ map: 2,444.52 kB
+14:15:03 [vite] ✓ built in 457ms
+
+ prerendering static routes
+14:15:03 ✓ Completed in 41ms.
+
+14:15:03 [build] Rearranging server assets...
+14:15:03 [build] Server built in 1.69s
+14:15:03 [build] Complete!
+|  Created     Astro sst:aws:Astro → AstroBuilder command:local:Command (2.2s)
+|  Created     Astro sst:aws:Astro → AstroServerEuwest2Sourcemap0 aws:s3:BucketObjectv2 (1.2s)
+|  Created     Astro sst:aws:Astro → AstroServerEuwest2Code aws:s3:BucketObjectv2 (2.0s)
+|  Updated     Astro sst:aws:Astro → AstroServerEuwest2Function aws:lambda:Function (6.1s)
+|  Created     Astro sst:aws:Astro → AstroPrewarmEuwest2 aws:lambda:Invocation
+|  Deleted     Astro sst:aws:Astro → AstroPrewarmEuwest2 aws:lambda:Invocation
+|  Deleted     Astro sst:aws:Astro → AstroServerEuwest2Sourcemap0 aws:s3:BucketObjectv2
+|  Deleted     Astro sst:aws:Astro → AstroBuilder command:local:Command
+|  Deleted     Astro sst:aws:Astro → AstroServerEuwest2Code aws:s3:BucketObjectv2
+
+↗  Permalink   https://sst.dev/u/63c063c9
+
+✓  Complete
+   Astro: https://kodehort.com
+   ---
+   www: https://kodehort.com
+   github_role_arn: arn:aws:iam::196313910340:role/production-GithubActionRole
+   github_role_name: production-GithubActionRole

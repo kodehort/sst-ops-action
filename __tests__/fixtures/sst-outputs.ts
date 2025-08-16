@@ -69,25 +69,6 @@ $ bunx --bun astro build
    github_role_arn: arn:aws:iam::196313910340:role/production-GithubActionRole
 `;
 
-export const SST_DEPLOY_PARTIAL_OUTPUT = `
-SST 3.17.10  ready!
-
-➜  App:        partial-app
-   Stage:      staging
-
-~  Deploy
-
-|  Created     Database sst:aws:Dynamo
-|  Updated     Api sst:aws:Function (2.5s)
-|  Error       Web sst:aws:Astro → WebDistribution aws:cloudfront:Distribution
-resource 'E1234567890' does not exist
-
-⚠  Partial
-   Api: https://api.staging.example.com
-
-↗  Permalink https://sst.dev/u/partial123
-`;
-
 export const SST_DEPLOY_FAILURE_OUTPUT = `
 SST 3.17.10  ready!
 

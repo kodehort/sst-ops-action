@@ -44,7 +44,6 @@ export type {
   SSTParsePatterns,
   SSTRemoveOutput,
   SSTResource,
-  SSTUrl,
   SSTValidationResult,
 } from './sst.js';
 

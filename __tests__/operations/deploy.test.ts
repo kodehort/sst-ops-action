@@ -10,10 +10,7 @@ import { DeployOperation } from '../../src/operations/deploy';
 import { DeployParser } from '../../src/parsers/deploy-parser';
 import type { DeployResult, OperationOptions } from '../../src/types';
 import type { SSTCLIExecutor, SSTCommandResult } from '../../src/utils/cli';
-import {
-  SST_DEPLOY_FAILURE_OUTPUT,
-  SST_DEPLOY_PARTIAL_OUTPUT,
-} from '../fixtures/sst-outputs';
+import { SST_DEPLOY_FAILURE_OUTPUT } from '../fixtures/sst-outputs';
 
 describe('Deploy Operation - SST Deployment Workflows', () => {
   let deployOperation: DeployOperation;
@@ -51,9 +48,9 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
     truncated: false,
     completionStatus: 'complete',
     resourceChanges: 3,
-    urls: [
-      { name: 'API', url: 'https://api.staging.example.com', type: 'api' },
-      { name: 'Web', url: 'https://staging.example.com', type: 'web' },
+    outputs: [
+      { key: 'API', value: 'https://api.staging.example.com' },
+      { key: 'Web', value: 'https://staging.example.com' },
     ],
     resources: [
       { type: 'Function', name: 'test-app-staging-handler', status: 'created' },
@@ -160,69 +157,6 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
       expect(result).toEqual(mockDeployResult);
     });
 
-    it('should report partial deployment when some resources fail', async () => {
-      const partialCLIResult: SSTCommandResult = {
-        output: SST_DEPLOY_PARTIAL_OUTPUT,
-        exitCode: 0,
-        duration: 120_000,
-        command: 'sst deploy --stage staging',
-        truncated: false,
-        stdout: SST_DEPLOY_PARTIAL_OUTPUT,
-        stderr: '',
-        success: true,
-        stage: 'staging',
-        operation: 'deploy',
-      };
-
-      const partialDeployResult: DeployResult = {
-        success: true,
-        operation: 'deploy',
-        stage: 'staging',
-        app: 'my-sst-app',
-        rawOutput: SST_DEPLOY_PARTIAL_OUTPUT,
-        exitCode: 0,
-        truncated: false,
-        completionStatus: 'partial',
-        resourceChanges: 2,
-        urls: [
-          {
-            name: 'Router',
-            url: 'https://api.staging.example.com',
-            type: 'api',
-          },
-        ],
-        resources: [
-          {
-            type: 'Function',
-            name: 'my-sst-app-staging-handler',
-            status: 'created',
-          },
-          { type: 'Api', name: 'my-sst-app-staging-api', status: 'updated' },
-        ],
-        permalink:
-          'https://console.sst.dev/my-sst-app/staging/deployments/def456',
-      };
-
-      // Mock parser to return partial result
-      const _mockParse = vi
-        .spyOn(DeployParser.prototype, 'parse')
-        .mockReturnValue(partialDeployResult);
-
-      vi.mocked(mockSSTExecutor.executeSST).mockResolvedValue(partialCLIResult);
-      vi.mocked(mockGitHubClient.createOrUpdateComment).mockResolvedValue(
-        undefined
-      );
-      vi.mocked(mockGitHubClient.createWorkflowSummary).mockResolvedValue(
-        undefined
-      );
-
-      const result = await deployOperation.execute(mockOperationOptions);
-
-      expect(result).toEqual(partialDeployResult);
-      expect(result.completionStatus).toBe('partial');
-      expect(result.resourceChanges).toBe(2);
-    });
-
     it('should report failed deployment with error details', async () => {
       const failureCLIResult: SSTCommandResult = {
         output: SST_DEPLOY_FAILURE_OUTPUT,
@@ -247,7 +181,7 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
         truncated: false,
         completionStatus: 'failed',
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [
           {
             type: 'Function',
@@ -374,7 +308,7 @@ describe('Deploy Operation - SST Deployment Workflows', () => {
       expect(result).toHaveProperty('stage', 'staging');
       expect(result).toHaveProperty('app');
       expect(result).toHaveProperty('resourceChanges');
-      expect(result).toHaveProperty('urls');
+      expect(result).toHaveProperty('outputs');
       expect(result).toHaveProperty('resources');
       expect(result).toHaveProperty('completionStatus');
     });

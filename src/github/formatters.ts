@@ -8,7 +8,6 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-  SSTUrl,
 } from '../types/index.js';
 
 /**
@@ -102,9 +101,9 @@ export class OperationFormatter {
       sections.push(this.formatResourceChangesSection(result));
     }
 
-    // URLs section
-    if (result.urls && result.urls.length > 0) {
-      sections.push(this.formatUrlsSection(result.urls));
+    // Outputs section
+    if (result.outputs && result.outputs.length > 0) {
+      sections.push(this.formatOutputsSection(result.outputs));
     }
 
     // Console link section
@@ -173,7 +172,7 @@ export class OperationFormatter {
 | App | \`${result.app || 'Unknown'}\` |
 | Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
-| URLs Deployed | ${result.urls?.length || 0} |
+| Outputs | ${result.outputs?.length || 0} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
     // Add console link if available
@@ -181,17 +180,18 @@ export class OperationFormatter {
       summary += `\n| Console Link | [View Deployment](${result.permalink}) |`;
     }
 
-    if (result.urls && result.urls.length > 0) {
-      summary += '\n\n### 🔗 Deployed URLs\n';
-      const urlsToShow = result.urls.slice(0, this.config.maxUrlsToShow);
+    if (result.outputs && result.outputs.length > 0) {
+      summary += '\n\n### 📋 Deploy Outputs\n\n';
+      const outputsToShow = result.outputs.slice(0, this.config.maxUrlsToShow);
 
-      for (const url of urlsToShow) {
-        const capitalizedType = this.formatUrlType(url.type);
-        summary += `- **${capitalizedType}**: [${url.url}](${url.url})\n`;
+      summary += '| Key | Value |\n|-----|-------|\n';
+      for (const output of outputsToShow) {
+        const formattedValue = this.formatOutputValue(output.value);
+        summary += `| ${output.key} | ${formattedValue} |\n`;
       }
 
-      if (result.urls.length > this.config.maxUrlsToShow) {
-        summary += `\n*... and ${result.urls.length - this.config.maxUrlsToShow} more URLs*`;
+      if (result.outputs.length > this.config.maxUrlsToShow) {
+        summary += `\n*... and ${result.outputs.length - this.config.maxUrlsToShow} more outputs*`;
       }
     }
 
@@ -316,7 +316,7 @@ All resources have been successfully removed.`;
 | App | \`${result.app || 'Unknown'}\` |
 | Stage | \`${result.stage}\` |
 | Resource Changes | ${result.resourceChanges || 0} |
-| URLs Deployed | ${result.urls?.length || 0} |
+| Outputs | ${result.outputs?.length || 0} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
     // Add console link if available
@@ -357,22 +357,39 @@ All resources have been successfully removed.`;
   }
 
   /**
-   * Format URLs section
+   * Format outputs section
    */
-  private formatUrlsSection(urls: SSTUrl[]): string {
-    let section = '### 🔗 Deployed URLs';
+  private formatOutputsSection(
+    outputs: Array<{ key: string; value: string }>
+  ): string {
+    let section = '### 📋 Deploy Outputs\n\n';
 
-    const urlsToShow = urls.slice(0, this.config.maxUrlsToShow);
+    const outputsToShow = outputs.slice(0, this.config.maxUrlsToShow);
 
-    for (const url of urlsToShow) {
-      section += `\n- **${url.type}**: [${url.url}](${url.url})`;
+    section += '| Key | Value |\n|-----|-------|\n';
+    for (const output of outputsToShow) {
+      const formattedValue = this.formatOutputValue(output.value);
+      section += `| ${output.key} | ${formattedValue} |\n`;
     }
 
-    if (urls.length > this.config.maxUrlsToShow) {
-      section += `\n\n*... and ${urls.length - this.config.maxUrlsToShow} more URLs*`;
+    if (outputs.length > this.config.maxUrlsToShow) {
+      section += `\n*... and ${outputs.length - this.config.maxUrlsToShow} more outputs*`;
     }
 
     return section;
+  }
+
+  /**
+   * Format output value - make URLs clickable, escape other values
+   */
+  private formatOutputValue(value: string): string {
+    // Check if value is a URL
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return `[${value}](${value})`;
+    }
+
+    // For non-URL values, just return the value (escaped for table)
+    return `\`${value}\``;
   }
 
   /**
@@ -565,20 +582,6 @@ No infrastructure changes detected for this operation.`;
         return '➖ Unchanged';
       default:
         return `${action}`;
-    }
-  }
-
-  /**
-   * Format URL type with proper capitalization
-   */
-  private formatUrlType(type: string): string {
-    switch (type.toLowerCase()) {
-      case 'api':
-        return 'API';
-      case 'web':
-        return 'Web';
-      default:
-        return type.charAt(0).toUpperCase() + type.slice(1);
     }
   }
 }

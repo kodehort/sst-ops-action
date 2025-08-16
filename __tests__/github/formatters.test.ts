@@ -4,15 +4,12 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-  SSTUrl,
 } from '../../src/types/index.js';
 import {
   createMockDeployResource,
   createMockDeployResult,
   createMockDiffResult,
   createMockResourceBatch,
-  createMockSSTUrl,
-  createMockUrlBatch,
 } from '../utils/test-types.js';
 
 describe('OperationFormatter', () => {
@@ -29,17 +26,9 @@ describe('OperationFormatter', () => {
         app: 'my-app',
         rawOutput: 'Deploy completed successfully',
         resourceChanges: 5,
-        urls: [
-          createMockSSTUrl({
-            name: 'app',
-            type: 'web',
-            url: 'https://my-app.com',
-          }),
-          createMockSSTUrl({
-            name: 'api',
-            type: 'api',
-            url: 'https://api.my-app.com',
-          }),
+        outputs: [
+          { key: 'app', value: 'https://my-app.com' },
+          { key: 'api', value: 'https://api.my-app.com' },
         ],
         resources: [
           createMockDeployResource({
@@ -64,9 +53,13 @@ describe('OperationFormatter', () => {
       expect(comment).toContain('| Resource Changes | 5 |');
       expect(comment).toContain('📊 Resource Changes');
       expect(comment).toContain('**Total Changes:** 5');
-      expect(comment).toContain('🔗 Deployed URLs');
-      expect(comment).toContain('https://my-app.com');
-      expect(comment).toContain('https://api.my-app.com');
+      expect(comment).toContain('📋 Deploy Outputs');
+      expect(comment).toContain(
+        '| app | [https://my-app.com](https://my-app.com) |'
+      );
+      expect(comment).toContain(
+        '| api | [https://api.my-app.com](https://api.my-app.com) |'
+      );
       expect(comment).toContain('🖥️ SST Console');
       expect(comment).toContain('https://console.sst.dev/my-app/production');
     });
@@ -82,7 +75,7 @@ describe('OperationFormatter', () => {
         truncated: false,
         completionStatus: 'failed',
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
         error: 'Deployment failed due to insufficient permissions',
       };
@@ -272,9 +265,9 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 7,
-        urls: [
-          { name: 'app', type: 'web', url: 'https://my-app.com' },
-          { name: 'api', type: 'api', url: 'https://api.my-app.com' },
+        outputs: [
+          { key: 'app', value: 'https://my-app.com' },
+          { key: 'api', value: 'https://api.my-app.com' },
         ],
         resources: [],
       };
@@ -283,21 +276,20 @@ $ bunx --bun astro build
 
       expect(summary).toContain('📦 Deployment Summary');
       expect(summary).toContain('Resources Changed | 7');
-      expect(summary).toContain('URLs Deployed | 2');
-      expect(summary).toContain('🔗 Deployed URLs');
+      expect(summary).toContain('Outputs | 2');
+      expect(summary).toContain('📋 Deploy Outputs');
       expect(summary).toContain(
-        '**Web**: [https://my-app.com](https://my-app.com)'
+        '| app | [https://my-app.com](https://my-app.com) |'
       );
       expect(summary).toContain(
-        '**API**: [https://api.my-app.com](https://api.my-app.com)'
+        '| api | [https://api.my-app.com](https://api.my-app.com) |'
       );
     });
 
-    it('should format deploy summary with many URLs', () => {
-      const urls: SSTUrl[] = Array.from({ length: 15 }, (_, i) => ({
-        name: `Service${i}`,
-        type: 'api' as const,
-        url: `https://service${i}.example.com`,
+    it('should format deploy summary with many outputs', () => {
+      const outputs = Array.from({ length: 15 }, (_, i) => ({
+        key: `Service${i}`,
+        value: `https://service${i}.example.com`,
       }));
 
       const deployResult: DeployResult = {
@@ -310,14 +302,14 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 15,
-        urls,
+        outputs,
         resources: [],
       };
 
       const summary = formatter.formatOperationSummary(deployResult);
 
-      expect(summary).toContain('URLs Deployed | 15');
-      expect(summary).toContain('... and 5 more URLs');
+      expect(summary).toContain('Outputs | 15');
+      expect(summary).toContain('... and 5 more outputs');
     });
 
     it('should format diff summary correctly', () => {
@@ -432,7 +424,7 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [],
       };
 
@@ -530,12 +522,15 @@ $ bunx --bun astro build
         app: 'my-app',
         rawOutput: 'Deploy completed',
         resourceChanges: 7,
-        urls: createMockUrlBatch(7),
+        outputs: Array.from({ length: 7 }, (_, i) => ({
+          key: `service${i}`,
+          value: `https://service${i}.example.com`,
+        })),
       }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
 
-      expect(comment).toContain('... and 4 more URLs');
+      expect(comment).toContain('... and 4 more outputs');
     });
 
     it('should respect custom maxResourcesToShow configuration', () => {
@@ -552,7 +547,7 @@ $ bunx --bun astro build
         app: 'my-app',
         rawOutput: 'Deploy completed',
         resourceChanges: 12,
-        urls: [],
+        outputs: [],
         resources: createMockResourceBatch(12, {
           type: 'AWS::Lambda::Function',
           status: 'created',

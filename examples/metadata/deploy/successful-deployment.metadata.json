@@ -5,7 +5,7 @@
   "stage": "production",
   "success": true,
   "description": "Generated from successful-deployment.txt",
-  "generatedAt": "2025-08-16T16:54:35.500Z",
+  "generatedAt": "2025-08-16T18:55:14.037Z",
   "files": {
     "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/successful-deployment.txt",
     "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/successful-deployment.comment.md",

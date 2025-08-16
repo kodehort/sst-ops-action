@@ -5,7 +5,7 @@
 | App | `kodehort-scratch` |
 | Stage | `sst-ops-actions` |
 | Resource Changes | 11 |
-| URLs Deployed | 1 |
+| Outputs | 0 |
 | Status | ![Failed](https://img.shields.io/badge/Status-Failed-red) |
 
 ### 📊 Resource Changes
@@ -25,6 +25,3 @@
 | `Web` | 🆕 Created | sst:aws:Astro → WebBuilder command:local:Command |
 | `Web` | 🆕 Created | sst:aws:Astro → WebAssetsBucket aws:s3:BucketV2 |
 | `Database` | 🆕 Created | sst:aws:Dynamo → DatabaseTable aws:dynamodb:Table |
-
-### 🔗 Deployed URLs
-- **other**: [https://sst.dev/u/75c084c6](https://sst.dev/u/75c084c6)

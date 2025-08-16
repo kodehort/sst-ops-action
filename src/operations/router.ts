@@ -31,7 +31,7 @@ interface RawOperationResults {
     };
     error?: string;
     resourceChanges?: number;
-    urls?: Array<{ name: string; url: string; type: string }>;
+    outputs?: Array<{ key: string; value: string }>;
     resources?: Array<{
       type: string;
       name: string;
@@ -167,27 +167,6 @@ function transformToUnifiedResult(
 }
 
 /**
- * Type guard to ensure URL type is valid
- *
- * Normalizes URL types to one of the allowed values. Invalid types are mapped to 'other'
- * to maintain type safety while handling unexpected SST CLI output variations.
- *
- * @param type Raw URL type from SST CLI output
- * @returns Normalized URL type that matches the TypeScript union type
- */
-function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
-  const validTypes: Array<'function' | 'api' | 'web' | 'other'> = [
-    'function',
-    'api',
-    'web',
-    'other',
-  ];
-  return (validTypes as readonly string[]).includes(type)
-    ? (type as 'function' | 'api' | 'web' | 'other')
-    : 'other';
-}
-
-/**
  * Type guard to ensure resource status is valid
  *
  * Normalizes resource status values to ensure type safety. Unknown statuses
@@ -275,11 +254,7 @@ function transformDeployResult(
       ? ('complete' as const)
       : ('failed' as const),
     resourceChanges: result.resourceChanges || 0,
-    urls: (result.urls || []).map((url) => ({
-      name: url.name,
-      url: url.url,
-      type: normalizeUrlType(url.type),
-    })),
+    outputs: result.outputs || [],
     resources: (result.resources || []).map((resource) => ({
       type: resource.type,
       name: resource.name,
@@ -430,7 +405,7 @@ function createFailureResult(
         ...baseResult,
         operation: 'deploy' as const,
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
       };
     case 'diff':

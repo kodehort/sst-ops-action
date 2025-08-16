@@ -144,8 +144,8 @@ function testParserConsistency(operation: OperationWithParser): void {
 
           const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-          expect(parsed).toHaveProperty('urls');
-          expect(Array.isArray(parsed.urls)).toBe(true);
+          expect(parsed).toHaveProperty('outputs');
+          expect(Array.isArray(parsed.outputs)).toBe(true);
         }
       });
     }

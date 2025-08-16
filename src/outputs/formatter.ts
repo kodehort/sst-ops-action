@@ -35,7 +35,7 @@ export interface StandardizedOutputs {
   error: string;
 
   // Operation-specific outputs
-  urls: string; // JSON array for deploy operations
+  outputs: string; // JSON array for deploy operations
   resources: string; // JSON array for deploy operations
   diff_summary: string; // Summary for diff operations
   planned_changes: string; // Number for diff operations
@@ -72,7 +72,7 @@ interface BaseInfrastructureOutputs {
 export interface DeployOutputs extends BaseInfrastructureOutputs {
   operation: string; // 'deploy'
   resource_changes: string;
-  urls: string; // JSON array of deployed URLs
+  outputs: string; // JSON array of deployed URLs
   resources: string; // JSON array of deployed resources
   // Reset other operation fields
   diff_summary: string; // ''
@@ -96,7 +96,7 @@ export interface DiffOutputs extends BaseInfrastructureOutputs {
   planned_changes: string;
   diff_summary: string;
   // Reset other operation fields
-  urls: string; // ''
+  outputs: string; // ''
   resources: string; // ''
   resources_removed: string; // ''
   removed_resources: string; // ''
@@ -117,7 +117,7 @@ export interface RemoveOutputs extends BaseInfrastructureOutputs {
   resources_removed: string;
   removed_resources: string; // JSON array of removed resources
   // Reset other operation fields
-  urls: string; // ''
+  outputs: string; // ''
   resources: string; // ''
   diff_summary: string; // ''
   planned_changes: string; // ''
@@ -147,7 +147,7 @@ export interface StageOutputs {
   truncated: string;
   resource_changes: string;
   error: string;
-  urls: string;
+  outputs: string;
   resources: string;
   diff_summary: string;
   planned_changes: string;
@@ -206,7 +206,7 @@ function formatDeployOperation(result: DeployResult): DeployOutputs {
     truncated: String(result.truncated),
     error: result.error || '',
     resource_changes: String(result.resourceChanges || 0),
-    urls: safeStringify(result.urls || []),
+    outputs: safeStringify(result.outputs || []),
     resources: safeStringify(result.resources || []),
     // Reset other operation fields
     diff_summary: '',
@@ -237,7 +237,7 @@ function formatDiffOperation(result: DiffResult): DiffOutputs {
     planned_changes: String(result.plannedChanges || 0),
     diff_summary: result.changeSummary || '',
     // Reset other operation fields
-    urls: '',
+    outputs: '',
     resources: '',
     resources_removed: '',
     removed_resources: '',
@@ -265,7 +265,7 @@ function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
     resources_removed: String(result.resourcesRemoved || 0),
     removed_resources: safeStringify(result.removedResources || []),
     // Reset other operation fields
-    urls: '',
+    outputs: '',
     resources: '',
     diff_summary: '',
     planned_changes: '',
@@ -295,7 +295,7 @@ function formatStageOperation(result: StageResult): StageOutputs {
     truncated: 'false',
     resource_changes: '',
     error: result.error || '',
-    urls: '',
+    outputs: '',
     resources: '',
     diff_summary: '',
     planned_changes: '',
@@ -424,7 +424,7 @@ function validateNumericFields(outputs: Record<string, string>): void {
  * Validate JSON field values
  */
 function validateJsonFields(outputs: Record<string, string>): void {
-  const jsonFields = ['urls', 'resources', 'removed_resources'];
+  const jsonFields = ['outputs', 'resources', 'removed_resources'];
 
   for (const field of jsonFields) {
     if (outputs[field] && outputs[field] !== '') {
@@ -454,7 +454,7 @@ export function getExpectedFields(): string[] {
     'truncated',
     'resource_changes',
     'error',
-    'urls',
+    'outputs',
     'resources',
     'diff_summary',
     'planned_changes',
@@ -478,7 +478,7 @@ export function getRequiredFields(): string[] {
  * Set default values for deploy operation outputs
  */
 function setDeployDefaults(outputs: Record<string, string>): void {
-  outputs.urls = outputs.urls || '[]';
+  outputs.outputs = outputs.outputs || '[]';
   outputs.resources = outputs.resources || '[]';
 }
 

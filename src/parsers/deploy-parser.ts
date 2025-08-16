@@ -13,8 +13,6 @@ const RESOURCE_UPDATED_PATTERN =
   /^\|\s+Updated\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
 const RESOURCE_DELETED_PATTERN =
   /^\|\s+Deleted\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
-// URL patterns for final output section (not inline)
-const FINAL_URL_PATTERN = /^\s*([\w\s]+):\s+(https?:\/\/.+)$/;
 
 // Error and completion patterns for real SST output
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
@@ -47,7 +45,7 @@ export class DeployParser extends OperationParser<DeployResult> {
 
     // Parse deploy-specific information
     const resources = this.parseResourceChanges(processedOutput);
-    const urls = this.parseDeployedURLs(processedOutput);
+    const outputs = this.parseOutputs(processedOutput);
     const error = this.parseErrorMessage(processedOutput);
 
     // Determine success based on exit code (primary) and patterns (secondary)
@@ -67,7 +65,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
       resourceChanges: resources.length,
       resources,
-      urls,
+      outputs,
     };
 
     return result;
@@ -139,22 +137,20 @@ export class DeployParser extends OperationParser<DeployResult> {
   }
 
   /**
-   * Parse deployed URLs from deployment output
-   * Real SST URLs appear in final output section after completion
+   * Parse outputs from deployment output
+   * SST outputs appear in final output section after completion as key: value pairs
    */
-  private parseDeployedURLs(output: string): Array<{
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function' | 'other';
+  private parseOutputs(output: string): Array<{
+    key: string;
+    value: string;
   }> {
     const lines = output.split('\n');
-    const urls: Array<{
-      name: string;
-      url: string;
-      type: 'api' | 'web' | 'function' | 'other';
+    const outputs: Array<{
+      key: string;
+      value: string;
     }> = [];
 
-    // Look for URLs after completion marker
+    // Look for outputs after completion marker
     let inOutputSection = false;
 
     for (const line of lines) {
@@ -166,70 +162,42 @@ export class DeployParser extends OperationParser<DeployResult> {
         continue;
       }
 
-      if (inOutputSection || this.isLikelyUrl(trimmedLine)) {
-        const url = this.parseUrlFromLine(trimmedLine);
-        if (url) {
-          urls.push(url);
+      if (inOutputSection) {
+        const outputPair = this.parseOutputFromLine(trimmedLine);
+        if (outputPair) {
+          outputs.push(outputPair);
         }
       }
     }
 
-    return urls;
+    return outputs;
   }
 
   /**
-   * Parse a single URL from a deploy line
-   * Real format: ResourceName: https://example.com or generic output: key: value
+   * Parse a single output from a deploy line
+   * Format: key: value (ignoring lines with --- separator)
    */
-  private parseUrlFromLine(line: string): {
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function' | 'other';
+  private parseOutputFromLine(line: string): {
+    key: string;
+    value: string;
   } | null {
-    const match = line.match(FINAL_URL_PATTERN);
-    if (match?.[1] && match?.[2] && match[2].startsWith('http')) {
-      const name = match[1].trim();
-      const url = match[2].trim();
+    // Ignore separator lines
+    if (line.includes('---')) {
+      return null;
+    }
 
-      // Determine type based on name patterns
-      const type = this.classifyUrlType(name);
+    // Parse key: value format
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0 && colonIndex < line.length - 1) {
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
 
-      return { name, url, type };
+      if (key && value) {
+        return { key, value };
+      }
     }
 
     return null;
-  }
-
-  /**
-   * Check if line likely contains a URL
-   */
-  private isLikelyUrl(line: string): boolean {
-    return line.includes('http://') || line.includes('https://');
-  }
-
-  /**
-   * Classify URL type based on resource name
-   */
-  private classifyUrlType(name: string): 'api' | 'web' | 'function' | 'other' {
-    const lowerName = name.toLowerCase();
-
-    if (lowerName.includes('api') || lowerName.includes('router')) {
-      return 'api';
-    }
-
-    if (
-      lowerName.includes('web') ||
-      lowerName.includes('astro') ||
-      lowerName.includes('www')
-    ) {
-      return 'web';
-    }
-
-    if (lowerName.includes('function') || lowerName.includes('lambda')) {
-      return 'function';
-    }
-
-    return 'other';
   }
 
   /**
