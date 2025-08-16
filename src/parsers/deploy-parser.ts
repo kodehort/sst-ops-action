@@ -3,6 +3,7 @@
  * Parses SST deploy command output to extract resource changes and generic outputs
  */
 
+import * as core from '@actions/core';
 import type { DeployResult } from '../types/operations';
 import { OperationParser } from './operation-parser';
 
@@ -166,6 +167,9 @@ export class DeployParser extends OperationParser<DeployResult> {
         const outputPair = this.parseOutputFromLine(trimmedLine);
         if (outputPair) {
           outputs.push(outputPair);
+        } else if (trimmedLine) {
+          // Log skipped non-empty lines for debugging
+          core.debug(`Skipped output line: "${trimmedLine}" (failed parsing)`);
         }
       }
     }
@@ -175,7 +179,43 @@ export class DeployParser extends OperationParser<DeployResult> {
 
   /**
    * Parse a single output from a deploy line
-   * Format: key: value (ignoring lines with --- separator)
+   *
+   * Extracts key-value pairs from SST deployment output lines. The method expects
+   * lines in the format "key: value" and handles various edge cases and formatting.
+   *
+   * **Supported Formats:**
+   * - Standard: `ApiUrl: https://api.example.com`
+   * - With spaces: `Web URL : https://web.example.com`
+   * - Mixed case: `webUrl: https://web.example.com`
+   * - Numeric values: `Port: 3000`
+   * - Boolean values: `Enabled: true`
+   *
+   * **Ignored Formats:**
+   * - Separator lines: `--- Deployment Complete ---`
+   * - Empty lines or whitespace-only lines
+   * - Lines without colons: `Invalid format line`
+   * - Lines with colon at start/end: `: value` or `key:`
+   * - Lines with empty keys or values after trimming
+   *
+   * **Error Conditions:**
+   * - Returns `null` for any line that doesn't match expected format
+   * - Handles malformed input gracefully without throwing
+   * - Ignores lines that contain '---' (deployment separators)
+   *
+   * @param line Raw output line from SST deployment
+   * @returns Parsed key-value pair or null if line doesn't match expected format
+   *
+   * @example
+   * ```typescript
+   * parseOutputFromLine("ApiUrl: https://api.example.com")
+   * // Returns: { key: "ApiUrl", value: "https://api.example.com" }
+   *
+   * parseOutputFromLine("--- Deployment Complete ---")
+   * // Returns: null (separator line ignored)
+   *
+   * parseOutputFromLine("InvalidLine")
+   * // Returns: null (no colon found)
+   * ```
    */
   private parseOutputFromLine(line: string): {
     key: string;

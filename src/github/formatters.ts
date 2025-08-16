@@ -43,6 +43,11 @@ const DEFAULT_CONFIG: FormatConfig = {
 export class OperationFormatter {
   private config: FormatConfig;
 
+  /**
+   * URL protocols for optimized protocol checking
+   */
+  private static readonly URL_PROTOCOLS = new Set(['http://', 'https://']);
+
   constructor(config: FormatConfig = DEFAULT_CONFIG) {
     this.config = config;
   }
@@ -381,10 +386,15 @@ All resources have been successfully removed.`;
 
   /**
    * Format output value - make URLs clickable, escape other values
+   * Uses optimized Set-based protocol checking for better performance
    */
   private formatOutputValue(value: string): string {
-    // Check if value is a URL
-    if (value.startsWith('http://') || value.startsWith('https://')) {
+    // Check if value is a URL using optimized protocol checking
+    const hasUrlProtocol =
+      OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 8)) ||
+      OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 7));
+
+    if (hasUrlProtocol) {
       return `[${value}](${value})`;
     }
 
