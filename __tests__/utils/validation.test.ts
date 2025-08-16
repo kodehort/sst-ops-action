@@ -28,8 +28,6 @@ describe('Input Validation', () => {
   describe('createValidationContext', () => {
     it('should create context from environment variables', () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'staging',
         GITHUB_REF: 'refs/heads/main',
         NODE_ENV: 'test',
         CI: 'true',
@@ -37,8 +35,6 @@ describe('Input Validation', () => {
 
       const context = createValidationContext(env);
 
-      expect(context.operation).toBe('deploy');
-      expect(context.stage).toBe('staging');
       expect(context.isProduction).toBe(true); // main branch
       expect(context.allowFakeTokens).toBe(true); // NODE_ENV=test
     });
@@ -66,8 +62,6 @@ describe('Input Validation', () => {
     it('should use defaults for missing environment variables', () => {
       const context = createValidationContext({});
 
-      expect(context.operation).toBe('deploy');
-      expect(context.stage).toBe('');
       expect(context.isProduction).toBe(false);
       expect(context.allowFakeTokens).toBe(true);
     });

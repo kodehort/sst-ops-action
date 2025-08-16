@@ -16,6 +16,7 @@ export type ErrorType =
  */
 export interface OperationMetadata {
   timestamp: string;
+  actionVersion: string;
   workflowId?: string;
   runId?: number;
   runNumber?: number;

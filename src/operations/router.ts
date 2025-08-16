@@ -156,10 +156,13 @@ function transformToUnifiedResult(
     case 'stage':
       // Stage operation returns the result directly as it already conforms to the unified format
       return result as OperationResult;
-    default:
+    default: {
+      // Exhaustive check for TypeScript
+      const _exhaustive: never = operationType;
       throw new Error(
-        `Cannot transform result for unknown operation: ${operationType}`
+        `Cannot transform result for unknown operation: ${_exhaustive}`
       );
+    }
   }
 }
 
@@ -454,14 +457,12 @@ function createFailureResult(
         eventName: 'unknown',
         isPullRequest: false,
       };
-    default:
-      // This should never happen but TypeScript needs it
-      return {
-        ...baseResult,
-        operation: operationType,
-        resourceChanges: 0,
-        urls: [],
-        resources: [],
-      } as OperationResult;
+    default: {
+      // Exhaustive check for TypeScript
+      const _exhaustive: never = operationType;
+      throw new Error(
+        `Cannot create error result for unknown operation: ${_exhaustive}`
+      );
+    }
   }
 }

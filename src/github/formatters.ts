@@ -59,8 +59,12 @@ export class OperationFormatter {
         return this.formatDiffComment(result as DiffResult);
       case 'remove':
         return this.formatRemoveComment(result as RemoveResult);
-      default:
+      case 'stage':
         return this.formatGenericComment(result);
+      default: {
+        const _exhaustive: never = result.operation;
+        return this.formatGenericComment(result);
+      }
     }
   }
 
@@ -75,8 +79,12 @@ export class OperationFormatter {
         return this.formatDiffSummary(result as DiffResult);
       case 'remove':
         return this.formatRemoveSummary(result as RemoveResult);
-      default:
+      case 'stage':
         return this.formatGenericSummary(result);
+      default: {
+        const _exhaustive: never = result.operation;
+        return this.formatGenericSummary(result);
+      }
     }
   }
 
@@ -490,8 +498,12 @@ No infrastructure changes detected for this operation.`;
           return '🔍';
         case 'remove':
           return '🗑️';
-        default:
+        case 'stage':
+          return '🏷️';
+        default: {
+          const _exhaustive: never = result.operation;
           return '✅';
+        }
       }
     }
     return '❌';

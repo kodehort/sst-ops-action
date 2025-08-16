@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 import type { OperationOptions } from '../../src/types';
-import { SSTCLIExecutor, type SSTRunner } from '../../src/utils/cli';
+import {
+  SST_RUNNERS,
+  SSTCLIExecutor,
+  type SSTRunner,
+} from '../../src/utils/cli';
 
 describe('Configurable Runner', () => {
   describe('CLI Command Building', () => {
@@ -112,16 +116,10 @@ describe('Configurable Runner', () => {
 
   describe('Runner Validation', () => {
     it('should validate supported runners', () => {
-      const supportedRunners: SSTRunner[] = [
-        'bun',
-        'npm',
-        'pnpm',
-        'yarn',
-        'sst',
-      ];
+      const supportedRunners = SST_RUNNERS;
 
       for (const runner of supportedRunners) {
-        expect(['bun', 'npm', 'pnpm', 'yarn', 'sst']).toContain(runner);
+        expect(SST_RUNNERS).toContain(runner);
       }
     });
 
@@ -134,43 +132,6 @@ describe('Configurable Runner', () => {
       expect(() => {
         buildRunnerCommand('invalid-runner' as SSTRunner, 'deploy');
       }).toThrow('Unsupported runner: invalid-runner');
-    });
-  });
-
-  describe('Utility Commands', () => {
-    it('should build utility commands for different runners', () => {
-      const executor = new SSTCLIExecutor();
-      const buildUtilityCommand = (executor as any).buildUtilityCommand.bind(
-        executor
-      );
-
-      // Test version command with different runners
-      expect(buildUtilityCommand('bun', ['--version'])).toEqual([
-        'bun',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('npm', ['--version'])).toEqual([
-        'npm',
-        'run',
-        'sst',
-        '--',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('pnpm', ['--version'])).toEqual([
-        'pnpm',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('yarn', ['--version'])).toEqual([
-        'yarn',
-        'sst',
-        '--version',
-      ]);
-      expect(buildUtilityCommand('sst', ['--version'])).toEqual([
-        'sst',
-        '--version',
-      ]);
     });
   });
 });

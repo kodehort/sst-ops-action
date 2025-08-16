@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 
@@ -67,6 +68,16 @@ function generateBuildManifest() {
   };
 }
 
+// Read package.json for version injection
+let packageVersion = 'unknown';
+try {
+  const packageJson = readFileSync('package.json', 'utf8');
+  const packageInfo = JSON.parse(packageJson);
+  packageVersion = packageInfo.version || 'unknown';
+} catch {
+  packageVersion = 'unknown';
+}
+
 export default {
   input: 'src/index.ts',
   output: {
@@ -83,6 +94,10 @@ export default {
     moduleSideEffects: false,
   },
   plugins: [
+    replace({
+      __ACTION_VERSION__: JSON.stringify(packageVersion),
+      preventAssignment: true,
+    }),
     typescript(),
     json(),
     nodeResolve({

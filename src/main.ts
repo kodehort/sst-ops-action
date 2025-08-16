@@ -15,6 +15,7 @@ import { OutputFormatter } from './outputs/formatter';
 import { StageProcessor } from './parsers/stage-processor';
 import type { OperationOptions, OperationResult } from './types';
 import type { SSTRunner } from './utils/cli';
+import { SST_RUNNERS } from './utils/cli';
 import {
   createValidationContext,
   ValidationError,
@@ -27,7 +28,7 @@ import {
  * @returns Valid SSTRunner type with fallback to 'bun'
  */
 function validateSSTRunner(input: string): SSTRunner {
-  const validRunners: SSTRunner[] = ['bun', 'npm', 'pnpm', 'yarn', 'sst'];
+  const validRunners = SST_RUNNERS;
 
   if (validRunners.includes(input as SSTRunner)) {
     return input as SSTRunner;
@@ -45,100 +46,118 @@ function validateSSTRunner(input: string): SSTRunner {
 
 /**
  * Compute stage name from GitHub context when not explicitly provided
+ * @throws {Error} When stage cannot be computed from Git context - this is an unrecoverable scenario
  */
 function computeStageFromContext(
-  fallbackStage = 'main',
   truncationLength = 26,
   prefix = 'pr-'
 ): string {
-  try {
-    const processor = new StageProcessor();
-    const result = processor.process({
-      truncationLength,
-      prefix,
-    });
+  const processor = new StageProcessor();
+  const result = processor.process({
+    truncationLength,
+    prefix,
+  });
 
-    if (result.success && result.computedStage) {
-      core.info(
-        `🎯 Computed stage from Git context: "${result.computedStage}"`
-      );
-      return result.computedStage;
-    }
-
-    core.warning(
-      `⚠️ Failed to compute stage from Git context, using fallback: "${fallbackStage}"`
-    );
-    return fallbackStage;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    core.warning(
-      `⚠️ Stage computation failed: ${message}, using fallback: "${fallbackStage}"`
-    );
-    return fallbackStage;
+  if (result.success && result.computedStage) {
+    core.info(`🎯 Computed stage from Git context: "${result.computedStage}"`);
+    return result.computedStage;
   }
+
+  // This is an unrecoverable scenario - throw and exit
+  const errorMessage = `Failed to compute stage from Git context: ${result.error || 'Unknown error'}`;
+  core.error(`❌ ${errorMessage}`);
+  throw new Error(errorMessage);
 }
 
 /**
- * Parse GitHub Actions inputs into a typed structure
- *
- * Processes raw GitHub Actions input parameters and converts them into a
- * strongly-typed OperationOptions object. Handles stage computation from
- * Git context when not explicitly provided, and applies operation-specific
- * input filtering to avoid validation errors.
- *
- * @returns Validated OperationOptions ready for use by operation handlers
- * @throws ValidationError if inputs don't match expected schemas
+ * Collect raw inputs from GitHub Actions environment
  */
-function parseGitHubActionsInputs() {
-  // Get the operation first to determine which inputs are needed
-  const operation = core.getInput('operation') || 'deploy';
-
-  // Get raw inputs from GitHub Actions
-  let stage = core.getInput('stage');
+function collectRawInputs() {
+  const operationInput = core.getInput('operation');
+  const stage = core.getInput('stage');
   const truncationLength = Number.parseInt(
     core.getInput('truncation-length') || '26',
     10
   );
   const prefix = core.getInput('prefix') || 'pr-';
 
-  // Compute stage from Git context if not explicitly provided
-  if (!stage || stage.trim() === '') {
-    stage = computeStageFromContext('main', truncationLength, prefix);
-    core.info(
-      `📋 Stage input was empty, computed from Git context: "${stage}"`
-    );
-  } else {
-    core.info(`📋 Using explicitly provided stage: "${stage}"`);
+  return {
+    operation: operationInput,
+    stage,
+    token: core.getInput('token'),
+    commentMode: core.getInput('comment-mode') || 'on-success',
+    failOnError: core.getBooleanInput('fail-on-error') ?? true,
+    maxOutputSize: core.getInput('max-output-size') || '50000',
+    runner: validateSSTRunner(core.getInput('runner') || 'bun'),
+    truncationLength,
+    prefix,
+  };
+}
+
+/**
+ * Get display name for stage based on operation type
+ */
+function getStageDisplayName(
+  inputs: ReturnType<typeof validateOperationWithContext>
+): string {
+  if (inputs.operation === 'stage') {
+    return 'computed';
   }
-
-  // Build operation-specific inputs to avoid strict validation errors
-  let rawInputs: Record<string, unknown>;
-
-  if (operation === 'stage') {
-    // Stage operation only needs these fields
-    rawInputs = {
-      operation,
-      truncationLength,
-      prefix,
-    };
-  } else {
-    // Infrastructure operations (deploy, diff, remove) need all fields
-    rawInputs = {
-      operation,
-      stage,
-      token: core.getInput('token'),
-      commentMode: core.getInput('comment-mode') || 'on-success',
-      failOnError: core.getBooleanInput('fail-on-error') ?? true,
-      maxOutputSize: core.getInput('max-output-size') || '50000',
-      runner: validateSSTRunner(core.getInput('runner') || 'bun'),
-    };
+  if (inputs.operation === 'deploy') {
+    return inputs.stage || 'auto';
   }
+  return inputs.stage;
+}
 
-  // Create validation context
+/**
+ * Parse GitHub Actions inputs into a typed structure
+ *
+ * Processes raw GitHub Actions input parameters and converts them into a
+ * strongly-typed OperationOptions object. Uses single-pass validation that
+ * validates the operation first, then discriminates to validate the rest
+ * of the inputs based on the operation type.
+ *
+ * @returns Validated OperationOptions ready for use by operation handlers
+ * @throws ValidationError if inputs don't match expected schemas
+ */
+function parseGitHubActionsInputs() {
+  const rawInputs = collectRawInputs();
   const validationContext = createValidationContext();
 
-  // Parse and validate inputs
-  return validateOperationWithContext(rawInputs, validationContext);
+  // Single-pass validation that handles operation discrimination
+  let inputs: ReturnType<typeof validateOperationWithContext>;
+  try {
+    inputs = validateOperationWithContext(rawInputs, validationContext);
+  } catch (error) {
+    // If validation fails, try to compute stage for deploy operations and retry
+    if (
+      error instanceof ValidationError &&
+      rawInputs.operation === 'deploy' &&
+      (!rawInputs.stage || rawInputs.stage.trim() === '')
+    ) {
+      const stage = computeStageFromContext(
+        rawInputs.truncationLength as number,
+        rawInputs.prefix as string
+      );
+      core.info(
+        `📋 Stage input was empty, computed from Git context: "${stage}"`
+      );
+
+      // Update raw inputs with computed stage and retry validation
+      rawInputs.stage = stage;
+      inputs = validateOperationWithContext(rawInputs, validationContext);
+    } else {
+      throw error;
+    }
+  }
+
+  // Log the final parsed operation and stage
+  const stageName = getStageDisplayName(inputs);
+  core.info(
+    `📝 Parsed inputs: ${inputs.operation} operation on stage "${stageName}"`
+  );
+
+  return inputs;
 }
 
 /**
@@ -169,7 +188,6 @@ function handleInputValidationError(error: unknown): void {
       failOnError: true,
     });
   }
-  // Don't re-throw - let the function return normally
 }
 
 /**
@@ -335,14 +353,19 @@ function handleUnexpectedError(error: unknown): never {
 }
 
 /**
+ * Configuration object containing operation type and options
+ */
+interface OperationConfiguration {
+  operation: ReturnType<typeof validateOperationWithContext>['operation'];
+  options: OperationOptions;
+}
+
+/**
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(
   inputs: ReturnType<typeof validateOperationWithContext>
-): {
-  operation: ReturnType<typeof validateOperationWithContext>['operation'];
-  options: OperationOptions;
-} {
+): OperationConfiguration {
   // Handle operation-specific properties using discriminated union
   switch (inputs.operation) {
     case 'deploy':

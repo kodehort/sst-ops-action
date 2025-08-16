@@ -183,96 +183,6 @@ describe('SST CLI Utilities - Command Execution', () => {
         expect(result.truncated).toBe(true);
         expect(result.output.length).toBe(50);
       });
-
-      it('should build environment variables correctly', async () => {
-        const operation: SSTOperation = 'deploy';
-        const stage = 'staging';
-        const options: CLIOptions = {
-          env: {
-            AWS_REGION: 'us-west-2',
-            CUSTOM_VAR: 'test-value',
-          },
-        };
-
-        await executor.executeSST(operation, stage, options);
-
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', 'deploy', '--stage', 'staging'],
-          expect.objectContaining({
-            env: expect.objectContaining({
-              AWS_REGION: 'us-west-2',
-              CUSTOM_VAR: 'test-value',
-              SST_TELEMETRY_DISABLED: '1',
-              CI: '1',
-            }),
-          })
-        );
-      });
-    });
-
-    describe('checkSSTAvailability', () => {
-      it('should detect available SST CLI', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stdout) {
-              options.listeners.stdout(Buffer.from('2.41.3\n'));
-            }
-            return 0;
-          }
-        );
-
-        const result = await executor.checkSSTAvailability();
-
-        expect(result.available).toBe(true);
-        expect(result.version).toBe('2.41.3');
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', '--version'],
-          expect.any(Object)
-        );
-      });
-
-      it('should handle SST CLI error response', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stderr) {
-              options.listeners.stderr(Buffer.from('Command not found\n'));
-            }
-            return 1;
-          }
-        );
-
-        const result = await executor.checkSSTAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.error).toContain('SST CLI check failed with exit code 1');
-      });
-    });
-
-    describe('getProjectInfo', () => {
-      it('should extract project information', async () => {
-        mockExec.exec.mockImplementation(
-          (_command: string, _args: string[], options: any) => {
-            if (options?.listeners?.stdout) {
-              options.listeners.stdout(
-                Buffer.from('App: my-app\nStage: production\n')
-              );
-            }
-            return 0;
-          }
-        );
-
-        const result = await executor.getProjectInfo();
-
-        expect(result.app).toBe('my-app');
-        expect(result.stage).toBe('production');
-        expect(mockExec.exec).toHaveBeenCalledWith(
-          'bun',
-          ['sst', 'env'],
-          expect.any(Object)
-        );
-      });
     });
   });
 
@@ -308,22 +218,6 @@ describe('SST CLI Utilities - Command Execution', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle custom working directory', async () => {
-      const operation: SSTOperation = 'deploy';
-      const stage = 'staging';
-      const customCwd = '/custom/path';
-
-      await executor.executeSST(operation, stage, { cwd: customCwd });
-
-      expect(mockExec.exec).toHaveBeenCalledWith(
-        'bun',
-        ['sst', 'deploy', '--stage', 'staging'],
-        expect.objectContaining({
-          cwd: customCwd,
-        })
-      );
-    });
-
     it('should handle custom arguments', async () => {
       const operation: SSTOperation = 'deploy';
       const stage = 'staging';

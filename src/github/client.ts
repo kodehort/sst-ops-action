@@ -228,11 +228,13 @@ export class GitHubClient {
         return !result.success;
       case 'never':
         return false;
-      default:
+      default: {
+        const _exhaustive: never = mode;
         core.warning(
-          `Unknown comment mode: ${mode}. Defaulting to 'on-success'`
+          `Unknown comment mode: ${_exhaustive}. Defaulting to 'on-success'`
         );
         return result.success;
+      }
     }
   }
 

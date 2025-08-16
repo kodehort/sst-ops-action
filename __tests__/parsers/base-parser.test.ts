@@ -16,7 +16,6 @@ const PERMALINK_PATTERN = /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m;
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
 const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
 const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
-const DURATION_PATTERN = /^Duration:\s+(\d+)s$/m;
 const SECTION_SPLIT_PATTERN = /\n\n+/;
 const LINE_ENDING_PATTERN = /\r?\n/;
 
@@ -29,7 +28,6 @@ class TestParser {
     COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
     COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
     COMPLETION_FAILED: COMPLETION_FAILED_PATTERN,
-    DURATION: DURATION_PATTERN,
   };
 
   parse(output: string, stage: string, exitCode: number): BaseOperationResult {

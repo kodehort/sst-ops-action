@@ -2,23 +2,19 @@
  * Version utility for accessing action version information
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// Version is injected at build time by rollup @rollup/plugin-replace
+declare const __ACTION_VERSION__: string;
 
 /**
- * Get the current action version from package.json
+ * Get the current action version (injected at build time)
  * @returns The version string from package.json
  */
 export function getActionVersion(): string {
-  try {
-    // Read package.json from the root directory
-    const packageJsonPath = join(process.cwd(), 'package.json');
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    return packageJson.version || 'unknown';
-  } catch (_error) {
-    // Return fallback version if reading fails
-    return 'unknown';
+  // Handle test environment where __ACTION_VERSION__ is not defined
+  if (typeof __ACTION_VERSION__ === 'undefined') {
+    return 'test-version';
   }
+  return __ACTION_VERSION__;
 }
 
 /**
