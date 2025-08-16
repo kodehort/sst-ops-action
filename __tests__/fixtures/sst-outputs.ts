@@ -262,8 +262,6 @@ Stage: staging
 | Deleted         Function      my-sst-app-staging-handler
 
 Monthly savings: $50.00
-
-Duration: 60s
 `;
 
 export const SST_REMOVE_PARTIAL_OUTPUT = `
@@ -275,8 +273,6 @@ Stage: staging
 | Deleted         Website       my-sst-app-staging-web
 | Deleted         Function      my-sst-app-staging-handler
 ! Api            my-sst-app-staging-api could not be removed: dependency exists
-
-Duration: 90s
 `;
 
 // Enhanced remove outputs for comprehensive testing
@@ -296,8 +292,6 @@ Stage: production
 Monthly savings: $245.80
 
 ↗  Permalink https://console.sst.dev/complex-app/production/removals/abc123
-
-Duration: 180s
 `;
 
 export const SST_REMOVE_FAILED_OUTPUT = `
@@ -312,8 +306,6 @@ Stage: staging
 ! Api            failed-app-staging-api could not be removed: external dependencies
 
 Error: Remove operation failed - 3 resources could not be removed
-
-Duration: 45s
 `;
 
 export const SST_REMOVE_TIMEOUT_OUTPUT = `
@@ -328,8 +320,6 @@ Stage: staging
 
 Partial cleanup completed
 Manual intervention may be required
-
-Duration: 300s
 `;
 
 export const SST_REMOVE_EMPTY_STACK_OUTPUT = `
@@ -339,8 +329,6 @@ Stage: staging
 
 No resources to remove
 Stack is already empty or does not exist
-
-Duration: 5s
 `;
 
 export const SST_REMOVE_MALFORMED_OUTPUT = `
@@ -397,5 +385,4 @@ ${Array.from({ length: 20 }, (_, i) => `| Deleted         Website       large-ap
 Monthly savings: $1,250.75
 
 100 resources removed
-Duration: 240s
 `;

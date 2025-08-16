@@ -11,8 +11,8 @@ import {
   validateMaxOutputSize,
 } from '../types/index.js';
 import type { SSTRunner } from './cli.js';
+import { SST_RUNNERS } from './cli.js';
 
-// Top-level regex patterns for performance
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 
@@ -22,7 +22,7 @@ const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 const CommonFieldSchemas = {
   operation: z
     .string()
-    .default('deploy')
+    .min(1, 'Operation is required and cannot be empty')
     .refine((val) => isValidOperation(val), {
       message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
     })
@@ -79,13 +79,9 @@ const CommonFieldSchemas = {
   runner: z
     .string()
     .default('bun')
-    .refine(
-      (val): val is SSTRunner =>
-        ['bun', 'npm', 'pnpm', 'yarn', 'sst'].includes(val),
-      {
-        message: 'Invalid runner. Must be one of: bun, npm, pnpm, yarn, sst',
-      }
-    )
+    .refine((val): val is SSTRunner => SST_RUNNERS.includes(val as SSTRunner), {
+      message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(', ')}`,
+    })
     .transform((val) => val as SSTRunner),
 
   truncationLength: z
@@ -135,7 +131,7 @@ const DeployInputsSchema = z
     operation: z.literal('deploy'),
     stage: CommonFieldSchemas.optionalStage.optional(),
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const DiffInputsSchema = z
@@ -143,7 +139,7 @@ const DiffInputsSchema = z
     operation: z.literal('diff'),
     stage: CommonFieldSchemas.stage,
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const RemoveInputsSchema = z
@@ -151,7 +147,7 @@ const RemoveInputsSchema = z
     operation: z.literal('remove'),
     stage: CommonFieldSchemas.stage,
   })
-  .merge(BaseInfrastructureSchema)
+  .extend(BaseInfrastructureSchema.shape)
   .strict();
 
 const StageInputsSchema = z
@@ -200,13 +196,43 @@ export class ValidationError extends Error {
 }
 
 /**
+ * Filter raw inputs to only include fields relevant for the given operation
+ */
+function filterInputsByOperation(
+  rawInputs: Record<string, unknown>
+): Record<string, unknown> {
+  const operation = rawInputs.operation as string;
+
+  if (operation === 'stage') {
+    // Stage operations only need these fields
+    return {
+      operation: rawInputs.operation,
+      truncationLength: rawInputs.truncationLength,
+      prefix: rawInputs.prefix,
+    };
+  }
+  // Infrastructure operations (deploy, diff, remove) need these fields
+  return {
+    operation: rawInputs.operation,
+    stage: rawInputs.stage,
+    token: rawInputs.token,
+    commentMode: rawInputs.commentMode,
+    failOnError: rawInputs.failOnError,
+    maxOutputSize: rawInputs.maxOutputSize,
+    runner: rawInputs.runner,
+  };
+}
+
+/**
  * Parse and validate operation-specific GitHub Actions inputs
  */
 export function parseOperationInputs(
   rawInputs: Record<string, unknown>
 ): OperationInputsType {
   try {
-    return OperationInputsSchema.parse(rawInputs);
+    // Filter inputs to only include relevant fields for the operation
+    const filteredInputs = filterInputsByOperation(rawInputs);
+    return OperationInputsSchema.parse(filteredInputs);
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
@@ -432,8 +458,6 @@ export function validateInput<T>(
  * Create operation-specific validation context
  */
 export interface ValidationContext {
-  operation: SSTOperation;
-  stage: string;
   isProduction: boolean;
   allowFakeTokens: boolean;
 }
@@ -508,8 +532,6 @@ export function createValidationContext(
   env: Record<string, string | undefined> = process.env
 ): ValidationContext {
   return {
-    operation: (env.INPUT_OPERATION || 'deploy') as SSTOperation,
-    stage: env.INPUT_STAGE || '',
     isProduction: Boolean(
       env.GITHUB_REF === 'refs/heads/main' ||
         env.GITHUB_REF?.includes('refs/tags/')

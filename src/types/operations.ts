@@ -3,7 +3,19 @@
  * Defines the unified type system for deploy, diff, and remove operations
  */
 
-export type SSTOperation = 'deploy' | 'diff' | 'remove' | 'stage';
+import type { SSTRunner } from '../utils/cli.js';
+
+/**
+ * Array of all supported SST operations - single source of truth
+ * Used to derive the SSTOperation type and validate operation values
+ */
+export const SST_OPERATIONS = ['deploy', 'diff', 'remove', 'stage'] as const;
+
+/**
+ * Union type of all supported SST operations
+ * Derived from SST_OPERATIONS constant to ensure consistency
+ */
+export type SSTOperation = (typeof SST_OPERATIONS)[number];
 
 export type CommentMode = 'always' | 'on-success' | 'on-failure' | 'never';
 
@@ -15,7 +27,7 @@ export interface OperationOptions {
   commentMode?: CommentMode;
   failOnError?: boolean;
   maxOutputSize?: number;
-  runner?: 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
+  runner?: SSTRunner;
   truncationLength?: number;
   prefix?: string;
 }

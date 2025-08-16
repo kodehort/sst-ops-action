@@ -3,13 +3,8 @@
  * Provides reliable SST CLI command execution for all operation types
  */
 
-import { access, constants } from 'node:fs';
-import { join } from 'node:path';
-import { promisify } from 'node:util';
 import * as exec from '@actions/exec';
 import type { SSTOperation } from '../types/index.js';
-
-const accessAsync = promisify(access);
 
 /**
  * Result of executing a CLI command
@@ -36,16 +31,13 @@ export interface CLIResult {
 /**
  * Supported package managers/runners for SST commands
  */
-export type SSTRunner = 'bun' | 'npm' | 'pnpm' | 'yarn' | 'sst';
+export const SST_RUNNERS = ['bun', 'npm', 'pnpm', 'yarn', 'sst'] as const;
+export type SSTRunner = (typeof SST_RUNNERS)[number];
 
 /**
  * Options for CLI command execution
  */
 export interface CLIOptions {
-  /** Environment variables to pass to the command */
-  env?: Record<string, string> | undefined;
-  /** Working directory for the command */
-  cwd?: string | undefined;
   /** Timeout in milliseconds (default: 15 minutes) */
   timeout?: number | undefined;
   /** Maximum output size in bytes (default: 50KB) */
@@ -66,28 +58,6 @@ export interface SSTCommandResult extends CLIResult {
   stage: string;
   /** Operation that was performed */
   operation: SSTOperation;
-}
-
-/**
- * Environment configuration for SST CLI
- */
-export interface SSTEnvironment {
-  /** AWS region */
-  AWS_REGION?: string;
-  /** AWS profile */
-  AWS_PROFILE?: string;
-  /** AWS access key ID */
-  AWS_ACCESS_KEY_ID?: string;
-  /** AWS secret access key */
-  AWS_SECRET_ACCESS_KEY?: string;
-  /** AWS session token */
-  AWS_SESSION_TOKEN?: string;
-  /** SST configuration */
-  SST_CONFIG?: string;
-  /** Node environment */
-  NODE_ENV?: string;
-  /** Additional environment variables */
-  [key: string]: string | undefined;
 }
 
 /**
@@ -113,9 +83,6 @@ export class SSTCLIExecutor {
     const command = this.buildCommand(operation, stage, options);
 
     try {
-      // Validate environment and prerequisites
-      await this.validateEnvironment(options.cwd);
-
       // Execute the command
       const result = await this.executeCommand(command, {
         ...options,
@@ -181,9 +148,14 @@ export class SSTCLIExecutor {
         // Auto-confirm removal to avoid interactive prompts
         command.push('--yes');
         break;
-      default:
-        // Should never reach here due to TypeScript union types
-        throw new Error(`Unsupported operation: ${operation}`);
+      case 'stage':
+        // Stage operation doesn't use SST CLI - handled separately
+        break;
+      default: {
+        // Exhaustive check for TypeScript
+        const _exhaustive: never = operation;
+        throw new Error(`Unsupported operation: ${_exhaustive}`);
+      }
     }
 
     // Add any additional arguments
@@ -213,33 +185,10 @@ export class SSTCLIExecutor {
         return ['pnpm', 'sst', operation];
       case 'yarn':
         return ['yarn', 'sst', operation];
-      default:
-        throw new Error(
-          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
-        );
-    }
-  }
-
-  /**
-   * Build a command array for utility operations like --version
-   */
-  private buildUtilityCommand(runner: SSTRunner, args: string[]): string[] {
-    switch (runner) {
-      case 'sst':
-        // Direct SST binary execution
-        return ['sst', ...args];
-      case 'bun':
-        return ['bun', 'sst', ...args];
-      case 'npm':
-        return ['npm', 'run', 'sst', '--', ...args];
-      case 'pnpm':
-        return ['pnpm', 'sst', ...args];
-      case 'yarn':
-        return ['yarn', 'sst', ...args];
-      default:
-        throw new Error(
-          `Unsupported runner: ${runner}. Supported runners: bun, npm, pnpm, yarn, sst`
-        );
+      default: {
+        const _exhaustive: never = runner;
+        throw new Error(`Unsupported runner: ${_exhaustive}`);
+      }
     }
   }
 
@@ -258,16 +207,10 @@ export class SSTCLIExecutor {
     let exitCode = 0;
 
     try {
-      const env = this.buildEnvironment(options.env);
-      const cwd = options.cwd || process.cwd();
-
-      // Create a timeout promise if timeout is specified
       if (!command[0]) {
         throw new Error('Command array is empty');
       }
       const execPromise = exec.exec(command[0], command.slice(1), {
-        cwd,
-        env,
         ignoreReturnCode: true,
         listeners: {
           stdout: (data: Buffer) => {
@@ -308,7 +251,6 @@ export class SSTCLIExecutor {
         try {
           exitCode = await Promise.race([execPromise, timeoutPromise]);
         } finally {
-          // Always clear the timeout to prevent event loop hanging
           if (timeoutId) {
             clearTimeout(timeoutId);
           }
@@ -354,171 +296,6 @@ export class SSTCLIExecutor {
           : undefined,
       truncated,
     };
-  }
-
-  /**
-   * Build environment variables for SST CLI execution
-   */
-  private buildEnvironment(
-    customEnv?: Record<string, string>
-  ): Record<string, string> {
-    const env: Record<string, string> = {
-      ...process.env,
-      // Ensure Node.js can find modules
-      NODE_PATH: process.env.NODE_PATH || '',
-      // Set production environment for SST
-      NODE_ENV: process.env.NODE_ENV || 'production',
-      // Disable SST telemetry in CI environments
-      SST_TELEMETRY_DISABLED: '1',
-      // Ensure non-interactive mode
-      CI: '1',
-    };
-
-    // Add custom environment variables
-    if (customEnv) {
-      for (const [key, value] of Object.entries(customEnv)) {
-        if (value !== undefined) {
-          env[key] = value;
-        }
-      }
-    }
-
-    // Filter out undefined values
-    const filteredEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(env)) {
-      if (value !== undefined && value !== null) {
-        filteredEnv[key] = String(value);
-      }
-    }
-
-    return filteredEnv;
-  }
-
-  /**
-   * Validate the environment before executing SST commands
-   */
-  private async validateEnvironment(cwd?: string): Promise<void> {
-    const workingDir = cwd || process.cwd();
-
-    // Check if sst.config.ts exists
-    const configPaths = ['sst.config.ts', 'sst.config.js', 'sst.config.mjs'];
-
-    // Check all config paths in parallel for better performance
-    const configChecks = configPaths.map(async (configPath) => {
-      try {
-        await accessAsync(join(workingDir, configPath), constants.F_OK);
-        return configPath;
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(configChecks);
-    const configFound = results.some((result) => result !== null);
-
-    if (!configFound) {
-      throw new Error(
-        'SST configuration file not found. Expected one of: ' +
-          configPaths.join(', ') +
-          ` in ${workingDir}`
-      );
-    }
-  }
-
-  /**
-   * Check if SST CLI is available in the environment
-   */
-  async checkSSTAvailability(runner: SSTRunner = 'bun'): Promise<{
-    available: boolean;
-    version?: string;
-    error?: string;
-  }> {
-    try {
-      const versionCommand = this.buildUtilityCommand(runner, ['--version']);
-      const result = await this.executeCommand(versionCommand, {
-        timeout: 30_000, // 30 seconds
-        maxOutputSize: 1024, // 1KB
-      });
-
-      if (result.exitCode === 0) {
-        const version = result.stdout.trim();
-        return { available: true, version };
-      }
-
-      return {
-        available: false,
-        error: `SST CLI check failed with exit code ${result.exitCode}: ${result.stderr}`,
-      };
-    } catch (error) {
-      return {
-        available: false,
-        error: `SST CLI not available: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
-
-  /**
-   * Parse SST environment output to extract app and stage information
-   */
-  private parseProjectInfo(stdout: string): { app?: string; stage?: string } {
-    const lines = stdout.split('\n');
-    const info: { app?: string; stage?: string } = {};
-
-    for (const line of lines) {
-      if (line.includes('App:')) {
-        const appValue = line.split(':')[1]?.trim();
-        if (appValue) {
-          info.app = appValue;
-        }
-      }
-      if (line.includes('Stage:')) {
-        const stageValue = line.split(':')[1]?.trim();
-        if (stageValue) {
-          info.stage = stageValue;
-        }
-      }
-    }
-
-    return info;
-  }
-
-  /**
-   * Execute SST environment command to get project information
-   */
-  private async executeProjectInfoCommand(
-    runner: SSTRunner,
-    cwd?: string
-  ): Promise<CLIResult> {
-    const envCommand = this.buildUtilityCommand(runner, ['env']);
-    return await this.executeCommand(envCommand, {
-      cwd,
-      timeout: 30_000, // 30 seconds
-      maxOutputSize: 4096, // 4KB
-    });
-  }
-
-  /**
-   * Get SST project information
-   */
-  async getProjectInfo(
-    cwd?: string,
-    runner: SSTRunner = 'bun'
-  ): Promise<{ app?: string; stage?: string; error?: string }> {
-    try {
-      const result = await this.executeProjectInfoCommand(runner, cwd);
-
-      if (result.exitCode === 0) {
-        return this.parseProjectInfo(result.stdout);
-      }
-
-      return {
-        error: `Failed to get project info: ${result.stderr || 'Unknown error'}`,
-      };
-    } catch (error) {
-      return {
-        error: `Failed to get project info: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
   }
 }
 

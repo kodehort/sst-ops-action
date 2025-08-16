@@ -68,19 +68,11 @@ describe('OperationRouter', () => {
 
   describe('executeOperation', () => {
     it('should validate operation type before execution', async () => {
-      vi.spyOn(OperationFactory, 'isValidOperationType').mockReturnValue(false);
-      vi.spyOn(OperationFactory, 'getSupportedOperations').mockReturnValue([
-        'deploy',
-        'diff',
-        'remove',
-      ]);
-
-      const result = await executeOperation('invalid' as any, defaultOptions);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Invalid operation type: invalid');
-      expect(result.error).toContain(
-        'Supported operations: deploy, diff, remove'
+      // Invalid operations should now throw during error result creation
+      await expect(
+        executeOperation('invalid' as any, defaultOptions)
+      ).rejects.toThrow(
+        'Cannot create error result for unknown operation: invalid'
       );
     });
 
@@ -367,13 +359,11 @@ describe('OperationRouter', () => {
     });
 
     it('should create failure result for unknown operation type', async () => {
-      const result = await executeOperation('unknown' as any, defaultOptions);
-
-      expect(result.success).toBe(false);
-      expect(result.operation).toBe('unknown');
-      expect(result.stage).toBe('test-stage');
-      expect(result.error).toContain(
-        'Cannot transform result for unknown operation'
+      // Unknown operations should now throw during error result creation
+      await expect(
+        executeOperation('unknown' as any, defaultOptions)
+      ).rejects.toThrow(
+        'Cannot create error result for unknown operation: unknown'
       );
     });
 

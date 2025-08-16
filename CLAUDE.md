@@ -59,6 +59,16 @@ bun run prepare
 4. GitHub integration for PR comments and artifact uploads
 5. Result reporting via GitHub Action outputs
 
+### Input Validation and Error Handling
+
+The action implements strict input validation with fail-fast behavior for critical scenarios:
+
+- **Operation Input**: Required and validated using Zod schema. The action throws and exits immediately if the operation is missing or invalid (not one of: deploy, diff, remove, stage). No default operation is provided to prevent dangerous failure states.
+
+- **Stage Computation**: When deploying without an explicit stage, the action attempts to compute the stage from Git context. If stage computation fails (e.g., no valid Git ref available), this is treated as an unrecoverable scenario and the action throws and exits immediately.
+
+- **Validation Philosophy**: Critical validation failures result in immediate termination rather than fallback behavior to ensure predictable and safe operation. This prevents scenarios like accidentally deploying to unexpected stages or using the wrong operation type.
+
 ### Type System
 
 - `SSTOperation`: Union type for 'deploy' | 'diff' | 'remove'

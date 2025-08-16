@@ -7,6 +7,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import type { OperationOptions, SSTOperation } from '../types';
 import type { ValidationError } from '../utils/validation';
+import { getActionVersion } from '../utils/version';
 import type { ActionError, OperationMetadata } from './categories';
 
 /**
@@ -37,11 +38,12 @@ export function createInputValidationError(
 
 /**
  * Create enhanced operation metadata for better error context
- * @returns Operation metadata with timestamp and GitHub context
+ * @returns Operation metadata with timestamp, action version, and GitHub context
  */
 function createOperationMetadata(): OperationMetadata {
   const metadata: OperationMetadata = {
     timestamp: new Date().toISOString(),
+    actionVersion: getActionVersion(),
   };
 
   try {
@@ -262,6 +264,7 @@ function logErrorMetadata(error: ActionError): void {
   }
 
   core.info(`Error Timestamp: ${metadata.timestamp}`);
+  core.info(`Action Version: ${metadata.actionVersion}`);
 
   if (metadata.workflowId) {
     core.info(`Workflow: ${metadata.workflowId}`);
