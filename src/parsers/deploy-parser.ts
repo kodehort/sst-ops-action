@@ -1,6 +1,6 @@
 /**
  * Deploy Operation Parser
- * Parses SST deploy command output to extract resource changes and URLs
+ * Parses SST deploy command output to extract resource changes and generic outputs
  */
 
 import type { DeployResult } from '../types/operations';

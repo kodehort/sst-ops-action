@@ -222,7 +222,6 @@ function validateDeployOutput(obj: Record<string, unknown>): SSTDeployOutput {
     'region',
     'resources',
     'outputs',
-    'urls',
     'duration',
     'status',
   ];

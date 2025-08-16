@@ -234,7 +234,7 @@ function normalizeRemoveStatus(
  * Transform DeployOperation result to unified format
  *
  * Converts raw deploy operation results into the standardized DeployResult format.
- * Handles URL type normalization, resource status validation, and optional field mapping.
+ * Handles output normalization, resource status validation, and optional field mapping.
  *
  * @param result Raw deploy operation result from the CLI
  * @returns Standardized DeployResult with normalized types

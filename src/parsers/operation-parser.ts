@@ -241,11 +241,12 @@ export abstract class OperationParser<T extends BaseOperationResult> {
   }
 
   /**
-   * Extract URL information from output lines
+   * Extract URL information from output lines (legacy pattern matching)
    *
    * Parses lines containing URL information for deployed services.
    * Recognizes different URL types (Router, Api, Web, Website) and extracts
    * both the type and URL for structured access to deployed endpoints.
+   * Note: This method is used for backward compatibility with direct URL parsing.
    *
    * @param lines Array of output lines to parse
    * @returns Array of URL entries with type and url properties

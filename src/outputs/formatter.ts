@@ -72,7 +72,7 @@ interface BaseInfrastructureOutputs {
 export interface DeployOutputs extends BaseInfrastructureOutputs {
   operation: string; // 'deploy'
   resource_changes: string;
-  outputs: string; // JSON array of deployed URLs
+  outputs: string; // JSON object of generic deployment outputs
   resources: string; // JSON array of deployed resources
   // Reset other operation fields
   diff_summary: string; // ''

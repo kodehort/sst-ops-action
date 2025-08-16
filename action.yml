@@ -101,7 +101,7 @@ outputs:
   resource_changes:
     description: "Number of resource changes made (deploy/remove only)"
   urls:
-    description: "JSON array of deployed URLs (deploy only)"
+    description: "JSON array of URLs extracted from deployment outputs (deploy only)"
   app:
     description: "The SST app name"
   completion_status:
