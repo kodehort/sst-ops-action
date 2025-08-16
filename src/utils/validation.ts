@@ -196,13 +196,43 @@ export class ValidationError extends Error {
 }
 
 /**
+ * Filter raw inputs to only include fields relevant for the given operation
+ */
+function filterInputsByOperation(
+  rawInputs: Record<string, unknown>
+): Record<string, unknown> {
+  const operation = rawInputs.operation as string;
+
+  if (operation === 'stage') {
+    // Stage operations only need these fields
+    return {
+      operation: rawInputs.operation,
+      truncationLength: rawInputs.truncationLength,
+      prefix: rawInputs.prefix,
+    };
+  }
+  // Infrastructure operations (deploy, diff, remove) need these fields
+  return {
+    operation: rawInputs.operation,
+    stage: rawInputs.stage,
+    token: rawInputs.token,
+    commentMode: rawInputs.commentMode,
+    failOnError: rawInputs.failOnError,
+    maxOutputSize: rawInputs.maxOutputSize,
+    runner: rawInputs.runner,
+  };
+}
+
+/**
  * Parse and validate operation-specific GitHub Actions inputs
  */
 export function parseOperationInputs(
   rawInputs: Record<string, unknown>
 ): OperationInputsType {
   try {
-    return OperationInputsSchema.parse(rawInputs);
+    // Filter inputs to only include relevant fields for the operation
+    const filteredInputs = filterInputsByOperation(rawInputs);
+    return OperationInputsSchema.parse(filteredInputs);
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
@@ -428,8 +458,6 @@ export function validateInput<T>(
  * Create operation-specific validation context
  */
 export interface ValidationContext {
-  operation: SSTOperation;
-  stage: string;
   isProduction: boolean;
   allowFakeTokens: boolean;
 }
@@ -504,8 +532,6 @@ export function createValidationContext(
   env: Record<string, string | undefined> = process.env
 ): ValidationContext {
   return {
-    operation: (env.INPUT_OPERATION || 'deploy') as SSTOperation,
-    stage: env.INPUT_STAGE || '',
     isProduction: Boolean(
       env.GITHUB_REF === 'refs/heads/main' ||
         env.GITHUB_REF?.includes('refs/tags/')

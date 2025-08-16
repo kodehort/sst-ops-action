@@ -4,7 +4,6 @@
  */
 
 import * as core from '@actions/core';
-import * as z from 'zod/v4';
 import {
   createInputValidationError,
   createSubprocessError,
@@ -14,8 +13,7 @@ import {
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
 import { StageProcessor } from './parsers/stage-processor';
-import type { OperationOptions, OperationResult, SSTOperation } from './types';
-import { SST_OPERATIONS } from './types/operations';
+import type { OperationOptions, OperationResult } from './types';
 import type { SSTRunner } from './utils/cli';
 import { SST_RUNNERS } from './utils/cli';
 import {
@@ -23,42 +21,6 @@ import {
   ValidationError,
   validateOperationWithContext,
 } from './utils/validation';
-
-/**
- * Zod schema for operation validation
- */
-const OperationSchema = z
-  .string()
-  .min(1, 'Operation is required and cannot be empty')
-  .refine(
-    (val): val is SSTOperation => SST_OPERATIONS.includes(val as SSTOperation),
-    {
-      message: `Invalid operation. Must be one of: ${SST_OPERATIONS.join(', ')}`,
-    }
-  )
-  .transform((val) => val as SSTOperation);
-
-/**
- * Validate operation input using Zod schema
- * @param input Raw operation input from GitHub Actions
- * @returns Valid SSTOperation
- * @throws Error if operation is invalid or missing
- */
-function validateOperation(input: string): SSTOperation {
-  const result = OperationSchema.safeParse(input);
-
-  if (result.success) {
-    return result.data;
-  }
-
-  const errorMessage = result.error.issues
-    .map((issue) => issue.message)
-    .join('; ');
-
-  core.error(`❌ ${errorMessage}`);
-
-  throw new Error(errorMessage);
-}
 
 /**
  * Validate and normalize SSTRunner input
@@ -108,70 +70,94 @@ function computeStageFromContext(
 }
 
 /**
- * Parse GitHub Actions inputs into a typed structure
- *
- * Processes raw GitHub Actions input parameters and converts them into a
- * strongly-typed OperationOptions object. Handles stage computation from
- * Git context when not explicitly provided, and applies operation-specific
- * input filtering to avoid validation errors.
- *
- * @returns Validated OperationOptions ready for use by operation handlers
- * @throws ValidationError if inputs don't match expected schemas
- * @throws Error if operation input is missing or invalid - this is an unrecoverable scenario
+ * Collect raw inputs from GitHub Actions environment
  */
-function parseGitHubActionsInputs() {
-  // Get the operation first to determine which inputs are needed
+function collectRawInputs() {
   const operationInput = core.getInput('operation');
-
-  // Validate operation using Zod schema - this is an unrecoverable scenario if missing/invalid
-  const operation = validateOperation(operationInput);
-
-  // Get raw inputs from GitHub Actions
-  let stage = core.getInput('stage');
+  const stage = core.getInput('stage');
   const truncationLength = Number.parseInt(
     core.getInput('truncation-length') || '26',
     10
   );
   const prefix = core.getInput('prefix') || 'pr-';
 
-  // Compute stage from Git context if not explicitly provided
-  if (!stage || stage.trim() === '') {
-    stage = computeStageFromContext(truncationLength, prefix);
-    core.info(
-      `📋 Stage input was empty, computed from Git context: "${stage}"`
-    );
-  } else {
-    core.info(`📋 Using explicitly provided stage: "${stage}"`);
+  return {
+    operation: operationInput,
+    stage,
+    token: core.getInput('token'),
+    commentMode: core.getInput('comment-mode') || 'on-success',
+    failOnError: core.getBooleanInput('fail-on-error') ?? true,
+    maxOutputSize: core.getInput('max-output-size') || '50000',
+    runner: validateSSTRunner(core.getInput('runner') || 'bun'),
+    truncationLength,
+    prefix,
+  };
+}
+
+/**
+ * Get display name for stage based on operation type
+ */
+function getStageDisplayName(
+  inputs: ReturnType<typeof validateOperationWithContext>
+): string {
+  if (inputs.operation === 'stage') {
+    return 'computed';
   }
-
-  // Build operation-specific inputs to avoid strict validation errors
-  let rawInputs: Record<string, unknown>;
-
-  if (operation === 'stage') {
-    // Stage operation only needs these fields
-    rawInputs = {
-      operation,
-      truncationLength,
-      prefix,
-    };
-  } else {
-    // Infrastructure operations (deploy, diff, remove) need all fields
-    rawInputs = {
-      operation,
-      stage,
-      token: core.getInput('token'),
-      commentMode: core.getInput('comment-mode') || 'on-success',
-      failOnError: core.getBooleanInput('fail-on-error') ?? true,
-      maxOutputSize: core.getInput('max-output-size') || '50000',
-      runner: validateSSTRunner(core.getInput('runner') || 'bun'),
-    };
+  if (inputs.operation === 'deploy') {
+    return inputs.stage || 'auto';
   }
+  return inputs.stage;
+}
 
-  // Create validation context
+/**
+ * Parse GitHub Actions inputs into a typed structure
+ *
+ * Processes raw GitHub Actions input parameters and converts them into a
+ * strongly-typed OperationOptions object. Uses single-pass validation that
+ * validates the operation first, then discriminates to validate the rest
+ * of the inputs based on the operation type.
+ *
+ * @returns Validated OperationOptions ready for use by operation handlers
+ * @throws ValidationError if inputs don't match expected schemas
+ */
+function parseGitHubActionsInputs() {
+  const rawInputs = collectRawInputs();
   const validationContext = createValidationContext();
 
-  // Parse and validate inputs
-  return validateOperationWithContext(rawInputs, validationContext);
+  // Single-pass validation that handles operation discrimination
+  let inputs: ReturnType<typeof validateOperationWithContext>;
+  try {
+    inputs = validateOperationWithContext(rawInputs, validationContext);
+  } catch (error) {
+    // If validation fails, try to compute stage for deploy operations and retry
+    if (
+      error instanceof ValidationError &&
+      rawInputs.operation === 'deploy' &&
+      (!rawInputs.stage || rawInputs.stage.trim() === '')
+    ) {
+      const stage = computeStageFromContext(
+        rawInputs.truncationLength as number,
+        rawInputs.prefix as string
+      );
+      core.info(
+        `📋 Stage input was empty, computed from Git context: "${stage}"`
+      );
+
+      // Update raw inputs with computed stage and retry validation
+      rawInputs.stage = stage;
+      inputs = validateOperationWithContext(rawInputs, validationContext);
+    } else {
+      throw error;
+    }
+  }
+
+  // Log the final parsed operation and stage
+  const stageName = getStageDisplayName(inputs);
+  core.info(
+    `📝 Parsed inputs: ${inputs.operation} operation on stage "${stageName}"`
+  );
+
+  return inputs;
 }
 
 /**
@@ -367,14 +353,19 @@ function handleUnexpectedError(error: unknown): never {
 }
 
 /**
+ * Configuration object containing operation type and options
+ */
+interface OperationConfiguration {
+  operation: ReturnType<typeof validateOperationWithContext>['operation'];
+  options: OperationOptions;
+}
+
+/**
  * Convert parsed inputs to operation options
  */
 function createOperationOptions(
   inputs: ReturnType<typeof validateOperationWithContext>
-): {
-  operation: ReturnType<typeof validateOperationWithContext>['operation'];
-  options: OperationOptions;
-} {
+): OperationConfiguration {
   // Handle operation-specific properties using discriminated union
   switch (inputs.operation) {
     case 'deploy':

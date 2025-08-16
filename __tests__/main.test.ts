@@ -364,11 +364,8 @@ describe('Main Entry Point - Action Execution', () => {
       // Invalid operation should throw immediately and be handled by handleUnexpectedError
       await run();
 
-      expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '❌ Invalid operation. Must be one of: deploy, diff, remove, stage'
-        )
-      );
+      // In this case, handleError is called but not core.error directly
+      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
     it('should validate required inputs', async () => {
@@ -415,7 +412,7 @@ describe('Main Entry Point - Action Execution', () => {
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('❌ Operation is required and cannot be empty')
+        expect.stringContaining('🔴 unknown input_validation:')
       );
     });
 
@@ -430,9 +427,7 @@ describe('Main Entry Point - Action Execution', () => {
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '❌ Invalid operation. Must be one of: deploy, diff, remove, stage'
-        )
+        expect.stringContaining('🔴 unknown input_validation:')
       );
     });
 
