@@ -606,7 +606,7 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 ### `urls` (Deploy Only)
 
-**Description:** Deployed application URLs  
+**Description:** Deployed application URLs extracted from generic outputs  
 **Type:** String (JSON Array)  
 **Format:** JSON-encoded array of URLs  
 
@@ -658,8 +658,9 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 **Notes:**
 - Only populated for `deploy` operations
-- Empty array `[]` if no URLs deployed
+- Empty array `[]` if no URLs found in outputs
 - JSON parsing required to extract individual URLs
+- URLs are extracted from the generic SST outputs during parsing
 
 ---
 
@@ -964,8 +965,8 @@ Detailed behavior for each operation type.
 
 **Process:**
 1. Execute `sst deploy --stage {stage}`
-2. Parse deployment output for resources and URLs
-3. Extract deployed URLs and resource changes
+2. Parse deployment output for resources and generic outputs
+3. Extract URLs and other outputs from generic parsing
 4. Create PR comments with deployment results
 5. Upload artifacts with deployment logs
 
@@ -978,7 +979,7 @@ Detailed behavior for each operation type.
 
 **Outputs Populated:**
 - All standard outputs
-- `urls` - Array of deployed URLs
+- `urls` - Array of URLs extracted from generic outputs
 - `resource_changes` - Number of resources modified
 
 **Example:**
@@ -1018,7 +1019,7 @@ Detailed behavior for each operation type.
 - Changes successfully analyzed (even if no changes)
 
 **Outputs Populated:**
-- All standard outputs except `urls`
+- All standard outputs (no URLs for diff operations)
 - `diff_summary` - Human-readable change summary
 - `resource_changes` - Number of planned changes
 
@@ -1060,7 +1061,7 @@ Detailed behavior for each operation type.
 - Resources successfully deleted (partial success acceptable)
 
 **Outputs Populated:**
-- All standard outputs except `urls` and `diff_summary`
+- All standard outputs (no URLs or diff summaries for remove operations)
 - `resource_changes` - Number of resources removed
 - `completion_status` - May be "partial" for incomplete removal
 

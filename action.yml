@@ -10,11 +10,11 @@ inputs:
   operation:
     description: |
       SST operation to perform:
-      • 'deploy': Deploy infrastructure to AWS (can auto-compute stage from Git context)  
+      • 'deploy': Deploy infrastructure to AWS (can auto-compute stage from Git context)
       • 'diff': Preview infrastructure changes (requires explicit stage for comparison)
       • 'remove': Delete deployed resources (requires explicit stage for safety)
       • 'stage': Compute stage name from Git context (utility operation, no infrastructure access)
-      
+
       This input is required - no default operation is provided to prevent dangerous failure states.
     required: true
   token:
@@ -29,7 +29,7 @@ inputs:
     description: |
       SST stage name:
       • deploy: Optional - auto-computed from branch/PR if not provided
-      • diff: Required - need target stage to compare infrastructure changes  
+      • diff: Required - need target stage to compare infrastructure changes
       • remove: Required - explicit stage name for safety (prevents accidental deletions)
       • stage: Not applicable - computes stage name as output
       • Format: alphanumeric, hyphens, underscores (e.g., "production", "pr-123")
@@ -39,7 +39,7 @@ inputs:
       When to post PR comments (infrastructure operations only):
       • 'always': Comment on every operation run
       • 'on-success': Comment only when operation succeeds (default)
-      • 'on-failure': Comment only when operation fails  
+      • 'on-failure': Comment only when operation fails
       • 'never': Disable PR comments
       • Note: stage operations don't post PR comments
     required: false
@@ -65,7 +65,7 @@ inputs:
     description: |
       Package manager/runtime for SST commands (infrastructure operations only):
       • 'bun' (default): Use Bun runtime and package manager
-      • 'npm': Use npm with package scripts  
+      • 'npm': Use npm with package scripts
       • 'pnpm': Use PNPM runtime
       • 'yarn': Use Yarn runtime
       • 'sst': Use SST binary directly (no package manager)
@@ -86,7 +86,7 @@ inputs:
       Prefix for stage names starting with numbers (stage operation only):
       • Default: "pr-" (creates names like "pr-123" for PR #123)
       • Format: lowercase letters, numbers, hyphens only
-      • Max length: 10 characters  
+      • Max length: 10 characters
       • Only applies to stage operations - ignored by other operations
     required: false
     default: "pr-"
@@ -100,8 +100,8 @@ outputs:
     description: "The stage that was operated on"
   resource_changes:
     description: "Number of resource changes made (deploy/remove only)"
-  urls:
-    description: "JSON array of deployed URLs (deploy only)"
+  outputs:
+    description: "JSON array of generic outputs from deployment (replaces urls)"
   app:
     description: "The SST app name"
   completion_status:

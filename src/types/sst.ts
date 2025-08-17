@@ -37,11 +37,6 @@ export interface SSTDeployOutput {
   region: string;
   resources: SSTResource[];
   outputs: Record<string, unknown>;
-  urls: Array<{
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function';
-  }>;
   duration: number;
   status: 'success' | 'failed' | 'partial';
   permalink?: string;

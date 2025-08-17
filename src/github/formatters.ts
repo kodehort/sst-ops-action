@@ -8,7 +8,6 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-  SSTUrl,
 } from '../types/index.js';
 
 /**
@@ -43,6 +42,11 @@ const DEFAULT_CONFIG: FormatConfig = {
  */
 export class OperationFormatter {
   private config: FormatConfig;
+
+  /**
+   * URL protocols for optimized protocol checking
+   */
+  private static readonly URL_PROTOCOLS = new Set(['http://', 'https://']);
 
   constructor(config: FormatConfig = DEFAULT_CONFIG) {
     this.config = config;
@@ -94,17 +98,17 @@ export class OperationFormatter {
   private formatDeployComment(result: DeployResult): string {
     const sections: string[] = [];
 
-    // Status section
-    sections.push(this.formatStatusSection(result));
+    // Status section with comprehensive table
+    sections.push(this.formatDeployStatusTable(result));
 
     // Resource changes section
     if (result.resourceChanges && result.resourceChanges > 0) {
       sections.push(this.formatResourceChangesSection(result));
     }
 
-    // URLs section
-    if (result.urls && result.urls.length > 0) {
-      sections.push(this.formatUrlsSection(result.urls));
+    // Outputs section
+    if (result.outputs && result.outputs.length > 0) {
+      sections.push(this.formatOutputsSection(result.outputs));
     }
 
     // Console link section
@@ -168,23 +172,31 @@ export class OperationFormatter {
   private formatDeploySummary(result: DeployResult): string {
     let summary = `### 📦 Deployment Summary
 
-| Metric | Value |
-|--------|-------|
+| Property | Value |
+|----------|-------|
+| App | \`${result.app || 'Unknown'}\` |
+| Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
-| URLs Deployed | ${result.urls?.length || 0} |
+| Outputs | ${result.outputs?.length || 0} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
-    if (result.urls && result.urls.length > 0) {
-      summary += '\n\n### 🔗 Deployed URLs\n';
-      const urlsToShow = result.urls.slice(0, this.config.maxUrlsToShow);
+    // Add console link if available
+    if (result.permalink) {
+      summary += `\n| Console Link | [View Deployment](${result.permalink}) |`;
+    }
 
-      for (const url of urlsToShow) {
-        const capitalizedType = this.formatUrlType(url.type);
-        summary += `- **${capitalizedType}**: [${url.url}](${url.url})\n`;
+    if (result.outputs && result.outputs.length > 0) {
+      summary += '\n\n### 📋 Deploy Outputs\n\n';
+      const outputsToShow = result.outputs.slice(0, this.config.maxUrlsToShow);
+
+      summary += '| Key | Value |\n|-----|-------|\n';
+      for (const output of outputsToShow) {
+        const formattedValue = this.formatOutputValue(output.value);
+        summary += `| ${output.key} | ${formattedValue} |\n`;
       }
 
-      if (result.urls.length > this.config.maxUrlsToShow) {
-        summary += `\n*... and ${result.urls.length - this.config.maxUrlsToShow} more URLs*`;
+      if (result.outputs.length > this.config.maxUrlsToShow) {
+        summary += `\n*... and ${result.outputs.length - this.config.maxUrlsToShow} more outputs*`;
       }
     }
 
@@ -223,13 +235,16 @@ export class OperationFormatter {
       summary += `\n| Console Link | [View Diff](${result.permalink}) |`;
     }
 
-    // Add the actual diff in a code block
+    // Add the actual diff in a collapsible code block
     if (result.plannedChanges > 0) {
-      summary += `\n\n### 📋 Resource Changes
+      summary += `\n\n<details>
+<summary>📋 View Resource Changes</summary>
 
 \`\`\`diff
 ${this.formatDiffOutput(result)}
-\`\`\``;
+\`\`\`
+
+</details>`;
     } else {
       summary += `\n\n### ✅ No Changes
 
@@ -293,6 +308,31 @@ All resources have been successfully removed.`;
   }
 
   /**
+   * Format deploy status table section
+   */
+  private formatDeployStatusTable(result: DeployResult): string {
+    const icon = this.getStatusIcon(result);
+    const status = result.success ? 'SUCCESS' : 'FAILED';
+
+    let table = `### ${icon} ${result.operation.toUpperCase()} ${status}
+
+| Property | Value |
+|----------|-------|
+| App | \`${result.app || 'Unknown'}\` |
+| Stage | \`${result.stage}\` |
+| Resource Changes | ${result.resourceChanges || 0} |
+| Outputs | ${result.outputs?.length || 0} |
+| Status | ${this.formatStatusBadge(result)} |`;
+
+    // Add console link if available
+    if (result.permalink) {
+      table += `\n| Console Link | [View Deployment](${result.permalink}) |`;
+    }
+
+    return table;
+  }
+
+  /**
    * Format resource changes section
    */
   private formatResourceChangesSection(result: DeployResult): string {
@@ -322,22 +362,70 @@ All resources have been successfully removed.`;
   }
 
   /**
-   * Format URLs section
+   * Format outputs section
    */
-  private formatUrlsSection(urls: SSTUrl[]): string {
-    let section = '### 🔗 Deployed URLs';
+  private formatOutputsSection(
+    outputs: Array<{ key: string; value: string }>
+  ): string {
+    let section = '### 📋 Deploy Outputs\n\n';
 
-    const urlsToShow = urls.slice(0, this.config.maxUrlsToShow);
+    const outputsToShow = outputs.slice(0, this.config.maxUrlsToShow);
 
-    for (const url of urlsToShow) {
-      section += `\n- **${url.type}**: [${url.url}](${url.url})`;
+    section += '| Key | Value |\n|-----|-------|\n';
+    for (const output of outputsToShow) {
+      const formattedValue = this.formatOutputValue(output.value);
+      section += `| ${output.key} | ${formattedValue} |\n`;
     }
 
-    if (urls.length > this.config.maxUrlsToShow) {
-      section += `\n\n*... and ${urls.length - this.config.maxUrlsToShow} more URLs*`;
+    if (outputs.length > this.config.maxUrlsToShow) {
+      section += `\n*... and ${outputs.length - this.config.maxUrlsToShow} more outputs*`;
     }
 
     return section;
+  }
+
+  /**
+   * Format output value - make URLs clickable, escape other values
+   * Uses optimized Set-based protocol checking with URL structure validation
+   */
+  private formatOutputValue(value: string): string {
+    // Early exit for strings too short to be URLs
+    if (value.length < 7) {
+      return `\`${value}\``;
+    }
+
+    // Single substring operation with early exit for non-http protocols
+    const prefix = value.substring(0, 8);
+    if (!prefix.startsWith('http')) {
+      return `\`${value}\``;
+    }
+
+    // Check for valid protocols with single substring result
+    const hasUrlProtocol =
+      OperationFormatter.URL_PROTOCOLS.has(prefix) ||
+      OperationFormatter.URL_PROTOCOLS.has(prefix.substring(0, 7));
+
+    // Validate URL structure before creating markdown link to prevent broken links
+    if (hasUrlProtocol && this.isValidUrl(value)) {
+      return `[${value}](${value})`;
+    }
+
+    // For non-URL values or invalid URLs, return as code block
+    return `\`${value}\``;
+  }
+
+  /**
+   * Validate URL structure using browser-standard URL constructor
+   * Prevents broken markdown links from malformed URLs
+   * Only allows http: and https: protocols for security
+   */
+  private isValidUrl(value: string): boolean {
+    try {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol);
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -357,13 +445,16 @@ All resources have been successfully removed.`;
       section += `\n| Console Link | [View Diff](${result.permalink}) |`;
     }
 
-    // Add the actual diff in a code block
+    // Add the actual diff in a collapsible code block
     if (result.plannedChanges > 0) {
-      section += `\n\n### 📋 Resource Changes
+      section += `\n\n<details>
+<summary>📋 View Infrastructure Changes</summary>
 
 \`\`\`diff
 ${this.formatDiffOutput(result)}
-\`\`\``;
+\`\`\`
+
+</details>`;
     } else {
       section += `\n\n### ✅ No Changes
 
@@ -527,20 +618,6 @@ No infrastructure changes detected for this operation.`;
         return '➖ Unchanged';
       default:
         return `${action}`;
-    }
-  }
-
-  /**
-   * Format URL type with proper capitalization
-   */
-  private formatUrlType(type: string): string {
-    switch (type.toLowerCase()) {
-      case 'api':
-        return 'API';
-      case 'web':
-        return 'Web';
-      default:
-        return type.charAt(0).toUpperCase() + type.slice(1);
     }
   }
 }

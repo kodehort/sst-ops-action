@@ -8,10 +8,7 @@ import type {
   DiffResult,
   RemoveResult,
 } from '../../src/types/index.js';
-import {
-  createMockDeployResult,
-  createMockSSTUrl,
-} from '../utils/test-types.js';
+import { createMockDeployResult } from '../utils/test-types.js';
 
 // Mock GitHub API client
 const mockOctokit = {
@@ -74,17 +71,9 @@ describe('GitHub Client - API Integration', () => {
       app: 'test-app',
       rawOutput: 'Deploy successful',
       resourceChanges: 3,
-      urls: [
-        createMockSSTUrl({
-          name: 'app',
-          type: 'web',
-          url: 'https://app.example.com',
-        }),
-        createMockSSTUrl({
-          name: 'api',
-          type: 'api',
-          url: 'https://api.example.com',
-        }),
+      outputs: [
+        { key: 'app', value: 'https://app.example.com' },
+        { key: 'api', value: 'https://api.example.com' },
       ],
       permalink: 'https://console.sst.dev/test-app/staging',
     }) as DeployResult;
@@ -304,9 +293,9 @@ describe('GitHub Client - API Integration', () => {
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 5,
-        urls: [
-          { name: 'app', type: 'web', url: 'https://my-app.com' },
-          { name: 'api', type: 'api', url: 'https://api.my-app.com' },
+        outputs: [
+          { key: 'app', value: 'https://my-app.com' },
+          { key: 'api', value: 'https://api.my-app.com' },
         ],
         resources: [],
         permalink: 'https://console.sst.dev/my-app/production',
@@ -317,8 +306,8 @@ describe('GitHub Client - API Integration', () => {
       const commentBody =
         mockOctokit.rest.issues.createComment.mock.calls[0]?.[0]?.body;
       expect(commentBody).toContain('DEPLOY SUCCESS');
-      expect(commentBody).toContain('**Stage:** `production`');
-      expect(commentBody).toContain('**App:** `my-app`');
+      expect(commentBody).toContain('| Stage | `production` |');
+      expect(commentBody).toContain('| App | `my-app` |');
       expect(commentBody).toContain('**Total Changes:** 5');
       expect(commentBody).toContain('https://my-app.com');
       expect(commentBody).toContain('https://api.my-app.com');

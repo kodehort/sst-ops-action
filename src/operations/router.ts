@@ -4,6 +4,7 @@
  * Provides unified interface and consistent error handling
  */
 
+import * as core from '@actions/core';
 import { GitHubClient } from '../github/client';
 import type {
   DeployResult,
@@ -31,7 +32,7 @@ interface RawOperationResults {
     };
     error?: string;
     resourceChanges?: number;
-    urls?: Array<{ name: string; url: string; type: string }>;
+    outputs?: Array<{ key: string; value: string }>;
     resources?: Array<{
       type: string;
       name: string;
@@ -167,27 +168,6 @@ function transformToUnifiedResult(
 }
 
 /**
- * Type guard to ensure URL type is valid
- *
- * Normalizes URL types to one of the allowed values. Invalid types are mapped to 'other'
- * to maintain type safety while handling unexpected SST CLI output variations.
- *
- * @param type Raw URL type from SST CLI output
- * @returns Normalized URL type that matches the TypeScript union type
- */
-function normalizeUrlType(type: string): 'function' | 'api' | 'web' | 'other' {
-  const validTypes: Array<'function' | 'api' | 'web' | 'other'> = [
-    'function',
-    'api',
-    'web',
-    'other',
-  ];
-  return (validTypes as readonly string[]).includes(type)
-    ? (type as 'function' | 'api' | 'web' | 'other')
-    : 'other';
-}
-
-/**
  * Type guard to ensure resource status is valid
  *
  * Normalizes resource status values to ensure type safety. Unknown statuses
@@ -204,9 +184,16 @@ function normalizeResourceStatus(
     'updated',
     'deleted',
   ];
-  return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'created' | 'updated' | 'deleted')
-    : 'created'; // Default to created instead of unchanged
+
+  if ((validStatuses as readonly string[]).includes(status)) {
+    return status as 'created' | 'updated' | 'deleted';
+  }
+
+  // Log unknown status for debugging and monitoring
+  core.warning(
+    `Unknown resource status encountered: '${status}', defaulting to 'created'`
+  );
+  return 'created'; // Default to created instead of unchanged
 }
 
 /**
@@ -224,9 +211,16 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
     'update',
     'delete',
   ];
-  return (validActions as readonly string[]).includes(action)
-    ? (action as 'create' | 'update' | 'delete')
-    : 'update';
+
+  if ((validActions as readonly string[]).includes(action)) {
+    return action as 'create' | 'update' | 'delete';
+  }
+
+  // Log unknown action for debugging and monitoring
+  core.warning(
+    `Unknown diff action encountered: '${action}', defaulting to 'update'`
+  );
+  return 'update';
 }
 
 /**
@@ -246,16 +240,23 @@ function normalizeRemoveStatus(
     'failed',
     'skipped',
   ];
-  return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'removed' | 'failed' | 'skipped')
-    : 'failed';
+
+  if ((validStatuses as readonly string[]).includes(status)) {
+    return status as 'removed' | 'failed' | 'skipped';
+  }
+
+  // Log unknown status for debugging and monitoring
+  core.warning(
+    `Unknown remove status encountered: '${status}', defaulting to 'failed'`
+  );
+  return 'failed';
 }
 
 /**
  * Transform DeployOperation result to unified format
  *
  * Converts raw deploy operation results into the standardized DeployResult format.
- * Handles URL type normalization, resource status validation, and optional field mapping.
+ * Handles output normalization, resource status validation, and optional field mapping.
  *
  * @param result Raw deploy operation result from the CLI
  * @returns Standardized DeployResult with normalized types
@@ -263,7 +264,7 @@ function normalizeRemoveStatus(
 function transformDeployResult(
   result: RawOperationResults['deploy']
 ): DeployResult {
-  const deployResult: DeployResult = {
+  return {
     success: result.success,
     operation: 'deploy' as const,
     stage: result.stage,
@@ -275,28 +276,16 @@ function transformDeployResult(
       ? ('complete' as const)
       : ('failed' as const),
     resourceChanges: result.resourceChanges || 0,
-    urls: (result.urls || []).map((url) => ({
-      name: url.name,
-      url: url.url,
-      type: normalizeUrlType(url.type),
-    })),
+    outputs: result.outputs || [],
     resources: (result.resources || []).map((resource) => ({
       type: resource.type,
       name: resource.name,
       status: normalizeResourceStatus(resource.status),
       ...(resource.timing && { timing: resource.timing }),
     })),
+    ...(result.error !== undefined && { error: result.error }),
+    ...(result.permalink !== undefined && { permalink: result.permalink }),
   };
-
-  if (result.error !== undefined) {
-    deployResult.error = result.error;
-  }
-
-  if (result.permalink !== undefined) {
-    deployResult.permalink = result.permalink;
-  }
-
-  return deployResult;
 }
 
 /**
@@ -309,7 +298,7 @@ function transformDeployResult(
  * @returns Standardized DiffResult with normalized types
  */
 function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
-  const diffResult: DiffResult = {
+  return {
     success: result.success,
     operation: 'diff' as const,
     stage: result.stage,
@@ -322,31 +311,14 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
       : ('failed' as const),
     plannedChanges: result.changesDetected || 0,
     changeSummary: result.summary || 'No changes detected',
-    changes: (result.changes || []).map((change) => {
-      const changeResult: {
-        type: string;
-        name: string;
-        action: 'create' | 'update' | 'delete';
-        details?: string;
-      } = {
-        type: change.resourceType,
-        name: change.resourceName,
-        action: normalizeDiffAction(change.action),
-      };
-
-      if (change.details !== undefined) {
-        changeResult.details = change.details;
-      }
-
-      return changeResult;
-    }),
+    changes: (result.changes || []).map((change) => ({
+      type: change.resourceType,
+      name: change.resourceName,
+      action: normalizeDiffAction(change.action),
+      ...(change.details !== undefined && { details: change.details }),
+    })),
+    ...(result.error !== undefined && { error: result.error }),
   };
-
-  if (result.error !== undefined) {
-    diffResult.error = result.error;
-  }
-
-  return diffResult;
 }
 
 /**
@@ -361,7 +333,7 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
 function transformRemoveResult(
   result: RawOperationResults['remove']
 ): RemoveResult {
-  const removeResult: RemoveResult = {
+  return {
     success: result.success,
     operation: 'remove' as const,
     stage: result.stage,
@@ -376,13 +348,8 @@ function transformRemoveResult(
       name: resource.resourceName,
       status: normalizeRemoveStatus(resource.status),
     })),
+    ...(result.error !== undefined && { error: result.error }),
   };
-
-  if (result.error !== undefined) {
-    removeResult.error = result.error;
-  }
-
-  return removeResult;
 }
 
 /**
@@ -430,7 +397,7 @@ function createFailureResult(
         ...baseResult,
         operation: 'deploy' as const,
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
       };
     case 'diff':

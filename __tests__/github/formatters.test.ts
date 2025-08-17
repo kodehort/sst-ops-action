@@ -4,15 +4,12 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-  SSTUrl,
 } from '../../src/types/index.js';
 import {
   createMockDeployResource,
   createMockDeployResult,
   createMockDiffResult,
   createMockResourceBatch,
-  createMockSSTUrl,
-  createMockUrlBatch,
 } from '../utils/test-types.js';
 
 describe('OperationFormatter', () => {
@@ -29,17 +26,9 @@ describe('OperationFormatter', () => {
         app: 'my-app',
         rawOutput: 'Deploy completed successfully',
         resourceChanges: 5,
-        urls: [
-          createMockSSTUrl({
-            name: 'app',
-            type: 'web',
-            url: 'https://my-app.com',
-          }),
-          createMockSSTUrl({
-            name: 'api',
-            type: 'api',
-            url: 'https://api.my-app.com',
-          }),
+        outputs: [
+          { key: 'app', value: 'https://my-app.com' },
+          { key: 'api', value: 'https://api.my-app.com' },
         ],
         resources: [
           createMockDeployResource({
@@ -59,14 +48,18 @@ describe('OperationFormatter', () => {
       const comment = formatter.formatOperationComment(deployResult);
 
       expect(comment).toContain('🚀 DEPLOY SUCCESS');
-      expect(comment).toContain('**Stage:** `production`');
-      expect(comment).toContain('**App:** `my-app`');
-      expect(comment).toContain('**Status:** `complete`');
+      expect(comment).toContain('| Stage | `production` |');
+      expect(comment).toContain('| App | `my-app` |');
+      expect(comment).toContain('| Resource Changes | 5 |');
       expect(comment).toContain('📊 Resource Changes');
       expect(comment).toContain('**Total Changes:** 5');
-      expect(comment).toContain('🔗 Deployed URLs');
-      expect(comment).toContain('https://my-app.com');
-      expect(comment).toContain('https://api.my-app.com');
+      expect(comment).toContain('📋 Deploy Outputs');
+      expect(comment).toContain(
+        '| app | [https://my-app.com](https://my-app.com) |'
+      );
+      expect(comment).toContain(
+        '| api | [https://api.my-app.com](https://api.my-app.com) |'
+      );
       expect(comment).toContain('🖥️ SST Console');
       expect(comment).toContain('https://console.sst.dev/my-app/production');
     });
@@ -82,7 +75,7 @@ describe('OperationFormatter', () => {
         truncated: false,
         completionStatus: 'failed',
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
         error: 'Deployment failed due to insufficient permissions',
       };
@@ -90,7 +83,7 @@ describe('OperationFormatter', () => {
       const comment = formatter.formatOperationComment(failedDeployResult);
 
       expect(comment).toContain('❌ DEPLOY FAILED');
-      expect(comment).toContain('**Status:** `failed`');
+      expect(comment).toContain('| Stage | `staging` |');
     });
 
     it('should format diff comment correctly', () => {
@@ -272,9 +265,9 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 7,
-        urls: [
-          { name: 'app', type: 'web', url: 'https://my-app.com' },
-          { name: 'api', type: 'api', url: 'https://api.my-app.com' },
+        outputs: [
+          { key: 'app', value: 'https://my-app.com' },
+          { key: 'api', value: 'https://api.my-app.com' },
         ],
         resources: [],
       };
@@ -283,21 +276,20 @@ $ bunx --bun astro build
 
       expect(summary).toContain('📦 Deployment Summary');
       expect(summary).toContain('Resources Changed | 7');
-      expect(summary).toContain('URLs Deployed | 2');
-      expect(summary).toContain('🔗 Deployed URLs');
+      expect(summary).toContain('Outputs | 2');
+      expect(summary).toContain('📋 Deploy Outputs');
       expect(summary).toContain(
-        '**Web**: [https://my-app.com](https://my-app.com)'
+        '| app | [https://my-app.com](https://my-app.com) |'
       );
       expect(summary).toContain(
-        '**API**: [https://api.my-app.com](https://api.my-app.com)'
+        '| api | [https://api.my-app.com](https://api.my-app.com) |'
       );
     });
 
-    it('should format deploy summary with many URLs', () => {
-      const urls: SSTUrl[] = Array.from({ length: 15 }, (_, i) => ({
-        name: `Service${i}`,
-        type: 'api' as const,
-        url: `https://service${i}.example.com`,
+    it('should format deploy summary with many outputs', () => {
+      const outputs = Array.from({ length: 15 }, (_, i) => ({
+        key: `Service${i}`,
+        value: `https://service${i}.example.com`,
       }));
 
       const deployResult: DeployResult = {
@@ -310,14 +302,14 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 15,
-        urls,
+        outputs,
         resources: [],
       };
 
       const summary = formatter.formatOperationSummary(deployResult);
 
-      expect(summary).toContain('URLs Deployed | 15');
-      expect(summary).toContain('... and 5 more URLs');
+      expect(summary).toContain('Outputs | 15');
+      expect(summary).toContain('... and 5 more outputs');
     });
 
     it('should format diff summary correctly', () => {
@@ -343,7 +335,7 @@ $ bunx --bun astro build
 
       expect(summary).toContain('🔍 Infrastructure Diff Summary');
       expect(summary).toContain('Total Changes | 6');
-      expect(summary).toContain('📋 Resource Changes');
+      expect(summary).toContain('📋 View Resource Changes');
       expect(summary).toContain('```diff');
       expect(summary).toContain('+ Function1 (Lambda)');
       expect(summary).toContain('* Bucket1 (S3)');
@@ -432,7 +424,7 @@ $ bunx --bun astro build
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [],
       };
 
@@ -530,12 +522,15 @@ $ bunx --bun astro build
         app: 'my-app',
         rawOutput: 'Deploy completed',
         resourceChanges: 7,
-        urls: createMockUrlBatch(7),
+        outputs: Array.from({ length: 7 }, (_, i) => ({
+          key: `service${i}`,
+          value: `https://service${i}.example.com`,
+        })),
       }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
 
-      expect(comment).toContain('... and 4 more URLs');
+      expect(comment).toContain('... and 4 more outputs');
     });
 
     it('should respect custom maxResourcesToShow configuration', () => {
@@ -552,7 +547,7 @@ $ bunx --bun astro build
         app: 'my-app',
         rawOutput: 'Deploy completed',
         resourceChanges: 12,
-        urls: [],
+        outputs: [],
         resources: createMockResourceBatch(12, {
           type: 'AWS::Lambda::Function',
           status: 'created',
@@ -562,6 +557,169 @@ $ bunx --bun astro build
       const comment = customFormatter.formatOperationComment(deployResult);
 
       expect(comment).toContain('... and 7 more resources');
+    });
+  });
+
+  describe('edge cases', () => {
+    describe('URL detection with short strings', () => {
+      it('should handle very short strings without errors', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'short', value: 'a' },
+            { key: 'empty', value: '' },
+            { key: 'six', value: 'sixchr' },
+            { key: 'seven', value: 'seven!!' },
+            { key: 'valid_url', value: 'https://example.com' },
+            { key: 'invalid_url', value: 'not-a-url' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Should contain the short values as code blocks (non-URL format)
+        expect(comment).toContain('`a`');
+        expect(comment).toContain('`sixchr`');
+        expect(comment).toContain('`seven!!`');
+
+        // Should format the valid URL as a clickable link
+        expect(comment).toContain('[https://example.com](https://example.com)');
+
+        // Should format invalid URL as code block
+        expect(comment).toContain('`not-a-url`');
+      });
+
+      it('should properly detect edge case URLs', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'http_min', value: 'http://' }, // Exactly 7 characters
+            { key: 'https_min', value: 'https://' }, // Exactly 8 characters
+            { key: 'http_url', value: 'http://example.com' },
+            { key: 'https_url', value: 'https://example.com' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // These minimal URLs are invalid and should be code blocks
+        expect(comment).toContain('`http://`');
+        expect(comment).toContain('`https://`');
+
+        // These valid URLs should be clickable links
+        expect(comment).toContain('[http://example.com](http://example.com)');
+        expect(comment).toContain('[https://example.com](https://example.com)');
+      });
+    });
+
+    describe('URL validation edge cases', () => {
+      it('should handle malformed URLs with valid protocols', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'malformed_spaces', value: 'https://not a valid url' },
+            { key: 'incomplete_http', value: 'http://' },
+            { key: 'incomplete_https', value: 'https://' },
+            { key: 'valid_simple', value: 'https://example.com' },
+            {
+              key: 'valid_complex',
+              value: 'https://api.example.com/v1/endpoint?param=value',
+            },
+            {
+              key: 'malformed_brackets',
+              value: 'https://example.com/path[invalid]',
+            },
+            { key: 'invalid_domain', value: 'https://not..valid..domain' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Malformed URLs should be code blocks, not links
+        expect(comment).toContain('`https://not a valid url`');
+        expect(comment).toContain('`http://`');
+        expect(comment).toContain('`https://`');
+
+        // Valid URLs should be links (URL constructor is more lenient than expected)
+        expect(comment).toContain('[https://example.com](https://example.com)');
+        expect(comment).toContain(
+          '[https://api.example.com/v1/endpoint?param=value](https://api.example.com/v1/endpoint?param=value)'
+        );
+
+        // These URLs are considered valid by the URL constructor despite unusual characters
+        expect(comment).toContain(
+          '[https://example.com/path[invalid]](https://example.com/path[invalid])'
+        );
+        expect(comment).toContain(
+          '[https://not..valid..domain](https://not..valid..domain)'
+        );
+      });
+
+      it('should handle various URL formats and edge cases', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'port_url', value: 'http://localhost:3000' },
+            { key: 'ip_url', value: 'https://192.168.1.1:8080/api' },
+            { key: 'subdomain', value: 'https://api.staging.example.com' },
+            {
+              key: 'path_query',
+              value: 'https://example.com/path?q=test&id=123#section',
+            },
+            {
+              key: 'encoded_url',
+              value: 'https://example.com/path%20with%20encoded%20spaces',
+            },
+            { key: 'protocol_only', value: 'ftp://example.com' }, // Non-http protocol
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Valid HTTP/HTTPS URLs should be links
+        expect(comment).toContain(
+          '[http://localhost:3000](http://localhost:3000)'
+        );
+        expect(comment).toContain(
+          '[https://192.168.1.1:8080/api](https://192.168.1.1:8080/api)'
+        );
+        expect(comment).toContain(
+          '[https://api.staging.example.com](https://api.staging.example.com)'
+        );
+        expect(comment).toContain(
+          '[https://example.com/path?q=test&id=123#section](https://example.com/path?q=test&id=123#section)'
+        );
+        expect(comment).toContain(
+          '[https://example.com/path%20with%20encoded%20spaces](https://example.com/path%20with%20encoded%20spaces)'
+        );
+
+        // Non-HTTP protocols should be code blocks (our protocol check only allows http/https)
+        expect(comment).toContain('`ftp://example.com`');
+      });
+    });
+
+    describe('workflow summaries with edge cases', () => {
+      it('should handle short strings in workflow summaries', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'short', value: 'ab' },
+            { key: 'url', value: 'https://api.test.com' },
+          ],
+        }) as DeployResult;
+
+        const summary = formatter.formatOperationSummary(deployResult);
+
+        expect(summary).toContain('`ab`');
+        expect(summary).toContain(
+          '[https://api.test.com](https://api.test.com)'
+        );
+      });
     });
   });
 });
