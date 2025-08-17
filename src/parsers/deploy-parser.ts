@@ -184,12 +184,13 @@ export class DeployParser extends OperationParser<DeployResult> {
       outputs.push(outputPair);
     } else if (trimmedLine?.includes(':')) {
       // Log potentially valid output lines that failed parsing for debugging
-      const truncatedLine =
+      // Cache truncated line to avoid repeated substring operations
+      const logLine =
         trimmedLine.length > 100
           ? `${trimmedLine.substring(0, 100)}...`
           : trimmedLine;
       core.debug(
-        `Skipped potential output line: "${truncatedLine}" (parsing failed)`
+        `Skipped potential output line: "${logLine}" (parsing failed)`
       );
     }
   }

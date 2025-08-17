@@ -407,11 +407,12 @@ All resources have been successfully removed.`;
   /**
    * Validate URL structure using browser-standard URL constructor
    * Prevents broken markdown links from malformed URLs
+   * Only allows http: and https: protocols for security
    */
   private isValidUrl(value: string): boolean {
     try {
-      new URL(value);
-      return true;
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol);
     } catch {
       return false;
     }

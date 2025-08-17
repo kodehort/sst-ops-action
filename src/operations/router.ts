@@ -242,7 +242,7 @@ function normalizeRemoveStatus(
 function transformDeployResult(
   result: RawOperationResults['deploy']
 ): DeployResult {
-  const deployResult: DeployResult = {
+  return {
     success: result.success,
     operation: 'deploy' as const,
     stage: result.stage,
@@ -261,17 +261,9 @@ function transformDeployResult(
       status: normalizeResourceStatus(resource.status),
       ...(resource.timing && { timing: resource.timing }),
     })),
+    ...(result.error !== undefined && { error: result.error }),
+    ...(result.permalink !== undefined && { permalink: result.permalink }),
   };
-
-  if (result.error !== undefined) {
-    deployResult.error = result.error;
-  }
-
-  if (result.permalink !== undefined) {
-    deployResult.permalink = result.permalink;
-  }
-
-  return deployResult;
 }
 
 /**
@@ -284,7 +276,7 @@ function transformDeployResult(
  * @returns Standardized DiffResult with normalized types
  */
 function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
-  const diffResult: DiffResult = {
+  return {
     success: result.success,
     operation: 'diff' as const,
     stage: result.stage,
@@ -297,31 +289,14 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
       : ('failed' as const),
     plannedChanges: result.changesDetected || 0,
     changeSummary: result.summary || 'No changes detected',
-    changes: (result.changes || []).map((change) => {
-      const changeResult: {
-        type: string;
-        name: string;
-        action: 'create' | 'update' | 'delete';
-        details?: string;
-      } = {
-        type: change.resourceType,
-        name: change.resourceName,
-        action: normalizeDiffAction(change.action),
-      };
-
-      if (change.details !== undefined) {
-        changeResult.details = change.details;
-      }
-
-      return changeResult;
-    }),
+    changes: (result.changes || []).map((change) => ({
+      type: change.resourceType,
+      name: change.resourceName,
+      action: normalizeDiffAction(change.action),
+      ...(change.details !== undefined && { details: change.details }),
+    })),
+    ...(result.error !== undefined && { error: result.error }),
   };
-
-  if (result.error !== undefined) {
-    diffResult.error = result.error;
-  }
-
-  return diffResult;
 }
 
 /**
@@ -336,7 +311,7 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
 function transformRemoveResult(
   result: RawOperationResults['remove']
 ): RemoveResult {
-  const removeResult: RemoveResult = {
+  return {
     success: result.success,
     operation: 'remove' as const,
     stage: result.stage,
@@ -351,13 +326,8 @@ function transformRemoveResult(
       name: resource.resourceName,
       status: normalizeRemoveStatus(resource.status),
     })),
+    ...(result.error !== undefined && { error: result.error }),
   };
-
-  if (result.error !== undefined) {
-    removeResult.error = result.error;
-  }
-
-  return removeResult;
 }
 
 /**
