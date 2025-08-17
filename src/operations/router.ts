@@ -4,6 +4,7 @@
  * Provides unified interface and consistent error handling
  */
 
+import * as core from '@actions/core';
 import { GitHubClient } from '../github/client';
 import type {
   DeployResult,
@@ -183,9 +184,16 @@ function normalizeResourceStatus(
     'updated',
     'deleted',
   ];
-  return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'created' | 'updated' | 'deleted')
-    : 'created'; // Default to created instead of unchanged
+
+  if ((validStatuses as readonly string[]).includes(status)) {
+    return status as 'created' | 'updated' | 'deleted';
+  }
+
+  // Log unknown status for debugging and monitoring
+  core.warning(
+    `Unknown resource status encountered: '${status}', defaulting to 'created'`
+  );
+  return 'created'; // Default to created instead of unchanged
 }
 
 /**
@@ -203,9 +211,16 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
     'update',
     'delete',
   ];
-  return (validActions as readonly string[]).includes(action)
-    ? (action as 'create' | 'update' | 'delete')
-    : 'update';
+
+  if ((validActions as readonly string[]).includes(action)) {
+    return action as 'create' | 'update' | 'delete';
+  }
+
+  // Log unknown action for debugging and monitoring
+  core.warning(
+    `Unknown diff action encountered: '${action}', defaulting to 'update'`
+  );
+  return 'update';
 }
 
 /**
@@ -225,9 +240,16 @@ function normalizeRemoveStatus(
     'failed',
     'skipped',
   ];
-  return (validStatuses as readonly string[]).includes(status)
-    ? (status as 'removed' | 'failed' | 'skipped')
-    : 'failed';
+
+  if ((validStatuses as readonly string[]).includes(status)) {
+    return status as 'removed' | 'failed' | 'skipped';
+  }
+
+  // Log unknown status for debugging and monitoring
+  core.warning(
+    `Unknown remove status encountered: '${status}', defaulting to 'failed'`
+  );
+  return 'failed';
 }
 
 /**

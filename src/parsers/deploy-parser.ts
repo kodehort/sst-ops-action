@@ -153,6 +153,7 @@ export class DeployParser extends OperationParser<DeployResult> {
 
     // Look for outputs after completion marker
     let inOutputSection = false;
+    let outputSectionLines = 0;
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -164,8 +165,22 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
 
       if (inOutputSection) {
+        outputSectionLines++;
         this.processOutputLine(trimmedLine, outputs);
       }
+    }
+
+    // Log diagnostic information for empty output sections if debug is enabled
+    if (
+      inOutputSection &&
+      outputs.length === 0 &&
+      outputSectionLines > 0 &&
+      (process.env.ACTIONS_STEP_DEBUG === '1' ||
+        process.env.RUNNER_DEBUG === '1')
+    ) {
+      core.debug(
+        `Output section found but no valid outputs parsed (${outputSectionLines} lines processed)`
+      );
     }
 
     return outputs;
@@ -182,8 +197,11 @@ export class DeployParser extends OperationParser<DeployResult> {
     const outputPair = this.parseOutputFromLine(trimmedLine);
     if (outputPair) {
       outputs.push(outputPair);
-    } else if (trimmedLine?.includes(':')) {
-      // Log potentially valid output lines that failed parsing for debugging
+    } else if (
+      trimmedLine?.includes(':') &&
+      (process.env.ACTIONS_STEP_DEBUG === '1' ||
+        process.env.RUNNER_DEBUG === '1')
+    ) {
       // Cache truncated line to avoid repeated substring operations
       const logLine =
         trimmedLine.length > 100
@@ -253,9 +271,34 @@ export class DeployParser extends OperationParser<DeployResult> {
       if (key && value) {
         return { key, value };
       }
+
+      // Log malformed key-value pairs for debugging
+      this.logMalformedOutputLine(line, key, value);
     }
 
     return null;
+  }
+
+  /**
+   * Log structured information about malformed key-value pairs if debug is enabled
+   */
+  private logMalformedOutputLine(
+    line: string,
+    key: string,
+    value: string
+  ): void {
+    if (
+      process.env.ACTIONS_STEP_DEBUG === '1' ||
+      process.env.RUNNER_DEBUG === '1'
+    ) {
+      if (!key) {
+        const truncatedLine =
+          line.length > 50 ? `${line.substring(0, 50)}...` : line;
+        core.debug(`Malformed output line: empty key in "${truncatedLine}"`);
+      } else if (!value) {
+        core.debug(`Malformed output line: empty value for key "${key}"`);
+      }
+    }
   }
 
   /**

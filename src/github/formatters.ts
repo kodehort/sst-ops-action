@@ -389,11 +389,21 @@ All resources have been successfully removed.`;
    * Uses optimized Set-based protocol checking with URL structure validation
    */
   private formatOutputValue(value: string): string {
-    // Check if value is a URL using optimized protocol checking with safe substring operations
+    // Early exit for strings too short to be URLs
+    if (value.length < 7) {
+      return `\`${value}\``;
+    }
+
+    // Single substring operation with early exit for non-http protocols
+    const prefix = value.substring(0, 8);
+    if (!prefix.startsWith('http')) {
+      return `\`${value}\``;
+    }
+
+    // Check for valid protocols with single substring result
     const hasUrlProtocol =
-      value.length >= 7 &&
-      (OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 8)) ||
-        OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 7)));
+      OperationFormatter.URL_PROTOCOLS.has(prefix) ||
+      OperationFormatter.URL_PROTOCOLS.has(prefix.substring(0, 7));
 
     // Validate URL structure before creating markdown link to prevent broken links
     if (hasUrlProtocol && this.isValidUrl(value)) {
