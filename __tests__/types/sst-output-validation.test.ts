@@ -35,13 +35,6 @@ describe('SST Output Validation', () => {
         outputs: {
           ApiUrl: 'https://api.example.com',
         },
-        urls: [
-          {
-            name: 'api',
-            url: 'https://api.example.com',
-            type: 'api',
-          },
-        ],
         duration: 45_000,
         status: 'success',
         permalink: 'https://console.sst.dev/test-app/test/deploy/123',
@@ -242,7 +235,6 @@ describe('SST Output Validation', () => {
         region: 'us-east-1',
         resources: [], // empty array
         outputs: {},
-        urls: [], // empty array
         duration: 1000,
         status: 'success',
       };
@@ -299,7 +291,6 @@ describe('SST Output Validation', () => {
         region: 'us-east-1',
         resources: [],
         outputs: {},
-        urls: [],
         duration: 1000,
         status: 'success',
         permalink: 'https://console.sst.dev/test-app/test/deploy/123',

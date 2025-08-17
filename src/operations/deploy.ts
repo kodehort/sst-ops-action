@@ -28,7 +28,7 @@ export class DeployOperation {
   /**
    * Execute SST deploy operation with full workflow
    * @param options Operation configuration options
-   * @returns Parsed deployment result with resource and URL information
+   * @returns Parsed deployment result with resource changes and extracted outputs
    */
   async execute(options: OperationOptions): Promise<DeployResult> {
     // Log action version at the start

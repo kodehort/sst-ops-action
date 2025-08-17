@@ -80,7 +80,7 @@ describe('Main Entry Point - Action Execution', () => {
       truncated: 'false',
       error: '',
       resource_changes: '3',
-      urls: '[]',
+      outputs: '[]',
       resources: '[]',
       diff_summary: '',
       planned_changes: '',
@@ -133,9 +133,7 @@ describe('Main Entry Point - Action Execution', () => {
         exitCode: 0,
         completionStatus: 'complete' as const,
         resourceChanges: 3,
-        urls: [
-          { name: 'API', url: 'https://api.example.com', type: 'api' as const },
-        ],
+        outputs: [{ key: 'API', value: 'https://api.example.com' }],
         resources: [
           { type: 'Function', name: 'MyFunction', status: 'created' as const },
         ],
@@ -288,7 +286,7 @@ describe('Main Entry Point - Action Execution', () => {
         completionStatus: 'failed' as const,
         error: 'Authentication failed',
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
         truncated: false,
       };
@@ -325,7 +323,7 @@ describe('Main Entry Point - Action Execution', () => {
         completionStatus: 'failed' as const,
         error: 'Network timeout',
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
         truncated: false,
       };
@@ -471,7 +469,7 @@ describe('Main Entry Point - Action Execution', () => {
         exitCode: 0,
         completionStatus: 'complete' as const,
         resourceChanges: 2,
-        urls: [],
+        outputs: [],
         resources: [],
         truncated: false,
       };
@@ -501,7 +499,7 @@ describe('Main Entry Point - Action Execution', () => {
         exitCode: 0,
         completionStatus: 'complete' as const,
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [],
         truncated: true,
       };
@@ -527,7 +525,7 @@ describe('Main Entry Point - Action Execution', () => {
         exitCode: 0,
         completionStatus: 'complete' as const,
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [],
         truncated: false,
       };
@@ -605,9 +603,9 @@ describe('Main Entry Point - Action Execution', () => {
         app: 'my-sst-app',
         completionStatus: 'complete' as const,
         resourceChanges: 15,
-        urls: [
-          { name: 'API', url: 'https://api.myapp.com', type: 'api' as const },
-          { name: 'Web', url: 'https://myapp.com', type: 'web' as const },
+        outputs: [
+          { key: 'API', value: 'https://api.myapp.com' },
+          { key: 'Web', value: 'https://myapp.com' },
         ],
         resources: [
           { type: 'Function', name: 'ApiHandler', status: 'created' as const },
@@ -635,7 +633,7 @@ describe('Main Entry Point - Action Execution', () => {
         truncated: 'false',
         error: '',
         resource_changes: '15',
-        urls: JSON.stringify(deployResult.urls),
+        outputs: JSON.stringify(deployResult.outputs),
         resources: JSON.stringify(deployResult.resources),
         diff_summary: '',
         planned_changes: '',

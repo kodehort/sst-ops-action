@@ -14,7 +14,8 @@
 | Summary | 6 changes planned |
 | Console Link | [View Diff](https://console.sst.dev/my-complex-app/production/diffs/xyz789) |
 
-### 📋 Resource Changes
+<details>
+<summary>📋 View Infrastructure Changes</summary>
 
 ```diff
 +  my-complex-app-production pulumi:pulumi:Stack
@@ -43,6 +44,8 @@
 
 -  NotificationTopic sst:aws:Topic → NotificationTopicTopic aws:sns:Topic
 ```
+
+</details>
 
 ### 🖥️ SST Console
 

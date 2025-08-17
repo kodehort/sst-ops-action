@@ -15,9 +15,9 @@ describe('OutputFormatter Integration', () => {
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 5,
-        urls: [
-          { name: 'API', url: 'https://api.myapp.com', type: 'api' },
-          { name: 'Web', url: 'https://myapp.com', type: 'web' },
+        outputs: [
+          { key: 'API', value: 'https://api.myapp.com' },
+          { key: 'Web', value: 'https://myapp.com' },
         ],
         resources: [
           { type: 'Function', name: 'api-handler', status: 'created' },
@@ -46,7 +46,7 @@ describe('OutputFormatter Integration', () => {
       expect(outputs.stage).toBe('production');
       expect(outputs.completion_status).toBe('complete');
       expect(outputs.resource_changes).toBe('5');
-      expect(JSON.parse(outputs.urls || '[]')).toHaveLength(2);
+      expect(JSON.parse(outputs.outputs || '[]')).toHaveLength(2);
       expect(JSON.parse(outputs.resources || '[]')).toHaveLength(2);
     });
 
@@ -90,7 +90,7 @@ describe('OutputFormatter Integration', () => {
       expect(outputs.resource_changes).toBe('3'); // Should match plannedChanges
 
       // Verify other operation fields are empty
-      expect(outputs.urls).toBe('');
+      expect(outputs.outputs).toBe('');
       expect(outputs.resources).toBe('');
       expect(outputs.resources_removed).toBe('');
       expect(outputs.removed_resources).toBe('');
@@ -128,7 +128,7 @@ describe('OutputFormatter Integration', () => {
       expect(JSON.parse(outputs.removed_resources || '[]')).toHaveLength(3);
 
       // Verify other operation fields are empty
-      expect(outputs.urls).toBe('');
+      expect(outputs.outputs).toBe('');
       expect(outputs.resources).toBe('');
       expect(outputs.diff_summary).toBe('');
       expect(outputs.planned_changes).toBe('');
@@ -145,7 +145,7 @@ describe('OutputFormatter Integration', () => {
         truncated: false,
         completionStatus: 'failed',
         resourceChanges: 0,
-        urls: [],
+        outputs: [],
         resources: [],
         error:
           'AWS credentials do not have sufficient permissions to deploy to production',
@@ -208,7 +208,7 @@ describe('OutputFormatter Integration', () => {
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 1,
-        urls: [],
+        outputs: [],
         resources: [],
       };
 

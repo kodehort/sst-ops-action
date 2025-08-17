@@ -289,7 +289,7 @@ Each operation type has different input requirements and behavior patterns. Choo
 | `stage` | The stage that was operated on | String | `"production"`, `"staging"` |
 | `app` | The SST app name | String | `"my-app"` |
 | `resource_changes` | Number of resource changes | String | `"5"` |
-| `urls` | Deployed URLs (deploy only) | JSON String | `["https://api.example.com"]` |
+| `urls` | Deployed URLs from outputs (deploy only) | JSON String | `["https://api.example.com"]` |
 | `diff_summary` | Diff summary (diff only) | String | `"3 resources to create, 1 to update"` |
 | `computed_stage` | Computed stage name (stage only) | String | `"feature-branch"` |
 | `ref` | Git reference (stage only) | String | `"refs/heads/main"` |
@@ -316,7 +316,7 @@ Deploys your SST application to the specified stage.
 
 **Features:**
 - ✅ Deploys all stack resources
-- ✅ Extracts and reports deployed URLs
+- ✅ Extracts URLs and outputs from deployment
 - ✅ Tracks resource changes (created, updated, unchanged)
 - ✅ Creates PR comments with deployment status
 - ✅ Generates workflow summaries
@@ -799,12 +799,12 @@ Choose your preferred package manager or runtime for executing SST commands:
     stage: production
     token: ${{ secrets.GITHUB_TOKEN }}
 
-- name: Extract URLs
+- name: Extract Outputs
   run: |
     URLS='${{ steps.deploy.outputs.urls }}'
     echo "Deployed URLs: $URLS"
 
-    # Parse JSON output
+    # Parse JSON output (URLs extracted from generic outputs)
     echo "API_URL=$(echo '$URLS' | jq -r '.[0]')" >> $GITHUB_ENV
     echo "WEB_URL=$(echo '$URLS' | jq -r '.[1]')" >> $GITHUB_ENV
 

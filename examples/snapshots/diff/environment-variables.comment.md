@@ -14,7 +14,8 @@
 | Summary | 1 changes planned |
 | Console Link | [View Diff](https://sst.dev/u/31550ec5) |
 
-### 📋 Resource Changes
+<details>
+<summary>📋 View Infrastructure Changes</summary>
 
 ```diff
 Router: https://dev.kodeapps.co.uk
@@ -92,6 +93,8 @@ Router: https://dev.kodeapps.co.uk
    + environment["INPUT_TRUNCATION-LENGTH"] = 26
    * triggers[0] = 1755101063020
 ```
+
+</details>
 
 ### 🖥️ SST Console
 

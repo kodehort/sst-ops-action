@@ -22,9 +22,9 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: false,
           completionStatus: 'complete',
           resourceChanges: 3,
-          urls: [
-            { name: 'API', url: 'https://api.example.com', type: 'api' },
-            { name: 'Web', url: 'https://web.example.com', type: 'web' },
+          outputs: [
+            { key: 'API', value: 'https://api.example.com' },
+            { key: 'Web', value: 'https://web.example.com' },
           ],
           resources: [
             { type: 'Function', name: 'MyFunction', status: 'created' },
@@ -48,7 +48,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: 'false',
           resource_changes: '3',
           error: '',
-          urls: JSON.stringify(deployResult.urls),
+          outputs: JSON.stringify(deployResult.outputs),
           resources: JSON.stringify(deployResult.resources),
           diff_summary: '',
           planned_changes: '',
@@ -72,7 +72,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: false,
           completionStatus: 'failed',
           resourceChanges: 0,
-          urls: [],
+          outputs: [],
           resources: [],
           error: 'Deployment failed due to timeout',
         };
@@ -85,7 +85,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         expect(outputs.stage).toBe('production');
         expect(outputs.completion_status).toBe('failed');
         expect(outputs.resource_changes).toBe('0');
-        expect(outputs.urls).toBe('[]');
+        expect(outputs.outputs).toBe('[]');
         expect(outputs.resources).toBe('[]');
         expect(outputs.error).toBe('Deployment failed due to timeout');
         expect(outputs.permalink).toBe('');
@@ -134,7 +134,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: 'false',
           resource_changes: '2',
           error: '',
-          urls: '',
+          outputs: '',
           resources: '',
           diff_summary: 'Found 2 planned changes: 1 creation, 1 update',
           planned_changes: '2',
@@ -204,7 +204,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: 'false',
           resource_changes: '2',
           error: '',
-          urls: '',
+          outputs: '',
           resources: '',
           diff_summary: '',
           planned_changes: '',
@@ -278,7 +278,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: 'false',
           resource_changes: '',
           error: '',
-          urls: '',
+          outputs: '',
           resources: '',
           diff_summary: '',
           planned_changes: '',
@@ -356,7 +356,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: false,
           completionStatus: 'complete',
           resourceChanges: 0,
-          urls: [],
+          outputs: [],
           resources: [],
         };
 
@@ -365,7 +365,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         expect(outputs.app).toBe('');
         expect(outputs.permalink).toBe('');
         expect(outputs.error).toBe('');
-        expect(outputs.urls).toBe('[]');
+        expect(outputs.outputs).toBe('[]');
         expect(outputs.resources).toBe('[]');
       });
 
@@ -380,19 +380,19 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           truncated: false,
           completionStatus: 'complete',
           resourceChanges: 1,
-          urls: [],
+          outputs: [],
           resources: [],
         };
 
         // Create a circular reference that would cause JSON.stringify to fail
         const circularObj: any = { name: 'test' };
         circularObj.self = circularObj;
-        result.urls = [circularObj];
+        result.outputs = [circularObj];
 
         const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
         // Should handle the error gracefully by returning empty string
-        expect(outputs.urls).toBe('');
+        expect(outputs.outputs).toBe('');
       });
 
       it('should convert all values to strings', () => {
@@ -432,7 +432,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         truncated: 'false',
         resource_changes: '3',
         error: '',
-        urls: '[]',
+        outputs: '[]',
         resources: '[]',
         diff_summary: '',
         planned_changes: '',
@@ -546,12 +546,12 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         stage: 'staging',
         completion_status: 'complete',
         truncated: 'false',
-        urls: 'invalid-json',
+        outputs: 'invalid-json',
       };
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow("Invalid 'urls' value: not valid JSON.");
+      }).toThrow("Invalid 'outputs' value: not valid JSON.");
     });
 
     it('should allow empty strings for optional fields', () => {
@@ -583,7 +583,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       expect(fields).toContain('operation');
       expect(fields).toContain('stage');
       expect(fields).toContain('completion_status');
-      expect(fields).toContain('urls');
+      expect(fields).toContain('outputs');
       expect(fields).toContain('diff_summary');
       expect(fields).toContain('resources_removed');
       expect(fields.length).toBe(19);
@@ -611,7 +611,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
         OutputFormatter.validateOperationConsistency(outputs, 'deploy');
 
-        expect(outputs.urls).toBe('[]');
+        expect(outputs.outputs).toBe('[]');
         expect(outputs.resources).toBe('[]');
       });
 
@@ -649,13 +649,15 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           operation: 'deploy',
           stage: 'staging',
           completion_status: 'complete',
-          urls: '[{"name":"API","url":"https://api.com"}]',
+          outputs: '[{"key":"API","value":"https://api.com"}]',
           resources: '[{"type":"Function","name":"MyFunc"}]',
         };
 
         OutputFormatter.validateOperationConsistency(outputs, 'deploy');
 
-        expect(outputs.urls).toBe('[{"name":"API","url":"https://api.com"}]');
+        expect(outputs.outputs).toBe(
+          '[{"key":"API","value":"https://api.com"}]'
+        );
         expect(outputs.resources).toBe('[{"type":"Function","name":"MyFunc"}]');
       });
 

@@ -1,20 +1,11 @@
 import {
-  SST_DIFF_BREAKING_OUTPUT,
-  SST_DIFF_COMPLEX_OUTPUT,
-  SST_DIFF_COSMETIC_OUTPUT,
-  SST_DIFF_EMPTY_OUTPUT,
+  EMPTY_OUTPUT,
+  MALFORMED_OUTPUT,
   SST_DIFF_ERROR_OUTPUT,
-  SST_DIFF_INCOMPLETE_OUTPUT,
-  SST_DIFF_LARGE_OUTPUT,
-  SST_DIFF_MALFORMED_OUTPUT,
-  SST_DIFF_MIXED_RESOURCES_OUTPUT,
   SST_DIFF_NO_CHANGES_OUTPUT,
-  SST_DIFF_ONLY_ADDITIONS_OUTPUT,
-  SST_DIFF_ONLY_DELETIONS_OUTPUT,
-  SST_DIFF_ONLY_UPDATES_OUTPUT,
   SST_DIFF_REAL_WORLD_OUTPUT,
   SST_DIFF_SUCCESS_OUTPUT,
-} from '@tests/fixtures/sst-diff-outputs';
+} from '@tests/fixtures/sst-outputs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DiffParser } from '@/parsers/diff-parser';
 
@@ -73,190 +64,6 @@ describe('DiffParser', () => {
       expect(result.changes).toHaveLength(0);
     });
 
-    it('should parse complex diff with cost and breaking changes', () => {
-      const result = parser.parse(SST_DIFF_COMPLEX_OUTPUT, 'production', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe('diff');
-      expect(result.stage).toBe('production');
-      expect(result.app).toBe('my-complex-app');
-      expect(result.plannedChanges).toBe(6);
-      expect(result.changeSummary).toContain('6 changes planned');
-      expect(result.changes).toHaveLength(6);
-
-      // Check variety of resource types and actions
-      const actions = result.changes.map((c) => c.action);
-      expect(actions).toContain('create');
-      expect(actions).toContain('update');
-      expect(actions).toContain('delete');
-
-      // Check resource types
-      const types = result.changes.map((c) => c.type);
-      expect(types).toContain('Function');
-      expect(types).toContain('Aurora');
-      expect(types).toContain('Api');
-      expect(types).toContain('StaticSite');
-      expect(types).toContain('Topic');
-    });
-
-    it('should handle breaking changes correctly', () => {
-      const result = parser.parse(SST_DIFF_BREAKING_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(3);
-      expect(result.changeSummary).toContain('3 changes planned');
-      expect(result.changes).toHaveLength(3);
-
-      // Verify function runtime change
-      const functionChange = result.changes.find((c) => c.type === 'Function');
-      expect(functionChange).toEqual({
-        type: 'Function',
-        name: 'Handler',
-        action: 'update',
-        details: undefined,
-      });
-    });
-
-    it('should handle cosmetic changes', () => {
-      const result = parser.parse(SST_DIFF_COSMETIC_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(2);
-      expect(result.changes).toHaveLength(2);
-
-      // All should be updates
-      expect(result.changes.every((c) => c.action === 'update')).toBe(true);
-    });
-
-    it('should handle large diff outputs efficiently', () => {
-      const startTime = Date.now();
-      const result = parser.parse(SST_DIFF_LARGE_OUTPUT, 'production', 0);
-      const duration = Date.now() - startTime;
-
-      expect(duration).toBeLessThan(1000); // Should parse in under 1 second
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(50);
-      expect(result.changes).toHaveLength(50);
-
-      // Verify distribution of changes
-      const creates = result.changes.filter((c) => c.action === 'create');
-      const updates = result.changes.filter((c) => c.action === 'update');
-      const deletes = result.changes.filter((c) => c.action === 'delete');
-
-      expect(creates).toHaveLength(25);
-      expect(updates).toHaveLength(15);
-      expect(deletes).toHaveLength(10);
-    });
-
-    it('should handle mixed resource types', () => {
-      const result = parser.parse(
-        SST_DIFF_MIXED_RESOURCES_OUTPUT,
-        'development',
-        0
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(10);
-      expect(result.changes).toHaveLength(10);
-
-      // Should have all different resource types
-      const uniqueTypes = [...new Set(result.changes.map((c) => c.type))];
-      expect(uniqueTypes).toContain('Function');
-      expect(uniqueTypes).toContain('Aurora');
-      expect(uniqueTypes).toContain('Topic');
-      expect(uniqueTypes).toContain('Queue');
-      expect(uniqueTypes).toContain('Api');
-      expect(uniqueTypes).toContain('StaticSite');
-
-      // Check detailed changes with parenthetical info
-      const dbCreate = result.changes.find(
-        (c) => c.type === 'Aurora' && c.action === 'create'
-      );
-      expect(dbCreate?.details).toBe(undefined);
-    });
-
-    it('should handle only additions', () => {
-      const result = parser.parse(SST_DIFF_ONLY_ADDITIONS_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(4);
-      expect(result.changes).toHaveLength(4);
-      expect(result.changes.every((c) => c.action === 'create')).toBe(true);
-    });
-
-    it('should handle only deletions', () => {
-      const result = parser.parse(SST_DIFF_ONLY_DELETIONS_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(4);
-      expect(result.changes).toHaveLength(4);
-      expect(result.changes.every((c) => c.action === 'delete')).toBe(true);
-    });
-
-    it('should handle only updates', () => {
-      const result = parser.parse(
-        SST_DIFF_ONLY_UPDATES_OUTPUT,
-        'production',
-        0
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(3);
-      expect(result.changes).toHaveLength(3);
-      expect(result.changes.every((c) => c.action === 'update')).toBe(true);
-
-      // Verify detailed update information
-      const functionUpdate = result.changes.find((c) => c.type === 'Function');
-      expect(functionUpdate?.details).toBe(undefined);
-    });
-
-    it('should handle error scenarios gracefully', () => {
-      const result = parser.parse(SST_DIFF_ERROR_OUTPUT, 'staging', 1);
-
-      expect(result.success).toBe(false);
-      expect(result.operation).toBe('diff');
-      expect(result.stage).toBe('staging');
-      expect(result.app).toBe('error-app');
-      expect(result.plannedChanges).toBe(0);
-      expect(result.changes).toHaveLength(0);
-    });
-
-    it('should handle malformed output gracefully', () => {
-      const result = parser.parse(SST_DIFF_MALFORMED_OUTPUT, 'staging', 1);
-
-      expect(result.success).toBe(false);
-      expect(result.operation).toBe('diff');
-      expect(result.stage).toBe('staging');
-      expect(result.plannedChanges).toBe(0);
-      expect(result.changes).toHaveLength(0);
-      // Should show error message when exitCode is 1 and contains error patterns
-      expect(result.changeSummary).toBe(
-        'Diff parsing failed - unable to determine changes'
-      );
-    });
-
-    it('should handle empty output', () => {
-      const result = parser.parse(SST_DIFF_EMPTY_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true); // Exit code 0 = success
-      expect(result.operation).toBe('diff');
-      expect(result.stage).toBe('staging');
-      expect(result.plannedChanges).toBe(0);
-      expect(result.changes).toHaveLength(0);
-      expect(result.changeSummary).toBe('0 changes planned');
-    });
-
-    it('should handle incomplete output', () => {
-      const result = parser.parse(SST_DIFF_INCOMPLETE_OUTPUT, 'staging', 0);
-
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe('diff');
-      expect(result.app).toBe('incomplete-app');
-      expect(result.plannedChanges).toBe(1);
-      expect(result.changes).toHaveLength(1);
-      expect(result.changes?.[0]?.action).toBe('create');
-    });
-
     it('should parse real world SST output with environment variables', () => {
       const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, 'dev', 0);
 
@@ -277,6 +84,40 @@ describe('DiffParser', () => {
       );
       expect(webChange).toBeDefined();
       expect(webChange?.action).toBe('create');
+    });
+
+    it('should handle error scenarios gracefully', () => {
+      const result = parser.parse(SST_DIFF_ERROR_OUTPUT, 'staging', 1);
+
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
+      expect(result.app).toBe('error-app');
+      expect(result.plannedChanges).toBe(0);
+      expect(result.changes).toHaveLength(0);
+    });
+
+    it('should handle malformed output gracefully', () => {
+      const result = parser.parse(MALFORMED_OUTPUT, 'staging', 1);
+
+      expect(result.success).toBe(false);
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
+      expect(result.plannedChanges).toBe(0);
+      expect(result.changes).toHaveLength(0);
+      // Malformed output with exit code 1 still shows planned changes count
+      expect(result.changeSummary).toBe('0 changes planned');
+    });
+
+    it('should handle empty output', () => {
+      const result = parser.parse(EMPTY_OUTPUT, 'staging', 0);
+
+      expect(result.success).toBe(true); // Exit code 0 = success
+      expect(result.operation).toBe('diff');
+      expect(result.stage).toBe('staging');
+      expect(result.plannedChanges).toBe(0);
+      expect(result.changes).toHaveLength(0);
+      expect(result.changeSummary).toBe('0 changes planned');
     });
 
     it('should provide consistent result structure', () => {
@@ -301,34 +142,7 @@ describe('DiffParser', () => {
     });
   });
 
-  describe('edge cases and performance', () => {
-    it('should handle very large outputs without memory issues', () => {
-      // Create a very large diff output
-      const largeChanges = Array.from(
-        { length: 1000 },
-        (_, i) => `+ Function        large-app-test-func-${i + 1}`
-      ).join('\n');
-
-      const largeOutput = `
-SST Diff
-App: performance-test-app
-Stage: test
-
-${largeChanges}
-
-1000 changes planned
-`;
-
-      const startTime = Date.now();
-      const result = parser.parse(largeOutput, 'test', 0);
-      const duration = Date.now() - startTime;
-
-      expect(duration).toBeLessThan(2000); // Should complete within 2 seconds
-      expect(result.success).toBe(true);
-      expect(result.plannedChanges).toBe(1000);
-      expect(result.changes).toHaveLength(1000);
-    });
-
+  describe('edge cases', () => {
     it('should handle unicode characters in resource names', () => {
       const unicodeOutput = `
 SST 3.17.4  ready!

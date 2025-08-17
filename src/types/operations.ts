@@ -48,10 +48,9 @@ export interface BaseOperationResult {
 export interface DeployResult extends BaseOperationResult {
   operation: 'deploy';
   resourceChanges: number;
-  urls: Array<{
-    name: string;
-    url: string;
-    type: 'api' | 'web' | 'function' | 'other';
+  outputs: Array<{
+    key: string;
+    value: string;
   }>;
   resources: Array<{
     type: string;

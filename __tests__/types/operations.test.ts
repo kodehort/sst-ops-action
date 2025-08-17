@@ -33,7 +33,7 @@ describe('Type Guards', () => {
         truncated: false,
         completionStatus: 'complete',
         resourceChanges: 5,
-        urls: [{ name: 'api', url: 'https://api.example.com', type: 'api' }],
+        outputs: [{ key: 'api', value: 'https://api.example.com' }],
         resources: [{ type: 'Function', name: 'handler', status: 'created' }],
       };
 
