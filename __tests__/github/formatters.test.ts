@@ -604,11 +604,101 @@ $ bunx --bun astro build
 
         const comment = formatter.formatOperationComment(deployResult);
 
-        // These should be treated as URLs (even if minimal)
-        expect(comment).toContain('[http://](http://)');
-        expect(comment).toContain('[https://](https://)');
+        // These minimal URLs are invalid and should be code blocks
+        expect(comment).toContain('`http://`');
+        expect(comment).toContain('`https://`');
+
+        // These valid URLs should be clickable links
         expect(comment).toContain('[http://example.com](http://example.com)');
         expect(comment).toContain('[https://example.com](https://example.com)');
+      });
+    });
+
+    describe('URL validation edge cases', () => {
+      it('should handle malformed URLs with valid protocols', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'malformed_spaces', value: 'https://not a valid url' },
+            { key: 'incomplete_http', value: 'http://' },
+            { key: 'incomplete_https', value: 'https://' },
+            { key: 'valid_simple', value: 'https://example.com' },
+            {
+              key: 'valid_complex',
+              value: 'https://api.example.com/v1/endpoint?param=value',
+            },
+            {
+              key: 'malformed_brackets',
+              value: 'https://example.com/path[invalid]',
+            },
+            { key: 'invalid_domain', value: 'https://not..valid..domain' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Malformed URLs should be code blocks, not links
+        expect(comment).toContain('`https://not a valid url`');
+        expect(comment).toContain('`http://`');
+        expect(comment).toContain('`https://`');
+
+        // Valid URLs should be links (URL constructor is more lenient than expected)
+        expect(comment).toContain('[https://example.com](https://example.com)');
+        expect(comment).toContain(
+          '[https://api.example.com/v1/endpoint?param=value](https://api.example.com/v1/endpoint?param=value)'
+        );
+
+        // These URLs are considered valid by the URL constructor despite unusual characters
+        expect(comment).toContain(
+          '[https://example.com/path[invalid]](https://example.com/path[invalid])'
+        );
+        expect(comment).toContain(
+          '[https://not..valid..domain](https://not..valid..domain)'
+        );
+      });
+
+      it('should handle various URL formats and edge cases', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'port_url', value: 'http://localhost:3000' },
+            { key: 'ip_url', value: 'https://192.168.1.1:8080/api' },
+            { key: 'subdomain', value: 'https://api.staging.example.com' },
+            {
+              key: 'path_query',
+              value: 'https://example.com/path?q=test&id=123#section',
+            },
+            {
+              key: 'encoded_url',
+              value: 'https://example.com/path%20with%20encoded%20spaces',
+            },
+            { key: 'protocol_only', value: 'ftp://example.com' }, // Non-http protocol
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Valid HTTP/HTTPS URLs should be links
+        expect(comment).toContain(
+          '[http://localhost:3000](http://localhost:3000)'
+        );
+        expect(comment).toContain(
+          '[https://192.168.1.1:8080/api](https://192.168.1.1:8080/api)'
+        );
+        expect(comment).toContain(
+          '[https://api.staging.example.com](https://api.staging.example.com)'
+        );
+        expect(comment).toContain(
+          '[https://example.com/path?q=test&id=123#section](https://example.com/path?q=test&id=123#section)'
+        );
+        expect(comment).toContain(
+          '[https://example.com/path%20with%20encoded%20spaces](https://example.com/path%20with%20encoded%20spaces)'
+        );
+
+        // Non-HTTP protocols should be code blocks (our protocol check only allows http/https)
+        expect(comment).toContain('`ftp://example.com`');
       });
     });
 

@@ -386,7 +386,7 @@ All resources have been successfully removed.`;
 
   /**
    * Format output value - make URLs clickable, escape other values
-   * Uses optimized Set-based protocol checking for better performance
+   * Uses optimized Set-based protocol checking with URL structure validation
    */
   private formatOutputValue(value: string): string {
     // Check if value is a URL using optimized protocol checking with safe substring operations
@@ -395,12 +395,26 @@ All resources have been successfully removed.`;
       (OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 8)) ||
         OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 7)));
 
-    if (hasUrlProtocol) {
+    // Validate URL structure before creating markdown link to prevent broken links
+    if (hasUrlProtocol && this.isValidUrl(value)) {
       return `[${value}](${value})`;
     }
 
-    // For non-URL values, just return the value (escaped for table)
+    // For non-URL values or invalid URLs, return as code block
     return `\`${value}\``;
+  }
+
+  /**
+   * Validate URL structure using browser-standard URL constructor
+   * Prevents broken markdown links from malformed URLs
+   */
+  private isValidUrl(value: string): boolean {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
