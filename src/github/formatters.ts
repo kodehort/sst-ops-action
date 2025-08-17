@@ -389,10 +389,11 @@ All resources have been successfully removed.`;
    * Uses optimized Set-based protocol checking for better performance
    */
   private formatOutputValue(value: string): string {
-    // Check if value is a URL using optimized protocol checking
+    // Check if value is a URL using optimized protocol checking with safe substring operations
     const hasUrlProtocol =
-      OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 8)) ||
-      OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 7));
+      value.length >= 7 &&
+      (OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 8)) ||
+        OperationFormatter.URL_PROTOCOLS.has(value.substring(0, 7)));
 
     if (hasUrlProtocol) {
       return `[${value}](${value})`;

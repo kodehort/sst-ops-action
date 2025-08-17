@@ -559,4 +559,77 @@ $ bunx --bun astro build
       expect(comment).toContain('... and 7 more resources');
     });
   });
+
+  describe('edge cases', () => {
+    describe('URL detection with short strings', () => {
+      it('should handle very short strings without errors', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'short', value: 'a' },
+            { key: 'empty', value: '' },
+            { key: 'six', value: 'sixchr' },
+            { key: 'seven', value: 'seven!!' },
+            { key: 'valid_url', value: 'https://example.com' },
+            { key: 'invalid_url', value: 'not-a-url' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // Should contain the short values as code blocks (non-URL format)
+        expect(comment).toContain('`a`');
+        expect(comment).toContain('`sixchr`');
+        expect(comment).toContain('`seven!!`');
+
+        // Should format the valid URL as a clickable link
+        expect(comment).toContain('[https://example.com](https://example.com)');
+
+        // Should format invalid URL as code block
+        expect(comment).toContain('`not-a-url`');
+      });
+
+      it('should properly detect edge case URLs', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'http_min', value: 'http://' }, // Exactly 7 characters
+            { key: 'https_min', value: 'https://' }, // Exactly 8 characters
+            { key: 'http_url', value: 'http://example.com' },
+            { key: 'https_url', value: 'https://example.com' },
+          ],
+        }) as DeployResult;
+
+        const comment = formatter.formatOperationComment(deployResult);
+
+        // These should be treated as URLs (even if minimal)
+        expect(comment).toContain('[http://](http://)');
+        expect(comment).toContain('[https://](https://)');
+        expect(comment).toContain('[http://example.com](http://example.com)');
+        expect(comment).toContain('[https://example.com](https://example.com)');
+      });
+    });
+
+    describe('workflow summaries with edge cases', () => {
+      it('should handle short strings in workflow summaries', () => {
+        const deployResult = createMockDeployResult({
+          stage: 'test',
+          app: 'test-app',
+          outputs: [
+            { key: 'short', value: 'ab' },
+            { key: 'url', value: 'https://api.test.com' },
+          ],
+        }) as DeployResult;
+
+        const summary = formatter.formatOperationSummary(deployResult);
+
+        expect(summary).toContain('`ab`');
+        expect(summary).toContain(
+          '[https://api.test.com](https://api.test.com)'
+        );
+      });
+    });
+  });
 });

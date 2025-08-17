@@ -331,4 +331,70 @@ ${largeResourceList}
       expect(result.resources.every((r) => r.timing)).toBe(true);
     });
   });
+
+  describe('Debug Logging and Edge Cases', () => {
+    it('should handle output parsing with various line formats', () => {
+      const outputWithMixedLines = `
+✓  Complete
+
+ApiUrl: https://api.example.com
+InvalidLine
+EmptyColon:
+:NoKey
+Database: postgres://localhost:5432/db
+--- Separator Line ---
+VeryLongLine: ${'x'.repeat(150)}
+`;
+
+      const result = parser.parse(outputWithMixedLines, 'test', 0);
+
+      // Should parse valid outputs
+      expect(result.outputs).toEqual([
+        { key: 'ApiUrl', value: 'https://api.example.com' },
+        { key: 'Database', value: 'postgres://localhost:5432/db' },
+        { key: 'VeryLongLine', value: 'x'.repeat(150) },
+      ]);
+
+      // Should maintain parsing success despite invalid lines
+      expect(result.success).toBe(true);
+      expect(result.operation).toBe('deploy');
+    });
+
+    it('should handle empty and malformed output sections gracefully', () => {
+      const outputWithNoValidOutputs = `
+✓  Complete
+
+InvalidLine1
+AnotherInvalidLine
+--- Separator ---
+NoColonHere
+`;
+
+      const result = parser.parse(outputWithNoValidOutputs, 'test', 0);
+
+      // Should not crash and return empty outputs
+      expect(result.outputs).toEqual([]);
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle outputs with special characters and edge cases', () => {
+      const outputWithSpecialChars = `
+✓  Complete
+
+Url: https://example.com/path?param=value&other=123
+Json: {"key": "value", "number": 42}
+Unicode: 🚀 deployment complete
+Spaces:    value with spaces   
+`;
+
+      const result = parser.parse(outputWithSpecialChars, 'test', 0);
+
+      expect(result.outputs).toEqual([
+        { key: 'Url', value: 'https://example.com/path?param=value&other=123' },
+        { key: 'Json', value: '{"key": "value", "number": 42}' },
+        { key: 'Unicode', value: '🚀 deployment complete' },
+        { key: 'Spaces', value: 'value with spaces' },
+      ]);
+    });
+  });
 });

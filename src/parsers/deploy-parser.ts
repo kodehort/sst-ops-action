@@ -164,17 +164,34 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
 
       if (inOutputSection) {
-        const outputPair = this.parseOutputFromLine(trimmedLine);
-        if (outputPair) {
-          outputs.push(outputPair);
-        } else if (trimmedLine) {
-          // Log skipped non-empty lines for debugging
-          core.debug(`Skipped output line: "${trimmedLine}" (failed parsing)`);
-        }
+        this.processOutputLine(trimmedLine, outputs);
       }
     }
 
     return outputs;
+  }
+
+  /**
+   * Process a single output line and add to outputs array if valid
+   * Also handles debug logging for invalid lines that might be outputs
+   */
+  private processOutputLine(
+    trimmedLine: string,
+    outputs: Array<{ key: string; value: string }>
+  ): void {
+    const outputPair = this.parseOutputFromLine(trimmedLine);
+    if (outputPair) {
+      outputs.push(outputPair);
+    } else if (trimmedLine?.includes(':')) {
+      // Log potentially valid output lines that failed parsing for debugging
+      const truncatedLine =
+        trimmedLine.length > 100
+          ? `${trimmedLine.substring(0, 100)}...`
+          : trimmedLine;
+      core.debug(
+        `Skipped potential output line: "${truncatedLine}" (parsing failed)`
+      );
+    }
   }
 
   /**
