@@ -62,7 +62,7 @@
     "lefthook": "^1.12.2",
     "rollup": "^4.46.2",
     "typescript": "^5.9.2",
-    "ultracite": "5.1.2",
+    "ultracite": "5.2.5",
     "vitest": "^3.2.4",
     "yaml": "^2.8.1"
   },
