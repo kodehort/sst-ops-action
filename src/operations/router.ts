@@ -190,11 +190,17 @@ function transformToUnifiedResult(
  * Normalizes resource status values to ensure type safety. Unknown statuses
  * default to 'created' to provide a safe fallback behavior.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param status Raw resource status from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized resource status ('created' | 'updated' | 'deleted')
  */
 function normalizeResourceStatus(
-  status: string
+  status: string,
+  resourceName?: string,
+  resourceType?: string
 ): 'created' | 'updated' | 'deleted' {
   const validStatuses: Array<'created' | 'updated' | 'deleted'> = [
     'created',
@@ -206,10 +212,20 @@ function normalizeResourceStatus(
     return status as 'created' | 'updated' | 'deleted';
   }
 
-  // Log unknown status for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context = [];
+  if (resourceName) context.push(`resource: ${resourceName}`);
+  if (resourceType) context.push(`type: ${resourceType}`);
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown resource status encountered: '${status}', defaulting to 'created'`
+    `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
+    `    Valid statuses: ${validStatuses.join(', ')}\n` +
+    `    Defaulting to: 'created'\n` +
+    `    This may indicate a new SST CLI output format.`
   );
+
   return 'created'; // Default to created instead of unchanged
 }
 
@@ -219,10 +235,18 @@ function normalizeResourceStatus(
  * Normalizes diff action types for consistent handling. Unknown actions
  * default to 'update' as the most common operation type.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param action Raw diff action from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized diff action ('create' | 'update' | 'delete')
  */
-function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
+function normalizeDiffAction(
+  action: string,
+  resourceName?: string,
+  resourceType?: string
+): 'create' | 'update' | 'delete' {
   const validActions: Array<'create' | 'update' | 'delete'> = [
     'create',
     'update',
@@ -233,10 +257,20 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
     return action as 'create' | 'update' | 'delete';
   }
 
-  // Log unknown action for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context = [];
+  if (resourceName) context.push(`resource: ${resourceName}`);
+  if (resourceType) context.push(`type: ${resourceType}`);
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown diff action encountered: '${action}', defaulting to 'update'`
+    `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
+    `    Valid actions: ${validActions.join(', ')}\n` +
+    `    Defaulting to: 'update'\n` +
+    `    This may indicate a new SST CLI diff format.`
   );
+
   return 'update';
 }
 
@@ -246,11 +280,17 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
  * Normalizes remove operation status values. Unknown statuses default
  * to 'failed' to err on the side of caution for removal operations.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param status Raw remove status from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized remove status ('removed' | 'failed' | 'skipped')
  */
 function normalizeRemoveStatus(
-  status: string
+  status: string,
+  resourceName?: string,
+  resourceType?: string
 ): 'removed' | 'failed' | 'skipped' {
   const validStatuses: Array<'removed' | 'failed' | 'skipped'> = [
     'removed',
@@ -262,10 +302,20 @@ function normalizeRemoveStatus(
     return status as 'removed' | 'failed' | 'skipped';
   }
 
-  // Log unknown status for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context = [];
+  if (resourceName) context.push(`resource: ${resourceName}`);
+  if (resourceType) context.push(`type: ${resourceType}`);
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown remove status encountered: '${status}', defaulting to 'failed'`
+    `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
+    `    Valid statuses: ${validStatuses.join(', ')}\n` +
+    `    Defaulting to: 'failed' (conservative default for removals)\n` +
+    `    This may indicate a new SST CLI remove format.`
   );
+
   return 'failed';
 }
 
@@ -297,7 +347,7 @@ function transformDeployResult(
     resources: (result.resources || []).map((resource) => ({
       type: resource.type,
       name: resource.name,
-      status: normalizeResourceStatus(resource.status),
+      status: normalizeResourceStatus(resource.status, resource.name, resource.type),
       ...(resource.timing && { timing: resource.timing }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -333,7 +383,7 @@ function transformDiffResult(
     changes: (result.changes || []).map((change) => ({
       type: change.resourceType,
       name: change.resourceName,
-      action: normalizeDiffAction(change.action),
+      action: normalizeDiffAction(change.action, change.resourceName, change.resourceType),
       ...(change.details !== undefined && { details: change.details }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -365,7 +415,7 @@ function transformRemoveResult(
     removedResources: (result.removedResources || []).map((resource) => ({
       type: resource.resourceType,
       name: resource.resourceName,
-      status: normalizeRemoveStatus(resource.status),
+      status: normalizeRemoveStatus(resource.status, resource.resourceName, resource.resourceType),
     })),
     ...(result.error !== undefined && { error: result.error }),
   };
