@@ -12,6 +12,10 @@ import type {
   StageResult,
 } from '../types';
 import { SST_OPERATIONS } from '../types/operations';
+import {
+  type ValidatedOutputs,
+  validateOutputs as validateWithSchema,
+} from './schema';
 
 // Export the main function as default
 export { formatOperationForGitHubActions as default };
@@ -168,20 +172,26 @@ export type OperationOutputs =
 
 /**
  * Format operation result for GitHub Actions output using discriminated unions
- * Provides type-safe operation-specific formatting
+ * Provides type-safe operation-specific formatting with Zod validation
  */
 export function formatOperationForGitHubActions(
   result: OperationResult
-): OperationOutputs {
+): ValidatedOutputs {
+  let outputs: OperationOutputs;
+
   switch (result.operation) {
     case 'deploy':
-      return formatDeployOperation(result as DeployResult);
+      outputs = formatDeployOperation(result as DeployResult);
+      break;
     case 'diff':
-      return formatDiffOperation(result as DiffResult);
+      outputs = formatDiffOperation(result as DiffResult);
+      break;
     case 'remove':
-      return formatRemoveOperation(result as RemoveResult);
+      outputs = formatRemoveOperation(result as RemoveResult);
+      break;
     case 'stage':
-      return formatStageOperation(result as StageResult);
+      outputs = formatStageOperation(result as StageResult);
+      break;
     default: {
       // Exhaustive check for TypeScript
       const _exhaustive: never = result;
@@ -190,6 +200,9 @@ export function formatOperationForGitHubActions(
       );
     }
   }
+
+  // Validate outputs against Zod schema before returning
+  return validateWithSchema(outputs);
 }
 
 /**
@@ -323,120 +336,11 @@ function safeStringify(value: unknown): string {
 /**
  * Validate that all required output fields are present
  * Throws error if any required field is missing
+ *
+ * This function now uses Zod schema validation for comprehensive type checking
  */
-export function validateOutputs(outputs: Record<string, string>): void {
-  const requiredFields = ['success', 'operation', 'stage', 'completion_status'];
-  const missingFields: string[] = [];
-
-  for (const field of requiredFields) {
-    if (outputs[field] === undefined || outputs[field] === null) {
-      missingFields.push(field);
-    }
-  }
-
-  if (missingFields.length > 0) {
-    throw new Error(
-      `Required output fields missing: ${missingFields.join(', ')}`
-    );
-  }
-
-  // Validate field types and values
-  validateFieldValues(outputs);
-}
-
-/**
- * Validate field values meet expected formats
- */
-function validateFieldValues(outputs: Record<string, string>): void {
-  validateBooleanFields(outputs);
-  validateEnumFields(outputs);
-  validateNumericFields(outputs);
-  validateJsonFields(outputs);
-}
-
-/**
- * Validate boolean field values
- */
-function validateBooleanFields(outputs: Record<string, string>): void {
-  const booleanFields = [
-    { name: 'success' },
-    { name: 'truncated' },
-    { name: 'is_pull_request' },
-  ];
-
-  for (const { name } of booleanFields) {
-    if (
-      outputs[name] &&
-      outputs[name] !== '' &&
-      !['true', 'false'].includes(outputs[name])
-    ) {
-      throw new Error(
-        `Invalid '${name}' value: '${outputs[name] ?? 'undefined'}'. Must be 'true' or 'false'.`
-      );
-    }
-  }
-}
-
-/**
- * Validate enum field values
- */
-function validateEnumFields(outputs: Record<string, string>): void {
-  const enumFields = [
-    { name: 'operation', validValues: [...SST_OPERATIONS] },
-    {
-      name: 'completion_status',
-      validValues: ['complete', 'partial', 'failed'],
-    },
-  ];
-
-  for (const { name, validValues } of enumFields) {
-    if (!(outputs[name] && validValues.includes(outputs[name]))) {
-      throw new Error(
-        `Invalid '${name}' value: '${outputs[name] ?? 'undefined'}'. Must be one of: ${validValues.join(', ')}.`
-      );
-    }
-  }
-}
-
-/**
- * Validate numeric field values
- */
-function validateNumericFields(outputs: Record<string, string>): void {
-  const numericFields = [
-    'resource_changes',
-    'planned_changes',
-    'resources_removed',
-  ];
-
-  for (const field of numericFields) {
-    if (outputs[field] && outputs[field] !== '') {
-      const numValue = Number(outputs[field]);
-      if (Number.isNaN(numValue) || numValue < 0) {
-        throw new Error(
-          `Invalid '${field}' value: '${outputs[field]}'. Must be a non-negative number.`
-        );
-      }
-    }
-  }
-}
-
-/**
- * Validate JSON field values
- */
-function validateJsonFields(outputs: Record<string, string>): void {
-  const jsonFields = ['outputs', 'resources', 'removed_resources'];
-
-  for (const field of jsonFields) {
-    if (outputs[field] && outputs[field] !== '') {
-      try {
-        JSON.parse(outputs[field]);
-      } catch (error) {
-        throw new Error(
-          `Invalid '${field}' value: not valid JSON. ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-  }
+export function validateOutputs(outputs: Record<string, string>): ValidatedOutputs {
+  return validateWithSchema(outputs);
 }
 
 /**

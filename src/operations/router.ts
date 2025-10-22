@@ -16,6 +16,11 @@ import type {
 } from '../types';
 import { SSTCLIExecutor } from '../utils/cli';
 import { OperationFactory } from './factory';
+import {
+  validateRawDeployResult,
+  validateRawDiffResult,
+  validateRawRemoveResult,
+} from './schemas';
 
 /**
  * Raw operation result types from the operation handlers
@@ -129,9 +134,12 @@ export async function executeOperation(
  * OperationResult type that the action outputs. It handles type normalization,
  * field mapping, and ensures consistent structure across all operation types.
  *
+ * Now includes runtime validation using Zod schemas to ensure type safety
+ * beyond compile-time checks.
+ *
  * @param operationType The operation that was executed ('deploy' | 'diff' | 'remove' | 'stage')
  * @param result The raw result from the operation handler
- * @param options Original operation options used for the execution
+ * @param _options Original operation options used for the execution
  * @returns Unified OperationResult with normalized types and consistent fields
  *
  * @example
@@ -148,12 +156,21 @@ function transformToUnifiedResult(
   _options: OperationOptions
 ): OperationResult {
   switch (operationType) {
-    case 'deploy':
-      return transformDeployResult(result as RawOperationResults['deploy']);
-    case 'diff':
-      return transformDiffResult(result as RawOperationResults['diff']);
-    case 'remove':
-      return transformRemoveResult(result as RawOperationResults['remove']);
+    case 'deploy': {
+      // Validate result at runtime before transformation
+      const validated = validateRawDeployResult(result);
+      return transformDeployResult(validated);
+    }
+    case 'diff': {
+      // Validate result at runtime before transformation
+      const validated = validateRawDiffResult(result);
+      return transformDiffResult(validated);
+    }
+    case 'remove': {
+      // Validate result at runtime before transformation
+      const validated = validateRawRemoveResult(result);
+      return transformRemoveResult(validated);
+    }
     case 'stage':
       // Stage operation returns the result directly as it already conforms to the unified format
       return result as OperationResult;
@@ -258,11 +275,11 @@ function normalizeRemoveStatus(
  * Converts raw deploy operation results into the standardized DeployResult format.
  * Handles output normalization, resource status validation, and optional field mapping.
  *
- * @param result Raw deploy operation result from the CLI
+ * @param result Validated raw deploy operation result from the CLI
  * @returns Standardized DeployResult with normalized types
  */
 function transformDeployResult(
-  result: RawOperationResults['deploy']
+  result: ReturnType<typeof validateRawDeployResult>
 ): DeployResult {
   return {
     success: result.success,
@@ -294,10 +311,12 @@ function transformDeployResult(
  * Converts raw diff operation results into the standardized DiffResult format.
  * Normalizes change actions and handles optional field mapping for diff summaries.
  *
- * @param result Raw diff operation result from the CLI
+ * @param result Validated raw diff operation result from the CLI
  * @returns Standardized DiffResult with normalized types
  */
-function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
+function transformDiffResult(
+  result: ReturnType<typeof validateRawDiffResult>
+): DiffResult {
   return {
     success: result.success,
     operation: 'diff' as const,
@@ -327,11 +346,11 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
  * Converts raw remove operation results into the standardized RemoveResult format.
  * Handles resource status normalization and completion status mapping.
  *
- * @param result Raw remove operation result from the CLI
+ * @param result Validated raw remove operation result from the CLI
  * @returns Standardized RemoveResult with normalized types
  */
 function transformRemoveResult(
-  result: RawOperationResults['remove']
+  result: ReturnType<typeof validateRawRemoveResult>
 ): RemoveResult {
   return {
     success: result.success,
