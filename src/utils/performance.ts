@@ -81,12 +81,17 @@ export class PerformanceTimer {
    * Get the full measurement result
    */
   getMeasurement(): PerformanceMeasurement {
-    return {
+    const measurement: PerformanceMeasurement = {
       name: this.name,
       startTime: this.startTime,
-      endTime: this.endTime,
       duration: this.getDuration(),
     };
+
+    if (this.endTime !== undefined) {
+      measurement.endTime = this.endTime;
+    }
+
+    return measurement;
   }
 
   /**
@@ -289,13 +294,14 @@ export const globalPerformanceTracker = new PerformanceTracker();
  * ```
  */
 export function measured(name?: string) {
-  return function (
+  return (
     target: unknown,
     propertyKey: string,
     descriptor: PropertyDescriptor
-  ) {
+  ) => {
     const originalMethod = descriptor.value;
-    const measurementName = name || `${target?.constructor?.name}.${propertyKey}`;
+    const measurementName =
+      name || `${target?.constructor?.name}.${propertyKey}`;
 
     descriptor.value = async function (...args: unknown[]) {
       const timer = new PerformanceTimer(measurementName);
@@ -319,13 +325,15 @@ export function measured(name?: string) {
  * Simple utility to format bytes
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) {
+    return '0 B';
+  }
 
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
 /**

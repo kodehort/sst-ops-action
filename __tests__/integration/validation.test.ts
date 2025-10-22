@@ -3,7 +3,7 @@
  * Tests the new validation features added in Phase 1 and Phase 2
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   validateRawDeployResult,
   validateRawDiffResult,
@@ -60,7 +60,7 @@ describe('Operation Result Validation Integration', () => {
       };
 
       expect(() => validateRawDeployResult(invalidResult)).toThrow(
-        /Expected boolean/
+        /expected boolean/
       );
     });
   });
@@ -172,7 +172,8 @@ describe('GitHub Actions Output Validation Integration', () => {
         resource_changes: '5',
         error: '',
         outputs: '[{"key":"ApiUrl","value":"https://api.example.com"}]',
-        resources: '[{"type":"AWS::Lambda::Function","name":"my-function","status":"created"}]',
+        resources:
+          '[{"type":"AWS::Lambda::Function","name":"my-function","status":"created"}]',
         diff_summary: '',
         planned_changes: '',
         resources_removed: '',
@@ -241,7 +242,7 @@ describe('GitHub Actions Output Validation Integration', () => {
       };
 
       expect(() => validateOutputs(invalidOutputs)).toThrow(
-        /operation must be one of/
+        /expected one of/
       );
     });
 

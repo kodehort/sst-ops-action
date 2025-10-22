@@ -5,8 +5,8 @@
 
 import * as core from '@actions/core';
 import {
-  UnifiedErrorHandler,
   isOutputFormattingError,
+  UnifiedErrorHandler,
 } from './errors/unified-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';

@@ -11,7 +11,6 @@ import type {
   RemoveResult,
   StageResult,
 } from '../types';
-import { SST_OPERATIONS } from '../types/operations';
 import {
   type ValidatedOutputs,
   validateOutputs as validateWithSchema,
@@ -339,7 +338,9 @@ function safeStringify(value: unknown): string {
  *
  * This function now uses Zod schema validation for comprehensive type checking
  */
-export function validateOutputs(outputs: Record<string, string>): ValidatedOutputs {
+export function validateOutputs(
+  outputs: Record<string, string>
+): ValidatedOutputs {
   return validateWithSchema(outputs);
 }
 

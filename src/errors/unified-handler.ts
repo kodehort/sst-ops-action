@@ -4,7 +4,7 @@
  */
 
 import * as core from '@actions/core';
-import type { OperationOptions } from '../types';
+import type { OperationOptions, SSTOperation } from '../types';
 import { ValidationError } from '../utils/validation';
 import {
   createInputValidationError,
@@ -25,13 +25,13 @@ export type ErrorContext =
   | {
       type: 'operation-execution';
       error: Error;
-      operation: string;
+      operation: SSTOperation;
       options: OperationOptions;
     }
   | {
       type: 'output-formatting';
       error: Error;
-      operation: string;
+      operation: SSTOperation;
       options: OperationOptions;
     }
   | {
@@ -51,6 +51,7 @@ export type ErrorContext =
  * - Consistent error reporting
  * - Easier to test and maintain
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: This is a namespace-like pattern for organizing related error handling functions
 export class UnifiedErrorHandler {
   /**
    * Main entry point for error handling
@@ -62,11 +63,11 @@ export class UnifiedErrorHandler {
     try {
       switch (context.type) {
         case 'input-validation':
-          this.handleInputValidation(context.error);
+          UnifiedErrorHandler.handleInputValidation(context.error);
           break;
 
         case 'operation-execution':
-          this.handleOperationExecution(
+          UnifiedErrorHandler.handleOperationExecution(
             context.error,
             context.operation,
             context.options
@@ -74,7 +75,7 @@ export class UnifiedErrorHandler {
           break;
 
         case 'output-formatting':
-          this.handleOutputFormatting(
+          UnifiedErrorHandler.handleOutputFormatting(
             context.error,
             context.operation,
             context.options
@@ -82,18 +83,20 @@ export class UnifiedErrorHandler {
           break;
 
         case 'unexpected':
-          this.handleUnexpected(context.error);
+          UnifiedErrorHandler.handleUnexpected(context.error);
           break;
 
         default: {
           // Exhaustive check for TypeScript
           const _exhaustive: never = context;
-          throw new Error(`Unknown error context type: ${JSON.stringify(_exhaustive)}`);
+          throw new Error(
+            `Unknown error context type: ${JSON.stringify(_exhaustive)}`
+          );
         }
       }
     } catch (handlingError) {
       // If error handling itself fails, use fallback
-      this.handleHandlingFailure(handlingError, context);
+      UnifiedErrorHandler.handleHandlingFailure(handlingError, context);
     }
   }
 
@@ -130,7 +133,7 @@ export class UnifiedErrorHandler {
    */
   private static handleOperationExecution(
     error: Error,
-    operation: string,
+    operation: SSTOperation,
     options: OperationOptions
   ): void {
     const actionError = createSubprocessError(
@@ -156,7 +159,7 @@ export class UnifiedErrorHandler {
    */
   private static handleOutputFormatting(
     error: Error,
-    operation: string,
+    operation: SSTOperation,
     options: OperationOptions
   ): void {
     core.error(`Failed to set outputs: ${error.message}`);
@@ -214,7 +217,7 @@ export class UnifiedErrorHandler {
     handlingError: unknown,
     originalContext: ErrorContext
   ): void {
-    const originalMessage = this.extractMessage(originalContext);
+    const originalMessage = UnifiedErrorHandler.extractMessage(originalContext);
     const handlingMessage =
       handlingError instanceof Error
         ? handlingError.message

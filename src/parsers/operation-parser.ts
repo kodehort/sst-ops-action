@@ -1,5 +1,5 @@
 import type { BaseOperationResult } from '../types/operations';
-import { SSTPatterns, PatternHelpers } from './patterns';
+import { PatternHelpers, SSTPatterns } from './patterns';
 
 /**
  * Abstract base parser for SST CLI outputs

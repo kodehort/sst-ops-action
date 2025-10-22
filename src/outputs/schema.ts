@@ -19,24 +19,17 @@ export const GitHubActionsOutputSchema = z.object({
   success: z.string().regex(/^(true|false)$/, {
     message: 'success must be "true" or "false"',
   }),
-  operation: z.enum(['deploy', 'diff', 'remove', 'stage'], {
-    errorMap: () => ({
-      message: 'operation must be one of: deploy, diff, remove, stage',
-    }),
-  }),
+  operation: z.enum(['deploy', 'diff', 'remove', 'stage']),
   stage: z.string().min(1, 'stage cannot be empty'),
-  completion_status: z.enum(['complete', 'partial', 'failed'], {
-    errorMap: () => ({
-      message: 'completion_status must be one of: complete, partial, failed',
-    }),
-  }),
+  completion_status: z.enum(['complete', 'partial', 'failed']),
 
   // Common optional outputs
   app: z.string().default(''),
   permalink: z
     .string()
     .refine(
-      (val: string) => val === '' || val.startsWith('http://') || val.startsWith('https://'),
+      (val: string) =>
+        val === '' || val.startsWith('http://') || val.startsWith('https://'),
       {
         message: 'permalink must be empty or a valid URL',
       }

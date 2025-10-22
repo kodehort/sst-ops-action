@@ -23,69 +23,6 @@ import {
 } from './schemas';
 
 /**
- * Raw operation result types from the operation handlers
- */
-interface RawOperationResults {
-  deploy: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    resourceChanges?: number;
-    outputs?: Array<{ key: string; value: string }>;
-    resources?: Array<{
-      type: string;
-      name: string;
-      status: string;
-      timing?: string;
-    }>;
-    permalink?: string;
-  };
-  diff: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    changesDetected?: number;
-    summary?: string;
-    changes?: Array<{
-      resourceType: string;
-      resourceName: string;
-      action: string;
-      details?: string;
-    }>;
-  };
-  remove: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    completionStatus?: 'complete' | 'partial' | 'failed';
-    resourcesRemoved?: number;
-    removedResources?: Array<{
-      resourceType: string;
-      resourceName: string;
-      status: string;
-    }>;
-  };
-}
-
-/**
  * Execute an SST operation with full error handling and routing
  * @param operationType The type of operation to execute
  * @param options Configuration options for the operation
@@ -213,17 +150,21 @@ function normalizeResourceStatus(
   }
 
   // Enhanced warning with context for debugging
-  const context = [];
-  if (resourceName) context.push(`resource: ${resourceName}`);
-  if (resourceType) context.push(`type: ${resourceType}`);
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
 
   const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
 
   core.warning(
     `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
-    `    Valid statuses: ${validStatuses.join(', ')}\n` +
-    `    Defaulting to: 'created'\n` +
-    `    This may indicate a new SST CLI output format.`
+      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Defaulting to: 'created'\n` +
+      '    This may indicate a new SST CLI output format.'
   );
 
   return 'created'; // Default to created instead of unchanged
@@ -258,17 +199,21 @@ function normalizeDiffAction(
   }
 
   // Enhanced warning with context for debugging
-  const context = [];
-  if (resourceName) context.push(`resource: ${resourceName}`);
-  if (resourceType) context.push(`type: ${resourceType}`);
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
 
   const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
 
   core.warning(
     `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
-    `    Valid actions: ${validActions.join(', ')}\n` +
-    `    Defaulting to: 'update'\n` +
-    `    This may indicate a new SST CLI diff format.`
+      `    Valid actions: ${validActions.join(', ')}\n` +
+      `    Defaulting to: 'update'\n` +
+      '    This may indicate a new SST CLI diff format.'
   );
 
   return 'update';
@@ -303,17 +248,21 @@ function normalizeRemoveStatus(
   }
 
   // Enhanced warning with context for debugging
-  const context = [];
-  if (resourceName) context.push(`resource: ${resourceName}`);
-  if (resourceType) context.push(`type: ${resourceType}`);
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
 
   const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
 
   core.warning(
     `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
-    `    Valid statuses: ${validStatuses.join(', ')}\n` +
-    `    Defaulting to: 'failed' (conservative default for removals)\n` +
-    `    This may indicate a new SST CLI remove format.`
+      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Defaulting to: 'failed' (conservative default for removals)\n` +
+      '    This may indicate a new SST CLI remove format.'
   );
 
   return 'failed';
@@ -347,7 +296,11 @@ function transformDeployResult(
     resources: (result.resources || []).map((resource) => ({
       type: resource.type,
       name: resource.name,
-      status: normalizeResourceStatus(resource.status, resource.name, resource.type),
+      status: normalizeResourceStatus(
+        resource.status,
+        resource.name,
+        resource.type
+      ),
       ...(resource.timing && { timing: resource.timing }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -383,7 +336,11 @@ function transformDiffResult(
     changes: (result.changes || []).map((change) => ({
       type: change.resourceType,
       name: change.resourceName,
-      action: normalizeDiffAction(change.action, change.resourceName, change.resourceType),
+      action: normalizeDiffAction(
+        change.action,
+        change.resourceName,
+        change.resourceType
+      ),
       ...(change.details !== undefined && { details: change.details }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -415,7 +372,11 @@ function transformRemoveResult(
     removedResources: (result.removedResources || []).map((resource) => ({
       type: resource.resourceType,
       name: resource.resourceName,
-      status: normalizeRemoveStatus(resource.status, resource.resourceName, resource.resourceType),
+      status: normalizeRemoveStatus(
+        resource.status,
+        resource.resourceName,
+        resource.resourceType
+      ),
     })),
     ...(result.error !== undefined && { error: result.error }),
   };

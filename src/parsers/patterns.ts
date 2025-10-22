@@ -11,6 +11,12 @@
  */
 
 /**
+ * Top-level regex patterns for performance
+ * These are used in helper functions and should not be recreated on each call
+ */
+const URL_TEST_PATTERN = /^https?:\/\//;
+
+/**
  * Metadata patterns for application and stage information
  */
 export const MetadataPatterns = {
@@ -82,7 +88,7 @@ export const ResourcePatterns = {
    * Matches any resource change with action indicator
    * Groups: [1] = action (+/~/−), [2] = type, [3] = name, [4] = optional timing
    */
-  diff: /^\s*([~+\-])\s+(.+?)\s+([\w-]+)(?:\s+(.+))?$/,
+  diff: /^\s*([~+-])\s+(.+?)\s+([\w-]+)(?:\s+(.+))?$/,
 
   /**
    * Generic resource line with pipe separator
@@ -134,6 +140,7 @@ export const UtilityPatterns = {
   trailingWhitespace: /\s+$/,
 
   /** Matches ANSI color codes */
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequences require control characters
   ansiCodes: /\x1b\[\d+m/g,
 
   /** Matches timing information like "(2.1s)" or "2.1s" */
@@ -143,6 +150,7 @@ export const UtilityPatterns = {
 /**
  * Pattern helper utilities
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: This is a namespace-like pattern for organizing pattern utility functions
 export class PatternHelpers {
   /**
    * Extract a single match from text using a pattern
@@ -159,11 +167,7 @@ export class PatternHelpers {
    * // Returns: "my-app" or null
    * ```
    */
-  static extractMatch(
-    text: string,
-    pattern: RegExp,
-    group = 1
-  ): string | null {
+  static extractMatch(text: string, pattern: RegExp, group = 1): string | null {
     const match = text.match(pattern);
     return match?.[group]?.trim() || null;
   }
@@ -183,15 +187,11 @@ export class PatternHelpers {
    * // Returns: ["https://api.example.com", "https://web.example.com"]
    * ```
    */
-  static extractAllMatches(
-    text: string,
-    pattern: RegExp,
-    group = 1
-  ): string[] {
+  static extractAllMatches(text: string, pattern: RegExp, group = 1): string[] {
     const globalPattern = new RegExp(pattern.source, 'gm');
-    return Array.from(text.matchAll(globalPattern), (m) => m[group]?.trim()).filter(
-      Boolean
-    ) as string[];
+    return Array.from(text.matchAll(globalPattern), (m) =>
+      m[group]?.trim()
+    ).filter(Boolean) as string[];
   }
 
   /**
@@ -239,6 +239,10 @@ export class PatternHelpers {
     return text
       .replace(UtilityPatterns.ansiCodes, '')
       .replace(UtilityPatterns.lineEnding, '\n')
+      .split('\n')
+      .map((line) => line.replace(UtilityPatterns.trailingWhitespace, ''))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n') // Collapse excessive blank lines
       .trim();
   }
 
@@ -249,7 +253,7 @@ export class PatternHelpers {
    * @returns true if string is a URL
    */
   static isUrl(str: string): boolean {
-    return /^https?:\/\//.test(str);
+    return URL_TEST_PATTERN.test(str);
   }
 
   /**
@@ -266,7 +270,9 @@ export class PatternHelpers {
    */
   static parseTiming(str: string): number | null {
     const match = str.match(UtilityPatterns.timing);
-    if (!match?.[1]) return null;
+    if (!match?.[1]) {
+      return null;
+    }
     return Number.parseFloat(match[1]);
   }
 }

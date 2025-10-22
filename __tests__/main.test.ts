@@ -92,9 +92,9 @@ describe('Main Entry Point - Action Execution', () => {
       is_pull_request: '',
     });
 
-    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(() => {
-      /* no-op */
-    });
+    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(
+      (outputs) => outputs as any
+    );
 
     // Spy on the error handler (but let it run to test actual error logging)
     vi.spyOn({ handleError }, 'handleError');

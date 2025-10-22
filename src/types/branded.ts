@@ -23,6 +23,14 @@ declare const __brand: unique symbol;
 type Brand<T, TBrand extends string> = T & { readonly [__brand]: TBrand };
 
 /**
+ * Regex patterns for branded type validation
+ * Defined at top level for performance (prevents recreation on each validation)
+ */
+const STAGE_NAME_PATTERN = /^[a-z0-9-]+$/;
+const RESOURCE_TYPE_PATTERN = /^[A-Z][A-Za-z0-9]*::[A-Za-z0-9]+::[A-Za-z0-9]+$/;
+const URL_PATTERN = /^https?:\/\/.+/;
+
+/**
  * Stage name branded type
  * Ensures stage names are validated before use
  *
@@ -68,13 +76,16 @@ export type GitRef = Brand<string, 'GitRef'>;
  * Validation error type for branded type creation
  */
 export class BrandedTypeError extends Error {
-  constructor(
-    public readonly typeName: string,
-    public readonly value: string,
-    public readonly reason: string
-  ) {
+  readonly typeName: string;
+  readonly value: string;
+  readonly reason: string;
+
+  constructor(typeName: string, value: string, reason: string) {
     super(`Invalid ${typeName}: ${reason} (value: "${value}")`);
     this.name = 'BrandedTypeError';
+    this.typeName = typeName;
+    this.value = value;
+    this.reason = reason;
   }
 }
 
@@ -113,7 +124,7 @@ export const StageName = {
     }
 
     // Rule: Lowercase alphanumeric and hyphens only
-    if (!/^[a-z0-9-]+$/.test(trimmed)) {
+    if (!STAGE_NAME_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
         'StageName',
         value,
@@ -253,7 +264,7 @@ export const ResourceType = {
     const trimmed = value.trim();
 
     // Validate AWS resource type format (AWS::Service::Resource)
-    if (!/^[A-Z][A-Za-z0-9]*::[A-Za-z0-9]+::[A-Za-z0-9]+$/.test(trimmed)) {
+    if (!RESOURCE_TYPE_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
         'ResourceType',
         value,
@@ -297,7 +308,7 @@ export const URL = {
     const trimmed = value.trim();
 
     // Validate URL format
-    if (!/^https?:\/\/.+/.test(trimmed)) {
+    if (!URL_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
         'URL',
         value,
