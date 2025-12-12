@@ -212,7 +212,7 @@ jobs:
           echo "✅ Bundle verification passed"
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-build-${{ github.sha }}
           path: |
@@ -300,7 +300,7 @@ jobs:
           cache-key-suffix: -release
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: release-build-${{ github.sha }}
           path: ./
