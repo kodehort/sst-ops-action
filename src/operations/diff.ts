@@ -3,17 +3,16 @@ import type { GitHubClient } from '../github/client';
 import { DiffParser } from '../parsers/diff-parser';
 import type { DiffResult, OperationOptions } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
-import { handleGitHubIntegrationError } from '../utils/github-actions';
 import { logActionVersion } from '../utils/version';
+import { BaseOperation } from './base-operation';
 
 /**
  * Diff operation handler for SST infrastructure changes
  * Combines CLI execution, output parsing, and GitHub integration
  */
-export class DiffOperation {
+export class DiffOperation extends BaseOperation<DiffResult> {
   private readonly defaultTimeout = 300_000; // 5 minutes
   private readonly sstExecutor: SSTCLIExecutor;
-  private readonly githubClient: GitHubClient;
   private readonly diffParser?: DiffParser;
 
   constructor(
@@ -21,8 +20,8 @@ export class DiffOperation {
     githubClient: GitHubClient,
     diffParser?: DiffParser
   ) {
+    super(githubClient);
     this.sstExecutor = sstExecutor;
-    this.githubClient = githubClient;
     if (diffParser) {
       this.diffParser = diffParser;
     }
@@ -77,38 +76,6 @@ export class DiffOperation {
         error instanceof Error ? error.message : 'Unknown operation error'
       );
     }
-  }
-
-  /**
-   * Perform GitHub integration tasks (comments and summaries)
-   * Handles errors gracefully to not fail the entire operation
-   * @param result Parsed diff result
-   * @param options Operation options
-   */
-  private async performGitHubIntegration(
-    result: DiffResult,
-    options: OperationOptions
-  ): Promise<void> {
-    const integrationPromises: Promise<void>[] = [];
-
-    // Create PR comment (if enabled)
-    integrationPromises.push(
-      this.githubClient
-        .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch((error) => handleGitHubIntegrationError(error, 'comment'))
-    );
-
-    // Create workflow summary
-    integrationPromises.push(
-      this.githubClient
-        .createWorkflowSummary(result)
-        .catch((error) =>
-          handleGitHubIntegrationError(error, 'workflow summary')
-        )
-    );
-
-    // Wait for all GitHub integration tasks to complete
-    await Promise.allSettled(integrationPromises);
   }
 
   private createFailureResult(stage: string, error: string): DiffResult {

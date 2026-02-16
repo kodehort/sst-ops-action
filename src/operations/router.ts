@@ -16,69 +16,11 @@ import type {
 } from '../types';
 import { SSTCLIExecutor } from '../utils/cli';
 import { OperationFactory } from './factory';
-
-/**
- * Raw operation result types from the operation handlers
- */
-interface RawOperationResults {
-  deploy: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    resourceChanges?: number;
-    outputs?: Array<{ key: string; value: string }>;
-    resources?: Array<{
-      type: string;
-      name: string;
-      status: string;
-      timing?: string;
-    }>;
-    permalink?: string;
-  };
-  diff: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    changesDetected?: number;
-    summary?: string;
-    changes?: Array<{
-      resourceType: string;
-      resourceName: string;
-      action: string;
-      details?: string;
-    }>;
-  };
-  remove: {
-    success: boolean;
-    stage: string;
-    metadata?: {
-      app?: string;
-      rawOutput?: string;
-      cliExitCode?: number;
-      truncated?: boolean;
-    };
-    error?: string;
-    completionStatus?: 'complete' | 'partial' | 'failed';
-    resourcesRemoved?: number;
-    removedResources?: Array<{
-      resourceType: string;
-      resourceName: string;
-      status: string;
-    }>;
-  };
-}
+import {
+  validateRawDeployResult,
+  validateRawDiffResult,
+  validateRawRemoveResult,
+} from './schemas';
 
 /**
  * Execute an SST operation with full error handling and routing
@@ -129,9 +71,12 @@ export async function executeOperation(
  * OperationResult type that the action outputs. It handles type normalization,
  * field mapping, and ensures consistent structure across all operation types.
  *
+ * Now includes runtime validation using Zod schemas to ensure type safety
+ * beyond compile-time checks.
+ *
  * @param operationType The operation that was executed ('deploy' | 'diff' | 'remove' | 'stage')
  * @param result The raw result from the operation handler
- * @param options Original operation options used for the execution
+ * @param _options Original operation options used for the execution
  * @returns Unified OperationResult with normalized types and consistent fields
  *
  * @example
@@ -148,12 +93,21 @@ function transformToUnifiedResult(
   _options: OperationOptions
 ): OperationResult {
   switch (operationType) {
-    case 'deploy':
-      return transformDeployResult(result as RawOperationResults['deploy']);
-    case 'diff':
-      return transformDiffResult(result as RawOperationResults['diff']);
-    case 'remove':
-      return transformRemoveResult(result as RawOperationResults['remove']);
+    case 'deploy': {
+      // Validate result at runtime before transformation
+      const validated = validateRawDeployResult(result);
+      return transformDeployResult(validated);
+    }
+    case 'diff': {
+      // Validate result at runtime before transformation
+      const validated = validateRawDiffResult(result);
+      return transformDiffResult(validated);
+    }
+    case 'remove': {
+      // Validate result at runtime before transformation
+      const validated = validateRawRemoveResult(result);
+      return transformRemoveResult(validated);
+    }
     case 'stage':
       // Stage operation returns the result directly as it already conforms to the unified format
       return result as OperationResult;
@@ -173,11 +127,17 @@ function transformToUnifiedResult(
  * Normalizes resource status values to ensure type safety. Unknown statuses
  * default to 'created' to provide a safe fallback behavior.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param status Raw resource status from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized resource status ('created' | 'updated' | 'deleted')
  */
 function normalizeResourceStatus(
-  status: string
+  status: string,
+  resourceName?: string,
+  resourceType?: string
 ): 'created' | 'updated' | 'deleted' {
   const validStatuses: Array<'created' | 'updated' | 'deleted'> = [
     'created',
@@ -189,10 +149,24 @@ function normalizeResourceStatus(
     return status as 'created' | 'updated' | 'deleted';
   }
 
-  // Log unknown status for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown resource status encountered: '${status}', defaulting to 'created'`
+    `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
+      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Defaulting to: 'created'\n` +
+      '    This may indicate a new SST CLI output format.'
   );
+
   return 'created'; // Default to created instead of unchanged
 }
 
@@ -202,10 +176,18 @@ function normalizeResourceStatus(
  * Normalizes diff action types for consistent handling. Unknown actions
  * default to 'update' as the most common operation type.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param action Raw diff action from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized diff action ('create' | 'update' | 'delete')
  */
-function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
+function normalizeDiffAction(
+  action: string,
+  resourceName?: string,
+  resourceType?: string
+): 'create' | 'update' | 'delete' {
   const validActions: Array<'create' | 'update' | 'delete'> = [
     'create',
     'update',
@@ -216,10 +198,24 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
     return action as 'create' | 'update' | 'delete';
   }
 
-  // Log unknown action for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown diff action encountered: '${action}', defaulting to 'update'`
+    `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
+      `    Valid actions: ${validActions.join(', ')}\n` +
+      `    Defaulting to: 'update'\n` +
+      '    This may indicate a new SST CLI diff format.'
   );
+
   return 'update';
 }
 
@@ -229,11 +225,17 @@ function normalizeDiffAction(action: string): 'create' | 'update' | 'delete' {
  * Normalizes remove operation status values. Unknown statuses default
  * to 'failed' to err on the side of caution for removal operations.
  *
+ * Enhanced error messages include context for debugging.
+ *
  * @param status Raw remove status from SST CLI output
+ * @param resourceName Optional resource name for context
+ * @param resourceType Optional resource type for context
  * @returns Normalized remove status ('removed' | 'failed' | 'skipped')
  */
 function normalizeRemoveStatus(
-  status: string
+  status: string,
+  resourceName?: string,
+  resourceType?: string
 ): 'removed' | 'failed' | 'skipped' {
   const validStatuses: Array<'removed' | 'failed' | 'skipped'> = [
     'removed',
@@ -245,10 +247,24 @@ function normalizeRemoveStatus(
     return status as 'removed' | 'failed' | 'skipped';
   }
 
-  // Log unknown status for debugging and monitoring
+  // Enhanced warning with context for debugging
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
+
+  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+
   core.warning(
-    `Unknown remove status encountered: '${status}', defaulting to 'failed'`
+    `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
+      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Defaulting to: 'failed' (conservative default for removals)\n` +
+      '    This may indicate a new SST CLI remove format.'
   );
+
   return 'failed';
 }
 
@@ -258,11 +274,11 @@ function normalizeRemoveStatus(
  * Converts raw deploy operation results into the standardized DeployResult format.
  * Handles output normalization, resource status validation, and optional field mapping.
  *
- * @param result Raw deploy operation result from the CLI
+ * @param result Validated raw deploy operation result from the CLI
  * @returns Standardized DeployResult with normalized types
  */
 function transformDeployResult(
-  result: RawOperationResults['deploy']
+  result: ReturnType<typeof validateRawDeployResult>
 ): DeployResult {
   return {
     success: result.success,
@@ -280,7 +296,11 @@ function transformDeployResult(
     resources: (result.resources || []).map((resource) => ({
       type: resource.type,
       name: resource.name,
-      status: normalizeResourceStatus(resource.status),
+      status: normalizeResourceStatus(
+        resource.status,
+        resource.name,
+        resource.type
+      ),
       ...(resource.timing && { timing: resource.timing }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -294,10 +314,12 @@ function transformDeployResult(
  * Converts raw diff operation results into the standardized DiffResult format.
  * Normalizes change actions and handles optional field mapping for diff summaries.
  *
- * @param result Raw diff operation result from the CLI
+ * @param result Validated raw diff operation result from the CLI
  * @returns Standardized DiffResult with normalized types
  */
-function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
+function transformDiffResult(
+  result: ReturnType<typeof validateRawDiffResult>
+): DiffResult {
   return {
     success: result.success,
     operation: 'diff' as const,
@@ -314,7 +336,11 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
     changes: (result.changes || []).map((change) => ({
       type: change.resourceType,
       name: change.resourceName,
-      action: normalizeDiffAction(change.action),
+      action: normalizeDiffAction(
+        change.action,
+        change.resourceName,
+        change.resourceType
+      ),
       ...(change.details !== undefined && { details: change.details }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -327,11 +353,11 @@ function transformDiffResult(result: RawOperationResults['diff']): DiffResult {
  * Converts raw remove operation results into the standardized RemoveResult format.
  * Handles resource status normalization and completion status mapping.
  *
- * @param result Raw remove operation result from the CLI
+ * @param result Validated raw remove operation result from the CLI
  * @returns Standardized RemoveResult with normalized types
  */
 function transformRemoveResult(
-  result: RawOperationResults['remove']
+  result: ReturnType<typeof validateRawRemoveResult>
 ): RemoveResult {
   return {
     success: result.success,
@@ -346,7 +372,11 @@ function transformRemoveResult(
     removedResources: (result.removedResources || []).map((resource) => ({
       type: resource.resourceType,
       name: resource.resourceName,
-      status: normalizeRemoveStatus(resource.status),
+      status: normalizeRemoveStatus(
+        resource.status,
+        resource.resourceName,
+        resource.resourceType
+      ),
     })),
     ...(result.error !== undefined && { error: result.error }),
   };

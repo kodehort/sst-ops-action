@@ -8,21 +8,20 @@ import type { GitHubClient } from '../github/client';
 import { RemoveParser } from '../parsers/remove-parser';
 import type { OperationOptions, RemoveResult } from '../types';
 import type { SSTCLIExecutor } from '../utils/cli';
-import { handleGitHubIntegrationError } from '../utils/github-actions';
 import { logActionVersion } from '../utils/version';
+import { BaseOperation } from './base-operation';
 
 /**
  * Remove operation handler for SST resource cleanup
  * Combines CLI execution, output parsing, and GitHub integration
  */
-export class RemoveOperation {
+export class RemoveOperation extends BaseOperation<RemoveResult> {
   private readonly defaultTimeout = 900_000; // 15 minutes
   private readonly sstExecutor: SSTCLIExecutor;
-  private readonly githubClient: GitHubClient;
 
   constructor(sstExecutor: SSTCLIExecutor, githubClient: GitHubClient) {
+    super(githubClient);
     this.sstExecutor = sstExecutor;
-    this.githubClient = githubClient;
   }
 
   /**
@@ -57,37 +56,5 @@ export class RemoveOperation {
     await this.performGitHubIntegration(result, options);
 
     return result;
-  }
-
-  /**
-   * Perform GitHub integration tasks (comments and summaries)
-   * Handles errors gracefully to not fail the entire operation
-   * @param result Parsed remove result
-   * @param options Operation options
-   */
-  private async performGitHubIntegration(
-    result: RemoveResult,
-    options: OperationOptions
-  ): Promise<void> {
-    const integrationPromises: Promise<void>[] = [];
-
-    // Create PR comment (if enabled)
-    integrationPromises.push(
-      this.githubClient
-        .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch((error) => handleGitHubIntegrationError(error, 'comment'))
-    );
-
-    // Create workflow summary
-    integrationPromises.push(
-      this.githubClient
-        .createWorkflowSummary(result)
-        .catch((error) =>
-          handleGitHubIntegrationError(error, 'workflow summary')
-        )
-    );
-
-    // Wait for all GitHub integration tasks to complete
-    await Promise.allSettled(integrationPromises);
   }
 }

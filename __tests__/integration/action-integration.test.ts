@@ -112,9 +112,9 @@ async function executeAction(env: Record<string, string>) {
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
-    /* no-op */
-  });
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
+    (out) => out as any
+  );
 
   // Mock error handler (shouldn't be called for successful operations)
   const { handleError } = await import('../../src/errors/error-handler');
@@ -211,9 +211,9 @@ async function executeActionWithFailure(
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
-    /* no-op */
-  });
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
+    (out) => out as any
+  );
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -305,9 +305,9 @@ async function executeActionWithFailureAndContinue(
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
-    /* no-op */
-  });
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
+    (out) => out as any
+  );
 
   // Import and run the action
   const { run } = await import('../../src/main');
@@ -460,9 +460,9 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
   );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(() => {
-    /* no-op */
-  });
+  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
+    (out) => out as any
+  );
 
   // Import and run the action
   const { run } = await import('../../src/main');
