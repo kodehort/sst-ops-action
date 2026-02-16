@@ -4,9 +4,9 @@
  * Eliminates code duplication across deploy, diff, and remove operations
  */
 
-import type { GitHubClient } from '../github/client';
-import type { BaseOperationResult, OperationOptions } from '../types';
-import { handleGitHubIntegrationError } from '../utils/github-actions';
+import type { GitHubClient } from "../github/client";
+import type { BaseOperationResult, OperationOptions } from "../types";
+import { handleGitHubIntegrationError } from "../utils/github-actions";
 
 /**
  * Abstract base class for all SST operations
@@ -46,14 +46,14 @@ export abstract class BaseOperation<T extends BaseOperationResult> {
     const integrationPromises: Promise<void>[] = [
       // Create PR comment (if enabled based on comment mode)
       this.githubClient
-        .createOrUpdateComment(result, options.commentMode || 'never')
-        .catch((error) => handleGitHubIntegrationError(error, 'comment')),
+        .createOrUpdateComment(result, options.commentMode || "never")
+        .catch((error) => handleGitHubIntegrationError(error, "comment")),
 
       // Create workflow summary (always attempted)
       this.githubClient
         .createWorkflowSummary(result)
         .catch((error) =>
-          handleGitHubIntegrationError(error, 'workflow summary')
+          handleGitHubIntegrationError(error, "workflow summary")
         ),
     ];
 

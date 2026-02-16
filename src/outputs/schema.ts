@@ -3,7 +3,7 @@
  * Ensures all outputs match the schema defined in action.yml
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Zod schema for GitHub Actions outputs
@@ -19,68 +19,68 @@ export const GitHubActionsOutputSchema = z.object({
   success: z.string().regex(/^(true|false)$/, {
     message: 'success must be "true" or "false"',
   }),
-  operation: z.enum(['deploy', 'diff', 'remove', 'stage']),
-  stage: z.string().min(1, 'stage cannot be empty'),
-  completion_status: z.enum(['complete', 'partial', 'failed']),
+  operation: z.enum(["deploy", "diff", "remove", "stage"]),
+  stage: z.string().min(1, "stage cannot be empty"),
+  completion_status: z.enum(["complete", "partial", "failed"]),
 
   // Common optional outputs
-  app: z.string().default(''),
+  app: z.string().default(""),
   permalink: z
     .string()
     .refine(
       (val: string) =>
-        val === '' || val.startsWith('http://') || val.startsWith('https://'),
+        val === "" || val.startsWith("http://") || val.startsWith("https://"),
       {
-        message: 'permalink must be empty or a valid URL',
+        message: "permalink must be empty or a valid URL",
       }
     )
-    .default(''),
+    .default(""),
   truncated: z
     .string()
     .regex(/^(true|false|)$/, {
       message: 'truncated must be "true", "false", or empty',
     })
-    .default('false'),
+    .default("false"),
   resource_changes: z
     .string()
     .regex(/^\d*$/, {
-      message: 'resource_changes must be a numeric string or empty',
+      message: "resource_changes must be a numeric string or empty",
     })
-    .default('0'),
-  error: z.string().default(''),
+    .default("0"),
+  error: z.string().default(""),
 
   // Operation-specific outputs for deploy
-  outputs: z.string().default('[]'), // JSON string
-  resources: z.string().default('[]'), // JSON string
+  outputs: z.string().default("[]"), // JSON string
+  resources: z.string().default("[]"), // JSON string
 
   // Operation-specific outputs for diff
-  diff_summary: z.string().default(''),
+  diff_summary: z.string().default(""),
   planned_changes: z
     .string()
     .regex(/^\d*$/, {
-      message: 'planned_changes must be a numeric string or empty',
+      message: "planned_changes must be a numeric string or empty",
     })
-    .default('0'),
+    .default("0"),
 
   // Operation-specific outputs for remove
   resources_removed: z
     .string()
     .regex(/^\d*$/, {
-      message: 'resources_removed must be a numeric string or empty',
+      message: "resources_removed must be a numeric string or empty",
     })
-    .default('0'),
-  removed_resources: z.string().default('[]'), // JSON string
+    .default("0"),
+  removed_resources: z.string().default("[]"), // JSON string
 
   // Operation-specific outputs for stage
-  computed_stage: z.string().default(''),
-  ref: z.string().default(''),
-  event_name: z.string().default(''),
+  computed_stage: z.string().default(""),
+  ref: z.string().default(""),
+  event_name: z.string().default(""),
   is_pull_request: z
     .string()
     .regex(/^(true|false|)$/, {
       message: 'is_pull_request must be "true", "false", or empty',
     })
-    .default('false'),
+    .default("false"),
 });
 
 /**
@@ -94,16 +94,16 @@ export type ValidatedOutputs = z.infer<typeof GitHubActionsOutputSchema>;
  * Ensures that JSON string fields contain valid JSON
  */
 export function validateJSONFields(outputs: ValidatedOutputs): void {
-  const jsonFields = ['outputs', 'resources', 'removed_resources'] as const;
+  const jsonFields = ["outputs", "resources", "removed_resources"] as const;
 
   for (const field of jsonFields) {
     const value = outputs[field];
-    if (value && value !== '[]' && value !== '{}') {
+    if (value && value !== "[]" && value !== "{}") {
       try {
         JSON.parse(value);
       } catch (error) {
         throw new Error(
-          `Invalid JSON in field '${field}': ${error instanceof Error ? error.message : 'unknown error'}`
+          `Invalid JSON in field '${field}': ${error instanceof Error ? error.message : "unknown error"}`
         );
       }
     }
@@ -127,10 +127,10 @@ export function validateOutputs(outputs: unknown): ValidatedOutputs {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join('.')}: ${issue.message}`
+        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `GitHub Actions output validation failed:\n${issues.join('\n')}`
+        `GitHub Actions output validation failed:\n${issues.join("\n")}`
       );
     }
     throw error as Error;

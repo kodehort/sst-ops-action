@@ -3,7 +3,7 @@
  * Defines the structure for action outputs and metadata
  */
 
-import type { CompletionStatus, SSTOperation } from './operations.js';
+import type { CompletionStatus, SSTOperation } from "./operations.js";
 
 export interface ActionOutputs {
   success: string;
@@ -18,18 +18,18 @@ export interface ActionOutputs {
 }
 
 export interface DeployOutputs extends ActionOutputs {
-  operation: 'deploy';
+  operation: "deploy";
   resource_changes: string; // Number as string
 }
 
 export interface DiffOutputs extends ActionOutputs {
-  operation: 'diff';
+  operation: "diff";
   resource_changes: string; // Number as string for planned changes
   diff_summary: string; // Summary of changes
 }
 
 export interface RemoveOutputs extends ActionOutputs {
-  operation: 'remove';
+  operation: "remove";
   resource_changes: string; // Number as string for removed resources
 }
 

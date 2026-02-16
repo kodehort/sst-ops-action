@@ -4,14 +4,14 @@
  * Provides consistent interface for all SST operations
  */
 
-import type { GitHubClient } from '../github/client';
-import type { OperationOptions, SSTOperation } from '../types';
-import { SST_OPERATIONS } from '../types/operations';
-import type { SSTCLIExecutor } from '../utils/cli';
-import { DeployOperation } from './deploy';
-import { DiffOperation } from './diff';
-import { RemoveOperation } from './remove';
-import { StageOperation } from './stage';
+import type { GitHubClient } from "../github/client";
+import type { OperationOptions, SSTOperation } from "../types";
+import { SST_OPERATIONS } from "../types/operations";
+import type { SSTCLIExecutor } from "../utils/cli";
+import { DeployOperation } from "./deploy";
+import { DiffOperation } from "./diff";
+import { RemoveOperation } from "./remove";
+import { StageOperation } from "./stage";
 
 /**
  * Base operation interface that all operations must implement
@@ -41,13 +41,13 @@ export class OperationFactory {
    */
   createOperation(operationType: SSTOperation): BaseOperation {
     switch (operationType) {
-      case 'deploy':
+      case "deploy":
         return new DeployOperation(this.cliExecutor, this.githubClient);
-      case 'diff':
+      case "diff":
         return new DiffOperation(this.cliExecutor, this.githubClient);
-      case 'remove':
+      case "remove":
         return new RemoveOperation(this.cliExecutor, this.githubClient);
-      case 'stage':
+      case "stage":
         return new StageOperation();
       default: {
         const _exhaustive: never = operationType;

@@ -1,5 +1,5 @@
-import type { BaseOperationResult } from '../types/operations';
-import { PatternHelpers, SSTPatterns } from './patterns';
+import type { BaseOperationResult } from "../types/operations";
+import { PatternHelpers, SSTPatterns } from "./patterns";
 
 /**
  * Abstract base parser for SST CLI outputs
@@ -58,7 +58,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * @returns Partial result containing common fields (app, permalink, completionStatus)
    */
   protected parseCommonInfo(lines: string[]): Partial<BaseOperationResult> {
-    const fullOutput = lines.join('\n');
+    const fullOutput = lines.join("\n");
     const result: Partial<BaseOperationResult> = {};
 
     try {
@@ -76,11 +76,11 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
       // Extract completion status
       if (this.patterns.COMPLETION_SUCCESS.test(fullOutput)) {
-        result.completionStatus = 'complete';
+        result.completionStatus = "complete";
       } else if (this.patterns.COMPLETION_PARTIAL.test(fullOutput)) {
-        result.completionStatus = 'partial';
+        result.completionStatus = "partial";
       } else if (this.patterns.COMPLETION_FAILED.test(fullOutput)) {
-        result.completionStatus = 'failed';
+        result.completionStatus = "failed";
       }
     } catch (_error) {
       // Parsing is optional - continue without it
@@ -121,8 +121,8 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * @returns Cleaned and normalized text ready for pattern matching
    */
   protected cleanText(text: string): string {
-    if (!text || typeof text !== 'string') {
-      return '';
+    if (!text || typeof text !== "string") {
+      return "";
     }
 
     try {
@@ -166,7 +166,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     if (!output) {
       return 0;
     }
-    return output.split('\n').length;
+    return output.split("\n").length;
   }
 
   /**
@@ -187,9 +187,9 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       }
 
       // Ensure global flag is set, avoid duplicate 'g' flags
-      const flags = pattern.flags.includes('g')
+      const flags = pattern.flags.includes("g")
         ? pattern.flags
-        : pattern.flags + 'g';
+        : pattern.flags + "g";
       const globalPattern = new RegExp(pattern.source, flags);
       let match: RegExpMatchArray | null;
 
@@ -305,7 +305,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * @returns Diff section content, or original output if marker not found
    */
   protected extractDiffSection(output: string): string {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     let diffStartIndex = -1;
 
     // Find the "✓ Generated" marker
@@ -319,7 +319,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
     // If we found the marker, return everything after it
     if (diffStartIndex >= 0 && diffStartIndex < lines.length) {
-      return lines.slice(diffStartIndex).join('\n').trim();
+      return lines.slice(diffStartIndex).join("\n").trim();
     }
 
     // Fallback: return original output if no marker found

@@ -1,5 +1,5 @@
-import type { RemoveResult } from '../types/operations';
-import { OperationParser } from './operation-parser';
+import type { RemoveResult } from "../types/operations";
+import { OperationParser } from "./operation-parser";
 
 /**
  * Remove-specific regex patterns for parsing resource removals
@@ -55,8 +55,8 @@ export class RemoveParser extends OperationParser<RemoveResult> {
    */
   parse(output: string, stage: string, exitCode: number): RemoveResult {
     // Handle null/undefined input gracefully
-    const processedOutput = this.cleanText(output || '');
-    const lines = processedOutput.split('\n');
+    const processedOutput = this.cleanText(output || "");
+    const lines = processedOutput.split("\n");
 
     // Parse common information from base parser
     const commonInfo = this.parseCommonInfo(lines);
@@ -67,7 +67,7 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     // Parse remove-specific information
     const removedResources = this.parseRemovedResources(processedOutput);
     const resourcesRemoved = removedResources.filter(
-      (r) => r.status === 'removed'
+      (r) => r.status === "removed"
     ).length;
     const completionStatus = this.determineCompletionStatus(
       processedOutput,
@@ -79,12 +79,12 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     const result: RemoveResult = {
       // Base operation result properties
       success,
-      operation: 'remove',
+      operation: "remove",
       stage,
       exitCode,
-      app: commonInfo.app || 'unknown-app',
+      app: commonInfo.app || "unknown-app",
       rawOutput: processedOutput,
-      permalink: commonInfo.permalink || '',
+      permalink: commonInfo.permalink || "",
       completionStatus,
       truncated: false,
 
@@ -102,13 +102,13 @@ export class RemoveParser extends OperationParser<RemoveResult> {
   private parseRemovedResources(output: string): Array<{
     type: string;
     name: string;
-    status: 'removed' | 'failed' | 'skipped';
+    status: "removed" | "failed" | "skipped";
   }> {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     const resources: Array<{
       type: string;
       name: string;
-      status: 'removed' | 'failed' | 'skipped';
+      status: "removed" | "failed" | "skipped";
     }> = [];
 
     for (const line of lines) {
@@ -128,17 +128,17 @@ export class RemoveParser extends OperationParser<RemoveResult> {
   private parseResourceFromLine(line: string): {
     type: string;
     name: string;
-    status: 'removed' | 'failed' | 'skipped';
+    status: "removed" | "failed" | "skipped";
   } | null {
     const patterns = [
       {
         regex: this.removePatterns.REMOVED_RESOURCE,
-        status: 'removed' as const,
+        status: "removed" as const,
       },
-      { regex: this.removePatterns.FAILED_RESOURCE, status: 'failed' as const },
+      { regex: this.removePatterns.FAILED_RESOURCE, status: "failed" as const },
       {
         regex: this.removePatterns.SKIPPED_RESOURCE,
-        status: 'skipped' as const,
+        status: "skipped" as const,
       },
     ];
 
@@ -146,8 +146,8 @@ export class RemoveParser extends OperationParser<RemoveResult> {
       const match = line.match(regex);
       if (match?.[1] && match[2]) {
         return {
-          type: match[1] || 'unknown',
-          name: match[2] || 'unknown',
+          type: match[1] || "unknown",
+          name: match[2] || "unknown",
           status,
         };
       }
@@ -162,38 +162,38 @@ export class RemoveParser extends OperationParser<RemoveResult> {
   private determineCompletionStatus(
     output: string,
     exitCode: number,
-    removedResources: Array<{ status: 'removed' | 'failed' | 'skipped' }>
-  ): 'complete' | 'partial' | 'failed' {
+    removedResources: Array<{ status: "removed" | "failed" | "skipped" }>
+  ): "complete" | "partial" | "failed" {
     // Check for explicit completion status indicators
     if (this.removePatterns.COMPLETE.test(output)) {
-      return 'complete';
+      return "complete";
     }
     if (this.removePatterns.PARTIAL_COMPLETION.test(output)) {
-      return 'partial';
+      return "partial";
     }
     if (this.removePatterns.FAILED.test(output)) {
-      return 'failed';
+      return "failed";
     }
 
     // Determine status based on exit code and resource outcomes
     if (exitCode !== 0) {
       // Non-zero exit code indicates failure
-      return removedResources.length > 0 ? 'partial' : 'failed';
+      return removedResources.length > 0 ? "partial" : "failed";
     }
 
     // Zero exit code - check resource status distribution
-    const failed = removedResources.filter((r) => r.status === 'failed');
-    const removed = removedResources.filter((r) => r.status === 'removed');
+    const failed = removedResources.filter((r) => r.status === "failed");
+    const removed = removedResources.filter((r) => r.status === "removed");
 
     if (failed.length > 0) {
-      return 'partial'; // Some resources failed to remove
+      return "partial"; // Some resources failed to remove
     }
 
     if (removed.length > 0 || removedResources.length === 0) {
-      return 'complete'; // All resources removed successfully or no resources to remove
+      return "complete"; // All resources removed successfully or no resources to remove
     }
 
-    return 'complete'; // Default to complete for successful operations
+    return "complete"; // Default to complete for successful operations
   }
 
   /**

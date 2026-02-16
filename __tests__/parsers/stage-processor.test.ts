@@ -3,11 +3,11 @@
  * Tests processing of stage computation operations
  */
 
-import * as github from '@actions/github';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { StageProcessor } from '../../src/parsers/stage-processor';
+import * as github from "@actions/github";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { StageProcessor } from "../../src/parsers/stage-processor";
 
-describe('Stage Processor - GitHub Context Processing', () => {
+describe("Stage Processor - GitHub Context Processing", () => {
   let processor: StageProcessor;
 
   beforeEach(() => {
@@ -17,22 +17,22 @@ describe('Stage Processor - GitHub Context Processing', () => {
 
     // Reset GitHub context to a clean state
     Object.assign(github.context, {
-      eventName: 'push',
+      eventName: "push",
       payload: {},
       ref: undefined,
       ref_name: undefined,
     });
   });
 
-  describe('Stage Computation from GitHub Context', () => {
-    it('should compute stage from pull request head ref', () => {
+  describe("Stage Computation from GitHub Context", () => {
+    it("should compute stage from pull request head ref", () => {
       // Mock GitHub context for pull request
       Object.assign(github.context, {
-        eventName: 'pull_request',
+        eventName: "pull_request",
         payload: {
           pull_request: {
             head: {
-              ref: 'feature/my-awesome-feature',
+              ref: "feature/my-awesome-feature",
             },
           },
         },
@@ -41,51 +41,51 @@ describe('Stage Processor - GitHub Context Processing', () => {
       const result = processor.process({});
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('stage');
-      expect(result.stage).toBe('my-awesome-feature');
-      expect(result.computedStage).toBe('my-awesome-feature');
-      expect(result.ref).toBe('feature/my-awesome-feature');
-      expect(result.eventName).toBe('pull_request');
+      expect(result.operation).toBe("stage");
+      expect(result.stage).toBe("my-awesome-feature");
+      expect(result.computedStage).toBe("my-awesome-feature");
+      expect(result.ref).toBe("feature/my-awesome-feature");
+      expect(result.eventName).toBe("pull_request");
       expect(result.isPullRequest).toBe(true);
       expect(result.exitCode).toBe(0);
     });
 
-    it('should compute stage from push event ref', () => {
+    it("should compute stage from push event ref", () => {
       Object.assign(github.context, {
-        eventName: 'push',
+        eventName: "push",
         payload: {
-          ref: 'refs/heads/main',
+          ref: "refs/heads/main",
         },
       });
 
       const result = processor.process({});
 
       expect(result.success).toBe(true);
-      expect(result.stage).toBe('main');
-      expect(result.computedStage).toBe('main');
-      expect(result.ref).toBe('refs/heads/main');
-      expect(result.eventName).toBe('push');
+      expect(result.stage).toBe("main");
+      expect(result.computedStage).toBe("main");
+      expect(result.ref).toBe("refs/heads/main");
+      expect(result.eventName).toBe("push");
       expect(result.isPullRequest).toBe(false);
     });
 
-    it('should compute stage from head_ref in payload', () => {
+    it("should compute stage from head_ref in payload", () => {
       Object.assign(github.context, {
-        eventName: 'pull_request',
+        eventName: "pull_request",
         payload: {
-          head_ref: 'feature/awesome-branch',
+          head_ref: "feature/awesome-branch",
         },
       });
 
       const result = processor.process({});
 
       expect(result.success).toBe(true);
-      expect(result.stage).toBe('awesome-branch');
-      expect(result.computedStage).toBe('awesome-branch');
+      expect(result.stage).toBe("awesome-branch");
+      expect(result.computedStage).toBe("awesome-branch");
     });
 
-    it('should fail when no ref is available', () => {
+    it("should fail when no ref is available", () => {
       Object.assign(github.context, {
-        eventName: 'push',
+        eventName: "push",
         payload: {},
         ref: undefined,
       });
@@ -94,16 +94,16 @@ describe('Stage Processor - GitHub Context Processing', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain(
-        'Failed to generate a valid stage name from Git context'
+        "Failed to generate a valid stage name from Git context"
       );
       expect(result.exitCode).toBe(1);
     });
 
-    it('should fail when ref results in empty stage', () => {
+    it("should fail when ref results in empty stage", () => {
       Object.assign(github.context, {
-        eventName: 'push',
+        eventName: "push",
         payload: {
-          ref: '---___', // This will result in empty string after sanitization
+          ref: "---___", // This will result in empty string after sanitization
         },
       });
 
@@ -111,32 +111,32 @@ describe('Stage Processor - GitHub Context Processing', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain(
-        'Failed to generate a valid stage name from Git context'
+        "Failed to generate a valid stage name from Git context"
       );
     });
 
-    it('should sanitize ref names correctly', () => {
+    it("should sanitize ref names correctly", () => {
       Object.assign(github.context, {
-        eventName: 'push',
+        eventName: "push",
         payload: {
-          ref: 'refs/heads/Feature/My_AWESOME-Feature!123',
+          ref: "refs/heads/Feature/My_AWESOME-Feature!123",
         },
       });
 
       const result = processor.process({});
 
       expect(result.success).toBe(true);
-      expect(result.stage).toBe('my-awesome-feature-123');
-      expect(result.computedStage).toBe('my-awesome-feature-123');
+      expect(result.stage).toBe("my-awesome-feature-123");
+      expect(result.computedStage).toBe("my-awesome-feature-123");
     });
   });
 
-  describe('Output Content', () => {
-    it('should include debug information in raw output', () => {
+  describe("Output Content", () => {
+    it("should include debug information in raw output", () => {
       Object.assign(github.context, {
-        eventName: 'push',
+        eventName: "push",
         payload: {
-          ref: 'refs/heads/main',
+          ref: "refs/heads/main",
         },
       });
 
@@ -144,19 +144,19 @@ describe('Stage Processor - GitHub Context Processing', () => {
 
       expect(result.success).toBe(true);
       expect(result.truncated).toBe(false); // Never truncated since no CLI output
-      expect(result.rawOutput).toContain('Stage computation successful');
-      expect(result.rawOutput).toContain('Event: push');
-      expect(result.rawOutput).toContain('Computed Stage: main');
+      expect(result.rawOutput).toContain("Stage computation successful");
+      expect(result.rawOutput).toContain("Event: push");
+      expect(result.rawOutput).toContain("Computed Stage: main");
     });
   });
 
-  describe('Stage Name Truncation and Prefixing', () => {
-    describe('Truncation Length', () => {
-      it('should truncate long stage names to specified length', () => {
+  describe("Stage Name Truncation and Prefixing", () => {
+    describe("Truncation Length", () => {
+      it("should truncate long stage names to specified length", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/very-long-branch-name-that-exceeds-default-limits',
+            ref: "refs/heads/very-long-branch-name-that-exceeds-default-limits",
           },
         });
 
@@ -165,15 +165,15 @@ describe('Stage Processor - GitHub Context Processing', () => {
         }); // Custom truncation length of 15
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('very-long-branc'); // Truncated to 15 chars
+        expect(result.computedStage).toBe("very-long-branc"); // Truncated to 15 chars
         expect(result.computedStage.length).toBe(15);
       });
 
-      it('should not truncate short stage names', () => {
+      it("should not truncate short stage names", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/my-very-long-feature-branch-name-here',
+            ref: "refs/heads/my-very-long-feature-branch-name-here",
           },
         });
 
@@ -183,33 +183,33 @@ describe('Stage Processor - GitHub Context Processing', () => {
 
         expect(result.success).toBe(true);
         expect(result.computedStage).toBe(
-          'my-very-long-feature-branch-name-here'
+          "my-very-long-feature-branch-name-here"
         ); // Should not be truncated
       });
 
-      it('should handle prefix and truncation together', () => {
+      it("should handle prefix and truncation together", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/123-my-very-long-feature-branch-name-here',
+            ref: "refs/heads/123-my-very-long-feature-branch-name-here",
           },
         });
 
         const result = processor.process({
           truncationLength: 15,
-          prefix: 'pr-',
+          prefix: "pr-",
         }); // Custom truncation length of 15
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('pr-123-my-very'); // Should be truncated to 15 chars total
+        expect(result.computedStage).toBe("pr-123-my-very"); // Should be truncated to 15 chars total
         expect(result.computedStage.length).toBe(14); // After trailing hyphen cleanup
       });
 
-      it('should remove trailing hyphens after truncation', () => {
+      it("should remove trailing hyphens after truncation", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/123-my-very-long-feature-branch-name-here',
+            ref: "refs/heads/123-my-very-long-feature-branch-name-here",
           },
         });
 
@@ -218,100 +218,100 @@ describe('Stage Processor - GitHub Context Processing', () => {
         }); // Truncate to 12 chars
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('pr-123-my-ve'); // Should be truncated to 12 chars
+        expect(result.computedStage).toBe("pr-123-my-ve"); // Should be truncated to 12 chars
         expect(result.computedStage.length).toBe(12);
       });
     });
 
-    describe('Prefix Handling', () => {
-      it('should add prefix when stage name starts with digit', () => {
+    describe("Prefix Handling", () => {
+      it("should add prefix when stage name starts with digit", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/123-my-feature',
+            ref: "refs/heads/123-my-feature",
           },
         });
 
         const result = processor.process({
           truncationLength: 26,
-          prefix: 'fix-',
+          prefix: "fix-",
         }); // Custom prefix 'fix-'
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('fix-123-my-feature');
+        expect(result.computedStage).toBe("fix-123-my-feature");
       });
 
-      it('should handle empty prefix', () => {
+      it("should handle empty prefix", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/123-my-feature',
+            ref: "refs/heads/123-my-feature",
           },
         });
 
         const result = processor.process({
           truncationLength: 26,
-          prefix: '',
+          prefix: "",
         }); // Empty prefix
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('123-my-feature');
+        expect(result.computedStage).toBe("123-my-feature");
       });
 
-      it('should use custom prefix for numeric stage names', () => {
+      it("should use custom prefix for numeric stage names", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/456-urgent-fix',
+            ref: "refs/heads/456-urgent-fix",
           },
         });
 
         const result = processor.process({
           truncationLength: 26,
-          prefix: 'custom-',
+          prefix: "custom-",
         }); // Custom prefix
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('custom-456-urgent-fix');
+        expect(result.computedStage).toBe("custom-456-urgent-fix");
       });
 
-      it('should handle prefix with truncation correctly', () => {
+      it("should handle prefix with truncation correctly", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/789-very-long-branch-name-that-will-be-truncated',
+            ref: "refs/heads/789-very-long-branch-name-that-will-be-truncated",
           },
         });
 
         const result = processor.process({
           truncationLength: 20,
-          prefix: 'issue-',
+          prefix: "issue-",
         }); // Custom prefix and truncation
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('issue-789-very-long'); // Should include prefix in total length
+        expect(result.computedStage).toBe("issue-789-very-long"); // Should include prefix in total length
         expect(result.computedStage.length).toBe(19); // After trailing hyphen cleanup
       });
 
-      it('should not add prefix when stage starts with letter', () => {
+      it("should not add prefix when stage starts with letter", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/feature-branch',
+            ref: "refs/heads/feature-branch",
           },
         });
 
         const result = processor.process({}); // No custom parameters
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('feature-branch'); // No prefix added
+        expect(result.computedStage).toBe("feature-branch"); // No prefix added
       });
 
-      it('should handle default prefix correctly', () => {
+      it("should handle default prefix correctly", () => {
         Object.assign(github.context, {
-          eventName: 'push',
+          eventName: "push",
           payload: {
-            ref: 'refs/heads/987-another-numeric-branch-with-default-prefix',
+            ref: "refs/heads/987-another-numeric-branch-with-default-prefix",
           },
         });
 
@@ -320,7 +320,7 @@ describe('Stage Processor - GitHub Context Processing', () => {
         }); // Only custom truncation, default prefix
 
         expect(result.success).toBe(true);
-        expect(result.computedStage).toBe('pr-987-another-numer'); // Should use default 'pr-' prefix
+        expect(result.computedStage).toBe("pr-987-another-numer"); // Should use default 'pr-' prefix
         expect(result.computedStage.length).toBe(20);
       });
     });

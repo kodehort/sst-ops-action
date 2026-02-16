@@ -10,11 +10,11 @@ import type {
   OperationResult,
   RemoveResult,
   StageResult,
-} from '../types';
+} from "../types";
 import {
   type ValidatedOutputs,
   validateOutputs as validateWithSchema,
-} from './schema';
+} from "./schema";
 
 // Export the main function as default
 export { formatOperationForGitHubActions as default };
@@ -179,16 +179,16 @@ export function formatOperationForGitHubActions(
   let outputs: OperationOutputs;
 
   switch (result.operation) {
-    case 'deploy':
+    case "deploy":
       outputs = formatDeployOperation(result as DeployResult);
       break;
-    case 'diff':
+    case "diff":
       outputs = formatDiffOperation(result as DiffResult);
       break;
-    case 'remove':
+    case "remove":
       outputs = formatRemoveOperation(result as RemoveResult);
       break;
-    case 'stage':
+    case "stage":
       outputs = formatStageOperation(result as StageResult);
       break;
     default: {
@@ -210,25 +210,25 @@ export function formatOperationForGitHubActions(
 function formatDeployOperation(result: DeployResult): DeployOutputs {
   return {
     success: String(result.success),
-    operation: 'deploy',
+    operation: "deploy",
     stage: result.stage,
     completion_status: result.completionStatus,
-    app: result.app || '',
-    permalink: result.permalink || '',
+    app: result.app || "",
+    permalink: result.permalink || "",
     truncated: String(result.truncated),
-    error: result.error || '',
+    error: result.error || "",
     resource_changes: String(result.resourceChanges || 0),
     outputs: safeStringify(result.outputs || []),
     resources: safeStringify(result.resources || []),
     // Reset other operation fields
-    diff_summary: '',
-    planned_changes: '',
-    resources_removed: '',
-    removed_resources: '',
-    computed_stage: '',
-    ref: '',
-    event_name: '',
-    is_pull_request: '',
+    diff_summary: "",
+    planned_changes: "",
+    resources_removed: "",
+    removed_resources: "",
+    computed_stage: "",
+    ref: "",
+    event_name: "",
+    is_pull_request: "",
   };
 }
 
@@ -238,25 +238,25 @@ function formatDeployOperation(result: DeployResult): DeployOutputs {
 function formatDiffOperation(result: DiffResult): DiffOutputs {
   return {
     success: String(result.success),
-    operation: 'diff',
+    operation: "diff",
     stage: result.stage,
     completion_status: result.completionStatus,
-    app: result.app || '',
-    permalink: result.permalink || '',
+    app: result.app || "",
+    permalink: result.permalink || "",
     truncated: String(result.truncated),
-    error: result.error || '',
+    error: result.error || "",
     resource_changes: String(result.plannedChanges || 0),
     planned_changes: String(result.plannedChanges || 0),
-    diff_summary: result.changeSummary || '',
+    diff_summary: result.changeSummary || "",
     // Reset other operation fields
-    outputs: '',
-    resources: '',
-    resources_removed: '',
-    removed_resources: '',
-    computed_stage: '',
-    ref: '',
-    event_name: '',
-    is_pull_request: '',
+    outputs: "",
+    resources: "",
+    resources_removed: "",
+    removed_resources: "",
+    computed_stage: "",
+    ref: "",
+    event_name: "",
+    is_pull_request: "",
   };
 }
 
@@ -266,25 +266,25 @@ function formatDiffOperation(result: DiffResult): DiffOutputs {
 function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
   return {
     success: String(result.success),
-    operation: 'remove',
+    operation: "remove",
     stage: result.stage,
     completion_status: result.completionStatus,
-    app: result.app || '',
-    permalink: result.permalink || '',
+    app: result.app || "",
+    permalink: result.permalink || "",
     truncated: String(result.truncated),
-    error: result.error || '',
+    error: result.error || "",
     resource_changes: String(result.resourcesRemoved || 0),
     resources_removed: String(result.resourcesRemoved || 0),
     removed_resources: safeStringify(result.removedResources || []),
     // Reset other operation fields
-    outputs: '',
-    resources: '',
-    diff_summary: '',
-    planned_changes: '',
-    computed_stage: '',
-    ref: '',
-    event_name: '',
-    is_pull_request: '',
+    outputs: "",
+    resources: "",
+    diff_summary: "",
+    planned_changes: "",
+    computed_stage: "",
+    ref: "",
+    event_name: "",
+    is_pull_request: "",
   };
 }
 
@@ -294,25 +294,25 @@ function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
 function formatStageOperation(result: StageResult): StageOutputs {
   return {
     success: String(result.success),
-    operation: 'stage',
+    operation: "stage",
     stage: result.stage,
     completion_status: result.completionStatus,
     computed_stage: result.computedStage || result.stage,
-    ref: result.ref || '',
-    event_name: result.eventName || '',
+    ref: result.ref || "",
+    event_name: result.eventName || "",
     is_pull_request: String(result.isPullRequest),
     // Infrastructure fields not applicable
-    app: '',
-    permalink: '',
-    truncated: 'false',
-    resource_changes: '',
-    error: result.error || '',
-    outputs: '',
-    resources: '',
-    diff_summary: '',
-    planned_changes: '',
-    resources_removed: '',
-    removed_resources: '',
+    app: "",
+    permalink: "",
+    truncated: "false",
+    resource_changes: "",
+    error: result.error || "",
+    outputs: "",
+    resources: "",
+    diff_summary: "",
+    planned_changes: "",
+    resources_removed: "",
+    removed_resources: "",
   };
 }
 
@@ -322,13 +322,13 @@ function formatStageOperation(result: StageResult): StageOutputs {
  */
 function safeStringify(value: unknown): string {
   if (value === null || value === undefined) {
-    return '';
+    return "";
   }
 
   try {
     return JSON.stringify(value);
   } catch (_error) {
-    return '';
+    return "";
   }
 }
 
@@ -350,25 +350,25 @@ export function validateOutputs(
  */
 export function getExpectedFields(): string[] {
   return [
-    'success',
-    'operation',
-    'stage',
-    'completion_status',
-    'app',
-    'permalink',
-    'truncated',
-    'resource_changes',
-    'error',
-    'outputs',
-    'resources',
-    'diff_summary',
-    'planned_changes',
-    'resources_removed',
-    'removed_resources',
-    'computed_stage',
-    'ref',
-    'event_name',
-    'is_pull_request',
+    "success",
+    "operation",
+    "stage",
+    "completion_status",
+    "app",
+    "permalink",
+    "truncated",
+    "resource_changes",
+    "error",
+    "outputs",
+    "resources",
+    "diff_summary",
+    "planned_changes",
+    "resources_removed",
+    "removed_resources",
+    "computed_stage",
+    "ref",
+    "event_name",
+    "is_pull_request",
   ];
 }
 
@@ -376,41 +376,41 @@ export function getExpectedFields(): string[] {
  * Get required output field names
  */
 export function getRequiredFields(): string[] {
-  return ['success', 'operation', 'stage', 'completion_status'];
+  return ["success", "operation", "stage", "completion_status"];
 }
 
 /**
  * Set default values for deploy operation outputs
  */
 function setDeployDefaults(outputs: Record<string, string>): void {
-  outputs.outputs = outputs.outputs || '[]';
-  outputs.resources = outputs.resources || '[]';
+  outputs.outputs = outputs.outputs || "[]";
+  outputs.resources = outputs.resources || "[]";
 }
 
 /**
  * Set default values for diff operation outputs
  */
 function setDiffDefaults(outputs: Record<string, string>): void {
-  outputs.planned_changes = outputs.planned_changes || '0';
-  outputs.diff_summary = outputs.diff_summary || '';
+  outputs.planned_changes = outputs.planned_changes || "0";
+  outputs.diff_summary = outputs.diff_summary || "";
 }
 
 /**
  * Set default values for remove operation outputs
  */
 function setRemoveDefaults(outputs: Record<string, string>): void {
-  outputs.resources_removed = outputs.resources_removed || '0';
-  outputs.removed_resources = outputs.removed_resources || '[]';
+  outputs.resources_removed = outputs.resources_removed || "0";
+  outputs.removed_resources = outputs.removed_resources || "[]";
 }
 
 /**
  * Set default values for stage operation outputs
  */
 function setStageDefaults(outputs: Record<string, string>): void {
-  outputs.computed_stage = outputs.computed_stage || '';
-  outputs.ref = outputs.ref || '';
-  outputs.event_name = outputs.event_name || '';
-  outputs.is_pull_request = outputs.is_pull_request || 'false';
+  outputs.computed_stage = outputs.computed_stage || "";
+  outputs.ref = outputs.ref || "";
+  outputs.event_name = outputs.event_name || "";
+  outputs.is_pull_request = outputs.is_pull_request || "false";
 }
 
 /**
@@ -422,16 +422,16 @@ export function validateOperationConsistency(
   operation: string
 ): void {
   switch (operation) {
-    case 'deploy':
+    case "deploy":
       setDeployDefaults(outputs);
       break;
-    case 'diff':
+    case "diff":
       setDiffDefaults(outputs);
       break;
-    case 'remove':
+    case "remove":
       setRemoveDefaults(outputs);
       break;
-    case 'stage':
+    case "stage":
       setStageDefaults(outputs);
       break;
     default:

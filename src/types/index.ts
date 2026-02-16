@@ -19,7 +19,7 @@ export type {
   RemoveResult,
   SSTOperation,
   StageResult,
-} from './operations.js';
+} from "./operations.js";
 
 // GitHub Actions types
 export type {
@@ -32,7 +32,7 @@ export type {
   GitHubContext,
   RemoveOutputs,
   WorkflowSummary,
-} from './outputs.js';
+} from "./outputs.js";
 
 // SST CLI types
 export type {
@@ -45,9 +45,9 @@ export type {
   SSTRemoveOutput,
   SSTResource,
   SSTValidationResult,
-} from './sst.js';
+} from "./sst.js";
 
-import type { SSTRunner } from '../utils/cli.js';
+import type { SSTRunner } from "../utils/cli.js";
 import type {
   CommentMode,
   CompletionStatus,
@@ -57,14 +57,14 @@ import type {
   RemoveResult,
   SSTOperation,
   StageResult,
-} from './operations.js';
-import { SST_OPERATIONS } from './operations.js';
+} from "./operations.js";
+import { SST_OPERATIONS } from "./operations.js";
 import type {
   SSTDeployOutput,
   SSTDiffOutput,
   SSTError,
   SSTRemoveOutput,
-} from './sst.js';
+} from "./sst.js";
 
 /**
  * Regular expression for validating SST stage names
@@ -77,21 +77,21 @@ const SST_STAGE_NAME_PATTERN = /^[a-zA-Z0-9-_]+$/;
 export function isDeployResult(
   result: OperationResult
 ): result is DeployResult {
-  return result.operation === 'deploy';
+  return result.operation === "deploy";
 }
 
 export function isDiffResult(result: OperationResult): result is DiffResult {
-  return result.operation === 'diff';
+  return result.operation === "diff";
 }
 
 export function isRemoveResult(
   result: OperationResult
 ): result is RemoveResult {
-  return result.operation === 'remove';
+  return result.operation === "remove";
 }
 
 export function isStageResult(result: OperationResult): result is StageResult {
-  return result.operation === 'stage';
+  return result.operation === "stage";
 }
 
 /**
@@ -102,21 +102,21 @@ export function isValidOperation(operation: string): operation is SSTOperation {
 }
 
 export function isValidCommentMode(mode: string): mode is CommentMode {
-  return ['always', 'on-success', 'on-failure', 'never'].includes(mode);
+  return ["always", "on-success", "on-failure", "never"].includes(mode);
 }
 
 export function isValidCompletionStatus(
   status: string
 ): status is CompletionStatus {
-  return ['complete', 'partial', 'failed'].includes(status);
+  return ["complete", "partial", "failed"].includes(status);
 }
 
 /**
  * Validation utilities
  */
 export function validateOperation(operation: unknown): SSTOperation {
-  if (typeof operation !== 'string') {
-    throw new Error('Operation must be a string');
+  if (typeof operation !== "string") {
+    throw new Error("Operation must be a string");
   }
 
   if (!isValidOperation(operation)) {
@@ -129,8 +129,8 @@ export function validateOperation(operation: unknown): SSTOperation {
 }
 
 export function validateCommentMode(mode: unknown): CommentMode {
-  if (typeof mode !== 'string') {
-    throw new Error('Comment mode must be a string');
+  if (typeof mode !== "string") {
+    throw new Error("Comment mode must be a string");
   }
 
   if (!isValidCommentMode(mode)) {
@@ -143,8 +143,8 @@ export function validateCommentMode(mode: unknown): CommentMode {
 }
 
 export function validateStage(stage: unknown): string {
-  if (typeof stage !== 'string' || stage.trim() === '') {
-    throw new Error('Stage must be a non-empty string');
+  if (typeof stage !== "string" || stage.trim() === "") {
+    throw new Error("Stage must be a non-empty string");
   }
 
   const trimmedStage = stage.trim();
@@ -152,7 +152,7 @@ export function validateStage(stage: unknown): string {
   // Basic validation for SST stage naming
   if (!SST_STAGE_NAME_PATTERN.test(trimmedStage)) {
     throw new Error(
-      'Stage must contain only alphanumeric characters, hyphens, and underscores'
+      "Stage must contain only alphanumeric characters, hyphens, and underscores"
     );
   }
 
@@ -160,21 +160,21 @@ export function validateStage(stage: unknown): string {
 }
 
 export function validateMaxOutputSize(size: unknown): number {
-  const parsed = typeof size === 'string' ? Number.parseInt(size, 10) : size;
+  const parsed = typeof size === "string" ? Number.parseInt(size, 10) : size;
 
-  if (typeof parsed !== 'number' || Number.isNaN(parsed) || parsed < 0) {
-    throw new Error('Max output size must be a non-negative number');
+  if (typeof parsed !== "number" || Number.isNaN(parsed) || parsed < 0) {
+    throw new Error("Max output size must be a non-negative number");
   }
 
   // Set reasonable bounds (1000 min, 1MB max)
   if (parsed > 0 && parsed < 1000) {
     throw new Error(
-      'Max output size must be at least 1000 bytes (except 0 for unlimited)'
+      "Max output size must be at least 1000 bytes (except 0 for unlimited)"
     );
   }
 
   if (parsed > 1024 * 1024) {
-    throw new Error('Max output size cannot exceed 1MB (1048576 bytes)');
+    throw new Error("Max output size cannot exceed 1MB (1048576 bytes)");
   }
 
   return parsed;
@@ -187,26 +187,26 @@ export function validateSSTOutput(
   output: unknown,
   operation: SSTOperation
 ): SSTDeployOutput | SSTDiffOutput | SSTRemoveOutput {
-  if (!output || typeof output !== 'object') {
-    throw new Error('SST output must be an object');
+  if (!output || typeof output !== "object") {
+    throw new Error("SST output must be an object");
   }
 
   const obj = output as Record<string, unknown>;
 
-  if (typeof obj.app !== 'string' || typeof obj.stage !== 'string') {
-    throw new Error('SST output must include app and stage');
+  if (typeof obj.app !== "string" || typeof obj.stage !== "string") {
+    throw new Error("SST output must include app and stage");
   }
 
   switch (operation) {
-    case 'deploy':
+    case "deploy":
       return validateDeployOutput(obj);
-    case 'diff':
+    case "diff":
       return validateDiffOutput(obj);
-    case 'remove':
+    case "remove":
       return validateRemoveOutput(obj);
-    case 'stage':
+    case "stage":
       // Stage operation doesn't use SST output validation - it computes stage internally
-      throw new Error('Stage operation does not use SST output validation');
+      throw new Error("Stage operation does not use SST output validation");
     default: {
       // Exhaustive check for TypeScript
       const _exhaustive: never = operation;
@@ -217,13 +217,13 @@ export function validateSSTOutput(
 
 function validateDeployOutput(obj: Record<string, unknown>): SSTDeployOutput {
   const required = [
-    'app',
-    'stage',
-    'region',
-    'resources',
-    'outputs',
-    'duration',
-    'status',
+    "app",
+    "stage",
+    "region",
+    "resources",
+    "outputs",
+    "duration",
+    "status",
   ];
 
   for (const field of required) {
@@ -236,7 +236,7 @@ function validateDeployOutput(obj: Record<string, unknown>): SSTDeployOutput {
 }
 
 function validateDiffOutput(obj: Record<string, unknown>): SSTDiffOutput {
-  const required = ['app', 'stage', 'region', 'changes', 'summary', 'status'];
+  const required = ["app", "stage", "region", "changes", "summary", "status"];
 
   for (const field of required) {
     if (!(field in obj)) {
@@ -249,13 +249,13 @@ function validateDiffOutput(obj: Record<string, unknown>): SSTDiffOutput {
 
 function validateRemoveOutput(obj: Record<string, unknown>): SSTRemoveOutput {
   const required = [
-    'app',
-    'stage',
-    'region',
-    'removed',
-    'summary',
-    'duration',
-    'status',
+    "app",
+    "stage",
+    "region",
+    "removed",
+    "summary",
+    "duration",
+    "status",
   ];
 
   for (const field of required) {
@@ -289,12 +289,12 @@ export function createSSTError(
 
 export function isSSTError(error: unknown): error is SSTError {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    'message' in error &&
-    typeof (error as SSTError).code === 'string' &&
-    typeof (error as SSTError).message === 'string'
+    "code" in error &&
+    "message" in error &&
+    typeof (error as SSTError).code === "string" &&
+    typeof (error as SSTError).message === "string"
   );
 }
 
@@ -349,40 +349,40 @@ export interface StageInputs {
  * Discriminated union of all operation-specific input types
  */
 export type OperationInputs =
-  | ({ operation: 'deploy' } & DeployInputs)
-  | ({ operation: 'diff' } & DiffInputs)
-  | ({ operation: 'remove' } & RemoveInputs)
-  | ({ operation: 'stage' } & StageInputs);
+  | ({ operation: "deploy" } & DeployInputs)
+  | ({ operation: "diff" } & DiffInputs)
+  | ({ operation: "remove" } & RemoveInputs)
+  | ({ operation: "stage" } & StageInputs);
 
 /**
  * Type guards for operation input types
  */
 export function isDeployInputs(
   inputs: OperationInputs
-): inputs is { operation: 'deploy' } & DeployInputs {
-  return inputs.operation === 'deploy';
+): inputs is { operation: "deploy" } & DeployInputs {
+  return inputs.operation === "deploy";
 }
 
 export function isDiffInputs(
   inputs: OperationInputs
-): inputs is { operation: 'diff' } & DiffInputs {
-  return inputs.operation === 'diff';
+): inputs is { operation: "diff" } & DiffInputs {
+  return inputs.operation === "diff";
 }
 
 export function isRemoveInputs(
   inputs: OperationInputs
-): inputs is { operation: 'remove' } & RemoveInputs {
-  return inputs.operation === 'remove';
+): inputs is { operation: "remove" } & RemoveInputs {
+  return inputs.operation === "remove";
 }
 
 export function isStageInputs(
   inputs: OperationInputs
-): inputs is { operation: 'stage' } & StageInputs {
-  return inputs.operation === 'stage';
+): inputs is { operation: "stage" } & StageInputs {
+  return inputs.operation === "stage";
 }
 
-export { SST_RUNNERS } from '../utils/cli.js';
+export { SST_RUNNERS } from "../utils/cli.js";
 /**
  * Re-export constants for convenient access
  */
-export { SST_OPERATIONS } from './operations.js';
+export { SST_OPERATIONS } from "./operations.js";

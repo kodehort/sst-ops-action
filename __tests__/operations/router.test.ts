@@ -1,32 +1,32 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the classes needed for the router
-vi.mock('@/github/client');
-vi.mock('@/utils/cli');
+vi.mock("@/github/client");
+vi.mock("@/utils/cli");
 
-import { GitHubClient } from '@/github/client';
-import { OperationFactory } from '@/operations/factory';
-import { executeOperation } from '@/operations/router';
+import { GitHubClient } from "@/github/client";
+import { OperationFactory } from "@/operations/factory";
+import { executeOperation } from "@/operations/router";
 import type {
   DeployResult,
   DiffResult,
   OperationOptions,
   RemoveResult,
-} from '@/types';
-import { SSTCLIExecutor } from '@/utils/cli';
+} from "@/types";
+import { SSTCLIExecutor } from "@/utils/cli";
 
-describe('OperationRouter', () => {
+describe("OperationRouter", () => {
   let mockOperation: {
     execute: ReturnType<typeof vi.fn>;
   };
 
   const defaultOptions: OperationOptions = {
-    stage: 'test-stage',
-    token: 'test-token',
-    commentMode: 'on-success',
+    stage: "test-stage",
+    token: "test-token",
+    commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
-    runner: 'bun',
+    runner: "bun",
   };
 
   beforeEach(() => {
@@ -38,371 +38,366 @@ describe('OperationRouter', () => {
     };
 
     // Mock OperationFactory methods
-    vi.spyOn(OperationFactory.prototype, 'createOperation').mockReturnValue(
+    vi.spyOn(OperationFactory.prototype, "createOperation").mockReturnValue(
       mockOperation as any
     );
-    vi.spyOn(OperationFactory, 'isValidOperationType').mockReturnValue(true);
-    vi.spyOn(OperationFactory, 'getSupportedOperations').mockReturnValue([
-      'deploy',
-      'diff',
-      'remove',
-      'stage',
+    vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(true);
+    vi.spyOn(OperationFactory, "getSupportedOperations").mockReturnValue([
+      "deploy",
+      "diff",
+      "remove",
+      "stage",
     ]);
 
     // Mock GitHubClient and SSTCLIExecutor constructors
-    vi.mocked(GitHubClient).mockImplementation(
-      () =>
-        ({
-          commentOnPR: vi.fn(),
-          updateWorkflowSummary: vi.fn(),
-        }) as any
-    );
+    // Vitest v4 requires function/class for constructor mocks (not arrow functions)
+    vi.mocked(GitHubClient).mockImplementation(function (this: any) {
+      this.commentOnPR = vi.fn();
+      this.updateWorkflowSummary = vi.fn();
+    } as any);
 
-    vi.mocked(SSTCLIExecutor).mockImplementation(
-      () =>
-        ({
-          execute: vi.fn(),
-        }) as any
-    );
+    vi.mocked(SSTCLIExecutor).mockImplementation(function (this: any) {
+      this.execute = vi.fn();
+    } as any);
   });
 
-  describe('executeOperation', () => {
-    it('should validate operation type before execution', async () => {
+  describe("executeOperation", () => {
+    it("should validate operation type before execution", async () => {
       // Invalid operations should now throw during error result creation
       await expect(
-        executeOperation('invalid' as any, defaultOptions)
+        executeOperation("invalid" as any, defaultOptions)
       ).rejects.toThrow(
-        'Cannot create error result for unknown operation: invalid'
+        "Cannot create error result for unknown operation: invalid"
       );
     });
 
-    it('should handle deploy operation successfully', async () => {
+    it("should handle deploy operation successfully", async () => {
       const mockDeployResult = {
         success: true,
-        stage: 'test-stage',
+        stage: "test-stage",
         metadata: {
-          app: 'test-app',
-          rawOutput: 'Deploy successful',
+          app: "test-app",
+          rawOutput: "Deploy successful",
           cliExitCode: 0,
           truncated: false,
         },
         resourceChanges: 3,
         outputs: [
-          { key: 'api', value: 'https://api.example.com' },
-          { key: 'web', value: 'https://web.example.com' },
+          { key: "api", value: "https://api.example.com" },
+          { key: "web", value: "https://web.example.com" },
         ],
         resources: [
           {
-            type: 'function',
-            name: 'handler',
-            status: 'created',
-            timing: '2s',
+            type: "function",
+            name: "handler",
+            status: "created",
+            timing: "2s",
           },
         ],
-        permalink: 'https://console.sst.dev/deploy/123',
+        permalink: "https://console.sst.dev/deploy/123",
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('deploy');
+      expect(result.operation).toBe("deploy");
       expect((result as DeployResult).resourceChanges).toBe(3);
       expect((result as DeployResult).outputs).toHaveLength(2);
       expect((result as DeployResult).resources).toHaveLength(1);
       expect((result as DeployResult).permalink).toBe(
-        'https://console.sst.dev/deploy/123'
+        "https://console.sst.dev/deploy/123"
       );
     });
 
-    it('should handle diff operation successfully', async () => {
+    it("should handle diff operation successfully", async () => {
       const mockDiffResult = {
         success: true,
-        stage: 'test-stage',
+        stage: "test-stage",
         metadata: {
-          app: 'test-app',
-          rawOutput: 'Diff completed',
+          app: "test-app",
+          rawOutput: "Diff completed",
           cliExitCode: 0,
           truncated: false,
         },
         changesDetected: 2,
-        summary: 'Infrastructure changes detected',
+        summary: "Infrastructure changes detected",
         changes: [
           {
-            resourceType: 'function',
-            resourceName: 'handler',
-            action: 'create',
-            details: 'New Lambda function',
+            resourceType: "function",
+            resourceName: "handler",
+            action: "create",
+            details: "New Lambda function",
           },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockDiffResult);
 
-      const result = await executeOperation('diff', defaultOptions);
+      const result = await executeOperation("diff", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('diff');
+      expect(result.operation).toBe("diff");
       expect((result as DiffResult).plannedChanges).toBe(2);
       expect((result as DiffResult).changeSummary).toBe(
-        'Infrastructure changes detected'
+        "Infrastructure changes detected"
       );
       expect((result as DiffResult).changes).toHaveLength(1);
     });
 
-    it('should handle remove operation successfully', async () => {
+    it("should handle remove operation successfully", async () => {
       const mockRemoveResult = {
         success: true,
-        stage: 'test-stage',
+        stage: "test-stage",
         metadata: {
-          app: 'test-app',
-          rawOutput: 'Remove completed',
+          app: "test-app",
+          rawOutput: "Remove completed",
           cliExitCode: 0,
           truncated: false,
         },
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourcesRemoved: 5,
         removedResources: [
           {
-            resourceType: 'function',
-            resourceName: 'handler',
-            status: 'removed',
+            resourceType: "function",
+            resourceName: "handler",
+            status: "removed",
           },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockRemoveResult);
 
-      const result = await executeOperation('remove', defaultOptions);
+      const result = await executeOperation("remove", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('remove');
+      expect(result.operation).toBe("remove");
       expect((result as RemoveResult).resourcesRemoved).toBe(5);
       expect((result as RemoveResult).removedResources).toHaveLength(1);
     });
 
-    it('should handle stage operation successfully', async () => {
+    it("should handle stage operation successfully", async () => {
       const mockStageResult = {
         success: true,
-        operation: 'stage' as const,
-        stage: 'test-stage',
-        app: 'test-app',
-        rawOutput: '',
+        operation: "stage" as const,
+        stage: "test-stage",
+        app: "test-app",
+        rawOutput: "",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete' as const,
-        computedStage: 'pr-123',
-        ref: 'refs/heads/feature-branch',
-        eventName: 'pull_request',
+        completionStatus: "complete" as const,
+        computedStage: "pr-123",
+        ref: "refs/heads/feature-branch",
+        eventName: "pull_request",
         isPullRequest: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockStageResult);
 
-      const result = await executeOperation('stage', defaultOptions);
+      const result = await executeOperation("stage", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('stage');
+      expect(result.operation).toBe("stage");
       expect(result).toEqual(mockStageResult);
     });
 
-    it('should handle operation execution errors', async () => {
-      const mockError = new Error('Operation failed');
+    it("should handle operation execution errors", async () => {
+      const mockError = new Error("Operation failed");
       mockOperation.execute.mockRejectedValue(mockError);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Operation failed');
-      expect(result.operation).toBe('deploy');
-      expect(result.stage).toBe('test-stage');
+      expect(result.error).toBe("Operation failed");
+      expect(result.operation).toBe("deploy");
+      expect(result.stage).toBe("test-stage");
     });
 
-    it('should normalize URL types correctly', async () => {
+    it("should normalize URL types correctly", async () => {
       const mockDeployResult = {
         success: true,
-        stage: 'test-stage',
-        metadata: { app: 'test-app' },
+        stage: "test-stage",
+        metadata: { app: "test-app" },
         outputs: [
-          { key: 'valid-api', value: 'https://api.example.com' },
-          { key: 'invalid-type', value: 'https://custom.example.com' },
+          { key: "valid-api", value: "https://api.example.com" },
+          { key: "invalid-type", value: "https://custom.example.com" },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       const deployResult = result as DeployResult;
-      expect(deployResult.outputs?.[0]?.key).toBe('valid-api');
-      expect(deployResult.outputs?.[1]?.key).toBe('invalid-type');
+      expect(deployResult.outputs?.[0]?.key).toBe("valid-api");
+      expect(deployResult.outputs?.[1]?.key).toBe("invalid-type");
     });
 
-    it('should normalize resource status correctly', async () => {
+    it("should normalize resource status correctly", async () => {
       const mockDeployResult = {
         success: true,
-        stage: 'test-stage',
-        metadata: { app: 'test-app' },
+        stage: "test-stage",
+        metadata: { app: "test-app" },
         resources: [
-          { type: 'function', name: 'valid', status: 'created' },
-          { type: 'function', name: 'invalid', status: 'invalid-status' },
+          { type: "function", name: "valid", status: "created" },
+          { type: "function", name: "invalid", status: "invalid-status" },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       const deployResult = result as DeployResult;
-      expect(deployResult.resources?.[0]?.status).toBe('created');
-      expect(deployResult.resources?.[1]?.status).toBe('created'); // Should normalize to 'created'
+      expect(deployResult.resources?.[0]?.status).toBe("created");
+      expect(deployResult.resources?.[1]?.status).toBe("created"); // Should normalize to 'created'
     });
 
-    it('should normalize diff actions correctly', async () => {
+    it("should normalize diff actions correctly", async () => {
       const mockDiffResult = {
         success: true,
-        stage: 'test-stage',
-        metadata: { app: 'test-app' },
+        stage: "test-stage",
+        metadata: { app: "test-app" },
         changes: [
-          { resourceType: 'function', resourceName: 'valid', action: 'create' },
+          { resourceType: "function", resourceName: "valid", action: "create" },
           {
-            resourceType: 'function',
-            resourceName: 'invalid',
-            action: 'modify',
+            resourceType: "function",
+            resourceName: "invalid",
+            action: "modify",
           },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockDiffResult);
 
-      const result = await executeOperation('diff', defaultOptions);
+      const result = await executeOperation("diff", defaultOptions);
 
       const diffResult = result as DiffResult;
-      expect(diffResult.changes?.[0]?.action).toBe('create');
-      expect(diffResult.changes?.[1]?.action).toBe('update'); // Should normalize to 'update'
+      expect(diffResult.changes?.[0]?.action).toBe("create");
+      expect(diffResult.changes?.[1]?.action).toBe("update"); // Should normalize to 'update'
     });
 
-    it('should normalize remove status correctly', async () => {
+    it("should normalize remove status correctly", async () => {
       const mockRemoveResult = {
         success: true,
-        stage: 'test-stage',
-        metadata: { app: 'test-app' },
+        stage: "test-stage",
+        metadata: { app: "test-app" },
         removedResources: [
           {
-            resourceType: 'function',
-            resourceName: 'valid',
-            status: 'removed',
+            resourceType: "function",
+            resourceName: "valid",
+            status: "removed",
           },
           {
-            resourceType: 'function',
-            resourceName: 'invalid',
-            status: 'invalid-status',
+            resourceType: "function",
+            resourceName: "invalid",
+            status: "invalid-status",
           },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockRemoveResult);
 
-      const result = await executeOperation('remove', defaultOptions);
+      const result = await executeOperation("remove", defaultOptions);
 
       const removeResult = result as RemoveResult;
-      expect(removeResult.removedResources?.[0]?.status).toBe('removed');
-      expect(removeResult.removedResources?.[1]?.status).toBe('failed'); // Should normalize to 'failed'
+      expect(removeResult.removedResources?.[0]?.status).toBe("removed");
+      expect(removeResult.removedResources?.[1]?.status).toBe("failed"); // Should normalize to 'failed'
     });
 
-    it('should handle missing optional fields gracefully', async () => {
+    it("should handle missing optional fields gracefully", async () => {
       const mockDeployResult = {
         success: true,
-        stage: 'test-stage',
+        stage: "test-stage",
         // Missing metadata, urls, resources
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect((result as DeployResult).app).toBe('unknown');
-      expect((result as DeployResult).rawOutput).toBe('');
+      expect((result as DeployResult).app).toBe("unknown");
+      expect((result as DeployResult).rawOutput).toBe("");
       expect((result as DeployResult).exitCode).toBe(0);
       expect((result as DeployResult).resourceChanges).toBe(0);
       expect((result as DeployResult).outputs).toEqual([]);
       expect((result as DeployResult).resources).toEqual([]);
     });
 
-    it('should use fake token for stage operations', async () => {
+    it("should use fake token for stage operations", async () => {
       const mockStageResult = {
         success: true,
-        operation: 'stage' as const,
-        stage: 'test-stage',
-        app: 'test-app',
-        rawOutput: '',
+        operation: "stage" as const,
+        stage: "test-stage",
+        app: "test-app",
+        rawOutput: "",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete' as const,
-        computedStage: 'main',
-        ref: 'refs/heads/main',
-        eventName: 'push',
+        completionStatus: "complete" as const,
+        computedStage: "main",
+        ref: "refs/heads/main",
+        eventName: "push",
         isPullRequest: false,
       };
 
       mockOperation.execute.mockResolvedValue(mockStageResult);
 
-      await executeOperation('stage', defaultOptions);
+      await executeOperation("stage", defaultOptions);
 
-      expect(GitHubClient).toHaveBeenCalledWith('fake-token');
+      expect(GitHubClient).toHaveBeenCalledWith("fake-token");
     });
 
-    it('should create failure result for unknown operation type', async () => {
+    it("should create failure result for unknown operation type", async () => {
       // Unknown operations should now throw during error result creation
       await expect(
-        executeOperation('unknown' as any, defaultOptions)
+        executeOperation("unknown" as any, defaultOptions)
       ).rejects.toThrow(
-        'Cannot create error result for unknown operation: unknown'
+        "Cannot create error result for unknown operation: unknown"
       );
     });
 
-    it('should preserve optional fields when present', async () => {
+    it("should preserve optional fields when present", async () => {
       const mockDeployResult = {
         success: true,
-        stage: 'test-stage',
+        stage: "test-stage",
         metadata: {
-          app: 'test-app',
-          rawOutput: 'Deploy output',
+          app: "test-app",
+          rawOutput: "Deploy output",
           cliExitCode: 0,
           truncated: true,
         },
-        error: 'Warning message',
-        permalink: 'https://console.sst.dev/123',
+        error: "Warning message",
+        permalink: "https://console.sst.dev/123",
         outputs: [
           {
-            key: 'api',
-            value: 'https://api.example.com',
+            key: "api",
+            value: "https://api.example.com",
           },
         ],
         resources: [
           {
-            type: 'function',
-            name: 'handler',
-            status: 'updated',
-            timing: '3s',
+            type: "function",
+            name: "handler",
+            status: "updated",
+            timing: "3s",
           },
         ],
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
 
-      const result = await executeOperation('deploy', defaultOptions);
+      const result = await executeOperation("deploy", defaultOptions);
 
       expect(result.success).toBe(true);
-      expect((result as DeployResult).error).toBe('Warning message');
+      expect((result as DeployResult).error).toBe("Warning message");
       expect((result as DeployResult).permalink).toBe(
-        'https://console.sst.dev/123'
+        "https://console.sst.dev/123"
       );
       expect((result as DeployResult).truncated).toBe(true);
       const deployResult = result as DeployResult;
-      expect(deployResult.resources?.[0]?.timing).toBe('3s');
+      expect(deployResult.resources?.[0]?.timing).toBe("3s");
     });
   });
 });

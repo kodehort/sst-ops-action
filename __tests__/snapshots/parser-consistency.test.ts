@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { DeployParser } from '@/parsers/deploy-parser';
-import { DiffParser } from '@/parsers/diff-parser';
-import { RemoveParser } from '@/parsers/remove-parser';
+import { describe, expect, it } from "vitest";
+import { DeployParser } from "@/parsers/deploy-parser";
+import { DiffParser } from "@/parsers/diff-parser";
+import { RemoveParser } from "@/parsers/remove-parser";
 import {
   listSnapshots,
   loadInput,
   loadMetadata,
-} from '../utils/snapshot-helpers';
+} from "../utils/snapshot-helpers";
 
 /**
  * Parser consistency testing using snapshot inputs
@@ -28,7 +28,7 @@ type OperationWithParser = keyof typeof parsers;
  */
 function extractStage(output: string): string {
   const stageMatch = output.match(/Stage:\s+(.+)/);
-  return stageMatch?.[1]?.trim() || 'unknown-stage';
+  return stageMatch?.[1]?.trim() || "unknown-stage";
 }
 
 /**
@@ -36,14 +36,14 @@ function extractStage(output: string): string {
  */
 function extractApp(output: string): string {
   const appMatch = output.match(/➜\s+App:\s+(.+)/);
-  return appMatch?.[1]?.trim() || 'unknown-app';
+  return appMatch?.[1]?.trim() || "unknown-app";
 }
 
 /**
  * Extract exit code from SST output
  */
 function extractExitCode(output: string): number {
-  return output.includes('✕  Failed') || output.includes('Error:') ? 1 : 0;
+  return output.includes("✕  Failed") || output.includes("Error:") ? 1 : 0;
 }
 
 /**
@@ -63,7 +63,7 @@ function testParserConsistency(operation: OperationWithParser): void {
 
     snapshots.forEach((name) => {
       describe(`${name}`, () => {
-        it('should parse without throwing errors', () => {
+        it("should parse without throwing errors", () => {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
@@ -73,7 +73,7 @@ function testParserConsistency(operation: OperationWithParser): void {
           }).not.toThrow();
         });
 
-        it('should extract correct metadata', () => {
+        it("should extract correct metadata", () => {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const app = extractApp(rawOutput);
@@ -87,7 +87,7 @@ function testParserConsistency(operation: OperationWithParser): void {
           expect(parsed.success).toBe(exitCode === 0);
         });
 
-        it('should match expected metadata from snapshot', () => {
+        it("should match expected metadata from snapshot", () => {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
@@ -104,38 +104,37 @@ function testParserConsistency(operation: OperationWithParser): void {
             expect(parsed.success).toBe(metadata.success);
           } catch (error) {
             // Metadata might not exist yet, skip this check
-            // biome-ignore lint/suspicious/noConsole: This is for test debugging
             console.warn(
               `Metadata not found for ${operation}/${name}: ${error}`
             );
           }
         });
 
-        it('should have required base properties', () => {
+        it("should have required base properties", () => {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
           const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-          expect(parsed).toHaveProperty('operation');
-          expect(parsed).toHaveProperty('stage');
-          expect(parsed).toHaveProperty('app');
-          expect(parsed).toHaveProperty('success');
-          expect(parsed).toHaveProperty('rawOutput');
+          expect(parsed).toHaveProperty("operation");
+          expect(parsed).toHaveProperty("stage");
+          expect(parsed).toHaveProperty("app");
+          expect(parsed).toHaveProperty("success");
+          expect(parsed).toHaveProperty("rawOutput");
 
-          expect(typeof parsed.operation).toBe('string');
-          expect(typeof parsed.stage).toBe('string');
-          expect(typeof parsed.app).toBe('string');
-          expect(typeof parsed.success).toBe('boolean');
-          expect(typeof parsed.rawOutput).toBe('string');
+          expect(typeof parsed.operation).toBe("string");
+          expect(typeof parsed.stage).toBe("string");
+          expect(typeof parsed.app).toBe("string");
+          expect(typeof parsed.success).toBe("boolean");
+          expect(typeof parsed.rawOutput).toBe("string");
         });
       });
     });
 
     // Test operation-specific properties
-    if (operation === 'deploy') {
-      it('should have deploy-specific properties', () => {
+    if (operation === "deploy") {
+      it("should have deploy-specific properties", () => {
         const deploySnapshots = listSnapshots(operation);
         for (const name of deploySnapshots) {
           const rawOutput = loadInput(operation, name);
@@ -144,14 +143,14 @@ function testParserConsistency(operation: OperationWithParser): void {
 
           const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-          expect(parsed).toHaveProperty('outputs');
+          expect(parsed).toHaveProperty("outputs");
           expect(Array.isArray(parsed.outputs)).toBe(true);
         }
       });
     }
 
-    if (operation === 'diff') {
-      it('should have diff-specific properties', () => {
+    if (operation === "diff") {
+      it("should have diff-specific properties", () => {
         const diffSnapshots = listSnapshots(operation);
         for (const name of diffSnapshots) {
           const rawOutput = loadInput(operation, name);
@@ -160,16 +159,16 @@ function testParserConsistency(operation: OperationWithParser): void {
 
           const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-          expect(parsed).toHaveProperty('changes');
-          expect(parsed).toHaveProperty('plannedChanges');
+          expect(parsed).toHaveProperty("changes");
+          expect(parsed).toHaveProperty("plannedChanges");
           expect(Array.isArray(parsed.changes)).toBe(true);
-          expect(typeof parsed.plannedChanges).toBe('number');
+          expect(typeof parsed.plannedChanges).toBe("number");
         }
       });
     }
 
-    if (operation === 'remove') {
-      it('should have remove-specific properties', () => {
+    if (operation === "remove") {
+      it("should have remove-specific properties", () => {
         const removeSnapshots = listSnapshots(operation);
         for (const name of removeSnapshots) {
           const rawOutput = loadInput(operation, name);
@@ -178,7 +177,7 @@ function testParserConsistency(operation: OperationWithParser): void {
 
           const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-          expect(parsed).toHaveProperty('removedResources');
+          expect(parsed).toHaveProperty("removedResources");
           expect(Array.isArray(parsed.removedResources)).toBe(true);
         }
       });
@@ -186,16 +185,16 @@ function testParserConsistency(operation: OperationWithParser): void {
   });
 }
 
-describe('Parser Consistency Testing', () => {
-  describe('Individual Parser Validation', () => {
-    testParserConsistency('deploy');
-    testParserConsistency('diff');
-    testParserConsistency('remove');
+describe("Parser Consistency Testing", () => {
+  describe("Individual Parser Validation", () => {
+    testParserConsistency("deploy");
+    testParserConsistency("diff");
+    testParserConsistency("remove");
   });
 
-  describe('Cross-Parser Consistency', () => {
-    it('should handle consistent SST output format', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+  describe("Cross-Parser Consistency", () => {
+    it("should handle consistent SST output format", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
         const snapshots = listSnapshots(operation);
@@ -212,8 +211,8 @@ describe('Parser Consistency Testing', () => {
       }
     });
 
-    it('should handle success and failure cases appropriately', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+    it("should handle success and failure cases appropriately", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
         const snapshots = listSnapshots(operation);
@@ -230,23 +229,23 @@ describe('Parser Consistency Testing', () => {
           // Failed operations should contain error indicators
           if (!parsed.success) {
             expect(
-              rawOutput.includes('✕  Failed') ||
-                rawOutput.includes('Error:') ||
-                rawOutput.includes('failed')
+              rawOutput.includes("✕  Failed") ||
+                rawOutput.includes("Error:") ||
+                rawOutput.includes("failed")
             ).toBe(true);
           }
         }
       }
     });
 
-    it('should extract permalinks when present', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+    it("should extract permalinks when present", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       // Test each operation's permalinks
       operations.forEach((operation) => {
         const snapshots = listSnapshots(operation);
         const permalinkSnapshots = snapshots.filter((name) => {
-          return loadInput(operation, name).includes('↗  Permalink');
+          return loadInput(operation, name).includes("↗  Permalink");
         });
 
         // Test permalink extraction for snapshots that have them
@@ -267,9 +266,9 @@ describe('Parser Consistency Testing', () => {
     });
   });
 
-  describe('Edge Cases and Error Handling', () => {
-    it('should handle minimal SST output', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+  describe("Edge Cases and Error Handling", () => {
+    it("should handle minimal SST output", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
         const minimalOutput = `SST 3.17.4  ready!
@@ -282,19 +281,19 @@ describe('Parser Consistency Testing', () => {
 ✓  Complete`;
 
         expect(() => {
-          parsers[operation].parse(minimalOutput, 'test', 0);
+          parsers[operation].parse(minimalOutput, "test", 0);
         }).not.toThrow();
       }
     });
 
-    it('should handle malformed input gracefully', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+    it("should handle malformed input gracefully", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
-        const malformedOutput = 'Invalid SST output';
+        const malformedOutput = "Invalid SST output";
 
         expect(() => {
-          parsers[operation].parse(malformedOutput, 'test', 1);
+          parsers[operation].parse(malformedOutput, "test", 1);
         }).not.toThrow();
       }
     });

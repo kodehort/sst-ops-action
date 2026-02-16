@@ -16,11 +16,11 @@ export interface SSTResource {
   logicalId: string;
   physicalId?: string;
   status:
-    | 'CREATE_COMPLETE'
-    | 'UPDATE_COMPLETE'
-    | 'DELETE_COMPLETE'
-    | 'FAILED'
-    | 'IN_PROGRESS';
+    | "CREATE_COMPLETE"
+    | "UPDATE_COMPLETE"
+    | "DELETE_COMPLETE"
+    | "FAILED"
+    | "IN_PROGRESS";
   properties?: Record<string, unknown>;
   outputs?: Record<string, unknown>;
 }
@@ -28,7 +28,7 @@ export interface SSTResource {
 export interface SSTUrl {
   name: string;
   url: string;
-  type: 'api' | 'web' | 'function' | 'other';
+  type: "api" | "web" | "function" | "other";
 }
 
 export interface SSTDeployOutput {
@@ -38,7 +38,7 @@ export interface SSTDeployOutput {
   resources: SSTResource[];
   outputs: Record<string, unknown>;
   duration: number;
-  status: 'success' | 'failed' | 'partial';
+  status: "success" | "failed" | "partial";
   permalink?: string;
   warnings?: string[];
   errors?: string[];
@@ -49,7 +49,7 @@ export interface SSTDiffOutput {
   stage: string;
   region: string;
   changes: Array<{
-    action: 'create' | 'update' | 'delete';
+    action: "create" | "update" | "delete";
     type: string;
     name: string;
     logicalId: string;
@@ -66,7 +66,7 @@ export interface SSTDiffOutput {
     toDelete: number;
     total: number;
   };
-  status: 'success' | 'failed';
+  status: "success" | "failed";
   errors?: string[];
 }
 
@@ -78,7 +78,7 @@ export interface SSTRemoveOutput {
     type: string;
     name: string;
     logicalId: string;
-    status: 'removed' | 'failed' | 'skipped';
+    status: "removed" | "failed" | "skipped";
     reason?: string;
   }>;
   summary: {
@@ -87,7 +87,7 @@ export interface SSTRemoveOutput {
     totalSkipped: number;
   };
   duration: number;
-  status: 'success' | 'failed' | 'partial';
+  status: "success" | "failed" | "partial";
   errors?: string[];
   warnings?: string[];
 }

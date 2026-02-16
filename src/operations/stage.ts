@@ -3,10 +3,10 @@
  * Handles stage calculation based on GitHub context without SST CLI execution
  */
 
-import * as core from '@actions/core';
-import { StageProcessor } from '../parsers/stage-processor';
-import type { OperationOptions, StageResult } from '../types';
-import { logActionVersion } from '../utils/version';
+import * as core from "@actions/core";
+import { StageProcessor } from "../parsers/stage-processor";
+import type { OperationOptions, StageResult } from "../types";
+import { logActionVersion } from "../utils/version";
 
 /**
  * Stage operation handler for computing SST stage names
@@ -27,7 +27,7 @@ export class StageOperation {
     const processor = new StageProcessor();
     const result = processor.process({
       truncationLength: options.truncationLength ?? 26,
-      prefix: options.prefix ?? 'pr-',
+      prefix: options.prefix ?? "pr-",
     });
 
     return result;

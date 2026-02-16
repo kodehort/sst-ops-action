@@ -40,37 +40,37 @@ const URL_PATTERN = /^https?:\/\/.+/;
  * const invalid = 'production'; // ✗ Type error if used where StageName expected
  * ```
  */
-export type StageName = Brand<string, 'StageName'>;
+export type StageName = Brand<string, "StageName">;
 
 /**
  * Application name branded type
  * Ensures app names are validated and distinct from other strings
  */
-export type AppName = Brand<string, 'AppName'>;
+export type AppName = Brand<string, "AppName">;
 
 /**
  * Resource name branded type
  * Used for AWS resource identifiers
  */
-export type ResourceName = Brand<string, 'ResourceName'>;
+export type ResourceName = Brand<string, "ResourceName">;
 
 /**
  * Resource type branded type
  * Used for AWS resource types (e.g., "AWS::Lambda::Function")
  */
-export type ResourceType = Brand<string, 'ResourceType'>;
+export type ResourceType = Brand<string, "ResourceType">;
 
 /**
  * URL branded type
  * Ensures URLs are validated before use
  */
-export type URL = Brand<string, 'URL'>;
+export type URL = Brand<string, "URL">;
 
 /**
  * Git ref branded type
  * Used for Git references (branches, tags, commits)
  */
-export type GitRef = Brand<string, 'GitRef'>;
+export type GitRef = Brand<string, "GitRef">;
 
 /**
  * Validation error type for branded type creation
@@ -82,7 +82,7 @@ export class BrandedTypeError extends Error {
 
   constructor(typeName: string, value: string, reason: string) {
     super(`Invalid ${typeName}: ${reason} (value: "${value}")`);
-    this.name = 'BrandedTypeError';
+    this.name = "BrandedTypeError";
     this.typeName = typeName;
     this.value = value;
     this.reason = reason;
@@ -108,8 +108,8 @@ export const StageName = {
    */
   create(value: string): StageName {
     // Rule: Cannot be empty
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('StageName', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("StageName", value, "cannot be empty");
     }
 
     const trimmed = value.trim();
@@ -117,7 +117,7 @@ export const StageName = {
     // Rule: Max 63 characters (AWS naming limit)
     if (trimmed.length > 63) {
       throw new BrandedTypeError(
-        'StageName',
+        "StageName",
         value,
         `exceeds maximum length of 63 characters (got ${trimmed.length})`
       );
@@ -126,18 +126,18 @@ export const StageName = {
     // Rule: Lowercase alphanumeric and hyphens only
     if (!STAGE_NAME_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
-        'StageName',
+        "StageName",
         value,
-        'must contain only lowercase letters, numbers, and hyphens'
+        "must contain only lowercase letters, numbers, and hyphens"
       );
     }
 
     // Rule: Cannot start or end with hyphen
-    if (trimmed.startsWith('-') || trimmed.endsWith('-')) {
+    if (trimmed.startsWith("-") || trimmed.endsWith("-")) {
       throw new BrandedTypeError(
-        'StageName',
+        "StageName",
         value,
-        'cannot start or end with a hyphen'
+        "cannot start or end with a hyphen"
       );
     }
 
@@ -193,15 +193,15 @@ export const AppName = {
    * @throws {BrandedTypeError} If validation fails
    */
   create(value: string): AppName {
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('AppName', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("AppName", value, "cannot be empty");
     }
 
     const trimmed = value.trim();
 
     if (trimmed.length > 128) {
       throw new BrandedTypeError(
-        'AppName',
+        "AppName",
         value,
         `exceeds maximum length of 128 characters (got ${trimmed.length})`
       );
@@ -233,8 +233,8 @@ export const AppName = {
  */
 export const ResourceName = {
   create(value: string): ResourceName {
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('ResourceName', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("ResourceName", value, "cannot be empty");
     }
     return value.trim() as ResourceName;
   },
@@ -257,8 +257,8 @@ export const ResourceType = {
    * Expects AWS resource type format (e.g., "AWS::Lambda::Function")
    */
   create(value: string): ResourceType {
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('ResourceType', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("ResourceType", value, "cannot be empty");
     }
 
     const trimmed = value.trim();
@@ -266,7 +266,7 @@ export const ResourceType = {
     // Validate AWS resource type format (AWS::Service::Resource)
     if (!RESOURCE_TYPE_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
-        'ResourceType',
+        "ResourceType",
         value,
         'must be in format "Provider::Service::Resource" (e.g., "AWS::Lambda::Function")'
       );
@@ -301,8 +301,8 @@ export const URL = {
    * Create a validated URL
    */
   create(value: string): URL {
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('URL', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("URL", value, "cannot be empty");
     }
 
     const trimmed = value.trim();
@@ -310,9 +310,9 @@ export const URL = {
     // Validate URL format
     if (!URL_PATTERN.test(trimmed)) {
       throw new BrandedTypeError(
-        'URL',
+        "URL",
         value,
-        'must be a valid HTTP or HTTPS URL'
+        "must be a valid HTTP or HTTPS URL"
       );
     }
 
@@ -342,8 +342,8 @@ export const URL = {
  */
 export const GitRef = {
   create(value: string): GitRef {
-    if (!value || value.trim() === '') {
-      throw new BrandedTypeError('GitRef', value, 'cannot be empty');
+    if (!value || value.trim() === "") {
+      throw new BrandedTypeError("GitRef", value, "cannot be empty");
     }
     return value.trim() as GitRef;
   },
@@ -365,7 +365,7 @@ export function isBrandedType<T extends Brand<string, string>>(
   value: unknown,
   validator: (v: string) => boolean
 ): value is T {
-  return typeof value === 'string' && validator(value);
+  return typeof value === "string" && validator(value);
 }
 
 /**

@@ -3,15 +3,15 @@
  * Consolidates error handling logic with clear categorization and consistent handling
  */
 
-import * as core from '@actions/core';
-import type { OperationOptions, SSTOperation } from '../types';
-import { ValidationError } from '../utils/validation';
+import * as core from "@actions/core";
+import type { OperationOptions, SSTOperation } from "../types";
+import { ValidationError } from "../utils/validation";
 import {
   createInputValidationError,
   createSubprocessError,
   fromValidationError,
   handleError,
-} from './error-handler';
+} from "./error-handler";
 
 /**
  * Error context types using discriminated unions
@@ -19,23 +19,23 @@ import {
  */
 export type ErrorContext =
   | {
-      type: 'input-validation';
+      type: "input-validation";
       error: ValidationError | Error;
     }
   | {
-      type: 'operation-execution';
+      type: "operation-execution";
       error: Error;
       operation: SSTOperation;
       options: OperationOptions;
     }
   | {
-      type: 'output-formatting';
+      type: "output-formatting";
       error: Error;
       operation: SSTOperation;
       options: OperationOptions;
     }
   | {
-      type: 'unexpected';
+      type: "unexpected";
       error: unknown;
     };
 
@@ -62,11 +62,11 @@ export class UnifiedErrorHandler {
   static handle(context: ErrorContext): void {
     try {
       switch (context.type) {
-        case 'input-validation':
+        case "input-validation":
           UnifiedErrorHandler.handleInputValidation(context.error);
           break;
 
-        case 'operation-execution':
+        case "operation-execution":
           UnifiedErrorHandler.handleOperationExecution(
             context.error,
             context.operation,
@@ -74,7 +74,7 @@ export class UnifiedErrorHandler {
           );
           break;
 
-        case 'output-formatting':
+        case "output-formatting":
           UnifiedErrorHandler.handleOutputFormatting(
             context.error,
             context.operation,
@@ -82,7 +82,7 @@ export class UnifiedErrorHandler {
           );
           break;
 
-        case 'unexpected':
+        case "unexpected":
           UnifiedErrorHandler.handleUnexpected(context.error);
           break;
 
@@ -110,7 +110,7 @@ export class UnifiedErrorHandler {
   private static handleInputValidation(error: ValidationError | Error): void {
     if (error instanceof ValidationError) {
       const actionError = fromValidationError(error);
-      handleError(actionError, { stage: 'unknown', failOnError: true });
+      handleError(actionError, { stage: "unknown", failOnError: true });
     } else {
       const actionError = createInputValidationError(
         error.message,
@@ -118,7 +118,7 @@ export class UnifiedErrorHandler {
         undefined,
         error
       );
-      handleError(actionError, { stage: 'unknown', failOnError: true });
+      handleError(actionError, { stage: "unknown", failOnError: true });
     }
   }
 
@@ -184,16 +184,16 @@ export class UnifiedErrorHandler {
    */
   private static handleUnexpected(error: unknown): never {
     const message = error instanceof Error ? error.message : String(error);
-    const failOnErrorInput = core.getInput('fail-on-error') || 'true';
+    const failOnErrorInput = core.getInput("fail-on-error") || "true";
 
     const basicOptions: OperationOptions = {
-      stage: core.getInput('stage') || 'unknown',
-      failOnError: failOnErrorInput === 'true',
+      stage: core.getInput("stage") || "unknown",
+      failOnError: failOnErrorInput === "true",
     };
 
     const actionError = createSubprocessError(
       message,
-      'deploy', // Default operation for unexpected errors
+      "deploy", // Default operation for unexpected errors
       basicOptions.stage,
       1,
       undefined,
@@ -237,12 +237,12 @@ export class UnifiedErrorHandler {
    */
   private static extractMessage(context: ErrorContext): string {
     switch (context.type) {
-      case 'input-validation':
+      case "input-validation":
         return context.error.message;
-      case 'operation-execution':
-      case 'output-formatting':
+      case "operation-execution":
+      case "output-formatting":
         return context.error.message;
-      case 'unexpected':
+      case "unexpected":
         return context.error instanceof Error
           ? context.error.message
           : String(context.error);
@@ -261,8 +261,8 @@ export class UnifiedErrorHandler {
  */
 export function isOutputFormattingError(error: Error): boolean {
   return (
-    error.message.includes('Output formatting failed') ||
-    error.message.includes('Failed to set outputs') ||
-    error.message.includes('validation failed')
+    error.message.includes("Output formatting failed") ||
+    error.message.includes("Failed to set outputs") ||
+    error.message.includes("validation failed")
   );
 }

@@ -3,7 +3,7 @@
  * Handles parsing inputs and setting outputs using @actions/core
  */
 
-import * as core from '@actions/core';
+import * as core from "@actions/core";
 
 /**
  * Handle GitHub integration errors with consistent logging

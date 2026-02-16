@@ -3,10 +3,10 @@
  * Tests complete end-to-end workflows including real subprocess execution scenarios
  */
 
-import * as childProcess from 'node:child_process';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as childProcess from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { spawn } = childProcess;
 const { mkdirSync, writeFileSync } = fs;
@@ -14,20 +14,20 @@ const { join } = path;
 
 // Test constants
 const E2E_TIMEOUT = 60_000;
-const ACTION_DIST_PATH = join(process.cwd(), 'dist', 'index.cjs');
+const ACTION_DIST_PATH = join(process.cwd(), "dist", "index.cjs");
 
 // Mock modules for integration tests
-vi.mock('node:child_process');
-vi.mock('../../src/operations/router', () => ({
+vi.mock("node:child_process");
+vi.mock("../../src/operations/router", () => ({
   executeOperation: vi.fn(),
 }));
-vi.mock('../../src/outputs/formatter', () => ({
+vi.mock("../../src/outputs/formatter", () => ({
   OutputFormatter: {
     formatOperationForGitHubActions: vi.fn(),
     validateOutputs: vi.fn(),
   },
 }));
-vi.mock('../../src/errors/error-handler', () => ({
+vi.mock("../../src/errors/error-handler", () => ({
   handleError: vi.fn(),
   createInputValidationError: vi.fn(),
   createSubprocessError: vi.fn(),
@@ -35,9 +35,9 @@ vi.mock('../../src/errors/error-handler', () => ({
   fromValidationError: vi.fn(),
   isParsingError: vi.fn(),
 }));
-vi.mock('../../src/utils/validation', async (importOriginal) => {
+vi.mock("../../src/utils/validation", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import('../../src/utils/validation')>();
+    await importOriginal<typeof import("../../src/utils/validation")>();
   return {
     ...original,
     validateOperationWithContext: vi.fn(),
@@ -50,9 +50,9 @@ vi.mock('../../src/utils/validation', async (importOriginal) => {
  */
 async function executeAction(env: Record<string, string>) {
   // Import mocked modules
-  const { executeOperation } = await import('../../src/operations/router');
-  const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const core = await import('@actions/core');
+  const { executeOperation } = await import("../../src/operations/router");
+  const { OutputFormatter } = await import("../../src/outputs/formatter");
+  const core = await import("@actions/core");
 
   // Set up environment
   Object.entries(env).forEach(([key, value]) => {
@@ -64,13 +64,13 @@ async function executeAction(env: Record<string, string>) {
 
   // Mock core functions to capture inputs and outputs
   vi.mocked(core.getInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value || '';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value || "";
   });
 
   vi.mocked(core.getBooleanInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value === 'true';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value === "true";
   });
 
   vi.mocked(core.setOutput).mockImplementation(
@@ -81,26 +81,26 @@ async function executeAction(env: Record<string, string>) {
 
   vi.mocked(core.setFailed).mockImplementation((message: string | Error) => {
     exitCode = 1;
-    outputs.error = typeof message === 'string' ? message : message.message;
+    outputs.error = typeof message === "string" ? message : message.message;
   });
 
   // Determine the operation from inputs
-  const operation = env.INPUT_OPERATION || 'deploy';
-  const stage = env.INPUT_STAGE || 'test';
+  const operation = env.INPUT_OPERATION || "deploy";
+  const stage = env.INPUT_STAGE || "test";
 
   // Mock validation functions to return proper inputs
-  const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+  const validationModule = await import("../../src/utils/validation");
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
+  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
     operation: operation as any,
     stage,
-    token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
-    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
-    runner: 'bun' as const,
+    token: env.INPUT_TOKEN || "fake-token",
+    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
+    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
+    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    runner: "bun" as const,
   });
 
   // Mock operation execution based on the operation type
@@ -117,11 +117,11 @@ async function executeAction(env: Record<string, string>) {
   );
 
   // Mock error handler (shouldn't be called for successful operations)
-  const { handleError } = await import('../../src/errors/error-handler');
+  const { handleError } = await import("../../src/errors/error-handler");
   vi.mocked(handleError).mockReturnValue();
 
   // Import and run the action
-  const { run } = await import('../../src/main');
+  const { run } = await import("../../src/main");
 
   try {
     await run();
@@ -144,9 +144,9 @@ async function executeActionWithFailure(
   errorMessage: string
 ) {
   // Import mocked modules
-  const { executeOperation } = await import('../../src/operations/router');
-  const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const core = await import('@actions/core');
+  const { executeOperation } = await import("../../src/operations/router");
+  const { OutputFormatter } = await import("../../src/outputs/formatter");
+  const core = await import("@actions/core");
 
   // Set up environment
   Object.entries(env).forEach(([key, value]) => {
@@ -158,13 +158,13 @@ async function executeActionWithFailure(
 
   // Mock core functions to capture inputs and outputs
   vi.mocked(core.getInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value || '';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value || "";
   });
 
   vi.mocked(core.getBooleanInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value === 'true';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value === "true";
   });
 
   vi.mocked(core.setOutput).mockImplementation(
@@ -175,26 +175,26 @@ async function executeActionWithFailure(
 
   vi.mocked(core.setFailed).mockImplementation((message: string | Error) => {
     exitCode = 1;
-    outputs.error = typeof message === 'string' ? message : message.message;
+    outputs.error = typeof message === "string" ? message : message.message;
   });
 
   // Determine the operation from inputs
-  const operation = env.INPUT_OPERATION || 'deploy';
-  const stage = env.INPUT_STAGE || 'test';
+  const operation = env.INPUT_OPERATION || "deploy";
+  const stage = env.INPUT_STAGE || "test";
 
   // Mock validation functions to return proper inputs
-  const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+  const validationModule = await import("../../src/utils/validation");
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
+  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
     operation: operation as any,
     stage,
-    token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
-    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
-    runner: 'bun' as const,
+    token: env.INPUT_TOKEN || "fake-token",
+    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
+    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
+    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    runner: "bun" as const,
   });
 
   // Mock failed operation execution
@@ -202,7 +202,7 @@ async function executeActionWithFailure(
   mockResult.success = false;
   mockResult.error = errorMessage;
   mockResult.exitCode = 1;
-  mockResult.completionStatus = 'failed';
+  mockResult.completionStatus = "failed";
 
   vi.mocked(executeOperation).mockResolvedValue(mockResult);
 
@@ -216,7 +216,7 @@ async function executeActionWithFailure(
   );
 
   // Import and run the action
-  const { run } = await import('../../src/main');
+  const { run } = await import("../../src/main");
 
   try {
     await run();
@@ -238,9 +238,9 @@ async function executeActionWithFailureAndContinue(
   errorMessage: string
 ) {
   // Import mocked modules
-  const { executeOperation } = await import('../../src/operations/router');
-  const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const core = await import('@actions/core');
+  const { executeOperation } = await import("../../src/operations/router");
+  const { OutputFormatter } = await import("../../src/outputs/formatter");
+  const core = await import("@actions/core");
 
   // Set up environment
   Object.entries(env).forEach(([key, value]) => {
@@ -252,13 +252,13 @@ async function executeActionWithFailureAndContinue(
 
   // Mock core functions to capture inputs and outputs
   vi.mocked(core.getInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value || '';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value || "";
   });
 
   vi.mocked(core.getBooleanInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value === 'true';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value === "true";
   });
 
   vi.mocked(core.setOutput).mockImplementation(
@@ -269,26 +269,26 @@ async function executeActionWithFailureAndContinue(
 
   // For fail-on-error=false, don't set exitCode to 1
   vi.mocked(core.setFailed).mockImplementation((message: string | Error) => {
-    outputs.error = typeof message === 'string' ? message : message.message;
+    outputs.error = typeof message === "string" ? message : message.message;
   });
 
   // Determine the operation from inputs
-  const operation = env.INPUT_OPERATION || 'deploy';
-  const stage = env.INPUT_STAGE || 'test';
+  const operation = env.INPUT_OPERATION || "deploy";
+  const stage = env.INPUT_STAGE || "test";
 
   // Mock validation functions to return proper inputs
-  const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+  const validationModule = await import("../../src/utils/validation");
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
+  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
     operation: operation as any,
     stage,
-    token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
-    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
-    runner: 'bun' as const,
+    token: env.INPUT_TOKEN || "fake-token",
+    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
+    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
+    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    runner: "bun" as const,
   });
 
   // Mock failed operation execution
@@ -296,7 +296,7 @@ async function executeActionWithFailureAndContinue(
   mockResult.success = false;
   mockResult.error = errorMessage;
   mockResult.exitCode = 1;
-  mockResult.completionStatus = 'failed';
+  mockResult.completionStatus = "failed";
 
   vi.mocked(executeOperation).mockResolvedValue(mockResult);
 
@@ -310,7 +310,7 @@ async function executeActionWithFailureAndContinue(
   );
 
   // Import and run the action
-  const { run } = await import('../../src/main');
+  const { run } = await import("../../src/main");
 
   try {
     await run();
@@ -332,8 +332,8 @@ async function _executeActionWithValidationError(
   errorMessage: string
 ) {
   // Import mocked modules - we need to mock the validation functions
-  const validationModule = await import('../../src/utils/validation');
-  const core = await import('@actions/core');
+  const validationModule = await import("../../src/utils/validation");
+  const core = await import("@actions/core");
 
   // Set up environment
   Object.entries(env).forEach(([key, value]) => {
@@ -345,13 +345,13 @@ async function _executeActionWithValidationError(
 
   // Mock core functions to capture inputs and outputs
   vi.mocked(core.getInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value || '';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value || "";
   });
 
   vi.mocked(core.getBooleanInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value === 'true';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value === "true";
   });
 
   vi.mocked(core.setOutput).mockImplementation(
@@ -362,27 +362,27 @@ async function _executeActionWithValidationError(
 
   vi.mocked(core.setFailed).mockImplementation((message: string | Error) => {
     exitCode = 1;
-    outputs.error = typeof message === 'string' ? message : message.message;
+    outputs.error = typeof message === "string" ? message : message.message;
   });
 
   // Mock createValidationContext first
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
     {} as any
   );
 
   // Mock validation to throw an error
-  vi.spyOn(validationModule, 'validateOperationWithContext').mockImplementation(
+  vi.spyOn(validationModule, "validateOperationWithContext").mockImplementation(
     () => {
       throw new Error(errorMessage);
     }
   );
 
   // Mock error handler for validation errors
-  const { handleError } = await import('../../src/errors/error-handler');
+  const { handleError } = await import("../../src/errors/error-handler");
   vi.mocked(handleError).mockReturnValue();
 
   // Import and run the action
-  const { run } = await import('../../src/main');
+  const { run } = await import("../../src/main");
 
   try {
     await run();
@@ -401,9 +401,9 @@ async function _executeActionWithValidationError(
  */
 async function executeActionWithTruncation(env: Record<string, string>) {
   // Import mocked modules
-  const { executeOperation } = await import('../../src/operations/router');
-  const { OutputFormatter } = await import('../../src/outputs/formatter');
-  const core = await import('@actions/core');
+  const { executeOperation } = await import("../../src/operations/router");
+  const { OutputFormatter } = await import("../../src/outputs/formatter");
+  const core = await import("@actions/core");
 
   // Set up environment
   Object.entries(env).forEach(([key, value]) => {
@@ -415,13 +415,13 @@ async function executeActionWithTruncation(env: Record<string, string>) {
 
   // Mock core functions
   vi.mocked(core.getInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value || '';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value || "";
   });
 
   vi.mocked(core.getBooleanInput).mockImplementation((name: string) => {
-    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, '_')}`];
-    return value === 'true';
+    const value = env[`INPUT_${name.toUpperCase().replace(/-/g, "_")}`];
+    return value === "true";
   });
 
   vi.mocked(core.setOutput).mockImplementation(
@@ -431,22 +431,22 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   );
 
   // Determine the operation from inputs
-  const operation = env.INPUT_OPERATION || 'deploy';
-  const stage = env.INPUT_STAGE || 'test';
+  const operation = env.INPUT_OPERATION || "deploy";
+  const stage = env.INPUT_STAGE || "test";
 
   // Mock validation functions to return proper inputs
-  const validationModule = await import('../../src/utils/validation');
-  vi.spyOn(validationModule, 'createValidationContext').mockReturnValue(
+  const validationModule = await import("../../src/utils/validation");
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
     {} as any
   );
-  vi.spyOn(validationModule, 'validateOperationWithContext').mockReturnValue({
+  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
     operation: operation as any,
     stage,
-    token: env.INPUT_TOKEN || 'fake-token',
-    commentMode: (env['INPUT_COMMENT-MODE'] || 'on-success') as any,
-    failOnError: env['INPUT_FAIL-ON-ERROR'] !== 'false',
-    maxOutputSize: Number.parseInt(env['INPUT_MAX-OUTPUT-SIZE'] || '50000', 10),
-    runner: 'bun' as const,
+    token: env.INPUT_TOKEN || "fake-token",
+    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
+    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
+    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    runner: "bun" as const,
   });
 
   // Mock operation execution with truncated result
@@ -465,7 +465,7 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   );
 
   // Import and run the action
-  const { run } = await import('../../src/main');
+  const { run } = await import("../../src/main");
 
   try {
     await run();
@@ -487,39 +487,39 @@ function createMockOperationResult(operation: string, stage: string): any {
     success: true,
     operation,
     stage,
-    app: 'test-app',
+    app: "test-app",
     rawOutput: `${operation} completed successfully`,
     exitCode: 0,
     truncated: false,
-    completionStatus: 'complete',
+    completionStatus: "complete",
   };
 
   switch (operation) {
-    case 'deploy':
+    case "deploy":
       return {
         ...baseResult,
         resourceChanges: 5,
-        urls: [{ name: 'API', url: 'https://api.example.com', type: 'api' }],
+        urls: [{ name: "API", url: "https://api.example.com", type: "api" }],
         resources: [
-          { type: 'Function', name: 'TestFunction', status: 'created' },
+          { type: "Function", name: "TestFunction", status: "created" },
         ],
-        permalink: 'https://console.sst.dev/test-app/test-integration',
+        permalink: "https://console.sst.dev/test-app/test-integration",
         error: undefined,
       };
-    case 'diff':
+    case "diff":
       return {
         ...baseResult,
         plannedChanges: 3,
-        changeSummary: 'Found 3 planned changes',
-        changes: [{ type: 'Lambda', name: 'Function1', action: 'create' }],
+        changeSummary: "Found 3 planned changes",
+        changes: [{ type: "Lambda", name: "Function1", action: "create" }],
         error: undefined,
       };
-    case 'remove':
+    case "remove":
       return {
         ...baseResult,
         resourcesRemoved: 7,
         removedResources: [
-          { type: 'Function', name: 'OldFunction', status: 'removed' },
+          { type: "Function", name: "OldFunction", status: "removed" },
         ],
         error: undefined,
       };
@@ -540,13 +540,13 @@ function createMockFormattedOutputs(result: any) {
   const baseOutputs = createBaseOutputs(result);
 
   switch (result.operation) {
-    case 'deploy':
+    case "deploy":
       return createDeployOutputs(baseOutputs, result);
-    case 'diff':
+    case "diff":
       return createDiffOutputs(baseOutputs, result);
-    case 'remove':
+    case "remove":
       return createRemoveOutputs(baseOutputs, result);
-    case 'stage':
+    case "stage":
       return createStageOutputs(result);
     default:
       throw new Error(`Unknown operation: ${result.operation}`);
@@ -558,14 +558,14 @@ function createMockFormattedOutputs(result: any) {
  */
 function createBaseOutputs(result: any) {
   return {
-    success: result.success ? 'true' : 'false',
+    success: result.success ? "true" : "false",
     operation: result.operation,
     stage: result.stage,
     completion_status: result.completionStatus,
     app: result.app,
-    truncated: result.truncated ? 'true' : 'false',
-    error: result.error || '',
-    permalink: result.permalink || '',
+    truncated: result.truncated ? "true" : "false",
+    error: result.error || "",
+    permalink: result.permalink || "",
   };
 }
 
@@ -575,8 +575,8 @@ function createBaseOutputs(result: any) {
 function createDeployOutputs(baseOutputs: any, result: any) {
   return {
     ...baseOutputs,
-    operation: 'deploy',
-    resource_changes: String(result.resourceChanges || ''),
+    operation: "deploy",
+    resource_changes: String(result.resourceChanges || ""),
     urls: JSON.stringify(result.urls || []),
     resources: JSON.stringify(result.resources || []),
     ...getEmptyInfrastructureFields(),
@@ -589,12 +589,12 @@ function createDeployOutputs(baseOutputs: any, result: any) {
 function createDiffOutputs(baseOutputs: any, result: any) {
   return {
     ...baseOutputs,
-    operation: 'diff',
-    resource_changes: String(result.plannedChanges || ''),
-    urls: '',
-    resources: '',
-    diff_summary: result.changeSummary || '',
-    planned_changes: String(result.plannedChanges || ''),
+    operation: "diff",
+    resource_changes: String(result.plannedChanges || ""),
+    urls: "",
+    resources: "",
+    diff_summary: result.changeSummary || "",
+    planned_changes: String(result.plannedChanges || ""),
     ...getEmptyInfrastructureFields(false),
   };
 }
@@ -605,13 +605,13 @@ function createDiffOutputs(baseOutputs: any, result: any) {
 function createRemoveOutputs(baseOutputs: any, result: any) {
   return {
     ...baseOutputs,
-    operation: 'remove',
-    resource_changes: String(result.resourcesRemoved || ''),
-    urls: '',
-    resources: '',
-    diff_summary: '',
-    planned_changes: '',
-    resources_removed: String(result.resourcesRemoved || ''),
+    operation: "remove",
+    resource_changes: String(result.resourcesRemoved || ""),
+    urls: "",
+    resources: "",
+    diff_summary: "",
+    planned_changes: "",
+    resources_removed: String(result.resourcesRemoved || ""),
     removed_resources: JSON.stringify(result.removedResources || []),
     ...getEmptyInfrastructureFields(false),
   };
@@ -622,25 +622,25 @@ function createRemoveOutputs(baseOutputs: any, result: any) {
  */
 function createStageOutputs(result: any) {
   return {
-    success: result.success ? 'true' : 'false',
-    operation: 'stage',
+    success: result.success ? "true" : "false",
+    operation: "stage",
     stage: result.stage,
     completion_status: result.completionStatus,
     computed_stage: result.computedStage || result.stage,
-    ref: result.ref || '',
-    event_name: result.eventName || '',
-    is_pull_request: result.isPullRequest ? 'true' : 'false',
-    app: '',
-    permalink: '',
-    truncated: 'false',
-    resource_changes: '',
-    error: result.error || '',
-    urls: '',
-    resources: '',
-    diff_summary: '',
-    planned_changes: '',
-    resources_removed: '',
-    removed_resources: '',
+    ref: result.ref || "",
+    event_name: result.eventName || "",
+    is_pull_request: result.isPullRequest ? "true" : "false",
+    app: "",
+    permalink: "",
+    truncated: "false",
+    resource_changes: "",
+    error: result.error || "",
+    urls: "",
+    resources: "",
+    diff_summary: "",
+    planned_changes: "",
+    resources_removed: "",
+    removed_resources: "",
   };
 }
 
@@ -649,21 +649,21 @@ function createStageOutputs(result: any) {
  */
 function getEmptyInfrastructureFields(includeStageFields = true) {
   const fields: any = {
-    resources_removed: '',
-    removed_resources: '',
+    resources_removed: "",
+    removed_resources: "",
   };
 
   if (includeStageFields) {
-    fields.diff_summary = '';
-    fields.planned_changes = '';
+    fields.diff_summary = "";
+    fields.planned_changes = "";
   }
 
   return {
     ...fields,
-    computed_stage: '',
-    ref: '',
-    event_name: '',
-    is_pull_request: '',
+    computed_stage: "",
+    ref: "",
+    event_name: "",
+    is_pull_request: "",
   };
 }
 
@@ -683,50 +683,50 @@ function _executeActionE2E(
     const actionEnv = {
       ...process.env,
       ...env,
-      GITHUB_ACTIONS: 'true',
-      GITHUB_WORKFLOW: 'test-workflow',
-      GITHUB_RUN_ID: '123456',
-      GITHUB_RUN_NUMBER: '1',
-      GITHUB_REPOSITORY: 'test-org/test-repo',
-      GITHUB_REF: 'refs/heads/main',
-      GITHUB_SHA: 'abc123def456',
-      GITHUB_ACTOR: 'test-actor',
-      GITHUB_EVENT_NAME: 'push',
+      GITHUB_ACTIONS: "true",
+      GITHUB_WORKFLOW: "test-workflow",
+      GITHUB_RUN_ID: "123456",
+      GITHUB_RUN_NUMBER: "1",
+      GITHUB_REPOSITORY: "test-org/test-repo",
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_SHA: "abc123def456",
+      GITHUB_ACTOR: "test-actor",
+      GITHUB_EVENT_NAME: "push",
       ...Object.fromEntries(
         Object.entries(inputs).map(([key, value]) => [
-          `INPUT_${key.toUpperCase().replace(/-/g, '_')}`,
+          `INPUT_${key.toUpperCase().replace(/-/g, "_")}`,
           value,
         ])
       ),
     };
 
-    const child = spawn('node', [ACTION_DIST_PATH], {
-      stdio: 'pipe',
+    const child = spawn("node", [ACTION_DIST_PATH], {
+      stdio: "pipe",
       env: actionEnv,
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    child.stdout?.on('data', (data) => {
+    child.stdout?.on("data", (data) => {
       stdout += data.toString();
     });
 
-    child.stderr?.on('data', (data) => {
+    child.stderr?.on("data", (data) => {
       stderr += data.toString();
     });
 
     const timer = setTimeout(() => {
-      child.kill('SIGTERM');
+      child.kill("SIGTERM");
       resolve({
         exitCode: -1,
         stdout,
-        stderr: stderr + '\nTimeout: Process killed',
+        stderr: stderr + "\nTimeout: Process killed",
         outputs: {},
       });
     }, E2E_TIMEOUT);
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       clearTimeout(timer);
 
       const outputs: Record<string, string> = {};
@@ -748,7 +748,7 @@ function _executeActionE2E(
       });
     });
 
-    child.on('error', (error) => {
+    child.on("error", (error) => {
       clearTimeout(timer);
       resolve({
         exitCode: -1,
@@ -767,15 +767,15 @@ function _createTestProject(projectPath: string) {
   mkdirSync(projectPath, { recursive: true });
 
   const packageJson = {
-    name: 'integration-test-project',
-    version: '0.1.0',
-    type: 'module',
+    name: "integration-test-project",
+    version: "0.1.0",
+    type: "module",
     dependencies: {
-      sst: '^3.0.0',
+      sst: "^3.0.0",
     },
   };
   writeFileSync(
-    join(projectPath, 'package.json'),
+    join(projectPath, "package.json"),
     JSON.stringify(packageJson, null, 2)
   );
 
@@ -800,29 +800,29 @@ export default $config({
   },
 });
 `;
-  writeFileSync(join(projectPath, 'sst.config.ts'), sstConfig);
+  writeFileSync(join(projectPath, "sst.config.ts"), sstConfig);
 }
 
-describe('SST Operations Action - Integration Workflows', () => {
+describe("SST Operations Action - Integration Workflows", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Clear environment variables
     Object.keys(process.env).forEach((key) => {
-      if (key.startsWith('INPUT_')) {
+      if (key.startsWith("INPUT_")) {
         delete process.env[key];
       }
     });
   });
 
-  describe('Deploy Operation - Complete Workflows', () => {
-    it('should deploy application successfully with GitHub integration', async () => {
+  describe("Deploy Operation - Complete Workflows", () => {
+    it("should deploy application successfully with GitHub integration", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test-integration',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'on-success',
-        'INPUT_FAIL-ON-ERROR': 'true',
-        'INPUT_MAX-OUTPUT-SIZE': '50000',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test-integration",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "on-success",
+        "INPUT_FAIL-ON-ERROR": "true",
+        "INPUT_MAX-OUTPUT-SIZE": "50000",
       };
 
       // SST CLI execution is mocked through the router
@@ -831,42 +831,42 @@ describe('SST Operations Action - Integration Workflows', () => {
 
       // Verify successful execution
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
-      expect(result.outputs.operation).toBe('deploy');
-      expect(result.outputs.stage).toBe('test-integration');
-      expect(result.outputs.completion_status).toBe('complete');
+      expect(result.outputs.success).toBe("true");
+      expect(result.outputs.operation).toBe("deploy");
+      expect(result.outputs.stage).toBe("test-integration");
+      expect(result.outputs.completion_status).toBe("complete");
 
       // Verify core actions were called (core is mocked in setup.ts)
     });
 
-    it('should handle deployment failures with proper error reporting', async () => {
+    it("should handle deployment failures with proper error reporting", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test-integration',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'always',
-        'INPUT_FAIL-ON-ERROR': 'true',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test-integration",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "always",
+        "INPUT_FAIL-ON-ERROR": "true",
       };
 
       const result = await executeActionWithFailure(
         env,
-        'Deploy failed: Authentication error'
+        "Deploy failed: Authentication error"
       );
 
       expect(result.exitCode).toBe(1);
-      expect(result.outputs.success).toBe('false');
-      expect(result.outputs.error).toContain('Deploy failed');
+      expect(result.outputs.success).toBe("false");
+      expect(result.outputs.error).toContain("Deploy failed");
     });
   });
 
-  describe('Diff Operation - Planning Workflows', () => {
-    it('should analyze deployment changes and report planned resources', async () => {
+  describe("Diff Operation - Planning Workflows", () => {
+    it("should analyze deployment changes and report planned resources", async () => {
       const env = {
-        INPUT_OPERATION: 'diff',
-        INPUT_STAGE: 'staging',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'always',
-        'INPUT_FAIL-ON-ERROR': 'false',
+        INPUT_OPERATION: "diff",
+        INPUT_STAGE: "staging",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "always",
+        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       // SST CLI execution is mocked through the router
@@ -874,9 +874,9 @@ describe('SST Operations Action - Integration Workflows', () => {
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
-      expect(result.outputs.operation).toBe('diff');
-      expect(result.outputs.stage).toBe('staging');
+      expect(result.outputs.success).toBe("true");
+      expect(result.outputs.operation).toBe("diff");
+      expect(result.outputs.stage).toBe("staging");
 
       // Verify diff-specific outputs
       expect(result.outputs.planned_changes).toBeDefined();
@@ -886,14 +886,14 @@ describe('SST Operations Action - Integration Workflows', () => {
     });
   });
 
-  describe('Remove Operation - Cleanup Workflows', () => {
-    it('should remove deployed resources and report cleanup results', async () => {
+  describe("Remove Operation - Cleanup Workflows", () => {
+    it("should remove deployed resources and report cleanup results", async () => {
       const env = {
-        INPUT_OPERATION: 'remove',
-        INPUT_STAGE: 'temp-test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'on-success',
-        'INPUT_FAIL-ON-ERROR': 'true',
+        INPUT_OPERATION: "remove",
+        INPUT_STAGE: "temp-test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "on-success",
+        "INPUT_FAIL-ON-ERROR": "true",
       };
 
       // SST CLI execution is mocked through the router
@@ -901,9 +901,9 @@ describe('SST Operations Action - Integration Workflows', () => {
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
-      expect(result.outputs.operation).toBe('remove');
-      expect(result.outputs.stage).toBe('temp-test');
+      expect(result.outputs.success).toBe("true");
+      expect(result.outputs.operation).toBe("remove");
+      expect(result.outputs.stage).toBe("temp-test");
 
       // Verify remove-specific outputs
       expect(result.outputs.resources_removed).toBeDefined();
@@ -913,50 +913,50 @@ describe('SST Operations Action - Integration Workflows', () => {
     });
   });
 
-  describe('Input Processing - Validation Workflows', () => {
-    it('should validate user inputs and execute operations with proper configuration', async () => {
+  describe("Input Processing - Validation Workflows", () => {
+    it("should validate user inputs and execute operations with proper configuration", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'never',
-        'INPUT_FAIL-ON-ERROR': 'false',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
-      expect(result.outputs.operation).toBe('deploy');
-      expect(result.outputs.stage).toBe('test');
+      expect(result.outputs.success).toBe("true");
+      expect(result.outputs.operation).toBe("deploy");
+      expect(result.outputs.stage).toBe("test");
     });
 
-    it('should support all operation types with appropriate input validation', async () => {
+    it("should support all operation types with appropriate input validation", async () => {
       const env = {
-        INPUT_OPERATION: 'diff',
-        INPUT_STAGE: 'integration-test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'never',
-        'INPUT_FAIL-ON-ERROR': 'false',
+        INPUT_OPERATION: "diff",
+        INPUT_STAGE: "integration-test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
-      expect(result.outputs.operation).toBe('diff');
+      expect(result.outputs.success).toBe("true");
+      expect(result.outputs.operation).toBe("diff");
       expect(result.outputs.planned_changes).toBeDefined();
     });
   });
 
-  describe('GitHub Integration - Comment Workflows', () => {
-    it('should create PR comments based on configured comment mode', async () => {
+  describe("GitHub Integration - Comment Workflows", () => {
+    it("should create PR comments based on configured comment mode", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_COMMENT-MODE': 'never',
-        'INPUT_FAIL-ON-ERROR': 'false',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       // SST CLI execution is mocked through the router
@@ -964,62 +964,62 @@ describe('SST Operations Action - Integration Workflows', () => {
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
+      expect(result.outputs.success).toBe("true");
       // GitHub comment creation should respect comment-mode
     });
   });
 
-  describe('Error Handling - Recovery Workflows', () => {
-    it('should continue execution when fail-on-error is disabled', async () => {
+  describe("Error Handling - Recovery Workflows", () => {
+    it("should continue execution when fail-on-error is disabled", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_FAIL-ON-ERROR': 'false',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeActionWithFailureAndContinue(
         env,
-        'Deploy failed'
+        "Deploy failed"
       );
 
       // Should not fail the action when fail-on-error is false
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('false');
+      expect(result.outputs.success).toBe("false");
     });
   });
 
-  describe('Output Management - Size Limit Workflows', () => {
-    it('should truncate large outputs while preserving essential information', async () => {
+  describe("Output Management - Size Limit Workflows", () => {
+    it("should truncate large outputs while preserving essential information", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'test',
-        INPUT_TOKEN: 'fake-token',
-        'INPUT_MAX-OUTPUT-SIZE': '100', // Very small limit
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test",
+        INPUT_TOKEN: "fake-token",
+        "INPUT_MAX-OUTPUT-SIZE": "100", // Very small limit
       };
 
       const result = await executeActionWithTruncation(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.truncated).toBe('true');
+      expect(result.outputs.truncated).toBe("true");
     });
   });
 
-  describe('Environment Compatibility - CI/CD Workflows', () => {
-    it('should execute successfully in various GitHub Actions environments', async () => {
+  describe("Environment Compatibility - CI/CD Workflows", () => {
+    it("should execute successfully in various GitHub Actions environments", async () => {
       const env = {
-        INPUT_OPERATION: 'deploy',
-        INPUT_STAGE: 'production',
-        INPUT_TOKEN: 'ghp_test_token_123',
-        GITHUB_REPOSITORY: 'test-org/test-repo',
-        GITHUB_REF: 'refs/heads/main',
-        CI: 'true',
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "production",
+        INPUT_TOKEN: "ghp_test_token_123",
+        GITHUB_REPOSITORY: "test-org/test-repo",
+        GITHUB_REF: "refs/heads/main",
+        CI: "true",
       };
 
       const result = await executeAction(env);
 
       expect(result.exitCode).toBe(0);
-      expect(result.outputs.success).toBe('true');
+      expect(result.outputs.success).toBe("true");
       // Should handle production environment appropriately
     });
   });

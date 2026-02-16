@@ -1,9 +1,9 @@
-import { beforeEach, vi } from 'vitest';
+import { beforeEach, vi } from "vitest";
 
 (globalThis as any).vi = vi;
 
 // Mock GitHub Actions core and github modules for tests
-vi.mock('@actions/core', () => ({
+vi.mock("@actions/core", () => ({
   getInput: vi.fn(),
   getBooleanInput: vi.fn(),
   setOutput: vi.fn(),
@@ -23,8 +23,8 @@ vi.mock('@actions/core', () => ({
 
 const mockContext = {
   repo: {
-    owner: 'test-owner',
-    repo: 'test-repo',
+    owner: "test-owner",
+    repo: "test-repo",
   },
   issue: {
     number: 1,
@@ -32,43 +32,43 @@ const mockContext = {
   payload: {
     pull_request: { number: 123 },
   },
-  eventName: 'pull_request',
-  ref: 'refs/heads/main',
-  ref_name: 'main',
+  eventName: "pull_request",
+  ref: "refs/heads/main",
+  ref_name: "main",
 };
 
-vi.mock('@actions/github', () => ({
+vi.mock("@actions/github", () => ({
   context: mockContext,
   getOctokit: vi.fn(),
 }));
 
-vi.mock('@actions/exec', () => ({
+vi.mock("@actions/exec", () => ({
   exec: vi.fn(),
 }));
 
-vi.mock('@actions/artifact', () => ({
+vi.mock("@actions/artifact", () => ({
   DefaultArtifactClient: vi.fn().mockImplementation(() => ({
     uploadArtifact: vi.fn().mockResolvedValue({
-      artifactName: 'test-artifact',
+      artifactName: "test-artifact",
       size: 1024,
     }),
   })),
 }));
 
-vi.mock('@actions/io', () => ({
+vi.mock("@actions/io", () => ({
   mkdirP: vi.fn(),
 }));
 
-vi.mock('node:fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs')>();
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
   return {
     ...actual,
     access: vi.fn(),
   };
 });
 
-vi.mock('node:fs/promises', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs/promises')>();
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...actual,
     writeFile: vi.fn(),
@@ -76,23 +76,23 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-vi.mock('os', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('os')>();
+vi.mock("os", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("os")>();
   return {
     ...actual,
-    tmpdir: vi.fn(() => '/tmp'),
+    tmpdir: vi.fn(() => "/tmp"),
   };
 });
 
-vi.mock('node:path', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:path')>();
+vi.mock("node:path", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:path")>();
   return {
     ...actual,
-    join: vi.fn((...paths: string[]) => paths.join('/')),
+    join: vi.fn((...paths: string[]) => paths.join("/")),
   };
 });
 
-vi.mock('node:util', () => ({
+vi.mock("node:util", () => ({
   promisify: vi.fn((fn) => vi.fn(fn)),
 }));
 

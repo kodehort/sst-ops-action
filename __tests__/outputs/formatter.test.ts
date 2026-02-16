@@ -1,122 +1,122 @@
-import { describe, expect, it } from 'vitest';
-import { OutputFormatter } from '../../src/outputs/formatter';
+import { describe, expect, it } from "vitest";
+import { OutputFormatter } from "../../src/outputs/formatter";
 import type {
   DeployResult,
   DiffResult,
   OperationResult,
   RemoveResult,
   StageResult,
-} from '../../src/types';
+} from "../../src/types";
 
-describe('Output Formatter - GitHub Actions Output Processing', () => {
-  describe('formatOperationForGitHubActions', () => {
-    describe('deploy operations', () => {
-      it('should format successful deploy result correctly', () => {
+describe("Output Formatter - GitHub Actions Output Processing", () => {
+  describe("formatOperationForGitHubActions", () => {
+    describe("deploy operations", () => {
+      it("should format successful deploy result correctly", () => {
         const deployResult: DeployResult = {
           success: true,
-          operation: 'deploy',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Deploy completed successfully',
+          operation: "deploy",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Deploy completed successfully",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           resourceChanges: 3,
           outputs: [
-            { key: 'API', value: 'https://api.example.com' },
-            { key: 'Web', value: 'https://web.example.com' },
+            { key: "API", value: "https://api.example.com" },
+            { key: "Web", value: "https://web.example.com" },
           ],
           resources: [
-            { type: 'Function', name: 'MyFunction', status: 'created' },
-            { type: 'Api', name: 'MyApi', status: 'updated' },
+            { type: "Function", name: "MyFunction", status: "created" },
+            { type: "Api", name: "MyApi", status: "updated" },
           ],
           permalink:
-            'https://console.sst.dev/test-app/staging/deployments/abc123',
+            "https://console.sst.dev/test-app/staging/deployments/abc123",
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(deployResult);
 
         expect(outputs).toEqual({
-          success: 'true',
-          operation: 'deploy',
-          stage: 'staging',
-          completion_status: 'complete',
-          app: 'test-app',
+          success: "true",
+          operation: "deploy",
+          stage: "staging",
+          completion_status: "complete",
+          app: "test-app",
           permalink:
-            'https://console.sst.dev/test-app/staging/deployments/abc123',
-          truncated: 'false',
-          resource_changes: '3',
-          error: '',
+            "https://console.sst.dev/test-app/staging/deployments/abc123",
+          truncated: "false",
+          resource_changes: "3",
+          error: "",
           outputs: JSON.stringify(deployResult.outputs),
           resources: JSON.stringify(deployResult.resources),
-          diff_summary: '',
-          planned_changes: '',
-          resources_removed: '',
-          removed_resources: '',
-          computed_stage: '',
-          ref: '',
-          event_name: '',
-          is_pull_request: '',
+          diff_summary: "",
+          planned_changes: "",
+          resources_removed: "",
+          removed_resources: "",
+          computed_stage: "",
+          ref: "",
+          event_name: "",
+          is_pull_request: "",
         });
       });
 
-      it('should handle deploy result with missing optional fields', () => {
+      it("should handle deploy result with missing optional fields", () => {
         const deployResult: DeployResult = {
           success: false,
-          operation: 'deploy',
-          stage: 'production',
-          app: 'test-app',
-          rawOutput: 'Deploy failed',
+          operation: "deploy",
+          stage: "production",
+          app: "test-app",
+          rawOutput: "Deploy failed",
           exitCode: 1,
           truncated: false,
-          completionStatus: 'failed',
+          completionStatus: "failed",
           resourceChanges: 0,
           outputs: [],
           resources: [],
-          error: 'Deployment failed due to timeout',
+          error: "Deployment failed due to timeout",
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(deployResult);
 
-        expect(outputs.success).toBe('false');
-        expect(outputs.operation).toBe('deploy');
-        expect(outputs.stage).toBe('production');
-        expect(outputs.completion_status).toBe('failed');
-        expect(outputs.resource_changes).toBe('0');
-        expect(outputs.outputs).toBe('[]');
-        expect(outputs.resources).toBe('[]');
-        expect(outputs.error).toBe('Deployment failed due to timeout');
-        expect(outputs.permalink).toBe('');
+        expect(outputs.success).toBe("false");
+        expect(outputs.operation).toBe("deploy");
+        expect(outputs.stage).toBe("production");
+        expect(outputs.completion_status).toBe("failed");
+        expect(outputs.resource_changes).toBe("0");
+        expect(outputs.outputs).toBe("[]");
+        expect(outputs.resources).toBe("[]");
+        expect(outputs.error).toBe("Deployment failed due to timeout");
+        expect(outputs.permalink).toBe("");
       });
     });
 
-    describe('diff operations', () => {
-      it('should format successful diff result correctly', () => {
+    describe("diff operations", () => {
+      it("should format successful diff result correctly", () => {
         const diffResult: DiffResult = {
           success: true,
-          operation: 'diff',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Diff completed',
+          operation: "diff",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Diff completed",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           plannedChanges: 2,
-          changeSummary: 'Found 2 planned changes: 1 creation, 1 update',
+          changeSummary: "Found 2 planned changes: 1 creation, 1 update",
           changes: [
             {
-              type: 'Function',
-              name: 'MyFunction',
-              action: 'create',
-              details: '',
+              type: "Function",
+              name: "MyFunction",
+              action: "create",
+              details: "",
             },
             {
-              type: 'Api',
-              name: 'MyApi',
-              action: 'update',
-              details: 'config updated',
+              type: "Api",
+              name: "MyApi",
+              action: "update",
+              details: "config updated",
             },
           ],
         };
@@ -125,69 +125,69 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           OutputFormatter.formatOperationForGitHubActions(diffResult);
 
         expect(outputs).toEqual({
-          success: 'true',
-          operation: 'diff',
-          stage: 'staging',
-          completion_status: 'complete',
-          app: 'test-app',
-          permalink: '',
-          truncated: 'false',
-          resource_changes: '2',
-          error: '',
-          outputs: '',
-          resources: '',
-          diff_summary: 'Found 2 planned changes: 1 creation, 1 update',
-          planned_changes: '2',
-          resources_removed: '',
-          removed_resources: '',
-          computed_stage: '',
-          ref: '',
-          event_name: '',
-          is_pull_request: '',
+          success: "true",
+          operation: "diff",
+          stage: "staging",
+          completion_status: "complete",
+          app: "test-app",
+          permalink: "",
+          truncated: "false",
+          resource_changes: "2",
+          error: "",
+          outputs: "",
+          resources: "",
+          diff_summary: "Found 2 planned changes: 1 creation, 1 update",
+          planned_changes: "2",
+          resources_removed: "",
+          removed_resources: "",
+          computed_stage: "",
+          ref: "",
+          event_name: "",
+          is_pull_request: "",
         });
       });
 
-      it('should handle diff result with no changes', () => {
+      it("should handle diff result with no changes", () => {
         const diffResult: DiffResult = {
           success: true,
-          operation: 'diff',
-          stage: 'production',
-          app: 'test-app',
-          rawOutput: 'No changes detected',
+          operation: "diff",
+          stage: "production",
+          app: "test-app",
+          rawOutput: "No changes detected",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           plannedChanges: 0,
-          changeSummary: 'No changes detected',
+          changeSummary: "No changes detected",
           changes: [],
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(diffResult);
 
-        expect(outputs.success).toBe('true');
-        expect(outputs.operation).toBe('diff');
-        expect(outputs.resource_changes).toBe('0');
-        expect(outputs.planned_changes).toBe('0');
-        expect(outputs.diff_summary).toBe('No changes detected');
+        expect(outputs.success).toBe("true");
+        expect(outputs.operation).toBe("diff");
+        expect(outputs.resource_changes).toBe("0");
+        expect(outputs.planned_changes).toBe("0");
+        expect(outputs.diff_summary).toBe("No changes detected");
       });
     });
 
-    describe('remove operations', () => {
-      it('should format successful remove result correctly', () => {
+    describe("remove operations", () => {
+      it("should format successful remove result correctly", () => {
         const removeResult: RemoveResult = {
           success: true,
-          operation: 'remove',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Remove completed',
+          operation: "remove",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Remove completed",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           resourcesRemoved: 2,
           removedResources: [
-            { type: 'Function', name: 'MyFunction', status: 'removed' },
-            { type: 'Api', name: 'MyApi', status: 'removed' },
+            { type: "Function", name: "MyFunction", status: "removed" },
+            { type: "Api", name: "MyApi", status: "removed" },
           ],
         };
 
@@ -195,73 +195,73 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           OutputFormatter.formatOperationForGitHubActions(removeResult);
 
         expect(outputs).toEqual({
-          success: 'true',
-          operation: 'remove',
-          stage: 'staging',
-          completion_status: 'complete',
-          app: 'test-app',
-          permalink: '',
-          truncated: 'false',
-          resource_changes: '2',
-          error: '',
-          outputs: '',
-          resources: '',
-          diff_summary: '',
-          planned_changes: '',
-          resources_removed: '2',
+          success: "true",
+          operation: "remove",
+          stage: "staging",
+          completion_status: "complete",
+          app: "test-app",
+          permalink: "",
+          truncated: "false",
+          resource_changes: "2",
+          error: "",
+          outputs: "",
+          resources: "",
+          diff_summary: "",
+          planned_changes: "",
+          resources_removed: "2",
           removed_resources: JSON.stringify(removeResult.removedResources),
-          computed_stage: '',
-          ref: '',
-          event_name: '',
-          is_pull_request: '',
+          computed_stage: "",
+          ref: "",
+          event_name: "",
+          is_pull_request: "",
         });
       });
 
-      it('should handle remove result with partial failure', () => {
+      it("should handle remove result with partial failure", () => {
         const removeResult: RemoveResult = {
           success: true,
-          operation: 'remove',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Remove partially completed',
+          operation: "remove",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Remove partially completed",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'partial',
+          completionStatus: "partial",
           resourcesRemoved: 1,
           removedResources: [
-            { type: 'Function', name: 'MyFunction', status: 'removed' },
-            { type: 'Api', name: 'MyApi', status: 'failed' },
+            { type: "Function", name: "MyFunction", status: "removed" },
+            { type: "Api", name: "MyApi", status: "failed" },
           ],
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(removeResult);
 
-        expect(outputs.success).toBe('true');
-        expect(outputs.completion_status).toBe('partial');
-        expect(outputs.resource_changes).toBe('1');
-        expect(outputs.resources_removed).toBe('1');
+        expect(outputs.success).toBe("true");
+        expect(outputs.completion_status).toBe("partial");
+        expect(outputs.resource_changes).toBe("1");
+        expect(outputs.resources_removed).toBe("1");
         expect(outputs.removed_resources).toBe(
           JSON.stringify(removeResult.removedResources)
         );
       });
     });
 
-    describe('stage operations', () => {
-      it('should format successful stage result correctly', () => {
+    describe("stage operations", () => {
+      it("should format successful stage result correctly", () => {
         const stageResult: StageResult = {
           success: true,
-          operation: 'stage',
-          stage: 'feature-branch',
-          app: 'stage-calculator',
+          operation: "stage",
+          stage: "feature-branch",
+          app: "stage-calculator",
           rawOutput:
-            'Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch',
+            "Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
-          computedStage: 'feature-branch',
-          ref: 'feature/branch',
-          eventName: 'pull_request',
+          completionStatus: "complete",
+          computedStage: "feature-branch",
+          ref: "feature/branch",
+          eventName: "pull_request",
           isPullRequest: true,
         };
 
@@ -269,92 +269,92 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
           OutputFormatter.formatOperationForGitHubActions(stageResult);
 
         expect(outputs).toEqual({
-          success: 'true',
-          operation: 'stage',
-          stage: 'feature-branch',
-          completion_status: 'complete',
-          app: '',
-          permalink: '',
-          truncated: 'false',
-          resource_changes: '',
-          error: '',
-          outputs: '',
-          resources: '',
-          diff_summary: '',
-          planned_changes: '',
-          resources_removed: '',
-          removed_resources: '',
-          computed_stage: 'feature-branch',
-          ref: 'feature/branch',
-          event_name: 'pull_request',
-          is_pull_request: 'true',
+          success: "true",
+          operation: "stage",
+          stage: "feature-branch",
+          completion_status: "complete",
+          app: "",
+          permalink: "",
+          truncated: "false",
+          resource_changes: "",
+          error: "",
+          outputs: "",
+          resources: "",
+          diff_summary: "",
+          planned_changes: "",
+          resources_removed: "",
+          removed_resources: "",
+          computed_stage: "feature-branch",
+          ref: "feature/branch",
+          event_name: "pull_request",
+          is_pull_request: "true",
         });
       });
 
-      it('should format stage result for push event', () => {
+      it("should format stage result for push event", () => {
         const stageResult: StageResult = {
           success: true,
-          operation: 'stage',
-          stage: 'main',
-          app: 'stage-calculator',
-          rawOutput: 'Stage computation successful',
+          operation: "stage",
+          stage: "main",
+          app: "stage-calculator",
+          rawOutput: "Stage computation successful",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
-          computedStage: 'main',
-          ref: 'refs/heads/main',
-          eventName: 'push',
+          completionStatus: "complete",
+          computedStage: "main",
+          ref: "refs/heads/main",
+          eventName: "push",
           isPullRequest: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(stageResult);
 
-        expect(outputs.computed_stage).toBe('main');
-        expect(outputs.ref).toBe('refs/heads/main');
-        expect(outputs.event_name).toBe('push');
-        expect(outputs.is_pull_request).toBe('false');
+        expect(outputs.computed_stage).toBe("main");
+        expect(outputs.ref).toBe("refs/heads/main");
+        expect(outputs.event_name).toBe("push");
+        expect(outputs.is_pull_request).toBe("false");
       });
 
-      it('should handle stage result with missing optional fields', () => {
+      it("should handle stage result with missing optional fields", () => {
         const stageResult: StageResult = {
           success: false,
-          operation: 'stage',
-          stage: 'fallback',
-          app: 'stage-calculator',
-          rawOutput: 'Stage computation failed',
+          operation: "stage",
+          stage: "fallback",
+          app: "stage-calculator",
+          rawOutput: "Stage computation failed",
           exitCode: 1,
           truncated: false,
-          error: 'Failed to compute stage from ref',
-          completionStatus: 'failed',
-          computedStage: 'fallback',
-          ref: '',
-          eventName: 'push',
+          error: "Failed to compute stage from ref",
+          completionStatus: "failed",
+          computedStage: "fallback",
+          ref: "",
+          eventName: "push",
           isPullRequest: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(stageResult);
 
-        expect(outputs.success).toBe('false');
-        expect(outputs.error).toBe('Failed to compute stage from ref');
-        expect(outputs.computed_stage).toBe('fallback');
-        expect(outputs.ref).toBe('');
-        expect(outputs.is_pull_request).toBe('false');
+        expect(outputs.success).toBe("false");
+        expect(outputs.error).toBe("Failed to compute stage from ref");
+        expect(outputs.computed_stage).toBe("fallback");
+        expect(outputs.ref).toBe("");
+        expect(outputs.is_pull_request).toBe("false");
       });
     });
 
-    describe('edge cases and error handling', () => {
-      it('should handle null and undefined values gracefully', () => {
+    describe("edge cases and error handling", () => {
+      it("should handle null and undefined values gracefully", () => {
         const result: OperationResult = {
           success: true,
-          operation: 'deploy',
-          stage: 'staging',
-          app: '',
-          rawOutput: '',
+          operation: "deploy",
+          stage: "staging",
+          app: "",
+          rawOutput: "",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           resourceChanges: 0,
           outputs: [],
           resources: [],
@@ -362,51 +362,51 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
         const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
-        expect(outputs.app).toBe('');
-        expect(outputs.permalink).toBe('');
-        expect(outputs.error).toBe('');
-        expect(outputs.outputs).toBe('[]');
-        expect(outputs.resources).toBe('[]');
+        expect(outputs.app).toBe("");
+        expect(outputs.permalink).toBe("");
+        expect(outputs.error).toBe("");
+        expect(outputs.outputs).toBe("[]");
+        expect(outputs.resources).toBe("[]");
       });
 
-      it('should handle JSON serialization errors gracefully', () => {
+      it("should handle JSON serialization errors gracefully", () => {
         const result: DeployResult = {
           success: true,
-          operation: 'deploy',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Deploy completed',
+          operation: "deploy",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Deploy completed",
           exitCode: 0,
           truncated: false,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           resourceChanges: 1,
           outputs: [],
           resources: [],
         };
 
         // Create a circular reference that would cause JSON.stringify to fail
-        const circularObj: any = { name: 'test' };
+        const circularObj: any = { name: "test" };
         circularObj.self = circularObj;
         result.outputs = [circularObj];
 
         const outputs = OutputFormatter.formatOperationForGitHubActions(result);
 
         // Should handle the error gracefully by returning empty string
-        expect(outputs.outputs).toBe('');
+        expect(outputs.outputs).toBe("");
       });
 
-      it('should convert all values to strings', () => {
+      it("should convert all values to strings", () => {
         const result: DiffResult = {
           success: true,
-          operation: 'diff',
-          stage: 'staging',
-          app: 'test-app',
-          rawOutput: 'Diff completed',
+          operation: "diff",
+          stage: "staging",
+          app: "test-app",
+          rawOutput: "Diff completed",
           exitCode: 0,
           truncated: true,
-          completionStatus: 'complete',
+          completionStatus: "complete",
           plannedChanges: 5,
-          changeSummary: 'Found changes',
+          changeSummary: "Found changes",
           changes: [],
         };
 
@@ -414,30 +414,30 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
         // All outputs should be strings
         for (const [_key, value] of Object.entries(outputs)) {
-          expect(typeof value).toBe('string');
+          expect(typeof value).toBe("string");
         }
       });
     });
   });
 
-  describe('validateOutputs', () => {
-    it('should pass validation for valid outputs', () => {
+  describe("validateOutputs", () => {
+    it("should pass validation for valid outputs", () => {
       const validOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        app: 'test-app',
-        permalink: '',
-        truncated: 'false',
-        resource_changes: '3',
-        error: '',
-        outputs: '[]',
-        resources: '[]',
-        diff_summary: '',
-        planned_changes: '',
-        resources_removed: '',
-        removed_resources: '',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        app: "test-app",
+        permalink: "",
+        truncated: "false",
+        resource_changes: "3",
+        error: "",
+        outputs: "[]",
+        resources: "[]",
+        diff_summary: "",
+        planned_changes: "",
+        resources_removed: "",
+        removed_resources: "",
       };
 
       expect(() => {
@@ -445,10 +445,10 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).not.toThrow();
     });
 
-    it('should throw error for missing required fields', () => {
+    it("should throw error for missing required fields", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'deploy',
+        success: "true",
+        operation: "deploy",
         // missing stage and completion_status
       };
 
@@ -457,13 +457,13 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/stage/);
     });
 
-    it('should validate boolean field values', () => {
+    it("should validate boolean field values", () => {
       const invalidOutputs = {
-        success: 'invalid', // Should be 'true' or 'false'
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
+        success: "invalid", // Should be 'true' or 'false'
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
       };
 
       expect(() => {
@@ -471,13 +471,13 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/success/);
     });
 
-    it('should validate operation field values', () => {
+    it("should validate operation field values", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'invalid-operation',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
+        success: "true",
+        operation: "invalid-operation",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
       };
 
       expect(() => {
@@ -485,13 +485,13 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/operation/);
     });
 
-    it('should validate completion_status field values', () => {
+    it("should validate completion_status field values", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'invalid-status',
-        truncated: 'false',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "invalid-status",
+        truncated: "false",
       };
 
       expect(() => {
@@ -499,14 +499,14 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/completion_status/);
     });
 
-    it('should validate numeric field values', () => {
+    it("should validate numeric field values", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
-        resource_changes: 'not-a-number',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
+        resource_changes: "not-a-number",
       };
 
       expect(() => {
@@ -514,14 +514,14 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/resource_changes/);
     });
 
-    it('should validate negative numbers are not allowed', () => {
+    it("should validate negative numbers are not allowed", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
-        resource_changes: '-5',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
+        resource_changes: "-5",
       };
 
       expect(() => {
@@ -529,14 +529,14 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/resource_changes/);
     });
 
-    it('should validate JSON field values', () => {
+    it("should validate JSON field values", () => {
       const invalidOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
-        outputs: 'invalid-json',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
+        outputs: "invalid-json",
       };
 
       expect(() => {
@@ -544,19 +544,19 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
       }).toThrow(/outputs.*JSON/i);
     });
 
-    it('should allow empty strings for optional fields', () => {
+    it("should allow empty strings for optional fields", () => {
       const validOutputs = {
-        success: 'true',
-        operation: 'deploy',
-        stage: 'staging',
-        completion_status: 'complete',
-        truncated: 'false',
-        app: '',
-        permalink: '',
-        error: '',
-        resource_changes: '',
-        urls: '',
-        resources: '',
+        success: "true",
+        operation: "deploy",
+        stage: "staging",
+        completion_status: "complete",
+        truncated: "false",
+        app: "",
+        permalink: "",
+        error: "",
+        resource_changes: "",
+        urls: "",
+        resources: "",
       };
 
       expect(() => {
@@ -565,85 +565,85 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
     });
   });
 
-  describe('utility methods', () => {
-    it('should return expected field names', () => {
+  describe("utility methods", () => {
+    it("should return expected field names", () => {
       const fields = OutputFormatter.getExpectedFields();
 
-      expect(fields).toContain('success');
-      expect(fields).toContain('operation');
-      expect(fields).toContain('stage');
-      expect(fields).toContain('completion_status');
-      expect(fields).toContain('outputs');
-      expect(fields).toContain('diff_summary');
-      expect(fields).toContain('resources_removed');
+      expect(fields).toContain("success");
+      expect(fields).toContain("operation");
+      expect(fields).toContain("stage");
+      expect(fields).toContain("completion_status");
+      expect(fields).toContain("outputs");
+      expect(fields).toContain("diff_summary");
+      expect(fields).toContain("resources_removed");
       expect(fields.length).toBe(19);
     });
 
-    it('should return required field names', () => {
+    it("should return required field names", () => {
       const requiredFields = OutputFormatter.getRequiredFields();
 
       expect(requiredFields).toEqual([
-        'success',
-        'operation',
-        'stage',
-        'completion_status',
+        "success",
+        "operation",
+        "stage",
+        "completion_status",
       ]);
     });
 
-    describe('validateOperationConsistency', () => {
-      it('should set default values for deploy operations', () => {
+    describe("validateOperationConsistency", () => {
+      it("should set default values for deploy operations", () => {
         const outputs: Record<string, string> = {
-          success: 'true',
-          operation: 'deploy',
-          stage: 'staging',
-          completion_status: 'complete',
+          success: "true",
+          operation: "deploy",
+          stage: "staging",
+          completion_status: "complete",
         };
 
-        OutputFormatter.validateOperationConsistency(outputs, 'deploy');
+        OutputFormatter.validateOperationConsistency(outputs, "deploy");
 
-        expect(outputs.outputs).toBe('[]');
-        expect(outputs.resources).toBe('[]');
+        expect(outputs.outputs).toBe("[]");
+        expect(outputs.resources).toBe("[]");
       });
 
-      it('should set default values for diff operations', () => {
+      it("should set default values for diff operations", () => {
         const outputs: Record<string, string> = {
-          success: 'true',
-          operation: 'diff',
-          stage: 'staging',
-          completion_status: 'complete',
+          success: "true",
+          operation: "diff",
+          stage: "staging",
+          completion_status: "complete",
         };
 
-        OutputFormatter.validateOperationConsistency(outputs, 'diff');
+        OutputFormatter.validateOperationConsistency(outputs, "diff");
 
-        expect(outputs.planned_changes).toBe('0');
-        expect(outputs.diff_summary).toBe('');
+        expect(outputs.planned_changes).toBe("0");
+        expect(outputs.diff_summary).toBe("");
       });
 
-      it('should set default values for remove operations', () => {
+      it("should set default values for remove operations", () => {
         const outputs: Record<string, string> = {
-          success: 'true',
-          operation: 'remove',
-          stage: 'staging',
-          completion_status: 'complete',
+          success: "true",
+          operation: "remove",
+          stage: "staging",
+          completion_status: "complete",
         };
 
-        OutputFormatter.validateOperationConsistency(outputs, 'remove');
+        OutputFormatter.validateOperationConsistency(outputs, "remove");
 
-        expect(outputs.resources_removed).toBe('0');
-        expect(outputs.removed_resources).toBe('[]');
+        expect(outputs.resources_removed).toBe("0");
+        expect(outputs.removed_resources).toBe("[]");
       });
 
-      it('should preserve existing values if already set', () => {
+      it("should preserve existing values if already set", () => {
         const outputs: Record<string, string> = {
-          success: 'true',
-          operation: 'deploy',
-          stage: 'staging',
-          completion_status: 'complete',
+          success: "true",
+          operation: "deploy",
+          stage: "staging",
+          completion_status: "complete",
           outputs: '[{"key":"API","value":"https://api.com"}]',
           resources: '[{"type":"Function","name":"MyFunc"}]',
         };
 
-        OutputFormatter.validateOperationConsistency(outputs, 'deploy');
+        OutputFormatter.validateOperationConsistency(outputs, "deploy");
 
         expect(outputs.outputs).toBe(
           '[{"key":"API","value":"https://api.com"}]'
@@ -651,31 +651,31 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
         expect(outputs.resources).toBe('[{"type":"Function","name":"MyFunc"}]');
       });
 
-      it('should set default values for stage operations', () => {
+      it("should set default values for stage operations", () => {
         const outputs: Record<string, string> = {};
 
-        OutputFormatter.validateOperationConsistency(outputs, 'stage');
+        OutputFormatter.validateOperationConsistency(outputs, "stage");
 
-        expect(outputs.computed_stage).toBe('');
-        expect(outputs.ref).toBe('');
-        expect(outputs.event_name).toBe('');
-        expect(outputs.is_pull_request).toBe('false');
+        expect(outputs.computed_stage).toBe("");
+        expect(outputs.ref).toBe("");
+        expect(outputs.event_name).toBe("");
+        expect(outputs.is_pull_request).toBe("false");
       });
 
-      it('should preserve existing stage values if already set', () => {
+      it("should preserve existing stage values if already set", () => {
         const outputs: Record<string, string> = {
-          computed_stage: 'feature-branch',
-          ref: 'feature/branch',
-          event_name: 'pull_request',
-          is_pull_request: 'true',
+          computed_stage: "feature-branch",
+          ref: "feature/branch",
+          event_name: "pull_request",
+          is_pull_request: "true",
         };
 
-        OutputFormatter.validateOperationConsistency(outputs, 'stage');
+        OutputFormatter.validateOperationConsistency(outputs, "stage");
 
-        expect(outputs.computed_stage).toBe('feature-branch');
-        expect(outputs.ref).toBe('feature/branch');
-        expect(outputs.event_name).toBe('pull_request');
-        expect(outputs.is_pull_request).toBe('true');
+        expect(outputs.computed_stage).toBe("feature-branch");
+        expect(outputs.ref).toBe("feature/branch");
+        expect(outputs.event_name).toBe("pull_request");
+        expect(outputs.is_pull_request).toBe("true");
       });
     });
   });

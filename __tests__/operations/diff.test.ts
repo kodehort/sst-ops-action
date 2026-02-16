@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubClient } from '../../src/github/client';
-import { DiffOperation } from '../../src/operations/diff';
-import type { DiffParser } from '../../src/parsers/diff-parser';
-import type { OperationOptions } from '../../src/types';
-import type { SSTCLIExecutor } from '../../src/utils/cli';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { GitHubClient } from "../../src/github/client";
+import { DiffOperation } from "../../src/operations/diff";
+import type { DiffParser } from "../../src/parsers/diff-parser";
+import type { OperationOptions } from "../../src/types";
+import type { SSTCLIExecutor } from "../../src/utils/cli";
 
 // Mock the dependencies
 const mockSSTExecutor = {
@@ -20,7 +20,7 @@ const mockDiffParser = {
   parse: vi.fn(),
 };
 
-describe('Diff Operation - Change Analysis Workflows', () => {
+describe("Diff Operation - Change Analysis Workflows", () => {
   let diffOperation: DiffOperation;
 
   beforeEach(() => {
@@ -32,9 +32,9 @@ describe('Diff Operation - Change Analysis Workflows', () => {
     );
   });
 
-  it('should execute diff operation successfully with changes detected', async () => {
+  it("should execute diff operation successfully with changes detected", async () => {
     const options: OperationOptions = {
-      stage: 'staging',
+      stage: "staging",
       maxOutputSize: 1_000_000,
     };
 
@@ -46,41 +46,41 @@ describe('Diff Operation - Change Analysis Workflows', () => {
 - Database OldDatabase
 
 Monthly: $45.50 → $67.80 (+$22.30)`,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
       duration: 5000,
     };
 
     const mockDiffResult = {
       success: true,
-      operation: 'diff' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
+      operation: "diff" as const,
+      stage: "staging",
+      app: "test-app",
+      rawOutput: "test output",
       exitCode: 0,
       truncated: false,
-      completionStatus: 'complete' as const,
+      completionStatus: "complete" as const,
       plannedChanges: 3,
       changeSummary:
-        'Found 3 planned changes: 1 creation, 1 update, 1 deletion. Cost increase: +$22.30 monthly.',
+        "Found 3 planned changes: 1 creation, 1 update, 1 deletion. Cost increase: +$22.30 monthly.",
       changes: [
         {
-          type: 'Function',
-          name: 'MyFunction',
-          action: 'create' as const,
-          details: '',
+          type: "Function",
+          name: "MyFunction",
+          action: "create" as const,
+          details: "",
         },
         {
-          type: 'Bucket',
-          name: 'MyBucket',
-          action: 'update' as const,
-          details: 'policy updated',
+          type: "Bucket",
+          name: "MyBucket",
+          action: "update" as const,
+          details: "policy updated",
         },
         {
-          type: 'Database',
-          name: 'OldDatabase',
-          action: 'delete' as const,
-          details: '',
+          type: "Database",
+          name: "OldDatabase",
+          action: "delete" as const,
+          details: "",
         },
       ],
     };
@@ -94,49 +94,49 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 
     expect(result).toEqual(mockDiffResult);
 
-    expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith('diff', 'staging', {
+    expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith("diff", "staging", {
       timeout: 300_000, // 5 minutes
       maxOutputSize: 1_000_000,
     });
 
     expect(mockDiffParser.parse).toHaveBeenCalledWith(
       mockSSTResult.stdout,
-      'staging',
+      "staging",
       0
     );
     expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
       mockDiffResult,
-      'never'
+      "never"
     );
     expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
       mockDiffResult
     );
   });
 
-  it('should handle diff operation with no changes detected', async () => {
+  it("should handle diff operation with no changes detected", async () => {
     const options: OperationOptions = {
-      stage: 'production',
+      stage: "production",
     };
 
     const mockSSTResult = {
       success: true,
-      stdout: 'No changes detected.',
-      stderr: '',
+      stdout: "No changes detected.",
+      stderr: "",
       exitCode: 0,
       duration: 2000,
     };
 
     const mockDiffResult = {
       success: true,
-      operation: 'diff' as const,
-      stage: 'production',
-      app: 'test-app',
-      rawOutput: 'test output',
+      operation: "diff" as const,
+      stage: "production",
+      app: "test-app",
+      rawOutput: "test output",
       exitCode: 0,
       truncated: false,
-      completionStatus: 'complete' as const,
+      completionStatus: "complete" as const,
       plannedChanges: 0,
-      changeSummary: 'No changes detected.',
+      changeSummary: "No changes detected.",
       changes: [],
     };
 
@@ -151,16 +151,16 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 
     expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
       mockDiffResult,
-      'never'
+      "never"
     );
     expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
       mockDiffResult
     );
   });
 
-  it('should handle diff with delete operations without breaking change warnings', async () => {
+  it("should handle diff with delete operations without breaking change warnings", async () => {
     const options: OperationOptions = {
-      stage: 'staging',
+      stage: "staging",
     };
 
     const mockSSTResult = {
@@ -169,27 +169,27 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
 - Function MyFunction
 
 Changes detected in infrastructure.`,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
       duration: 3000,
     };
 
     const mockDiffResult = {
       success: true,
-      operation: 'diff' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
+      operation: "diff" as const,
+      stage: "staging",
+      app: "test-app",
+      rawOutput: "test output",
       exitCode: 0,
       truncated: false,
-      completionStatus: 'complete' as const,
+      completionStatus: "complete" as const,
       plannedChanges: 1,
-      changeSummary: 'Found 1 planned change: 1 deletion.',
+      changeSummary: "Found 1 planned change: 1 deletion.",
       changes: [
         {
-          type: 'Function',
-          name: 'MyFunction',
-          action: 'delete' as const,
+          type: "Function",
+          name: "MyFunction",
+          action: "delete" as const,
         },
       ],
     };
@@ -204,22 +204,22 @@ Changes detected in infrastructure.`,
     expect(result).toEqual(mockDiffResult);
     expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
       mockDiffResult,
-      'never'
+      "never"
     );
     expect(mockGitHubClient.createWorkflowSummary).toHaveBeenCalledWith(
       mockDiffResult
     );
   });
 
-  it('should handle SST CLI execution failure', async () => {
+  it("should handle SST CLI execution failure", async () => {
     const options: OperationOptions = {
-      stage: 'staging',
+      stage: "staging",
     };
 
     const mockSSTResult = {
       success: false,
-      stdout: '',
-      stderr: 'Authentication failed: Invalid SST token',
+      stdout: "",
+      stderr: "Authentication failed: Invalid SST token",
       exitCode: 1,
       duration: 1000,
     };
@@ -230,16 +230,16 @@ Changes detected in infrastructure.`,
 
     expect(result).toEqual({
       success: false,
-      operation: 'diff',
-      stage: 'staging',
-      app: 'unknown',
-      rawOutput: '',
+      operation: "diff",
+      stage: "staging",
+      app: "unknown",
+      rawOutput: "",
       exitCode: -1,
       truncated: false,
-      error: 'Authentication failed: Invalid SST token',
-      completionStatus: 'failed',
+      error: "Authentication failed: Invalid SST token",
+      completionStatus: "failed",
       plannedChanges: 0,
-      changeSummary: 'Failed to execute SST diff command',
+      changeSummary: "Failed to execute SST diff command",
       changes: [],
     });
 
@@ -248,37 +248,37 @@ Changes detected in infrastructure.`,
     expect(mockGitHubClient.createWorkflowSummary).not.toHaveBeenCalled();
   });
 
-  it('should handle GitHub API failure gracefully', async () => {
+  it("should handle GitHub API failure gracefully", async () => {
     const options: OperationOptions = {
-      stage: 'staging',
+      stage: "staging",
     };
 
     const mockSSTResult = {
       success: true,
       stdout: `Planned changes:
 + Function MyFunction`,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
       duration: 3000,
     };
 
     const mockDiffResult = {
       success: true,
-      operation: 'diff' as const,
-      stage: 'staging',
-      app: 'test-app',
-      rawOutput: 'test output',
+      operation: "diff" as const,
+      stage: "staging",
+      app: "test-app",
+      rawOutput: "test output",
       exitCode: 0,
       truncated: false,
-      completionStatus: 'complete' as const,
+      completionStatus: "complete" as const,
       plannedChanges: 1,
-      changeSummary: 'Found 1 planned change: 1 creation.',
+      changeSummary: "Found 1 planned change: 1 creation.",
       changes: [
         {
-          type: 'Function',
-          name: 'MyFunction',
-          action: 'create' as const,
-          details: '',
+          type: "Function",
+          name: "MyFunction",
+          action: "create" as const,
+          details: "",
         },
       ],
     };
@@ -286,10 +286,10 @@ Changes detected in infrastructure.`,
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
     mockDiffParser.parse.mockReturnValue(mockDiffResult);
     mockGitHubClient.createOrUpdateComment.mockRejectedValue(
-      new Error('GitHub API token invalid')
+      new Error("GitHub API token invalid")
     );
     mockGitHubClient.createWorkflowSummary.mockRejectedValue(
-      new Error('GitHub API token invalid')
+      new Error("GitHub API token invalid")
     );
 
     const result = await diffOperation.execute(options);

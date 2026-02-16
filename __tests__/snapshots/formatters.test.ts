@@ -1,9 +1,9 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import { OperationFormatter } from '@/github/formatters';
-import { DeployParser } from '@/parsers/deploy-parser';
-import { DiffParser } from '@/parsers/diff-parser';
-import { RemoveParser } from '@/parsers/remove-parser';
-import type { SSTOperation } from '@/types/operations';
+import { beforeAll, describe, expect, it } from "vitest";
+import { OperationFormatter } from "@/github/formatters";
+import { DeployParser } from "@/parsers/deploy-parser";
+import { DiffParser } from "@/parsers/diff-parser";
+import { RemoveParser } from "@/parsers/remove-parser";
+import type { SSTOperation } from "@/types/operations";
 import {
   compareWithSnapshot,
   generateSnapshots,
@@ -11,7 +11,7 @@ import {
   loadInput,
   loadSnapshotData,
   snapshotExists,
-} from '../utils/snapshot-helpers';
+} from "../utils/snapshot-helpers";
 
 /**
  * Comprehensive snapshot testing for GitHub comment and summary formatters
@@ -39,7 +39,7 @@ beforeAll(() => {
  * Generate missing snapshots for test operations
  */
 function generateMissingSnapshots(): void {
-  const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+  const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
   for (const operation of operations) {
     const snapshots = listSnapshots(operation);
@@ -67,14 +67,14 @@ function generateMissingSnapshots(): void {
  */
 function extractStage(output: string): string {
   const stageMatch = output.match(/Stage:\s+(.+)/);
-  return stageMatch?.[1]?.trim() || 'unknown-stage';
+  return stageMatch?.[1]?.trim() || "unknown-stage";
 }
 
 /**
  * Extract exit code from SST output
  */
 function extractExitCode(output: string): number {
-  return output.includes('✕  Failed') || output.includes('Error:') ? 1 : 0;
+  return output.includes("✕  Failed") || output.includes("Error:") ? 1 : 0;
 }
 
 /**
@@ -94,7 +94,7 @@ function testOperationSnapshots(operation: OperationWithParser): void {
 
     snapshots.forEach((name) => {
       describe(`${name}`, () => {
-        it('should match comment snapshot', () => {
+        it("should match comment snapshot", () => {
           try {
             const rawOutput = loadInput(operation, name);
             const stage = extractStage(rawOutput);
@@ -105,13 +105,12 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             const comparison = compareWithSnapshot(
               operation,
               name,
-              'comment',
+              "comment",
               generated
             );
 
             expect(comparison.matches).toBe(true);
             if (comparison.diff) {
-              // biome-ignore lint/suspicious/noConsole: This is for test debugging output
               console.error(
                 `Comment snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
               );
@@ -123,7 +122,7 @@ function testOperationSnapshots(operation: OperationWithParser): void {
           }
         });
 
-        it('should match summary snapshot', () => {
+        it("should match summary snapshot", () => {
           try {
             const rawOutput = loadInput(operation, name);
             const stage = extractStage(rawOutput);
@@ -134,13 +133,12 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             const comparison = compareWithSnapshot(
               operation,
               name,
-              'summary',
+              "summary",
               generated
             );
 
             expect(comparison.matches).toBe(true);
             if (comparison.diff) {
-              // biome-ignore lint/suspicious/noConsole: This is for test debugging output
               console.error(
                 `Summary snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
               );
@@ -152,7 +150,7 @@ function testOperationSnapshots(operation: OperationWithParser): void {
           }
         });
 
-        it('should have consistent metadata', () => {
+        it("should have consistent metadata", () => {
           try {
             const snapshotData = loadSnapshotData(operation, name);
 
@@ -176,13 +174,13 @@ function testOperationSnapshots(operation: OperationWithParser): void {
           }
         });
 
-        it('should have non-empty snapshots', () => {
+        it("should have non-empty snapshots", () => {
           try {
             const snapshotData = loadSnapshotData(operation, name);
 
-            expect(snapshotData.comment.trim()).not.toBe('');
-            expect(snapshotData.summary.trim()).not.toBe('');
-            expect(snapshotData.input.trim()).not.toBe('');
+            expect(snapshotData.comment.trim()).not.toBe("");
+            expect(snapshotData.summary.trim()).not.toBe("");
+            expect(snapshotData.input.trim()).not.toBe("");
           } catch (error) {
             throw new Error(
               `Failed to validate snapshot content for ${operation}/${name}: ${error}`
@@ -210,16 +208,16 @@ function testOperationSnapshots(operation: OperationWithParser): void {
 }
 
 // Test all operations
-describe('Snapshot Testing Suite', () => {
-  describe('Formatter Output Validation', () => {
-    testOperationSnapshots('deploy');
-    testOperationSnapshots('diff');
-    testOperationSnapshots('remove');
+describe("Snapshot Testing Suite", () => {
+  describe("Formatter Output Validation", () => {
+    testOperationSnapshots("deploy");
+    testOperationSnapshots("diff");
+    testOperationSnapshots("remove");
   });
 
-  describe('Cross-Operation Consistency', () => {
-    it('should have consistent snapshot structure across operations', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+  describe("Cross-Operation Consistency", () => {
+    it("should have consistent snapshot structure across operations", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
       const snapshotCounts = operations.map((op) => listSnapshots(op).length);
 
       // Ensure each operation has at least some test cases
@@ -228,8 +226,8 @@ describe('Snapshot Testing Suite', () => {
       }
     });
 
-    it('should generate parseable content for all snapshots', () => {
-      const operations: OperationWithParser[] = ['deploy', 'diff', 'remove'];
+    it("should generate parseable content for all snapshots", () => {
+      const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
         const snapshots = listSnapshots(operation);
@@ -245,10 +243,10 @@ describe('Snapshot Testing Suite', () => {
     });
   });
 
-  describe('Regression Testing', () => {
-    it('should maintain backward compatibility with existing format', () => {
+  describe("Regression Testing", () => {
+    it("should maintain backward compatibility with existing format", () => {
       // Test that snapshots maintain expected structure and content
-      const operations: SSTOperation[] = ['deploy', 'diff', 'remove'];
+      const operations: SSTOperation[] = ["deploy", "diff", "remove"];
 
       for (const operation of operations) {
         const snapshots = listSnapshots(operation);
@@ -266,9 +264,9 @@ describe('Snapshot Testing Suite', () => {
           expect(snapshotData.summary.length).toBeGreaterThan(10);
 
           // Metadata should have required fields
-          expect(snapshotData.metadata).toHaveProperty('operation');
-          expect(snapshotData.metadata).toHaveProperty('stage');
-          expect(snapshotData.metadata).toHaveProperty('success');
+          expect(snapshotData.metadata).toHaveProperty("operation");
+          expect(snapshotData.metadata).toHaveProperty("stage");
+          expect(snapshotData.metadata).toHaveProperty("success");
         }
       }
     });

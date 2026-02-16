@@ -11,8 +11,8 @@ declare const __ACTION_VERSION__: string;
  */
 export function getActionVersion(): string {
   // Handle test environment where __ACTION_VERSION__ is not defined
-  if (typeof __ACTION_VERSION__ === 'undefined') {
-    return 'test-version';
+  if (typeof __ACTION_VERSION__ === "undefined") {
+    return "test-version";
   }
   return __ACTION_VERSION__;
 }

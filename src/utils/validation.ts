@@ -3,15 +3,15 @@
  * Provides comprehensive validation with clear error messages
  */
 
-import * as z from 'zod/v4';
-import type { CommentMode, SSTOperation } from '../types/index.js';
+import * as z from "zod/v4";
+import type { CommentMode, SSTOperation } from "../types/index.js";
 import {
   isValidCommentMode,
   isValidOperation,
   validateMaxOutputSize,
-} from '../types/index.js';
-import type { SSTRunner } from './cli.js';
-import { SST_RUNNERS } from './cli.js';
+} from "../types/index.js";
+import type { SSTRunner } from "./cli.js";
+import { SST_RUNNERS } from "./cli.js";
 
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
@@ -22,19 +22,19 @@ const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 const CommonFieldSchemas = {
   operation: z
     .string()
-    .min(1, 'Operation is required and cannot be empty')
+    .min(1, "Operation is required and cannot be empty")
     .refine((val) => isValidOperation(val), {
-      message: 'Invalid operation. Must be one of: deploy, diff, remove, stage',
+      message: "Invalid operation. Must be one of: deploy, diff, remove, stage",
     })
     .transform((val) => val as SSTOperation),
 
   stage: z
     .string()
-    .min(1, 'Stage cannot be empty')
+    .min(1, "Stage cannot be empty")
     .refine(
       (val) =>
         val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim()),
-      'Stage must contain only alphanumeric characters, hyphens, and underscores'
+      "Stage must contain only alphanumeric characters, hyphens, and underscores"
     )
     .transform((val) => val.trim()),
 
@@ -45,18 +45,18 @@ const CommonFieldSchemas = {
       (val) =>
         !val ||
         (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())),
-      'Stage must contain only alphanumeric characters, hyphens, and underscores'
+      "Stage must contain only alphanumeric characters, hyphens, and underscores"
     )
-    .transform((val) => val?.trim() || ''),
+    .transform((val) => val?.trim() || ""),
 
-  token: z.string().min(1, 'Token cannot be empty'),
+  token: z.string().min(1, "Token cannot be empty"),
 
   commentMode: z
     .string()
-    .default('on-success')
+    .default("on-success")
     .refine((val) => isValidCommentMode(val), {
       message:
-        'Invalid comment mode. Must be one of: always, on-success, on-failure, never',
+        "Invalid comment mode. Must be one of: always, on-success, on-failure, never",
     })
     .transform((val) => val as CommentMode),
 
@@ -68,7 +68,7 @@ const CommonFieldSchemas = {
       z.string().transform((val) => {
         const parsed = Number.parseInt(val, 10);
         if (Number.isNaN(parsed)) {
-          throw new Error('max-output-size must be a valid number');
+          throw new Error("max-output-size must be a valid number");
         }
         return parsed;
       })
@@ -78,9 +78,9 @@ const CommonFieldSchemas = {
 
   runner: z
     .string()
-    .default('bun')
+    .default("bun")
     .refine((val): val is SSTRunner => SST_RUNNERS.includes(val as SSTRunner), {
-      message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(', ')}`,
+      message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(", ")}`,
     })
     .transform((val) => val as SSTRunner),
 
@@ -90,26 +90,26 @@ const CommonFieldSchemas = {
       z.string().transform((val) => {
         const parsed = Number.parseInt(val, 10);
         if (Number.isNaN(parsed)) {
-          throw new Error('truncation-length must be a valid number');
+          throw new Error("truncation-length must be a valid number");
         }
         return parsed;
       })
     )
     .refine((val) => val > 0 && val <= 100, {
-      message: 'Truncation length must be between 1 and 100 characters',
+      message: "Truncation length must be between 1 and 100 characters",
     })
     .default(26),
 
   prefix: z
     .string()
     .refine((val) => val.length <= 10, {
-      message: 'Prefix must be 10 characters or less',
+      message: "Prefix must be 10 characters or less",
     })
     .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
       message:
-        'Prefix must contain only lowercase letters, numbers, and hyphens',
+        "Prefix must contain only lowercase letters, numbers, and hyphens",
     })
-    .default('pr-'),
+    .default("pr-"),
 };
 
 /**
@@ -128,7 +128,7 @@ const BaseInfrastructureSchema = z.object({
  */
 const DeployInputsSchema = z
   .object({
-    operation: z.literal('deploy'),
+    operation: z.literal("deploy"),
     stage: CommonFieldSchemas.optionalStage.optional(),
   })
   .extend(BaseInfrastructureSchema.shape)
@@ -136,7 +136,7 @@ const DeployInputsSchema = z
 
 const DiffInputsSchema = z
   .object({
-    operation: z.literal('diff'),
+    operation: z.literal("diff"),
     stage: CommonFieldSchemas.stage,
   })
   .extend(BaseInfrastructureSchema.shape)
@@ -144,7 +144,7 @@ const DiffInputsSchema = z
 
 const RemoveInputsSchema = z
   .object({
-    operation: z.literal('remove'),
+    operation: z.literal("remove"),
     stage: CommonFieldSchemas.stage,
   })
   .extend(BaseInfrastructureSchema.shape)
@@ -152,7 +152,7 @@ const RemoveInputsSchema = z
 
 const StageInputsSchema = z
   .object({
-    operation: z.literal('stage'),
+    operation: z.literal("stage"),
     truncationLength: CommonFieldSchemas.truncationLength.optional(),
     prefix: CommonFieldSchemas.prefix.optional(),
   })
@@ -161,7 +161,7 @@ const StageInputsSchema = z
 /**
  * Discriminated union schema for all operation types
  */
-export const OperationInputsSchema = z.discriminatedUnion('operation', [
+export const OperationInputsSchema = z.discriminatedUnion("operation", [
   DeployInputsSchema,
   DiffInputsSchema,
   RemoveInputsSchema,
@@ -188,7 +188,7 @@ export class ValidationError extends Error {
     suggestions: string[] = []
   ) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
     this.field = field;
     this.value = value;
     this.suggestions = suggestions;
@@ -203,7 +203,7 @@ function filterInputsByOperation(
 ): Record<string, unknown> {
   const operation = rawInputs.operation as string;
 
-  if (operation === 'stage') {
+  if (operation === "stage") {
     // Stage operations only need these fields
     return {
       operation: rawInputs.operation,
@@ -241,8 +241,8 @@ export function parseOperationInputs(
         throw error;
       }
 
-      const fieldName = issue.path.length > 0 ? issue.path[0] : 'unknown';
-      const operation = (rawInputs.operation as string) || 'unknown';
+      const fieldName = issue.path.length > 0 ? issue.path[0] : "unknown";
+      const operation = (rawInputs.operation as string) || "unknown";
       const suggestions = generateOperationSuggestions(
         String(fieldName),
         issue,
@@ -269,34 +269,34 @@ function generateOperationSuggestions(
   operation: string
 ): string[] {
   switch (field) {
-    case 'operation':
+    case "operation":
       return [
-        'Valid operations are: deploy, diff, remove, stage',
+        "Valid operations are: deploy, diff, remove, stage",
         'Use "deploy" for deploying infrastructure to AWS',
         'Use "diff" to preview infrastructure changes without deploying',
         'Use "remove" to clean up and delete deployed resources',
         'Use "stage" to compute stage names from Git context',
       ];
 
-    case 'stage':
+    case "stage":
       return generateStagesuggestions(operation);
 
-    case 'token':
+    case "token":
       return generateTokenSuggestions(operation);
 
-    case 'truncationLength':
+    case "truncationLength":
       return [
-        'Truncation length controls maximum stage name length (1-100 characters)',
-        'Only applies to stage operations for DNS compatibility',
-        'Default is 26 characters to fit Route53 limits',
-        'Use smaller values for shorter stage names',
+        "Truncation length controls maximum stage name length (1-100 characters)",
+        "Only applies to stage operations for DNS compatibility",
+        "Default is 26 characters to fit Route53 limits",
+        "Use smaller values for shorter stage names",
       ];
 
-    case 'prefix':
+    case "prefix":
       return [
-        'Prefix is added to stage names that start with numbers',
-        'Only applies to stage operations',
-        'Must be lowercase letters, numbers, and hyphens only',
+        "Prefix is added to stage names that start with numbers",
+        "Only applies to stage operations",
+        "Must be lowercase letters, numbers, and hyphens only",
         'Default "pr-" creates names like "pr-123" for PR #123',
       ];
 
@@ -310,30 +310,30 @@ function generateOperationSuggestions(
  */
 function generateStagesuggestions(operation: string): string[] {
   switch (operation) {
-    case 'deploy':
+    case "deploy":
       return [
-        'Deploy operations can auto-compute stage from Git context',
-        'Leave empty to use branch/PR name as stage',
+        "Deploy operations can auto-compute stage from Git context",
+        "Leave empty to use branch/PR name as stage",
         'Or provide explicit stage: "production", "staging", "dev-123"',
-        'Uses alphanumeric characters, hyphens, and underscores only',
+        "Uses alphanumeric characters, hyphens, and underscores only",
       ];
-    case 'diff':
+    case "diff":
       return [
-        'Diff operations require explicit stage name',
-        'Cannot preview changes without knowing target stage',
+        "Diff operations require explicit stage name",
+        "Cannot preview changes without knowing target stage",
         'Examples: "production", "staging", "dev-123", "pr-456"',
-        'Must match an existing deployed stage for comparison',
+        "Must match an existing deployed stage for comparison",
       ];
-    case 'remove':
+    case "remove":
       return [
-        'Remove operations require explicit stage for safety',
-        'Will not auto-compute stage to prevent accidental deletions',
+        "Remove operations require explicit stage for safety",
+        "Will not auto-compute stage to prevent accidental deletions",
         'Examples: "staging", "dev-123", "pr-456"',
-        'Use caution with production stages',
+        "Use caution with production stages",
       ];
     default:
       return [
-        'Stage must contain only alphanumeric characters, hyphens, and underscores',
+        "Stage must contain only alphanumeric characters, hyphens, and underscores",
         'Examples: "production", "staging", "dev-123", "pr-456"',
       ];
   }
@@ -344,37 +344,37 @@ function generateStagesuggestions(operation: string): string[] {
  */
 function generateTokenSuggestions(operation: string): string[] {
   switch (operation) {
-    case 'deploy':
+    case "deploy":
       return [
-        'Deploy operations require GitHub token for authentication',
-        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
-        'Token needed to comment on PRs and access AWS credentials',
+        "Deploy operations require GitHub token for authentication",
+        `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+        "Token needed to comment on PRs and access AWS credentials",
         'Use "fake-token" only for local testing',
       ];
-    case 'diff':
+    case "diff":
       return [
-        'Diff operations require GitHub token for PR comments',
-        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` for automatic token`,
-        'Token needed to post comparison results to pull requests',
+        "Diff operations require GitHub token for PR comments",
+        `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` for automatic token`,
+        "Token needed to post comparison results to pull requests",
         'Use "fake-token" only for local testing',
       ];
-    case 'remove':
+    case "remove":
       return [
-        'Remove operations require GitHub token for confirmation',
-        `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
-        'Token needed for authentication and result reporting',
+        "Remove operations require GitHub token for confirmation",
+        `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
+        "Token needed for authentication and result reporting",
         'Use "fake-token" only for local testing',
       ];
-    case 'stage':
+    case "stage":
       return [
-        'Stage operations do not require GitHub token',
-        'This operation only computes stage names from Git context',
-        'No infrastructure access or API calls needed',
+        "Stage operations do not require GitHub token",
+        "This operation only computes stage names from Git context",
+        "No infrastructure access or API calls needed",
       ];
     default:
       return [
-        `Use a valid GitHub token (e.g., \`${'$'}{{ secrets.GITHUB_TOKEN }}\`)`,
-        'Token must be provided and cannot be empty',
+        `Use a valid GitHub token (e.g., \`${"$"}{{ secrets.GITHUB_TOKEN }}\`)`,
+        "Token must be provided and cannot be empty",
         'Use "fake-token" only for testing',
       ];
   }
@@ -385,34 +385,34 @@ function generateTokenSuggestions(operation: string): string[] {
  */
 function generateGeneralSuggestions(field: string): string[] {
   switch (field) {
-    case 'commentMode':
+    case "commentMode":
       return [
-        'Valid comment modes are: always, on-success, on-failure, never',
+        "Valid comment modes are: always, on-success, on-failure, never",
         'Use "always" to comment on every run',
         'Use "on-success" to comment only when operation succeeds',
         'Use "on-failure" to comment only when operation fails',
         'Use "never" to disable PR comments',
       ];
 
-    case 'failOnError':
+    case "failOnError":
       return [
-        'Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled',
+        "Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled",
         'Use "true" or "yes" to fail the workflow on errors',
         'Use "false" or "no" to continue workflow even if operation fails',
-        'Values are case-insensitive',
+        "Values are case-insensitive",
       ];
 
-    case 'maxOutputSize':
+    case "maxOutputSize":
       return [
-        'Must be a number between 1000 and 1000000 (1MB)',
-        'Specify output size limit in bytes',
-        'Default is 50000 bytes (50KB)',
-        'Use larger values for verbose SST outputs',
+        "Must be a number between 1000 and 1000000 (1MB)",
+        "Specify output size limit in bytes",
+        "Default is 50000 bytes (50KB)",
+        "Use larger values for verbose SST outputs",
       ];
 
-    case 'runner':
+    case "runner":
       return [
-        'Valid runners are: bun, npm, pnpm, yarn, sst',
+        "Valid runners are: bun, npm, pnpm, yarn, sst",
         'Use "bun" (default) for Bun runtime',
         'Use "npm" for npm with package scripts',
         'Use "pnpm" for PNPM runtime',
@@ -445,7 +445,7 @@ export function validateInput<T>(
       const suggestions = generateOperationSuggestions(
         fieldName,
         issue,
-        'unknown'
+        "unknown"
       );
 
       throw new ValidationError(issue.message, fieldName, value, suggestions);
@@ -473,45 +473,45 @@ export function validateOperationWithContext(
 
   // Operation-specific validation rules
   switch (inputs.operation) {
-    case 'remove':
+    case "remove":
       // Remove operations should not be run on production without extra confirmation
-      if (context.isProduction && inputs.stage.toLowerCase().includes('prod')) {
+      if (context.isProduction && inputs.stage.toLowerCase().includes("prod")) {
         throw new ValidationError(
-          'Remove operation on production stage requires explicit confirmation',
-          'operation',
+          "Remove operation on production stage requires explicit confirmation",
+          "operation",
           inputs.operation,
           [
-            'Consider using a different stage name for production removal',
-            'Ensure this is intentional as it will delete resources',
-            'Use staging or development stages for testing removal',
+            "Consider using a different stage name for production removal",
+            "Ensure this is intentional as it will delete resources",
+            "Use staging or development stages for testing removal",
           ]
         );
       }
       break;
 
-    case 'diff':
+    case "diff":
       // Diff operations require explicit stage - already validated by schema
       break;
 
-    case 'deploy':
+    case "deploy":
       // Deploy operations should validate token format more strictly in production
       if (
         context.isProduction &&
         !context.allowFakeTokens &&
-        inputs.token === 'fake-token'
+        inputs.token === "fake-token"
       ) {
         throw new ValidationError(
-          'Production deployments require a real GitHub token',
-          'token',
+          "Production deployments require a real GitHub token",
+          "token",
           inputs.token,
           [
-            `Use \`${'$'}{{ secrets.GITHUB_TOKEN }}\` or a valid personal access token`,
+            `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` or a valid personal access token`,
           ]
         );
       }
       break;
 
-    case 'stage':
+    case "stage":
       // Stage operations are utility only - no additional validation needed
       break;
 
@@ -533,9 +533,9 @@ export function createValidationContext(
 ): ValidationContext {
   return {
     isProduction: Boolean(
-      env.GITHUB_REF === 'refs/heads/main' ||
-        env.GITHUB_REF?.includes('refs/tags/')
+      env.GITHUB_REF === "refs/heads/main" ||
+        env.GITHUB_REF?.includes("refs/tags/")
     ),
-    allowFakeTokens: Boolean(env.NODE_ENV === 'test' || env.CI !== 'true'),
+    allowFakeTokens: Boolean(env.NODE_ENV === "test" || env.CI !== "true"),
   };
 }

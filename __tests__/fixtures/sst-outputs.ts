@@ -430,7 +430,7 @@ This is not a valid SST output
 Random text without patterns
 `;
 
-export const EMPTY_OUTPUT = '';
+export const EMPTY_OUTPUT = "";
 
 export const INCOMPLETE_OUTPUT = `
 SST 3.17.10  ready!

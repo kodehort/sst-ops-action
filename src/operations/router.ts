@@ -4,8 +4,8 @@
  * Provides unified interface and consistent error handling
  */
 
-import * as core from '@actions/core';
-import { GitHubClient } from '../github/client';
+import * as core from "@actions/core";
+import { GitHubClient } from "../github/client";
 import type {
   DeployResult,
   DiffResult,
@@ -13,14 +13,14 @@ import type {
   OperationResult,
   RemoveResult,
   SSTOperation,
-} from '../types';
-import { SSTCLIExecutor } from '../utils/cli';
-import { OperationFactory } from './factory';
+} from "../types";
+import { SSTCLIExecutor } from "../utils/cli";
+import { OperationFactory } from "./factory";
 import {
   validateRawDeployResult,
   validateRawDiffResult,
   validateRawRemoveResult,
-} from './schemas';
+} from "./schemas";
 
 /**
  * Execute an SST operation with full error handling and routing
@@ -37,14 +37,14 @@ export async function executeOperation(
     if (!OperationFactory.isValidOperationType(operationType)) {
       throw new Error(
         `Invalid operation type: ${operationType}. ` +
-          `Supported operations: ${OperationFactory.getSupportedOperations().join(', ')}`
+          `Supported operations: ${OperationFactory.getSupportedOperations().join(", ")}`
       );
     }
 
     // Create dependencies
     const cliExecutor = new SSTCLIExecutor();
     // Stage operations don't require a GitHub token, use empty string as fallback
-    const token = operationType === 'stage' ? 'fake-token' : options.token;
+    const token = operationType === "stage" ? "fake-token" : options.token;
     const githubClient = new GitHubClient(token);
 
     // Create operation factory
@@ -93,22 +93,22 @@ function transformToUnifiedResult(
   _options: OperationOptions
 ): OperationResult {
   switch (operationType) {
-    case 'deploy': {
+    case "deploy": {
       // Validate result at runtime before transformation
       const validated = validateRawDeployResult(result);
       return transformDeployResult(validated);
     }
-    case 'diff': {
+    case "diff": {
       // Validate result at runtime before transformation
       const validated = validateRawDiffResult(result);
       return transformDiffResult(validated);
     }
-    case 'remove': {
+    case "remove": {
       // Validate result at runtime before transformation
       const validated = validateRawRemoveResult(result);
       return transformRemoveResult(validated);
     }
-    case 'stage':
+    case "stage":
       // Stage operation returns the result directly as it already conforms to the unified format
       return result as OperationResult;
     default: {
@@ -138,15 +138,15 @@ function normalizeResourceStatus(
   status: string,
   resourceName?: string,
   resourceType?: string
-): 'created' | 'updated' | 'deleted' {
-  const validStatuses: Array<'created' | 'updated' | 'deleted'> = [
-    'created',
-    'updated',
-    'deleted',
+): "created" | "updated" | "deleted" {
+  const validStatuses: Array<"created" | "updated" | "deleted"> = [
+    "created",
+    "updated",
+    "deleted",
   ];
 
   if ((validStatuses as readonly string[]).includes(status)) {
-    return status as 'created' | 'updated' | 'deleted';
+    return status as "created" | "updated" | "deleted";
   }
 
   // Enhanced warning with context for debugging
@@ -158,16 +158,16 @@ function normalizeResourceStatus(
     context.push(`type: ${resourceType}`);
   }
 
-  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
 
   core.warning(
     `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
-      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Valid statuses: ${validStatuses.join(", ")}\n` +
       `    Defaulting to: 'created'\n` +
-      '    This may indicate a new SST CLI output format.'
+      "    This may indicate a new SST CLI output format."
   );
 
-  return 'created'; // Default to created instead of unchanged
+  return "created"; // Default to created instead of unchanged
 }
 
 /**
@@ -187,15 +187,15 @@ function normalizeDiffAction(
   action: string,
   resourceName?: string,
   resourceType?: string
-): 'create' | 'update' | 'delete' {
-  const validActions: Array<'create' | 'update' | 'delete'> = [
-    'create',
-    'update',
-    'delete',
+): "create" | "update" | "delete" {
+  const validActions: Array<"create" | "update" | "delete"> = [
+    "create",
+    "update",
+    "delete",
   ];
 
   if ((validActions as readonly string[]).includes(action)) {
-    return action as 'create' | 'update' | 'delete';
+    return action as "create" | "update" | "delete";
   }
 
   // Enhanced warning with context for debugging
@@ -207,16 +207,16 @@ function normalizeDiffAction(
     context.push(`type: ${resourceType}`);
   }
 
-  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
 
   core.warning(
     `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
-      `    Valid actions: ${validActions.join(', ')}\n` +
+      `    Valid actions: ${validActions.join(", ")}\n` +
       `    Defaulting to: 'update'\n` +
-      '    This may indicate a new SST CLI diff format.'
+      "    This may indicate a new SST CLI diff format."
   );
 
-  return 'update';
+  return "update";
 }
 
 /**
@@ -236,15 +236,15 @@ function normalizeRemoveStatus(
   status: string,
   resourceName?: string,
   resourceType?: string
-): 'removed' | 'failed' | 'skipped' {
-  const validStatuses: Array<'removed' | 'failed' | 'skipped'> = [
-    'removed',
-    'failed',
-    'skipped',
+): "removed" | "failed" | "skipped" {
+  const validStatuses: Array<"removed" | "failed" | "skipped"> = [
+    "removed",
+    "failed",
+    "skipped",
   ];
 
   if ((validStatuses as readonly string[]).includes(status)) {
-    return status as 'removed' | 'failed' | 'skipped';
+    return status as "removed" | "failed" | "skipped";
   }
 
   // Enhanced warning with context for debugging
@@ -256,16 +256,16 @@ function normalizeRemoveStatus(
     context.push(`type: ${resourceType}`);
   }
 
-  const contextStr = context.length > 0 ? ` (${context.join(', ')})` : '';
+  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
 
   core.warning(
     `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
-      `    Valid statuses: ${validStatuses.join(', ')}\n` +
+      `    Valid statuses: ${validStatuses.join(", ")}\n` +
       `    Defaulting to: 'failed' (conservative default for removals)\n` +
-      '    This may indicate a new SST CLI remove format.'
+      "    This may indicate a new SST CLI remove format."
   );
 
-  return 'failed';
+  return "failed";
 }
 
 /**
@@ -282,15 +282,15 @@ function transformDeployResult(
 ): DeployResult {
   return {
     success: result.success,
-    operation: 'deploy' as const,
+    operation: "deploy" as const,
     stage: result.stage,
-    app: result.metadata?.app || 'unknown',
-    rawOutput: result.metadata?.rawOutput || '',
+    app: result.metadata?.app || "unknown",
+    rawOutput: result.metadata?.rawOutput || "",
     exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
     truncated: result.metadata?.truncated ?? false,
     completionStatus: result.success
-      ? ('complete' as const)
-      : ('failed' as const),
+      ? ("complete" as const)
+      : ("failed" as const),
     resourceChanges: result.resourceChanges || 0,
     outputs: result.outputs || [],
     resources: (result.resources || []).map((resource) => ({
@@ -322,17 +322,17 @@ function transformDiffResult(
 ): DiffResult {
   return {
     success: result.success,
-    operation: 'diff' as const,
+    operation: "diff" as const,
     stage: result.stage,
-    app: result.metadata?.app || 'unknown',
-    rawOutput: result.metadata?.rawOutput || '',
+    app: result.metadata?.app || "unknown",
+    rawOutput: result.metadata?.rawOutput || "",
     exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
     truncated: result.metadata?.truncated ?? false,
     completionStatus: result.success
-      ? ('complete' as const)
-      : ('failed' as const),
+      ? ("complete" as const)
+      : ("failed" as const),
     plannedChanges: result.changesDetected || 0,
-    changeSummary: result.summary || 'No changes detected',
+    changeSummary: result.summary || "No changes detected",
     changes: (result.changes || []).map((change) => ({
       type: change.resourceType,
       name: change.resourceName,
@@ -361,13 +361,13 @@ function transformRemoveResult(
 ): RemoveResult {
   return {
     success: result.success,
-    operation: 'remove' as const,
+    operation: "remove" as const,
     stage: result.stage,
-    app: result.metadata?.app || 'unknown',
-    rawOutput: result.metadata?.rawOutput || '',
+    app: result.metadata?.app || "unknown",
+    rawOutput: result.metadata?.rawOutput || "",
     exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
     truncated: result.metadata?.truncated ?? false,
-    completionStatus: result.completionStatus || 'failed',
+    completionStatus: result.completionStatus || "failed",
     resourcesRemoved: result.resourcesRemoved || 0,
     removedResources: (result.removedResources || []).map((resource) => ({
       type: resource.resourceType,
@@ -412,46 +412,46 @@ function createFailureResult(
     success: false,
     operation: operationType,
     stage: options.stage,
-    app: 'unknown',
+    app: "unknown",
     rawOutput: error.stack || error.message,
     exitCode: 1,
     truncated: false,
-    completionStatus: 'failed' as const,
+    completionStatus: "failed" as const,
     error: error.message,
   };
 
   // Add operation-specific fields
   switch (operationType) {
-    case 'deploy':
+    case "deploy":
       return {
         ...baseResult,
-        operation: 'deploy' as const,
+        operation: "deploy" as const,
         resourceChanges: 0,
         outputs: [],
         resources: [],
       };
-    case 'diff':
+    case "diff":
       return {
         ...baseResult,
-        operation: 'diff' as const,
+        operation: "diff" as const,
         plannedChanges: 0,
-        changeSummary: 'Operation failed',
+        changeSummary: "Operation failed",
         changes: [],
       };
-    case 'remove':
+    case "remove":
       return {
         ...baseResult,
-        operation: 'remove' as const,
+        operation: "remove" as const,
         resourcesRemoved: 0,
         removedResources: [],
       };
-    case 'stage':
+    case "stage":
       return {
         ...baseResult,
-        operation: 'stage' as const,
+        operation: "stage" as const,
         computedStage: options.stage,
-        ref: '',
-        eventName: 'unknown',
+        ref: "",
+        eventName: "unknown",
         isPullRequest: false,
       };
     default: {
