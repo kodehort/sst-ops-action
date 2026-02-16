@@ -5,11 +5,9 @@
 
 import * as core from '@actions/core';
 import {
-  createInputValidationError,
-  createSubprocessError,
-  fromValidationError,
-  handleError,
-} from './errors/error-handler';
+  isOutputFormattingError,
+  UnifiedErrorHandler,
+} from './errors/unified-handler';
 import { executeOperation } from './operations/router';
 import { OutputFormatter } from './outputs/formatter';
 import { StageProcessor } from './parsers/stage-processor';
@@ -161,33 +159,15 @@ function parseGitHubActionsInputs() {
 }
 
 /**
- * Handle input validation errors with proper error conversion
- *
- * Converts validation errors into ActionError format and handles them
- * according to the configured error handling strategy. Provides detailed
- * error context for debugging input validation issues.
+ * Handle input validation errors using unified error handler
  *
  * @param error The validation error that occurred during input parsing
  */
 function handleInputValidationError(error: unknown): void {
-  if (error instanceof ValidationError) {
-    const actionError = fromValidationError(error);
-    handleError(actionError, {
-      stage: 'unknown',
-      failOnError: true,
-    });
-  } else if (error instanceof Error) {
-    const actionError = createInputValidationError(
-      error.message,
-      undefined,
-      undefined,
-      error
-    );
-    handleError(actionError, {
-      stage: 'unknown',
-      failOnError: true,
-    });
-  }
+  UnifiedErrorHandler.handle({
+    type: 'input-validation',
+    error: error as ValidationError | Error,
+  });
 }
 
 /**
@@ -235,120 +215,48 @@ function handleOperationResult(
 }
 
 /**
- * Handle errors that occur during operation execution
+ * Handle errors that occur during operation execution using unified error handler
  */
 function handleOperationError(
   error: unknown,
   operation: ReturnType<typeof validateOperationWithContext>['operation'],
   options: OperationOptions
 ): void {
-  const message = error instanceof Error ? error.message : String(error);
+  if (!(error instanceof Error)) {
+    UnifiedErrorHandler.handle({
+      type: 'unexpected',
+      error,
+    });
+    return;
+  }
 
-  try {
-    const isOutputFormattingError =
-      error instanceof Error &&
-      error.message.includes('Output formatting failed');
-
-    if (isOutputFormattingError) {
-      handleOutputFormattingError(error, message, operation, options);
-    } else {
-      handleGenericOperationError(error, message, operation, options);
-    }
-  } catch (errorHandlingError) {
-    handleErrorHandlingFailure(errorHandlingError, message);
+  // Determine error type and route to appropriate handler
+  if (isOutputFormattingError(error)) {
+    UnifiedErrorHandler.handle({
+      type: 'output-formatting',
+      error,
+      operation,
+      options,
+    });
+  } else {
+    UnifiedErrorHandler.handle({
+      type: 'operation-execution',
+      error,
+      operation,
+      options,
+    });
   }
 }
 
 /**
- * Handle output formatting errors
- */
-function handleOutputFormattingError(
-  error: Error,
-  message: string,
-  operation: ReturnType<typeof validateOperationWithContext>['operation'],
-  options: OperationOptions
-): void {
-  core.error(`Failed to set outputs: ${message}`);
-  const actionError = createSubprocessError(
-    message,
-    operation,
-    options.stage,
-    1,
-    undefined,
-    undefined,
-    error
-  );
-  handleError(actionError, options);
-}
-
-/**
- * Handle generic operation errors
- */
-function handleGenericOperationError(
-  error: unknown,
-  message: string,
-  operation: ReturnType<typeof validateOperationWithContext>['operation'],
-  options: OperationOptions
-): void {
-  const actionError = createSubprocessError(
-    message,
-    operation,
-    options.stage,
-    1,
-    undefined,
-    undefined,
-    error instanceof Error ? error : undefined
-  );
-  handleError(actionError, options);
-}
-
-/**
- * Handle failures in error handling itself
- */
-function handleErrorHandlingFailure(
-  errorHandlingError: unknown,
-  originalMessage: string
-): void {
-  core.error(
-    `Error handling failed: ${errorHandlingError instanceof Error ? errorHandlingError.message : String(errorHandlingError)}`
-  );
-  core.setFailed(`Action failed: ${originalMessage}`);
-}
-
-/**
- * Handle unexpected errors with fallback error reporting
+ * Handle unexpected errors using unified error handler
  */
 function handleUnexpectedError(error: unknown): never {
-  const message = error instanceof Error ? error.message : String(error);
-
-  // Simple fallback error handling
-  try {
-    const failOnErrorInput = core.getInput('fail-on-error') || 'true';
-    const basicOptions: OperationOptions = {
-      stage: core.getInput('stage') || 'unknown',
-      failOnError: failOnErrorInput === 'true',
-    };
-
-    // Create a generic subprocess error for unhandled errors
-    const actionError = createSubprocessError(
-      message,
-      'deploy', // Default operation
-      basicOptions.stage,
-      1, // Generic error exit code
-      undefined,
-      undefined,
-      error instanceof Error ? error : undefined
-    );
-
-    handleError(actionError, basicOptions);
-  } catch (errorHandlingError) {
-    // If error handling itself fails, fall back to basic GitHub Actions error reporting
-    core.error(
-      `Error handling failed: ${errorHandlingError instanceof Error ? errorHandlingError.message : String(errorHandlingError)}`
-    );
-    core.setFailed(`Action failed: ${message}`);
-  }
-
+  UnifiedErrorHandler.handle({
+    type: 'unexpected',
+    error,
+  });
+  // UnifiedErrorHandler.handle will throw, but TypeScript doesn't know that
   throw error;
 }
 

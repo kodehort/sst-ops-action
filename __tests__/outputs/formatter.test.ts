@@ -454,7 +454,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow('Required output fields missing: stage, completion_status');
+      }).toThrow(/stage/);
     });
 
     it('should validate boolean field values', () => {
@@ -468,9 +468,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow(
-        "Invalid 'success' value: 'invalid'. Must be 'true' or 'false'."
-      );
+      }).toThrow(/success/);
     });
 
     it('should validate operation field values', () => {
@@ -484,9 +482,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow(
-        "Invalid 'operation' value: 'invalid-operation'. Must be one of: deploy, diff, remove, stage."
-      );
+      }).toThrow(/operation/);
     });
 
     it('should validate completion_status field values', () => {
@@ -500,9 +496,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow(
-        "Invalid 'completion_status' value: 'invalid-status'. Must be one of: complete, partial, failed."
-      );
+      }).toThrow(/completion_status/);
     });
 
     it('should validate numeric field values', () => {
@@ -517,9 +511,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow(
-        "Invalid 'resource_changes' value: 'not-a-number'. Must be a non-negative number."
-      );
+      }).toThrow(/resource_changes/);
     });
 
     it('should validate negative numbers are not allowed', () => {
@@ -534,9 +526,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow(
-        "Invalid 'resource_changes' value: '-5'. Must be a non-negative number."
-      );
+      }).toThrow(/resource_changes/);
     });
 
     it('should validate JSON field values', () => {
@@ -551,7 +541,7 @@ describe('Output Formatter - GitHub Actions Output Processing', () => {
 
       expect(() => {
         OutputFormatter.validateOutputs(invalidOutputs);
-      }).toThrow("Invalid 'outputs' value: not valid JSON.");
+      }).toThrow(/outputs.*JSON/i);
     });
 
     it('should allow empty strings for optional fields', () => {

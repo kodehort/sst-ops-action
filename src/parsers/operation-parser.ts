@@ -1,51 +1,42 @@
 import type { BaseOperationResult } from '../types/operations';
-
-/**
- * Common regex patterns for extracting information from SST CLI outputs
- * Moved to top-level for performance optimization
- * Support both old format (App:) and new format (➜ App:)
- */
-const APP_INFO_PATTERN = /^(?:➜\s+)?App:\s+(.+)$/m;
-const STAGE_INFO_PATTERN = /^\s*Stage:\s+(.+)$/m;
-const PERMALINK_PATTERN = /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m;
-const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
-const COMPLETION_PARTIAL_PATTERN = /^⚠\s+Partial\s*$/m;
-const COMPLETION_FAILED_PATTERN = /^✗\s+Failed\s*$/m;
-const DIFF_SECTION_START_PATTERN = /^✓\s+Generated\s*$/m;
-const RESOURCE_LINE_PATTERN = /^\|\s+(.+)$/m;
-const URL_LINE_PATTERN = /^\s*(Router|Api|Web|Website):\s+(https?:\/\/.+)$/m;
-const SECTION_SEPARATOR_PATTERN = /\n\n+/;
-const LINE_ENDING_PATTERN = /\r\n/g;
-const TRAILING_WHITESPACE_PATTERN = /\s+$/;
+import { PatternHelpers, SSTPatterns } from './patterns';
 
 /**
  * Abstract base parser for SST CLI outputs
  * Provides common parsing patterns and utilities for operations that parse CLI output
+ *
+ * Now uses centralized patterns from patterns.ts for consistency and maintainability
  */
 export abstract class OperationParser<T extends BaseOperationResult> {
   /**
    * Common regex patterns for extracting information from SST CLI outputs
+   * Using centralized pattern library for consistency
    */
   protected readonly patterns = {
     // App and stage information
-    APP_INFO: APP_INFO_PATTERN,
-    STAGE_INFO: STAGE_INFO_PATTERN,
+    APP_INFO: SSTPatterns.metadata.app,
+    STAGE_INFO: SSTPatterns.metadata.stage,
 
     // Permalink for SST console
-    PERMALINK: PERMALINK_PATTERN,
+    PERMALINK: SSTPatterns.metadata.permalink,
 
     // Completion status patterns
-    COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
-    COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
-    COMPLETION_FAILED: COMPLETION_FAILED_PATTERN,
+    COMPLETION_SUCCESS: SSTPatterns.status.success,
+    COMPLETION_PARTIAL: SSTPatterns.status.partial,
+    COMPLETION_FAILED: SSTPatterns.status.failed,
 
     // Diff section marker
-    DIFF_SECTION_START: DIFF_SECTION_START_PATTERN,
+    DIFF_SECTION_START: SSTPatterns.sections.generated,
 
     // Generic resource patterns (to be extended by subclasses)
-    RESOURCE_LINE: RESOURCE_LINE_PATTERN,
-    URL_LINE: URL_LINE_PATTERN,
+    RESOURCE_LINE: SSTPatterns.resources.line,
+    URL_LINE: SSTPatterns.outputs.url,
   };
+
+  /**
+   * Pattern helper utilities for common operations
+   */
+  protected readonly helpers = PatternHelpers;
 
   /**
    * Abstract method that must be implemented by subclasses
@@ -110,7 +101,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    */
   protected splitIntoSections(output: string): string[] {
     try {
-      return output.split(SECTION_SEPARATOR_PATTERN).filter(Boolean);
+      return output.split(SSTPatterns.sections.separator).filter(Boolean);
     } catch (_error) {
       // If splitting fails, return the whole output as single section
       return [output];
@@ -124,6 +115,8 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * whitespace, and reducing excessive blank lines. This ensures consistent
    * parsing behavior across different environments and SST versions.
    *
+   * Now uses centralized pattern helpers for cleaning
+   *
    * @param text Raw text input from SST CLI
    * @returns Cleaned and normalized text ready for pattern matching
    */
@@ -133,18 +126,8 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     }
 
     try {
-      return (
-        text
-          // Normalize line endings
-          .replace(LINE_ENDING_PATTERN, '\n')
-          // Remove trailing whitespace from each line
-          .split('\n')
-          .map((line) => line.replace(TRAILING_WHITESPACE_PATTERN, ''))
-          .join('\n')
-          // Remove excessive blank lines
-          .replace(/\n{3,}/g, '\n\n')
-          .trim()
-      );
+      // Use centralized pattern helpers
+      return this.helpers.cleanText(text);
     } catch (_error) {
       // If cleaning fails, return original text
       return text;
