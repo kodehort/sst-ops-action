@@ -3,12 +3,12 @@
  * Handles only the essential error types needed for a GitHub Action
  */
 
-import * as core from '@actions/core';
-import * as github from '@actions/github';
-import type { OperationOptions, SSTOperation } from '../types';
-import type { ValidationError } from '../utils/validation';
-import { getActionVersion } from '../utils/version';
-import type { ActionError, OperationMetadata } from './categories';
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import type { OperationOptions, SSTOperation } from "../types";
+import type { ValidationError } from "../utils/validation";
+import { getActionVersion } from "../utils/version";
+import type { ActionError, OperationMetadata } from "./categories";
 
 /**
  * Create input validation error
@@ -20,7 +20,7 @@ export function createInputValidationError(
   originalError?: Error
 ): ActionError {
   const error: ActionError = {
-    type: 'input_validation',
+    type: "input_validation",
     message,
     shouldFailAction: true,
   };
@@ -89,7 +89,7 @@ export function createSubprocessError(
   const operationMetadata = createOperationMetadata();
 
   const error: ActionError = {
-    type: 'subprocess_error',
+    type: "subprocess_error",
     message,
     shouldFailAction: true, // Non-zero exit code = fail action
     details: {
@@ -134,7 +134,7 @@ export function createOutputParsingError(
   const operationMetadata = createOperationMetadata();
 
   const error: ActionError = {
-    type: 'output_parsing',
+    type: "output_parsing",
     message,
     shouldFailAction: false, // Parsing errors don't fail the action
     details: {
@@ -181,7 +181,7 @@ export function handleError(
   options: OperationOptions
 ): void {
   // Add defensive check for error object to handle cases where it doesn't match expected structure
-  if (!error || typeof error !== 'object') {
+  if (!error || typeof error !== "object") {
     core.error(
       `🔴 Invalid error object passed to handleError: ${JSON.stringify(error)}`
     );
@@ -219,7 +219,7 @@ function logError(error: ActionError, options: OperationOptions): void {
  * Validate error object structure
  */
 function isValidErrorObject(error: unknown): error is ActionError {
-  return !!(error && typeof error === 'object' && (error as ActionError).type);
+  return !!(error && typeof error === "object" && (error as ActionError).type);
 }
 
 /**
@@ -271,7 +271,7 @@ function logErrorMetadata(error: ActionError): void {
   }
   if (metadata.runId) {
     core.info(
-      `Run ID: ${metadata.runId} (Run #${metadata.runNumber || 'unknown'})`
+      `Run ID: ${metadata.runId} (Run #${metadata.runNumber || "unknown"})`
     );
   }
   if (metadata.actor) {
@@ -304,7 +304,7 @@ function formatFailureMessage(
   error: ActionError,
   options: OperationOptions
 ): string {
-  let message = `${error.type.replace('_', ' ')} in ${options.stage}`;
+  let message = `${error.type.replace("_", " ")} in ${options.stage}`;
 
   if (error.details?.operation) {
     message += ` ${error.details.operation} operation`;
@@ -330,5 +330,5 @@ function formatFailureMessage(
  * Check if this is a parsing error (for partial success scenarios)
  */
 export function isParsingError(error: ActionError): boolean {
-  return error.type === 'output_parsing';
+  return error.type === "output_parsing";
 }

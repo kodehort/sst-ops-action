@@ -3,13 +3,13 @@
  * Defines the unified type system for deploy, diff, and remove operations
  */
 
-import type { SSTRunner } from '../utils/cli.js';
+import type { SSTRunner } from "../utils/cli.js";
 
 /**
  * Array of all supported SST operations - single source of truth
  * Used to derive the SSTOperation type and validate operation values
  */
-export const SST_OPERATIONS = ['deploy', 'diff', 'remove', 'stage'] as const;
+export const SST_OPERATIONS = ["deploy", "diff", "remove", "stage"] as const;
 
 /**
  * Union type of all supported SST operations
@@ -17,9 +17,9 @@ export const SST_OPERATIONS = ['deploy', 'diff', 'remove', 'stage'] as const;
  */
 export type SSTOperation = (typeof SST_OPERATIONS)[number];
 
-export type CommentMode = 'always' | 'on-success' | 'on-failure' | 'never';
+export type CommentMode = "always" | "on-success" | "on-failure" | "never";
 
-export type CompletionStatus = 'complete' | 'partial' | 'failed';
+export type CompletionStatus = "complete" | "partial" | "failed";
 
 export interface OperationOptions {
   stage: string;
@@ -46,7 +46,7 @@ export interface BaseOperationResult {
 }
 
 export interface DeployResult extends BaseOperationResult {
-  operation: 'deploy';
+  operation: "deploy";
   resourceChanges: number;
   outputs: Array<{
     key: string;
@@ -55,35 +55,35 @@ export interface DeployResult extends BaseOperationResult {
   resources: Array<{
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'deleted';
+    status: "created" | "updated" | "deleted";
     timing?: string;
   }>;
 }
 
 export interface DiffResult extends BaseOperationResult {
-  operation: 'diff';
+  operation: "diff";
   plannedChanges: number;
   changeSummary: string;
   changes: Array<{
     type: string;
     name: string;
-    action: 'create' | 'update' | 'delete';
+    action: "create" | "update" | "delete";
     details?: string;
   }>;
 }
 
 export interface RemoveResult extends BaseOperationResult {
-  operation: 'remove';
+  operation: "remove";
   resourcesRemoved: number;
   removedResources: Array<{
     type: string;
     name: string;
-    status: 'removed' | 'failed' | 'skipped';
+    status: "removed" | "failed" | "skipped";
   }>;
 }
 
 export interface StageResult extends BaseOperationResult {
-  operation: 'stage';
+  operation: "stage";
   computedStage: string;
   ref: string;
   eventName: string;
@@ -126,7 +126,7 @@ export interface ExecutionStats {
 export interface OperationMetadata {
   version: string;
   timestamp: string;
-  environment: 'github-actions';
+  environment: "github-actions";
   runner: {
     os: string;
     arch: string;

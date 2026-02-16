@@ -1,5 +1,5 @@
-import type { DiffResult } from '../types/operations';
-import { OperationParser } from './operation-parser';
+import type { DiffResult } from "../types/operations";
+import { OperationParser } from "./operation-parser";
 
 /**
  * Diff-specific regex patterns for parsing planned changes
@@ -37,8 +37,8 @@ export class DiffParser extends OperationParser<DiffResult> {
    */
   parse(output: string, stage: string, exitCode: number): DiffResult {
     // Handle null/undefined input gracefully
-    const processedOutput = this.cleanText(output || '');
-    const lines = processedOutput.split('\n');
+    const processedOutput = this.cleanText(output || "");
+    const lines = processedOutput.split("\n");
 
     // Parse common information from base parser (uses full output for header info)
     const commonInfo = this.parseCommonInfo(lines);
@@ -62,13 +62,13 @@ export class DiffParser extends OperationParser<DiffResult> {
     const result: DiffResult = {
       // Base operation result properties
       success,
-      operation: 'diff',
+      operation: "diff",
       stage,
       exitCode,
-      app: commonInfo.app || 'unknown-app',
+      app: commonInfo.app || "unknown-app",
       rawOutput: processedOutput,
-      permalink: commonInfo.permalink || '',
-      completionStatus: commonInfo.completionStatus || 'complete',
+      permalink: commonInfo.permalink || "",
+      completionStatus: commonInfo.completionStatus || "complete",
       truncated: false,
 
       // Diff-specific properties
@@ -87,14 +87,14 @@ export class DiffParser extends OperationParser<DiffResult> {
   private parsePlannedChanges(output: string): Array<{
     type: string;
     name: string;
-    action: 'create' | 'update' | 'delete';
+    action: "create" | "update" | "delete";
     details?: string;
   }> {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     const changes: Array<{
       type: string;
       name: string;
-      action: 'create' | 'update' | 'delete';
+      action: "create" | "update" | "delete";
       details?: string;
     }> = [];
 
@@ -133,7 +133,7 @@ export class DiffParser extends OperationParser<DiffResult> {
   private parseResourceChange(line: string): {
     type: string;
     name: string;
-    action: 'create' | 'update' | 'delete';
+    action: "create" | "update" | "delete";
     hasChildResource: boolean;
   } | null {
     const topLevelMatch = line.match(TOP_LEVEL_RESOURCE_PATTERN);
@@ -160,21 +160,21 @@ export class DiffParser extends OperationParser<DiffResult> {
   /**
    * Parse action from symbol
    */
-  private parseAction(symbol: string): 'create' | 'update' | 'delete' {
-    if (symbol === '+') {
-      return 'create';
+  private parseAction(symbol: string): "create" | "update" | "delete" {
+    if (symbol === "+") {
+      return "create";
     }
-    if (symbol === '*') {
-      return 'update';
+    if (symbol === "*") {
+      return "update";
     }
-    return 'delete';
+    return "delete";
   }
 
   /**
    * Check if a resource should be skipped
    */
   private shouldSkipResource(type: string, name: string): boolean {
-    return type === 'Stack' || name === 'Diff';
+    return type === "Stack" || name === "Diff";
   }
 
   /**
@@ -184,13 +184,13 @@ export class DiffParser extends OperationParser<DiffResult> {
     changes: Array<{
       type: string;
       name: string;
-      action: 'create' | 'update' | 'delete';
+      action: "create" | "update" | "delete";
       details?: string;
     }>,
     resourceChange: {
       type: string;
       name: string;
-      action: 'create' | 'update' | 'delete';
+      action: "create" | "update" | "delete";
       hasChildResource: boolean;
     }
   ): void {
@@ -226,27 +226,27 @@ export class DiffParser extends OperationParser<DiffResult> {
     type: string;
   } {
     // Split by space - last part should be the resource type
-    const parts = identifier.trim().split(' ');
+    const parts = identifier.trim().split(" ");
 
     if (parts.length >= 2) {
       // Join all parts except the last one as the name
-      const name = parts.slice(0, -1).join(' ');
-      const typeString = parts.at(-1) || '';
+      const name = parts.slice(0, -1).join(" ");
+      const typeString = parts.at(-1) || "";
 
       // Extract just the resource type from the full type string (e.g., "Function" from "sst:aws:Function")
-      const typeParts = typeString.split(':');
+      const typeParts = typeString.split(":");
       const simpleType = typeParts.at(-1) || typeString;
 
       return {
         name: name.trim(),
-        type: simpleType || 'Unknown',
+        type: simpleType || "Unknown",
       };
     }
 
     // Fallback: use the whole identifier as the name
     return {
       name: identifier.trim(),
-      type: 'Unknown',
+      type: "Unknown",
     };
   }
 
@@ -260,12 +260,12 @@ export class DiffParser extends OperationParser<DiffResult> {
   ): string {
     // Check for explicit "No changes" message
     if (this.diffPatterns.NO_CHANGES.test(output)) {
-      return 'No changes';
+      return "No changes";
     }
 
     // Check for error scenarios - only return error message for actual failures with non-zero exit code
     if (exitCode !== 0 && this.diffPatterns.DIFF_FAILED.test(output)) {
-      return 'Diff parsing failed - unable to determine changes';
+      return "Diff parsing failed - unable to determine changes";
     }
 
     // Always use "X changes planned" format for consistency

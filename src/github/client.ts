@@ -3,15 +3,15 @@
  * Handles operation-specific formatting and proper error recovery
  */
 
-import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { DefaultArtifactClient } from '@actions/artifact';
-import * as core from '@actions/core';
-import * as github from '@actions/github';
-import * as io from '@actions/io';
-import type { BaseOperationResult, CommentMode } from '../types/index.js';
-import { OperationFormatter } from './formatters.js';
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DefaultArtifactClient } from "@actions/artifact";
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import * as io from "@actions/io";
+import type { BaseOperationResult, CommentMode } from "../types/index.js";
+import { OperationFormatter } from "./formatters.js";
 
 /**
  * Comment creation options
@@ -41,10 +41,10 @@ export class GitHubClient {
 
   constructor(token?: string) {
     const githubToken =
-      token || core.getInput('github-token') || process.env.GITHUB_TOKEN;
+      token || core.getInput("github-token") || process.env.GITHUB_TOKEN;
     if (!githubToken) {
       throw new Error(
-        'GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable.'
+        "GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable."
       );
     }
     this.octokit = github.getOctokit(githubToken);
@@ -57,7 +57,7 @@ export class GitHubClient {
    */
   async postPRComment(comment: string, operationType: string): Promise<void> {
     if (!this.context.payload.pull_request) {
-      core.debug('Not in PR context, skipping comment creation');
+      core.debug("Not in PR context, skipping comment creation");
       return;
     }
 
@@ -105,7 +105,7 @@ export class GitHubClient {
       if (commentOptions.updateExisting && this.context.payload.pull_request) {
         if (!commentOptions.identifier) {
           throw new Error(
-            'Comment identifier is required when updateExisting is true'
+            "Comment identifier is required when updateExisting is true"
           );
         }
         await this.updateOrCreateComment(
@@ -158,19 +158,19 @@ export class GitHubClient {
     };
 
     try {
-      const tempDir = join(tmpdir(), 'sst-artifacts');
+      const tempDir = join(tmpdir(), "sst-artifacts");
       await io.mkdirP(tempDir);
 
       // Create result file
-      const resultFile = join(tempDir, 'result.json');
+      const resultFile = join(tempDir, "result.json");
       await writeFile(resultFile, JSON.stringify(result, null, 2));
 
       // Create raw output file
-      const outputFile = join(tempDir, 'output.txt');
+      const outputFile = join(tempDir, "output.txt");
       await writeFile(outputFile, result.rawOutput);
 
       // Create metadata file
-      const metadataFile = join(tempDir, 'metadata.json');
+      const metadataFile = join(tempDir, "metadata.json");
       await writeFile(
         metadataFile,
         JSON.stringify(
@@ -220,13 +220,13 @@ export class GitHubClient {
     mode: CommentMode
   ): boolean {
     switch (mode) {
-      case 'always':
+      case "always":
         return true;
-      case 'on-success':
+      case "on-success":
         return result.success;
-      case 'on-failure':
+      case "on-failure":
         return !result.success;
-      case 'never':
+      case "never":
         return false;
       default: {
         const _exhaustive: never = mode;
@@ -253,7 +253,7 @@ export class GitHubClient {
    */
   private async createComment(body: string): Promise<void> {
     if (!this.context.payload.pull_request) {
-      core.debug('Not in PR context, skipping comment creation');
+      core.debug("Not in PR context, skipping comment creation");
       return;
     }
 
@@ -272,7 +272,7 @@ export class GitHubClient {
     identifier: string
   ): Promise<void> {
     if (!this.context.payload.pull_request) {
-      core.debug('Not in PR context, skipping comment update');
+      core.debug("Not in PR context, skipping comment update");
       return;
     }
 

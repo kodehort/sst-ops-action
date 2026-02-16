@@ -1,30 +1,30 @@
-import { describe, expect, it } from 'vitest';
-import { OutputFormatter } from '../../src/outputs/formatter';
-import type { DeployResult, DiffResult, RemoveResult } from '../../src/types';
+import { describe, expect, it } from "vitest";
+import { OutputFormatter } from "../../src/outputs/formatter";
+import type { DeployResult, DiffResult, RemoveResult } from "../../src/types";
 
-describe('OutputFormatter Integration', () => {
-  describe('GitHub Actions workflow integration', () => {
-    it('should produce consistent outputs for deploy workflow', () => {
+describe("OutputFormatter Integration", () => {
+  describe("GitHub Actions workflow integration", () => {
+    it("should produce consistent outputs for deploy workflow", () => {
       const deployResult: DeployResult = {
         success: true,
-        operation: 'deploy',
-        stage: 'production',
-        app: 'my-sst-app',
-        rawOutput: 'Deploy completed successfully',
+        operation: "deploy",
+        stage: "production",
+        app: "my-sst-app",
+        rawOutput: "Deploy completed successfully",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         resourceChanges: 5,
         outputs: [
-          { key: 'API', value: 'https://api.myapp.com' },
-          { key: 'Web', value: 'https://myapp.com' },
+          { key: "API", value: "https://api.myapp.com" },
+          { key: "Web", value: "https://myapp.com" },
         ],
         resources: [
-          { type: 'Function', name: 'api-handler', status: 'created' },
-          { type: 'Api', name: 'api-gateway', status: 'updated' },
+          { type: "Function", name: "api-handler", status: "created" },
+          { type: "Api", name: "api-gateway", status: "updated" },
         ],
         permalink:
-          'https://console.sst.dev/my-sst-app/production/deployments/xyz789',
+          "https://console.sst.dev/my-sst-app/production/deployments/xyz789",
       };
 
       const outputs =
@@ -32,45 +32,45 @@ describe('OutputFormatter Integration', () => {
 
       // Validate outputs are properly formatted
       OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, 'deploy');
+      OutputFormatter.validateOperationConsistency(outputs, "deploy");
 
       // Verify all required fields are strings
-      expect(typeof outputs.success).toBe('string');
-      expect(typeof outputs.operation).toBe('string');
-      expect(typeof outputs.stage).toBe('string');
-      expect(typeof outputs.completion_status).toBe('string');
+      expect(typeof outputs.success).toBe("string");
+      expect(typeof outputs.operation).toBe("string");
+      expect(typeof outputs.stage).toBe("string");
+      expect(typeof outputs.completion_status).toBe("string");
 
       // Verify operation-specific fields
-      expect(outputs.success).toBe('true');
-      expect(outputs.operation).toBe('deploy');
-      expect(outputs.stage).toBe('production');
-      expect(outputs.completion_status).toBe('complete');
-      expect(outputs.resource_changes).toBe('5');
-      expect(JSON.parse(outputs.outputs || '[]')).toHaveLength(2);
-      expect(JSON.parse(outputs.resources || '[]')).toHaveLength(2);
+      expect(outputs.success).toBe("true");
+      expect(outputs.operation).toBe("deploy");
+      expect(outputs.stage).toBe("production");
+      expect(outputs.completion_status).toBe("complete");
+      expect(outputs.resource_changes).toBe("5");
+      expect(JSON.parse(outputs.outputs || "[]")).toHaveLength(2);
+      expect(JSON.parse(outputs.resources || "[]")).toHaveLength(2);
     });
 
-    it('should produce consistent outputs for diff workflow', () => {
+    it("should produce consistent outputs for diff workflow", () => {
       const diffResult: DiffResult = {
         success: true,
-        operation: 'diff',
-        stage: 'staging',
-        app: 'my-sst-app',
-        rawOutput: 'Diff analysis completed',
+        operation: "diff",
+        stage: "staging",
+        app: "my-sst-app",
+        rawOutput: "Diff analysis completed",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         plannedChanges: 3,
-        changeSummary: 'Found 3 planned infrastructure changes',
+        changeSummary: "Found 3 planned infrastructure changes",
         changes: [
-          { type: 'Function', name: 'handler', action: 'create', details: '' },
+          { type: "Function", name: "handler", action: "create", details: "" },
           {
-            type: 'Database',
-            name: 'main-db',
-            action: 'update',
-            details: 'schema change',
+            type: "Database",
+            name: "main-db",
+            action: "update",
+            details: "schema change",
           },
-          { type: 'Bucket', name: 'assets', action: 'delete', details: '' },
+          { type: "Bucket", name: "assets", action: "delete", details: "" },
         ],
       };
 
@@ -79,38 +79,38 @@ describe('OutputFormatter Integration', () => {
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, 'diff');
+      OutputFormatter.validateOperationConsistency(outputs, "diff");
 
       // Verify diff-specific fields
-      expect(outputs.operation).toBe('diff');
-      expect(outputs.planned_changes).toBe('3');
+      expect(outputs.operation).toBe("diff");
+      expect(outputs.planned_changes).toBe("3");
       expect(outputs.diff_summary).toBe(
-        'Found 3 planned infrastructure changes'
+        "Found 3 planned infrastructure changes"
       );
-      expect(outputs.resource_changes).toBe('3'); // Should match plannedChanges
+      expect(outputs.resource_changes).toBe("3"); // Should match plannedChanges
 
       // Verify other operation fields are empty
-      expect(outputs.outputs).toBe('');
-      expect(outputs.resources).toBe('');
-      expect(outputs.resources_removed).toBe('');
-      expect(outputs.removed_resources).toBe('');
+      expect(outputs.outputs).toBe("");
+      expect(outputs.resources).toBe("");
+      expect(outputs.resources_removed).toBe("");
+      expect(outputs.removed_resources).toBe("");
     });
 
-    it('should produce consistent outputs for remove workflow', () => {
+    it("should produce consistent outputs for remove workflow", () => {
       const removeResult: RemoveResult = {
         success: true,
-        operation: 'remove',
-        stage: 'staging',
-        app: 'my-sst-app',
-        rawOutput: 'Resources removed successfully',
+        operation: "remove",
+        stage: "staging",
+        app: "my-sst-app",
+        rawOutput: "Resources removed successfully",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         resourcesRemoved: 7,
         removedResources: [
-          { type: 'Function', name: 'api-handler', status: 'removed' },
-          { type: 'Database', name: 'main-db', status: 'removed' },
-          { type: 'Api', name: 'api-gateway', status: 'removed' },
+          { type: "Function", name: "api-handler", status: "removed" },
+          { type: "Database", name: "main-db", status: "removed" },
+          { type: "Api", name: "api-gateway", status: "removed" },
         ],
       };
 
@@ -119,36 +119,36 @@ describe('OutputFormatter Integration', () => {
 
       // Validate outputs
       OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, 'remove');
+      OutputFormatter.validateOperationConsistency(outputs, "remove");
 
       // Verify remove-specific fields
-      expect(outputs.operation).toBe('remove');
-      expect(outputs.resources_removed).toBe('7');
-      expect(outputs.resource_changes).toBe('7'); // Should match resourcesRemoved
-      expect(JSON.parse(outputs.removed_resources || '[]')).toHaveLength(3);
+      expect(outputs.operation).toBe("remove");
+      expect(outputs.resources_removed).toBe("7");
+      expect(outputs.resource_changes).toBe("7"); // Should match resourcesRemoved
+      expect(JSON.parse(outputs.removed_resources || "[]")).toHaveLength(3);
 
       // Verify other operation fields are empty
-      expect(outputs.outputs).toBe('');
-      expect(outputs.resources).toBe('');
-      expect(outputs.diff_summary).toBe('');
-      expect(outputs.planned_changes).toBe('');
+      expect(outputs.outputs).toBe("");
+      expect(outputs.resources).toBe("");
+      expect(outputs.diff_summary).toBe("");
+      expect(outputs.planned_changes).toBe("");
     });
 
-    it('should handle failed operations consistently', () => {
+    it("should handle failed operations consistently", () => {
       const failedResult: DeployResult = {
         success: false,
-        operation: 'deploy',
-        stage: 'production',
-        app: 'my-sst-app',
-        rawOutput: 'Deploy failed: insufficient permissions',
+        operation: "deploy",
+        stage: "production",
+        app: "my-sst-app",
+        rawOutput: "Deploy failed: insufficient permissions",
         exitCode: 1,
         truncated: false,
-        completionStatus: 'failed',
+        completionStatus: "failed",
         resourceChanges: 0,
         outputs: [],
         resources: [],
         error:
-          'AWS credentials do not have sufficient permissions to deploy to production',
+          "AWS credentials do not have sufficient permissions to deploy to production",
       };
 
       const outputs =
@@ -158,29 +158,29 @@ describe('OutputFormatter Integration', () => {
       OutputFormatter.validateOutputs(outputs);
 
       // Verify failure handling
-      expect(outputs.success).toBe('false');
-      expect(outputs.completion_status).toBe('failed');
+      expect(outputs.success).toBe("false");
+      expect(outputs.completion_status).toBe("failed");
       expect(outputs.error).toBe(
-        'AWS credentials do not have sufficient permissions to deploy to production'
+        "AWS credentials do not have sufficient permissions to deploy to production"
       );
-      expect(outputs.resource_changes).toBe('0');
+      expect(outputs.resource_changes).toBe("0");
     });
 
-    it('should handle partial completion consistently', () => {
+    it("should handle partial completion consistently", () => {
       const partialResult: RemoveResult = {
         success: true,
-        operation: 'remove',
-        stage: 'staging',
-        app: 'my-sst-app',
-        rawOutput: 'Some resources could not be removed',
+        operation: "remove",
+        stage: "staging",
+        app: "my-sst-app",
+        rawOutput: "Some resources could not be removed",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'partial',
+        completionStatus: "partial",
         resourcesRemoved: 2,
         removedResources: [
-          { type: 'Function', name: 'handler1', status: 'removed' },
-          { type: 'Function', name: 'handler2', status: 'removed' },
-          { type: 'Database', name: 'main-db', status: 'failed' },
+          { type: "Function", name: "handler1", status: "removed" },
+          { type: "Function", name: "handler2", status: "removed" },
+          { type: "Database", name: "main-db", status: "failed" },
         ],
       };
 
@@ -191,22 +191,22 @@ describe('OutputFormatter Integration', () => {
       OutputFormatter.validateOutputs(outputs);
 
       // Verify partial completion handling
-      expect(outputs.success).toBe('true');
-      expect(outputs.completion_status).toBe('partial');
-      expect(outputs.resources_removed).toBe('2');
-      expect(JSON.parse(outputs.removed_resources || '[]')).toHaveLength(3); // All resources listed, including failed ones
+      expect(outputs.success).toBe("true");
+      expect(outputs.completion_status).toBe("partial");
+      expect(outputs.resources_removed).toBe("2");
+      expect(JSON.parse(outputs.removed_resources || "[]")).toHaveLength(3); // All resources listed, including failed ones
     });
 
-    it('should maintain consistency across all operation types', () => {
+    it("should maintain consistency across all operation types", () => {
       const deployResult: DeployResult = {
         success: true,
-        operation: 'deploy',
-        stage: 'test',
-        app: 'test-app',
-        rawOutput: '',
+        operation: "deploy",
+        stage: "test",
+        app: "test-app",
+        rawOutput: "",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         resourceChanges: 1,
         outputs: [],
         resources: [],
@@ -214,27 +214,27 @@ describe('OutputFormatter Integration', () => {
 
       const diffResult: DiffResult = {
         success: true,
-        operation: 'diff',
-        stage: 'test',
-        app: 'test-app',
-        rawOutput: '',
+        operation: "diff",
+        stage: "test",
+        app: "test-app",
+        rawOutput: "",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         plannedChanges: 1,
-        changeSummary: '',
+        changeSummary: "",
         changes: [],
       };
 
       const removeResult: RemoveResult = {
         success: true,
-        operation: 'remove',
-        stage: 'test',
-        app: 'test-app',
-        rawOutput: '',
+        operation: "remove",
+        stage: "test",
+        app: "test-app",
+        rawOutput: "",
         exitCode: 0,
         truncated: false,
-        completionStatus: 'complete',
+        completionStatus: "complete",
         resourcesRemoved: 1,
         removedResources: [],
       };

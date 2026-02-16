@@ -3,10 +3,10 @@
  * Reduces duplication across test files by providing standard mock setups
  */
 
-import { vi } from 'vitest';
-import type { GitHubClient } from '../../src/github/client';
-import type { OperationOptions } from '../../src/types';
-import type { SSTCLIExecutor } from '../../src/utils/cli';
+import { vi } from "vitest";
+import type { GitHubClient } from "../../src/github/client";
+import type { OperationOptions } from "../../src/types";
+import type { SSTCLIExecutor } from "../../src/utils/cli";
 
 /**
  * Standard operation options for testing
@@ -14,12 +14,12 @@ import type { SSTCLIExecutor } from '../../src/utils/cli';
 export const createMockOperationOptions = (
   overrides: Partial<OperationOptions> = {}
 ): OperationOptions => ({
-  stage: 'test',
-  token: 'fake-token',
-  commentMode: 'on-success',
+  stage: "test",
+  token: "fake-token",
+  commentMode: "on-success",
   failOnError: true,
   maxOutputSize: 50_000,
-  runner: 'bun',
+  runner: "bun",
   ...overrides,
 });
 
@@ -33,16 +33,16 @@ export const createMockSSTExecutor = (): SSTCLIExecutor => {
 
   // Default successful execution
   vi.mocked(mockExecutor.executeSST).mockResolvedValue({
-    output: 'Mock SST execution completed',
+    output: "Mock SST execution completed",
     exitCode: 0,
     duration: 30_000,
-    command: 'sst deploy --stage test',
+    command: "sst deploy --stage test",
     truncated: false,
-    stdout: 'Mock SST execution completed',
-    stderr: '',
+    stdout: "Mock SST execution completed",
+    stderr: "",
     success: true,
-    stage: 'test',
-    operation: 'deploy',
+    stage: "test",
+    operation: "deploy",
   });
 
   return mockExecutor;
@@ -84,17 +84,17 @@ export const setupCoreMocks = () => {
   // Set default behaviors
   mocks.getInput.mockImplementation((name: string) => {
     const defaults: Record<string, string> = {
-      operation: 'deploy',
-      stage: 'test',
-      token: 'fake-token',
-      'comment-mode': 'on-success',
-      'max-output-size': '50000',
+      operation: "deploy",
+      stage: "test",
+      token: "fake-token",
+      "comment-mode": "on-success",
+      "max-output-size": "50000",
     };
-    return defaults[name] || '';
+    return defaults[name] || "";
   });
 
   mocks.getBooleanInput.mockImplementation((name: string) => {
-    if (name === 'fail-on-error') {
+    if (name === "fail-on-error") {
       return true;
     }
     return false;
@@ -109,14 +109,14 @@ export const setupCoreMocks = () => {
 export const createMockEnvironment = (
   overrides: Record<string, string> = {}
 ): Record<string, string> => ({
-  NODE_ENV: 'test',
-  CI: 'true',
-  GITHUB_ACTIONS: 'true',
-  GITHUB_REPOSITORY: 'test-org/test-repo',
-  GITHUB_REF: 'refs/heads/main',
-  GITHUB_SHA: 'abc123def456',
-  GITHUB_ACTOR: 'test-actor',
-  GITHUB_EVENT_NAME: 'push',
+  NODE_ENV: "test",
+  CI: "true",
+  GITHUB_ACTIONS: "true",
+  GITHUB_REPOSITORY: "test-org/test-repo",
+  GITHUB_REF: "refs/heads/main",
+  GITHUB_SHA: "abc123def456",
+  GITHUB_ACTOR: "test-actor",
+  GITHUB_EVENT_NAME: "push",
   ...overrides,
 });
 
@@ -128,7 +128,7 @@ export const setupInputEnvironment = (
 ): Record<string, string> => {
   return Object.fromEntries(
     Object.entries(inputs).map(([key, value]) => [
-      `INPUT_${key.toUpperCase().replace(/-/g, '_')}`,
+      `INPUT_${key.toUpperCase().replace(/-/g, "_")}`,
       value,
     ])
   );
@@ -139,13 +139,13 @@ export const setupInputEnvironment = (
  */
 export const createMockValidation = () => ({
   validateOperationWithContext: vi.fn().mockReturnValue({
-    operation: 'deploy',
-    stage: 'test',
-    token: 'fake-token',
-    commentMode: 'on-success',
+    operation: "deploy",
+    stage: "test",
+    token: "fake-token",
+    commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
-    runner: 'bun',
+    runner: "bun",
   }),
   createValidationContext: vi.fn().mockReturnValue({}),
 });
@@ -167,21 +167,21 @@ export const createMockErrorHandler = () => ({
  */
 export const createMockOutputFormatter = () => ({
   formatOperationForGitHubActions: vi.fn().mockReturnValue({
-    success: 'true',
-    operation: 'deploy',
-    stage: 'test',
-    completion_status: 'complete',
-    app: 'test-app',
-    permalink: '',
-    truncated: 'false',
-    error: '',
-    resource_changes: '0',
-    urls: '[]',
-    resources: '[]',
-    diff_summary: '',
-    planned_changes: '',
-    resources_removed: '',
-    removed_resources: '',
+    success: "true",
+    operation: "deploy",
+    stage: "test",
+    completion_status: "complete",
+    app: "test-app",
+    permalink: "",
+    truncated: "false",
+    error: "",
+    resource_changes: "0",
+    urls: "[]",
+    resources: "[]",
+    diff_summary: "",
+    planned_changes: "",
+    resources_removed: "",
+    removed_resources: "",
   }),
   validateOutputs: vi.fn(),
 });

@@ -1,118 +1,118 @@
-import * as core from '@actions/core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fromValidationError, handleError } from '../src/errors/error-handler';
+import * as core from "@actions/core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fromValidationError, handleError } from "../src/errors/error-handler";
 
 // Mock the error handler functions
-vi.mock('../src/errors/error-handler', () => ({
+vi.mock("../src/errors/error-handler", () => ({
   handleError: vi.fn(),
   fromValidationError: vi.fn(),
   createInputValidationError: vi.fn(),
   createSubprocessError: vi.fn(),
 }));
 
-import { run } from '../src/main';
+import { run } from "../src/main";
 
-import * as operationRouter from '../src/operations/router';
-import { OutputFormatter } from '../src/outputs/formatter';
+import * as operationRouter from "../src/operations/router";
+import { OutputFormatter } from "../src/outputs/formatter";
 
 // Helper function to create mock getInput
 function createGetInputMock(inputs: Record<string, string>) {
   return (name: string) => {
-    return inputs[name] || '';
+    return inputs[name] || "";
   };
 }
 
-describe('Main Entry Point - Action Execution', () => {
+describe("Main Entry Point - Action Execution", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     process.env = {
-      NODE_ENV: 'test',
-      CI: 'true',
-      GITHUB_ACTIONS: 'true',
+      NODE_ENV: "test",
+      CI: "true",
+      GITHUB_ACTIONS: "true",
     };
 
-    vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+    vi.spyOn(core, "getInput").mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
-        operation: 'deploy',
-        stage: 'staging',
-        token: 'fake-token',
-        'comment-mode': 'on-success',
-        'max-output-size': '50000',
+        operation: "deploy",
+        stage: "staging",
+        token: "fake-token",
+        "comment-mode": "on-success",
+        "max-output-size": "50000",
       };
-      return inputs[name] || '';
+      return inputs[name] || "";
     });
 
-    vi.spyOn(core, 'getBooleanInput').mockImplementation((name: string) => {
-      if (name === 'fail-on-error') {
+    vi.spyOn(core, "getBooleanInput").mockImplementation((name: string) => {
+      if (name === "fail-on-error") {
         return true;
       }
       return false;
     });
 
-    vi.spyOn(operationRouter, 'executeOperation').mockResolvedValue({
+    vi.spyOn(operationRouter, "executeOperation").mockResolvedValue({
       success: true,
-      operation: 'deploy' as const,
-      stage: 'staging',
-      app: 'test-app',
-      completionStatus: 'complete',
+      operation: "deploy" as const,
+      stage: "staging",
+      app: "test-app",
+      completionStatus: "complete",
       resourceChanges: 3,
       urls: [],
       resources: [],
       truncated: false,
-      rawOutput: 'Deploy successful',
+      rawOutput: "Deploy successful",
       exitCode: 0,
     } as any);
 
     // Spy on and mock the output formatter
     vi.spyOn(
       OutputFormatter,
-      'formatOperationForGitHubActions'
+      "formatOperationForGitHubActions"
     ).mockReturnValue({
-      success: 'true',
-      operation: 'deploy',
-      stage: 'staging',
-      completion_status: 'complete',
-      app: 'test-app',
-      permalink: '',
-      truncated: 'false',
-      error: '',
-      resource_changes: '3',
-      outputs: '[]',
-      resources: '[]',
-      diff_summary: '',
-      planned_changes: '',
-      resources_removed: '',
-      removed_resources: '',
-      computed_stage: '',
-      ref: '',
-      event_name: '',
-      is_pull_request: '',
+      success: "true",
+      operation: "deploy",
+      stage: "staging",
+      completion_status: "complete",
+      app: "test-app",
+      permalink: "",
+      truncated: "false",
+      error: "",
+      resource_changes: "3",
+      outputs: "[]",
+      resources: "[]",
+      diff_summary: "",
+      planned_changes: "",
+      resources_removed: "",
+      removed_resources: "",
+      computed_stage: "",
+      ref: "",
+      event_name: "",
+      is_pull_request: "",
     });
 
-    vi.spyOn(OutputFormatter, 'validateOutputs').mockImplementation(
+    vi.spyOn(OutputFormatter, "validateOutputs").mockImplementation(
       (outputs) => outputs as any
     );
 
     // Spy on the error handler (but let it run to test actual error logging)
-    vi.spyOn({ handleError }, 'handleError');
+    vi.spyOn({ handleError }, "handleError");
 
     // Mock all core functions with spies
-    vi.spyOn(core, 'info').mockImplementation(() => {
+    vi.spyOn(core, "info").mockImplementation(() => {
       /* no-op */
     });
-    vi.spyOn(core, 'warning').mockImplementation(() => {
+    vi.spyOn(core, "warning").mockImplementation(() => {
       /* no-op */
     });
-    vi.spyOn(core, 'error').mockImplementation(() => {
+    vi.spyOn(core, "error").mockImplementation(() => {
       /* no-op */
     });
-    vi.spyOn(core, 'setOutput').mockImplementation(() => {
+    vi.spyOn(core, "setOutput").mockImplementation(() => {
       /* no-op */
     });
-    vi.spyOn(core, 'setFailed').mockImplementation(() => {
+    vi.spyOn(core, "setFailed").mockImplementation(() => {
       /* no-op */
     });
   });
@@ -122,48 +122,48 @@ describe('Main Entry Point - Action Execution', () => {
     process.env = originalEnv;
   });
 
-  describe('Successful Operation Execution', () => {
-    it('should execute deploy operation and report success with detailed metrics', async () => {
+  describe("Successful Operation Execution", () => {
+    it("should execute deploy operation and report success with detailed metrics", async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy completed successfully',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy completed successfully",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourceChanges: 3,
-        outputs: [{ key: 'API', value: 'https://api.example.com' }],
+        outputs: [{ key: "API", value: "https://api.example.com" }],
         resources: [
-          { type: 'Function', name: 'MyFunction', status: 'created' as const },
+          { type: "Function", name: "MyFunction", status: "created" as const },
         ],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(core.info).toHaveBeenCalledWith(
-        '🚀 Starting SST Operations Action'
+        "🚀 Starting SST Operations Action"
       );
       expect(core.info).toHaveBeenCalledWith(
         '📝 Parsed inputs: deploy operation on stage "staging"'
       );
       expect(core.info).toHaveBeenCalledWith(
-        '🔧 Executing deploy operation...'
+        "🔧 Executing deploy operation..."
       );
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        'deploy',
+        "deploy",
         expect.objectContaining({
-          stage: 'staging',
-          token: 'fake-token',
-          commentMode: 'on-success',
+          stage: "staging",
+          token: "fake-token",
+          commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 50_000,
-          runner: 'bun',
+          runner: "bun",
         })
       );
       expect(
@@ -171,143 +171,143 @@ describe('Main Entry Point - Action Execution', () => {
       ).toHaveBeenCalledWith(mockResult);
       expect(core.setOutput).toHaveBeenCalledTimes(19); // All outputs
       expect(core.info).toHaveBeenCalledWith(
-        '✅ SST deploy operation completed successfully'
+        "✅ SST deploy operation completed successfully"
       );
     });
 
-    it('should analyze deployment changes and provide comprehensive diff report', async () => {
+    it("should analyze deployment changes and provide comprehensive diff report", async () => {
       const inputs = {
-        operation: 'diff',
-        stage: 'production',
-        token: 'ghp_test123',
-        'comment-mode': 'always',
+        operation: "diff",
+        stage: "production",
+        token: "ghp_test123",
+        "comment-mode": "always",
       };
-      vi.spyOn(core, 'getInput').mockImplementation(createGetInputMock(inputs));
+      vi.spyOn(core, "getInput").mockImplementation(createGetInputMock(inputs));
 
       const mockResult = {
         success: true,
-        operation: 'diff' as const,
-        stage: 'production',
-        app: 'test-app',
-        rawOutput: 'Diff analysis completed',
+        operation: "diff" as const,
+        stage: "production",
+        app: "test-app",
+        rawOutput: "Diff analysis completed",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         plannedChanges: 5,
-        changeSummary: 'Found 5 planned changes',
+        changeSummary: "Found 5 planned changes",
         changes: [],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        'diff',
+        "diff",
         expect.objectContaining({
-          stage: 'production',
-          token: 'ghp_test123',
-          commentMode: 'always',
+          stage: "production",
+          token: "ghp_test123",
+          commentMode: "always",
           failOnError: true,
           maxOutputSize: 50_000,
-          runner: 'bun',
+          runner: "bun",
         })
       );
-      expect(core.info).toHaveBeenCalledWith('📋 Found 5 planned change(s)');
+      expect(core.info).toHaveBeenCalledWith("📋 Found 5 planned change(s)");
       expect(core.info).toHaveBeenCalledWith(
-        '✅ SST diff operation completed successfully'
+        "✅ SST diff operation completed successfully"
       );
     });
 
-    it('should remove deployed resources and provide cleanup summary', async () => {
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'remove';
+    it("should remove deployed resources and provide cleanup summary", async () => {
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "remove";
         }
-        if (name === 'stage') {
-          return 'staging';
+        if (name === "stage") {
+          return "staging";
         }
-        if (name === 'token') {
-          return 'fake-token';
+        if (name === "token") {
+          return "fake-token";
         }
-        return '';
+        return "";
       });
 
       const mockResult = {
         success: true,
-        operation: 'remove' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Resources removed successfully',
+        operation: "remove" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Resources removed successfully",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourcesRemoved: 7,
         removedResources: [
-          { type: 'Function', name: 'OldFunction', status: 'removed' as const },
+          { type: "Function", name: "OldFunction", status: "removed" as const },
         ],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        'remove',
+        "remove",
         expect.objectContaining({
-          stage: 'staging',
-          token: 'fake-token',
-          commentMode: 'on-success',
+          stage: "staging",
+          token: "fake-token",
+          commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 50_000,
-          runner: 'bun',
+          runner: "bun",
         })
       );
-      expect(core.info).toHaveBeenCalledWith('🗑️ Removed 7 resource(s)');
+      expect(core.info).toHaveBeenCalledWith("🗑️ Removed 7 resource(s)");
       expect(core.info).toHaveBeenCalledWith(
-        '✅ SST remove operation completed successfully'
+        "✅ SST remove operation completed successfully"
       );
     });
   });
 
-  describe('Failed Operation Handling', () => {
-    it('should handle operation failure with failOnError=true', async () => {
+  describe("Failed Operation Handling", () => {
+    it("should handle operation failure with failOnError=true", async () => {
       const mockResult = {
         success: false,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy failed',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy failed",
         exitCode: 1,
-        completionStatus: 'failed' as const,
-        error: 'Authentication failed',
+        completionStatus: "failed" as const,
+        error: "Authentication failed",
         resourceChanges: 0,
         outputs: [],
         resources: [],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(core.setFailed).toHaveBeenCalledWith(
-        'SST deploy operation failed: Authentication failed'
+        "SST deploy operation failed: Authentication failed"
       );
       expect(core.info).not.toHaveBeenCalledWith(
         expect.stringMatching(/completed successfully/)
       );
     });
 
-    it('should handle operation failure with failOnError=false', async () => {
-      vi.spyOn(core, 'getBooleanInput').mockImplementation((name: string) => {
-        if (name === 'fail-on-error') {
+    it("should handle operation failure with failOnError=false", async () => {
+      vi.spyOn(core, "getBooleanInput").mockImplementation((name: string) => {
+        if (name === "fail-on-error") {
           return false;
         }
         return false;
@@ -315,48 +315,48 @@ describe('Main Entry Point - Action Execution', () => {
 
       const mockResult = {
         success: false,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy failed due to network timeout',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy failed due to network timeout",
         exitCode: 1,
-        completionStatus: 'failed' as const,
-        error: 'Network timeout',
+        completionStatus: "failed" as const,
+        error: "Network timeout",
         resourceChanges: 0,
         outputs: [],
         resources: [],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(core.warning).toHaveBeenCalledWith(
-        'SST deploy operation failed: Network timeout'
+        "SST deploy operation failed: Network timeout"
       );
       expect(core.info).toHaveBeenCalledWith(
-        '🔄 Continuing workflow as fail-on-error is disabled'
+        "🔄 Continuing workflow as fail-on-error is disabled"
       );
       expect(core.setFailed).not.toHaveBeenCalled();
     });
   });
 
-  describe('Input Validation Workflows', () => {
-    it('should handle input validation errors', async () => {
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'invalid-operation';
+  describe("Input Validation Workflows", () => {
+    it("should handle input validation errors", async () => {
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "invalid-operation";
         }
-        if (name === 'stage') {
-          return 'staging';
+        if (name === "stage") {
+          return "staging";
         }
-        if (name === 'token') {
-          return 'fake-token';
+        if (name === "token") {
+          return "fake-token";
         }
-        return '';
+        return "";
       });
 
       // Invalid operation should throw immediately and be handled by handleUnexpectedError
@@ -366,115 +366,115 @@ describe('Main Entry Point - Action Execution', () => {
       expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
-    it('should validate required inputs', async () => {
+    it("should validate required inputs", async () => {
       // Temporarily use real error handling functions for this test
       const {
         handleError: realHandleError,
         fromValidationError: realFromValidationError,
-      } = (await vi.importActual('../src/errors/error-handler')) as any;
+      } = (await vi.importActual("../src/errors/error-handler")) as any;
       vi.mocked(handleError).mockImplementation(realHandleError as any);
       vi.mocked(fromValidationError).mockImplementation(
         realFromValidationError as any
       );
 
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'deploy';
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "deploy";
         }
-        if (name === 'stage') {
-          return 'test-stage'; // Provide a valid stage to avoid stage computation failure
+        if (name === "stage") {
+          return "test-stage"; // Provide a valid stage to avoid stage computation failure
         }
         // Return empty token to trigger validation error
-        if (name === 'token') {
-          return '';
+        if (name === "token") {
+          return "";
         }
-        return '';
+        return "";
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('🔴 unknown input_validation:')
+        expect.stringContaining("🔴 unknown input_validation:")
       );
       expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
-    it('should throw when operation input is missing', async () => {
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return '';
+    it("should throw when operation input is missing", async () => {
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "";
         }
-        return '';
+        return "";
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('🔴 unknown input_validation:')
+        expect.stringContaining("🔴 unknown input_validation:")
       );
     });
 
-    it('should throw when operation input is invalid', async () => {
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'invalid-op';
+    it("should throw when operation input is invalid", async () => {
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "invalid-op";
         }
-        return '';
+        return "";
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('🔴 unknown input_validation:')
+        expect.stringContaining("🔴 unknown input_validation:")
       );
     });
 
-    it('should throw when stage computation fails', async () => {
+    it("should throw when stage computation fails", async () => {
       // Mock the StageProcessor to fail
       const { StageProcessor } = (await vi.importActual(
-        '../src/parsers/stage-processor'
+        "../src/parsers/stage-processor"
       )) as any;
-      vi.spyOn(StageProcessor.prototype, 'process').mockReturnValue({
+      vi.spyOn(StageProcessor.prototype, "process").mockReturnValue({
         success: false,
-        error: 'Failed to generate a valid stage name from Git context',
+        error: "Failed to generate a valid stage name from Git context",
         exitCode: 1,
       });
 
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'deploy';
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "deploy";
         }
-        if (name === 'stage') {
-          return ''; // Empty stage to trigger computation
+        if (name === "stage") {
+          return ""; // Empty stage to trigger computation
         }
-        return '';
+        return "";
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('❌ Failed to compute stage from Git context')
+        expect.stringContaining("❌ Failed to compute stage from Git context")
       );
     });
   });
 
-  describe('Output Processing Workflows', () => {
-    it('should format and validate outputs correctly', async () => {
+  describe("Output Processing Workflows", () => {
+    it("should format and validate outputs correctly", async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy completed',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy completed",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourceChanges: 2,
         outputs: [],
         resources: [],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
@@ -484,75 +484,75 @@ describe('Main Entry Point - Action Execution', () => {
         OutputFormatter.formatOperationForGitHubActions
       ).toHaveBeenCalledWith(mockResult);
       expect(OutputFormatter.validateOutputs).toHaveBeenCalled();
-      expect(core.setOutput).toHaveBeenCalledWith('success', 'true');
-      expect(core.setOutput).toHaveBeenCalledWith('operation', 'deploy');
-      expect(core.setOutput).toHaveBeenCalledWith('stage', 'staging');
+      expect(core.setOutput).toHaveBeenCalledWith("success", "true");
+      expect(core.setOutput).toHaveBeenCalledWith("operation", "deploy");
+      expect(core.setOutput).toHaveBeenCalledWith("stage", "staging");
     });
 
-    it('should handle output truncation warnings', async () => {
+    it("should handle output truncation warnings", async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy completed with large output',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy completed with large output",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourceChanges: 1,
         outputs: [],
         resources: [],
         truncated: true,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
 
       await run();
 
       expect(core.warning).toHaveBeenCalledWith(
-        '⚠️ Output was truncated due to size limits'
+        "⚠️ Output was truncated due to size limits"
       );
     });
 
-    it('should handle output formatting errors', async () => {
+    it("should handle output formatting errors", async () => {
       const mockResult = {
         success: true,
-        operation: 'deploy' as const,
-        stage: 'staging',
-        app: 'test-app',
-        rawOutput: 'Deploy completed',
+        operation: "deploy" as const,
+        stage: "staging",
+        app: "test-app",
+        rawOutput: "Deploy completed",
         exitCode: 0,
-        completionStatus: 'complete' as const,
+        completionStatus: "complete" as const,
         resourceChanges: 1,
         outputs: [],
         resources: [],
         truncated: false,
       };
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         mockResult
       );
       vi.spyOn(
         OutputFormatter,
-        'formatOperationForGitHubActions'
+        "formatOperationForGitHubActions"
       ).mockImplementation(() => {
-        throw new Error('Output formatting failed');
+        throw new Error("Output formatting failed");
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        'Failed to set outputs: Output formatting failed'
+        "Failed to set outputs: Output formatting failed"
       );
       expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
   });
 
-  describe('Error Handling Workflows', () => {
-    it('should use enhanced error handling for operation failures', async () => {
-      const operationError = new Error('SST CLI execution failed');
-      vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
+  describe("Error Handling Workflows", () => {
+    it("should use enhanced error handling for operation failures", async () => {
+      const operationError = new Error("SST CLI execution failed");
+      vi.spyOn(operationRouter, "executeOperation").mockRejectedValueOnce(
         operationError
       );
 
@@ -561,91 +561,91 @@ describe('Main Entry Point - Action Execution', () => {
       expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
-    it('should handle error handler failures gracefully', async () => {
-      const operationError = new Error('Operation failed');
-      vi.spyOn(operationRouter, 'executeOperation').mockRejectedValueOnce(
+    it("should handle error handler failures gracefully", async () => {
+      const operationError = new Error("Operation failed");
+      vi.spyOn(operationRouter, "executeOperation").mockRejectedValueOnce(
         operationError
       );
 
       vi.mocked(handleError).mockImplementationOnce(() => {
-        throw new Error('Error handler failed');
+        throw new Error("Error handler failed");
       });
 
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error handling failed')
+        expect.stringContaining("Error handling failed")
       );
       expect(core.setFailed).toHaveBeenCalledWith(
-        'Action failed: Operation failed'
+        "Action failed: Operation failed"
       );
     });
   });
 
-  describe('End-to-End Integration Scenarios', () => {
-    it('should handle end-to-end deploy workflow', async () => {
+  describe("End-to-End Integration Scenarios", () => {
+    it("should handle end-to-end deploy workflow", async () => {
       // Simulate full deploy workflow
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
-          operation: 'deploy',
-          stage: 'production',
-          token: 'ghp_real_token_123',
-          'comment-mode': 'on-success',
-          'max-output-size': '100000',
+          operation: "deploy",
+          stage: "production",
+          token: "ghp_real_token_123",
+          "comment-mode": "on-success",
+          "max-output-size": "100000",
         };
-        return inputs[name] || '';
+        return inputs[name] || "";
       });
 
       const deployResult = {
         success: true,
-        operation: 'deploy' as const,
-        stage: 'production',
-        app: 'my-sst-app',
-        completionStatus: 'complete' as const,
+        operation: "deploy" as const,
+        stage: "production",
+        app: "my-sst-app",
+        completionStatus: "complete" as const,
         resourceChanges: 15,
         outputs: [
-          { key: 'API', value: 'https://api.myapp.com' },
-          { key: 'Web', value: 'https://myapp.com' },
+          { key: "API", value: "https://api.myapp.com" },
+          { key: "Web", value: "https://myapp.com" },
         ],
         resources: [
-          { type: 'Function', name: 'ApiHandler', status: 'created' as const },
-          { type: 'Database', name: 'MainDB', status: 'updated' as const },
+          { type: "Function", name: "ApiHandler", status: "created" as const },
+          { type: "Database", name: "MainDB", status: "updated" as const },
         ],
         permalink:
-          'https://console.sst.dev/my-sst-app/production/deployments/abc123',
+          "https://console.sst.dev/my-sst-app/production/deployments/abc123",
         truncated: false,
-        rawOutput: 'Deploy completed successfully',
+        rawOutput: "Deploy completed successfully",
         exitCode: 0,
       };
 
       // Override the formatter mock to return production-specific outputs
       vi.spyOn(
         OutputFormatter,
-        'formatOperationForGitHubActions'
+        "formatOperationForGitHubActions"
       ).mockReturnValue({
-        success: 'true',
-        operation: 'deploy',
-        stage: 'production',
-        completion_status: 'complete',
-        app: 'my-sst-app',
+        success: "true",
+        operation: "deploy",
+        stage: "production",
+        completion_status: "complete",
+        app: "my-sst-app",
         permalink:
-          'https://console.sst.dev/my-sst-app/production/deployments/abc123',
-        truncated: 'false',
-        error: '',
-        resource_changes: '15',
+          "https://console.sst.dev/my-sst-app/production/deployments/abc123",
+        truncated: "false",
+        error: "",
+        resource_changes: "15",
         outputs: JSON.stringify(deployResult.outputs),
         resources: JSON.stringify(deployResult.resources),
-        diff_summary: '',
-        planned_changes: '',
-        resources_removed: '',
-        removed_resources: '',
-        computed_stage: '',
-        ref: '',
-        event_name: '',
-        is_pull_request: '',
+        diff_summary: "",
+        planned_changes: "",
+        resources_removed: "",
+        removed_resources: "",
+        computed_stage: "",
+        ref: "",
+        event_name: "",
+        is_pull_request: "",
       });
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         deployResult
       );
 
@@ -653,85 +653,85 @@ describe('Main Entry Point - Action Execution', () => {
 
       // Verify the complete workflow
       expect(core.info).toHaveBeenCalledWith(
-        '🚀 Starting SST Operations Action'
+        "🚀 Starting SST Operations Action"
       );
       expect(core.info).toHaveBeenCalledWith(
         '📝 Parsed inputs: deploy operation on stage "production"'
       );
       expect(core.info).toHaveBeenCalledWith(
-        '🔧 Executing deploy operation...'
+        "🔧 Executing deploy operation..."
       );
       expect(core.info).toHaveBeenCalledWith(
-        '✅ Operation: deploy (production)'
+        "✅ Operation: deploy (production)"
       );
-      expect(core.info).toHaveBeenCalledWith('📊 Status: SUCCESS (complete)');
-      expect(core.info).toHaveBeenCalledWith('🚀 Deployed 15 resource(s)');
+      expect(core.info).toHaveBeenCalledWith("📊 Status: SUCCESS (complete)");
+      expect(core.info).toHaveBeenCalledWith("🚀 Deployed 15 resource(s)");
       expect(core.info).toHaveBeenCalledWith(
-        '✅ SST deploy operation completed successfully'
+        "✅ SST deploy operation completed successfully"
       );
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        'deploy',
+        "deploy",
         expect.objectContaining({
-          stage: 'production',
-          token: 'ghp_real_token_123',
-          commentMode: 'on-success',
+          stage: "production",
+          token: "ghp_real_token_123",
+          commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 100_000,
-          runner: 'bun',
+          runner: "bun",
         })
       );
 
-      expect(core.setOutput).toHaveBeenCalledWith('success', 'true');
-      expect(core.setOutput).toHaveBeenCalledWith('operation', 'deploy');
-      expect(core.setOutput).toHaveBeenCalledWith('stage', 'production');
+      expect(core.setOutput).toHaveBeenCalledWith("success", "true");
+      expect(core.setOutput).toHaveBeenCalledWith("operation", "deploy");
+      expect(core.setOutput).toHaveBeenCalledWith("stage", "production");
       expect(core.setOutput).toHaveBeenCalledWith(
-        'completion_status',
-        'complete'
+        "completion_status",
+        "complete"
       );
     });
 
-    it('should handle partial success scenarios', async () => {
+    it("should handle partial success scenarios", async () => {
       const partialResult = {
         success: true,
-        operation: 'remove' as const,
-        stage: 'staging',
-        app: 'test-app',
-        completionStatus: 'partial' as const,
+        operation: "remove" as const,
+        stage: "staging",
+        app: "test-app",
+        completionStatus: "partial" as const,
         resourcesRemoved: 5,
         removedResources: [
-          { type: 'Function', name: 'Func1', status: 'removed' as const },
-          { type: 'Function', name: 'Func2', status: 'removed' as const },
-          { type: 'Database', name: 'DB1', status: 'failed' as const },
+          { type: "Function", name: "Func1", status: "removed" as const },
+          { type: "Function", name: "Func2", status: "removed" as const },
+          { type: "Database", name: "DB1", status: "failed" as const },
         ],
         truncated: false,
-        rawOutput: 'Remove completed with partial success',
+        rawOutput: "Remove completed with partial success",
         exitCode: 0,
       };
 
-      vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
-        if (name === 'operation') {
-          return 'remove';
+      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
+        if (name === "operation") {
+          return "remove";
         }
-        if (name === 'stage') {
-          return 'staging';
+        if (name === "stage") {
+          return "staging";
         }
-        if (name === 'token') {
-          return 'fake-token';
+        if (name === "token") {
+          return "fake-token";
         }
-        return '';
+        return "";
       });
 
-      vi.spyOn(operationRouter, 'executeOperation').mockResolvedValueOnce(
+      vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
         partialResult
       );
 
       await run();
 
-      expect(core.info).toHaveBeenCalledWith('📊 Status: SUCCESS (partial)');
-      expect(core.info).toHaveBeenCalledWith('🗑️ Removed 5 resource(s)');
+      expect(core.info).toHaveBeenCalledWith("📊 Status: SUCCESS (partial)");
+      expect(core.info).toHaveBeenCalledWith("🗑️ Removed 5 resource(s)");
       expect(core.info).toHaveBeenCalledWith(
-        '✅ SST remove operation completed successfully'
+        "✅ SST remove operation completed successfully"
       );
     });
   });

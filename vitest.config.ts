@@ -1,21 +1,21 @@
-import { resolve } from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    include: ['__tests__/**/*.test.{js,ts}', 'src/**/*.{test,spec}.{js,ts}'],
+    environment: "node",
+    include: ["__tests__/**/*.test.{js,ts}", "src/**/*.{test,spec}.{js,ts}"],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
       exclude: [
-        'node_modules/',
-        '__tests__/',
-        'dist/',
-        'scripts/',
-        '*.config.*',
-        'coverage/',
+        "node_modules/",
+        "__tests__/",
+        "dist/",
+        "scripts/",
+        "*.config.*",
+        "coverage/",
       ],
       thresholds: {
         global: {
@@ -26,16 +26,16 @@ export default defineConfig({
         },
       },
     },
-    setupFiles: ['./__tests__/setup.ts'],
+    setupFiles: ["./__tests__/setup.ts"],
     testTimeout: 30_000, // Increased for integration tests
     hookTimeout: 30_000,
     // Test categories with different configurations
-    pool: 'forks', // Better isolation for integration tests
+    pool: "forks", // Better isolation for integration tests
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@tests': resolve(__dirname, './__tests__'),
+      "@": resolve(import.meta.dirname, "./src"),
+      "@tests": resolve(import.meta.dirname, "./__tests__"),
     },
   },
 });

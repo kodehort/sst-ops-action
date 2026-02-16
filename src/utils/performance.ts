@@ -8,7 +8,7 @@
  * critical code paths.
  */
 
-import * as core from '@actions/core';
+import * as core from "@actions/core";
 
 /**
  * Performance measurement result
@@ -38,7 +38,7 @@ export interface PerformanceMeasurement {
  * ```
  */
 export class PerformanceTimer {
-  private startTime: number;
+  private readonly startTime: number;
   private endTime?: number;
   private readonly name: string;
 
@@ -123,8 +123,8 @@ export class PerformanceTimer {
  * ```
  */
 export class PerformanceTracker {
-  private measurements = new Map<string, PerformanceTimer>();
-  private completed = new Map<string, PerformanceMeasurement>();
+  private readonly measurements = new Map<string, PerformanceTimer>();
+  private readonly completed = new Map<string, PerformanceMeasurement>();
 
   /**
    * Start measuring an operation
@@ -235,11 +235,11 @@ export class PerformanceTracker {
   logSummary(): void {
     const measurements = this.getMeasurements();
     if (measurements.length === 0) {
-      core.info('📊 No performance measurements recorded');
+      core.info("📊 No performance measurements recorded");
       return;
     }
 
-    core.info('📊 Performance Summary:');
+    core.info("📊 Performance Summary:");
 
     // Sort by duration (longest first)
     const sorted = [...measurements].sort((a, b) => b.duration - a.duration);
@@ -252,7 +252,7 @@ export class PerformanceTracker {
 
       const metadata = measurement.metadata
         ? ` (${JSON.stringify(measurement.metadata)})`
-        : '';
+        : "";
 
       core.info(`  - ${measurement.name}: ${duration}${metadata}`);
     }
@@ -326,11 +326,11 @@ export function measured(name?: string) {
  */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) {
-    return '0 B';
+    return "0 B";
   }
 
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
@@ -345,7 +345,7 @@ export function getMemoryUsage(): {
   external: string;
 } | null {
   try {
-    if (typeof process !== 'undefined' && process.memoryUsage) {
+    if (typeof process !== "undefined" && process.memoryUsage) {
       const usage = process.memoryUsage();
       return {
         heapUsed: formatBytes(usage.heapUsed),
@@ -362,7 +362,7 @@ export function getMemoryUsage(): {
 /**
  * Log memory usage
  */
-export function logMemoryUsage(label = 'Memory'): void {
+export function logMemoryUsage(label = "Memory"): void {
   const usage = getMemoryUsage();
   if (usage) {
     core.debug(

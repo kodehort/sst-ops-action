@@ -3,9 +3,9 @@
  * Parses SST deploy command output to extract resource changes and generic outputs
  */
 
-import * as core from '@actions/core';
-import type { DeployResult } from '../types/operations';
-import { OperationParser } from './operation-parser';
+import * as core from "@actions/core";
+import type { DeployResult } from "../types/operations";
+import { OperationParser } from "./operation-parser";
 
 // Real SST v3 output patterns based on actual deploy examples
 const RESOURCE_CREATED_PATTERN =
@@ -41,7 +41,7 @@ export class DeployParser extends OperationParser<DeployResult> {
         : output;
 
     // Parse common information using base parser
-    const lines = processedOutput.split('\n');
+    const lines = processedOutput.split("\n");
     const commonInfo = this.parseCommonInfo(lines);
 
     // Parse deploy-specific information
@@ -54,15 +54,15 @@ export class DeployParser extends OperationParser<DeployResult> {
 
     const result: DeployResult = {
       success,
-      operation: 'deploy',
+      operation: "deploy",
       stage,
-      app: commonInfo.app || '',
+      app: commonInfo.app || "",
       rawOutput: processedOutput,
       exitCode,
       truncated,
       ...(error && { error }),
       completionStatus:
-        commonInfo.completionStatus || (success ? 'complete' : 'failed'),
+        commonInfo.completionStatus || (success ? "complete" : "failed"),
       ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
       resourceChanges: resources.length,
       resources,
@@ -78,14 +78,14 @@ export class DeployParser extends OperationParser<DeployResult> {
   private parseResourceChanges(output: string): Array<{
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'deleted';
+    status: "created" | "updated" | "deleted";
     timing?: string;
   }> {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     const resources: Array<{
       type: string;
       name: string;
-      status: 'created' | 'updated' | 'deleted';
+      status: "created" | "updated" | "deleted";
       timing?: string;
     }> = [];
 
@@ -107,13 +107,13 @@ export class DeployParser extends OperationParser<DeployResult> {
   private parseResourceChangeFromLine(line: string): {
     type: string;
     name: string;
-    status: 'created' | 'updated' | 'deleted';
+    status: "created" | "updated" | "deleted";
     timing?: string;
   } | null {
     const patterns = [
-      { regex: RESOURCE_CREATED_PATTERN, status: 'created' as const },
-      { regex: RESOURCE_UPDATED_PATTERN, status: 'updated' as const },
-      { regex: RESOURCE_DELETED_PATTERN, status: 'deleted' as const },
+      { regex: RESOURCE_CREATED_PATTERN, status: "created" as const },
+      { regex: RESOURCE_UPDATED_PATTERN, status: "updated" as const },
+      { regex: RESOURCE_DELETED_PATTERN, status: "deleted" as const },
     ];
 
     for (const { regex, status } of patterns) {
@@ -145,7 +145,7 @@ export class DeployParser extends OperationParser<DeployResult> {
     key: string;
     value: string;
   }> {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     const outputs: Array<{
       key: string;
       value: string;
@@ -175,8 +175,8 @@ export class DeployParser extends OperationParser<DeployResult> {
       inOutputSection &&
       outputs.length === 0 &&
       outputSectionLines > 0 &&
-      (process.env.ACTIONS_STEP_DEBUG === '1' ||
-        process.env.RUNNER_DEBUG === '1')
+      (process.env.ACTIONS_STEP_DEBUG === "1" ||
+        process.env.RUNNER_DEBUG === "1")
     ) {
       core.debug(
         `Output section found but no valid outputs parsed (${outputSectionLines} lines processed)`
@@ -198,9 +198,9 @@ export class DeployParser extends OperationParser<DeployResult> {
     if (outputPair) {
       outputs.push(outputPair);
     } else if (
-      trimmedLine?.includes(':') &&
-      (process.env.ACTIONS_STEP_DEBUG === '1' ||
-        process.env.RUNNER_DEBUG === '1')
+      trimmedLine?.includes(":") &&
+      (process.env.ACTIONS_STEP_DEBUG === "1" ||
+        process.env.RUNNER_DEBUG === "1")
     ) {
       // Cache truncated line to avoid repeated substring operations
       const logLine =
@@ -258,12 +258,12 @@ export class DeployParser extends OperationParser<DeployResult> {
     value: string;
   } | null {
     // Ignore separator lines
-    if (line.includes('---')) {
+    if (line.includes("---")) {
       return null;
     }
 
     // Parse key: value format
-    const colonIndex = line.indexOf(':');
+    const colonIndex = line.indexOf(":");
     if (colonIndex > 0 && colonIndex < line.length - 1) {
       const key = line.substring(0, colonIndex).trim();
       const value = line.substring(colonIndex + 1).trim();
@@ -288,8 +288,8 @@ export class DeployParser extends OperationParser<DeployResult> {
     value: string
   ): void {
     if (
-      process.env.ACTIONS_STEP_DEBUG === '1' ||
-      process.env.RUNNER_DEBUG === '1'
+      process.env.ACTIONS_STEP_DEBUG === "1" ||
+      process.env.RUNNER_DEBUG === "1"
     ) {
       if (!key) {
         const truncatedLine =
@@ -333,7 +333,7 @@ export class DeployParser extends OperationParser<DeployResult> {
 
     // Check for gRPC errors
     if (GRPC_ERROR_PATTERN.test(output)) {
-      return 'gRPC client error occurred during deployment';
+      return "gRPC client error occurred during deployment";
     }
 
     return;
@@ -343,7 +343,7 @@ export class DeployParser extends OperationParser<DeployResult> {
    * Parse generic Error: sections from output
    */
   private parseGenericErrorSections(output: string): string | undefined {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     let errorSection = false;
     const errorLines: string[] = [];
 
@@ -355,7 +355,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
 
       if (errorSection) {
-        if (line.trim() === '' && errorLines.length > 0) {
+        if (line.trim() === "" && errorLines.length > 0) {
           break; // End of error section
         }
         if (line.trim()) {
@@ -364,29 +364,29 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
     }
 
-    return errorLines.length > 0 ? errorLines.join(' ') : undefined;
+    return errorLines.length > 0 ? errorLines.join(" ") : undefined;
   }
 
   /**
    * Extract detailed error information from failed output
    */
   private extractDetailedError(output: string): string {
-    const lines = output.split('\n');
+    const lines = output.split("\n");
     const errorMessages: string[] = [];
 
     // Look for resource errors and main error messages
     for (const line of lines) {
       const trimmed = line.trim();
 
-      if (trimmed.startsWith('|') && trimmed.includes('Error')) {
-        errorMessages.push(trimmed.replace(PIPE_PREFIX_PATTERN, ''));
-      } else if (trimmed.startsWith('Error:')) {
+      if (trimmed.startsWith("|") && trimmed.includes("Error")) {
+        errorMessages.push(trimmed.replace(PIPE_PREFIX_PATTERN, ""));
+      } else if (trimmed.startsWith("Error:")) {
         errorMessages.push(trimmed);
       }
     }
 
     return errorMessages.length > 0
-      ? errorMessages.join('; ')
-      : 'Deployment failed';
+      ? errorMessages.join("; ")
+      : "Deployment failed";
   }
 }

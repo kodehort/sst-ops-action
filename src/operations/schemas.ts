@@ -3,7 +3,7 @@
  * Ensures type safety at runtime, not just compile time
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Metadata schema common to all operations
@@ -84,7 +84,7 @@ export const RawRemoveResultSchema = z.object({
   stage: z.string(),
   metadata: OperationMetadataSchema,
   error: z.string().optional(),
-  completionStatus: z.enum(['complete', 'partial', 'failed']).optional(),
+  completionStatus: z.enum(["complete", "partial", "failed"]).optional(),
   resourcesRemoved: z.number().optional(),
   removedResources: z
     .array(
@@ -111,10 +111,10 @@ export function validateRawDeployResult(result: unknown): RawDeployResult {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join('.')}: ${issue.message}`
+        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Deploy operation result validation failed:\n${issues.join('\n')}`
+        `Deploy operation result validation failed:\n${issues.join("\n")}`
       );
     }
     throw error as Error;
@@ -133,10 +133,10 @@ export function validateRawDiffResult(result: unknown): RawDiffResult {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join('.')}: ${issue.message}`
+        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Diff operation result validation failed:\n${issues.join('\n')}`
+        `Diff operation result validation failed:\n${issues.join("\n")}`
       );
     }
     throw error as Error;
@@ -155,10 +155,10 @@ export function validateRawRemoveResult(result: unknown): RawRemoveResult {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join('.')}: ${issue.message}`
+        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Remove operation result validation failed:\n${issues.join('\n')}`
+        `Remove operation result validation failed:\n${issues.join("\n")}`
       );
     }
     throw error as Error;

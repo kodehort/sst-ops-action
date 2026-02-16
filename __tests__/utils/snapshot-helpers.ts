@@ -4,10 +4,10 @@ import {
   readdirSync,
   readFileSync,
   writeFileSync,
-} from 'node:fs';
-import { dirname, join } from 'node:path';
-import { OperationFormatter } from '@/github/formatters';
-import type { OperationResult, SSTOperation } from '@/types/operations';
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { OperationFormatter } from "@/github/formatters";
+import type { OperationResult, SSTOperation } from "@/types/operations";
 
 /**
  * Snapshot testing utilities for SST operations
@@ -44,14 +44,14 @@ const formatter = new OperationFormatter();
  * Get the root directory for examples
  */
 export function getExamplesRoot(): string {
-  return join(process.cwd(), 'examples');
+  return join(process.cwd(), "examples");
 }
 
 /**
  * Get the path to an input file
  */
 export function getInputPath(operation: SSTOperation, name: string): string {
-  return join(getExamplesRoot(), 'inputs', operation, `${name}.txt`);
+  return join(getExamplesRoot(), "inputs", operation, `${name}.txt`);
 }
 
 /**
@@ -60,9 +60,9 @@ export function getInputPath(operation: SSTOperation, name: string): string {
 export function getSnapshotPath(
   operation: SSTOperation,
   name: string,
-  type: 'comment' | 'summary'
+  type: "comment" | "summary"
 ): string {
-  return join(getExamplesRoot(), 'snapshots', operation, `${name}.${type}.md`);
+  return join(getExamplesRoot(), "snapshots", operation, `${name}.${type}.md`);
 }
 
 /**
@@ -71,7 +71,7 @@ export function getSnapshotPath(
 export function getMetadataPath(operation: SSTOperation, name: string): string {
   return join(
     getExamplesRoot(),
-    'metadata',
+    "metadata",
     operation,
     `${name}.metadata.json`
   );
@@ -85,7 +85,7 @@ export function loadInput(operation: SSTOperation, name: string): string {
   if (!existsSync(inputPath)) {
     throw new Error(`Input file not found: ${inputPath}`);
   }
-  return readFileSync(inputPath, 'utf8');
+  return readFileSync(inputPath, "utf8");
 }
 
 /**
@@ -94,13 +94,13 @@ export function loadInput(operation: SSTOperation, name: string): string {
 export function loadSnapshot(
   operation: SSTOperation,
   name: string,
-  type: 'comment' | 'summary'
+  type: "comment" | "summary"
 ): string {
   const snapshotPath = getSnapshotPath(operation, name, type);
   if (!existsSync(snapshotPath)) {
     throw new Error(`Snapshot file not found: ${snapshotPath}`);
   }
-  return readFileSync(snapshotPath, 'utf8');
+  return readFileSync(snapshotPath, "utf8");
 }
 
 /**
@@ -114,7 +114,7 @@ export function loadMetadata(
   if (!existsSync(metadataPath)) {
     throw new Error(`Metadata file not found: ${metadataPath}`);
   }
-  const content = readFileSync(metadataPath, 'utf8');
+  const content = readFileSync(metadataPath, "utf8");
   return JSON.parse(content) as SnapshotMetadata;
 }
 
@@ -126,8 +126,8 @@ export function loadSnapshotData(
   name: string
 ): SnapshotData {
   const input = loadInput(operation, name);
-  const comment = loadSnapshot(operation, name, 'comment');
-  const summary = loadSnapshot(operation, name, 'summary');
+  const comment = loadSnapshot(operation, name, "comment");
+  const summary = loadSnapshot(operation, name, "summary");
   const metadata = loadMetadata(operation, name);
 
   return {
@@ -145,7 +145,7 @@ export function loadSnapshotData(
 export function saveSnapshot(
   operation: SSTOperation,
   name: string,
-  type: 'comment' | 'summary',
+  type: "comment" | "summary",
   content: string
 ): void {
   const snapshotPath = getSnapshotPath(operation, name, type);
@@ -190,8 +190,8 @@ export function generateSnapshots(
   const summary = formatter.formatOperationSummary(parsed);
 
   // Save snapshots
-  saveSnapshot(operation, name, 'comment', comment);
-  saveSnapshot(operation, name, 'summary', summary);
+  saveSnapshot(operation, name, "comment", comment);
+  saveSnapshot(operation, name, "summary", summary);
 
   // Create metadata
   const metadata: SnapshotMetadata = {
@@ -200,12 +200,12 @@ export function generateSnapshots(
     app: parsed.app,
     stage: parsed.stage,
     success: parsed.success,
-    description: description || '',
+    description: description || "",
     generatedAt: new Date().toISOString(),
     files: {
       input: getInputPath(operation, name),
-      comment: getSnapshotPath(operation, name, 'comment'),
-      summary: getSnapshotPath(operation, name, 'summary'),
+      comment: getSnapshotPath(operation, name, "comment"),
+      summary: getSnapshotPath(operation, name, "summary"),
       metadata: getMetadataPath(operation, name),
     },
   };
@@ -219,7 +219,7 @@ export function generateSnapshots(
 export function compareWithSnapshot(
   operation: SSTOperation,
   name: string,
-  type: 'comment' | 'summary',
+  type: "comment" | "summary",
   generated: string
 ): { matches: boolean; diff?: string } {
   try {
@@ -246,7 +246,7 @@ export function compareWithSnapshot(
  * List all available snapshots for an operation
  */
 export function listSnapshots(operation: SSTOperation): string[] {
-  const inputDir = join(getExamplesRoot(), 'inputs', operation);
+  const inputDir = join(getExamplesRoot(), "inputs", operation);
 
   if (!existsSync(inputDir)) {
     return [];
@@ -254,16 +254,16 @@ export function listSnapshots(operation: SSTOperation): string[] {
 
   const files = readdirSync(inputDir, { withFileTypes: true });
   return files
-    .filter((file) => file.isFile() && file.name.endsWith('.txt'))
-    .map((file) => file.name.replace('.txt', ''));
+    .filter((file) => file.isFile() && file.name.endsWith(".txt"))
+    .map((file) => file.name.replace(".txt", ""));
 }
 
 /**
  * Check if snapshot exists
  */
 export function snapshotExists(operation: SSTOperation, name: string): boolean {
-  const commentPath = getSnapshotPath(operation, name, 'comment');
-  const summaryPath = getSnapshotPath(operation, name, 'summary');
+  const commentPath = getSnapshotPath(operation, name, "comment");
+  const summaryPath = getSnapshotPath(operation, name, "summary");
   const metadataPath = getMetadataPath(operation, name);
 
   return (
@@ -285,8 +285,8 @@ export function validateSnapshot(
   try {
     // Check if all required files exist
     const inputPath = getInputPath(operation, name);
-    const commentPath = getSnapshotPath(operation, name, 'comment');
-    const summaryPath = getSnapshotPath(operation, name, 'summary');
+    const commentPath = getSnapshotPath(operation, name, "comment");
+    const summaryPath = getSnapshotPath(operation, name, "summary");
     const metadataPath = getMetadataPath(operation, name);
 
     if (!existsSync(inputPath)) {

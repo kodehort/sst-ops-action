@@ -3,13 +3,13 @@
  * Handles SST deploy command execution with resource tracking and GitHub integration
  */
 
-import * as core from '@actions/core';
-import type { GitHubClient } from '../github/client';
-import { DeployParser } from '../parsers/deploy-parser';
-import type { DeployResult, OperationOptions } from '../types';
-import type { SSTCLIExecutor } from '../utils/cli';
-import { logActionVersion } from '../utils/version';
-import { BaseOperation } from './base-operation';
+import * as core from "@actions/core";
+import type { GitHubClient } from "../github/client";
+import { DeployParser } from "../parsers/deploy-parser";
+import type { DeployResult, OperationOptions } from "../types";
+import type { SSTCLIExecutor } from "../utils/cli";
+import { logActionVersion } from "../utils/version";
+import { BaseOperation } from "./base-operation";
 
 /**
  * Deploy operation handler for SST deployments
@@ -35,7 +35,7 @@ export class DeployOperation extends BaseOperation<DeployResult> {
 
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
-      'deploy',
+      "deploy",
       options.stage,
       {
         timeout: this.defaultTimeout,

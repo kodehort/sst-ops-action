@@ -8,7 +8,7 @@ import type {
   DeployResult,
   DiffResult,
   RemoveResult,
-} from '../types/index.js';
+} from "../types/index.js";
 
 /**
  * Regex pattern for finding the Generated section marker
@@ -41,12 +41,12 @@ const DEFAULT_CONFIG: FormatConfig = {
  * Main formatter class for GitHub integration
  */
 export class OperationFormatter {
-  private config: FormatConfig;
+  private readonly config: FormatConfig;
 
   /**
    * URL protocols for optimized protocol checking
    */
-  private static readonly URL_PROTOCOLS = new Set(['http://', 'https://']);
+  private static readonly URL_PROTOCOLS = new Set(["http://", "https://"]);
 
   constructor(config: FormatConfig = DEFAULT_CONFIG) {
     this.config = config;
@@ -57,13 +57,13 @@ export class OperationFormatter {
    */
   formatOperationComment(result: BaseOperationResult): string {
     switch (result.operation) {
-      case 'deploy':
+      case "deploy":
         return this.formatDeployComment(result as DeployResult);
-      case 'diff':
+      case "diff":
         return this.formatDiffComment(result as DiffResult);
-      case 'remove':
+      case "remove":
         return this.formatRemoveComment(result as RemoveResult);
-      case 'stage':
+      case "stage":
         return this.formatGenericComment(result);
       default: {
         const _exhaustive: never = result.operation;
@@ -77,13 +77,13 @@ export class OperationFormatter {
    */
   formatOperationSummary(result: BaseOperationResult): string {
     switch (result.operation) {
-      case 'deploy':
+      case "deploy":
         return this.formatDeploySummary(result as DeployResult);
-      case 'diff':
+      case "diff":
         return this.formatDiffSummary(result as DiffResult);
-      case 'remove':
+      case "remove":
         return this.formatRemoveSummary(result as RemoveResult);
-      case 'stage':
+      case "stage":
         return this.formatGenericSummary(result);
       default: {
         const _exhaustive: never = result.operation;
@@ -116,7 +116,7 @@ export class OperationFormatter {
       sections.push(this.formatConsoleSection(result.permalink));
     }
 
-    return sections.join('\n\n');
+    return sections.join("\n\n");
   }
 
   /**
@@ -136,7 +136,7 @@ export class OperationFormatter {
       sections.push(this.formatConsoleSection(result.permalink));
     }
 
-    return sections.join('\n\n');
+    return sections.join("\n\n");
   }
 
   /**
@@ -156,7 +156,7 @@ export class OperationFormatter {
       sections.push(this.formatConsoleSection(result.permalink));
     }
 
-    return sections.join('\n\n');
+    return sections.join("\n\n");
   }
 
   /**
@@ -174,7 +174,7 @@ export class OperationFormatter {
 
 | Property | Value |
 |----------|-------|
-| App | \`${result.app || 'Unknown'}\` |
+| App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
 | Outputs | ${result.outputs?.length || 0} |
@@ -186,10 +186,10 @@ export class OperationFormatter {
     }
 
     if (result.outputs && result.outputs.length > 0) {
-      summary += '\n\n### 📋 Deploy Outputs\n\n';
+      summary += "\n\n### 📋 Deploy Outputs\n\n";
       const outputsToShow = result.outputs.slice(0, this.config.maxUrlsToShow);
 
-      summary += '| Key | Value |\n|-----|-------|\n';
+      summary += "| Key | Value |\n|-----|-------|\n";
       for (const output of outputsToShow) {
         const formattedValue = this.formatOutputValue(output.value);
         summary += `| ${output.key} | ${formattedValue} |\n`;
@@ -209,13 +209,13 @@ export class OperationFormatter {
   private formatDiffSummary(result: DiffResult): string {
     // Count changes by type
     const createCount = result.changes.filter(
-      (c) => c.action === 'create'
+      (c) => c.action === "create"
     ).length;
     const updateCount = result.changes.filter(
-      (c) => c.action === 'update'
+      (c) => c.action === "update"
     ).length;
     const deleteCount = result.changes.filter(
-      (c) => c.action === 'delete'
+      (c) => c.action === "delete"
     ).length;
 
     let summary = `### 🔍 Infrastructure Diff Summary
@@ -266,11 +266,11 @@ No infrastructure changes detected for this operation.`;
 | Cleanup Status | ${result.completionStatus} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
-    if (result.completionStatus === 'partial') {
+    if (result.completionStatus === "partial") {
       summary += `\n\n### ⚠️ Partial Cleanup
 
 Some resources could not be removed. Check the logs for details.`;
-    } else if (result.completionStatus === 'complete') {
+    } else if (result.completionStatus === "complete") {
       summary += `\n\n### ✅ Complete Cleanup
 
 All resources have been successfully removed.`;
@@ -298,12 +298,12 @@ All resources have been successfully removed.`;
    */
   private formatStatusSection(result: BaseOperationResult): string {
     const icon = this.getStatusIcon(result);
-    const status = result.success ? 'SUCCESS' : 'FAILED';
+    const status = result.success ? "SUCCESS" : "FAILED";
 
     return `### ${icon} ${result.operation.toUpperCase()} ${status}
 
 **Stage:** \`${result.stage}\`
-**App:** \`${result.app || 'Unknown'}\`
+**App:** \`${result.app || "Unknown"}\`
 **Status:** \`${result.completionStatus}\``;
   }
 
@@ -312,13 +312,13 @@ All resources have been successfully removed.`;
    */
   private formatDeployStatusTable(result: DeployResult): string {
     const icon = this.getStatusIcon(result);
-    const status = result.success ? 'SUCCESS' : 'FAILED';
+    const status = result.success ? "SUCCESS" : "FAILED";
 
     let table = `### ${icon} ${result.operation.toUpperCase()} ${status}
 
 | Property | Value |
 |----------|-------|
-| App | \`${result.app || 'Unknown'}\` |
+| App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resource Changes | ${result.resourceChanges || 0} |
 | Outputs | ${result.outputs?.length || 0} |
@@ -367,11 +367,11 @@ All resources have been successfully removed.`;
   private formatOutputsSection(
     outputs: Array<{ key: string; value: string }>
   ): string {
-    let section = '### 📋 Deploy Outputs\n\n';
+    let section = "### 📋 Deploy Outputs\n\n";
 
     const outputsToShow = outputs.slice(0, this.config.maxUrlsToShow);
 
-    section += '| Key | Value |\n|-----|-------|\n';
+    section += "| Key | Value |\n|-----|-------|\n";
     for (const output of outputsToShow) {
       const formattedValue = this.formatOutputValue(output.value);
       section += `| ${output.key} | ${formattedValue} |\n`;
@@ -396,7 +396,7 @@ All resources have been successfully removed.`;
 
     // Single substring operation with early exit for non-http protocols
     const prefix = value.substring(0, 8);
-    if (!prefix.startsWith('http')) {
+    if (!prefix.startsWith("http")) {
       return `\`${value}\``;
     }
 
@@ -422,7 +422,7 @@ All resources have been successfully removed.`;
   private isValidUrl(value: string): boolean {
     try {
       const url = new URL(value);
-      return ['http:', 'https:'].includes(url.protocol);
+      return ["http:", "https:"].includes(url.protocol);
     } catch {
       return false;
     }
@@ -469,27 +469,27 @@ No infrastructure changes detected for this operation.`;
    */
   private formatDiffOutput(result: DiffResult): string {
     if (!result.changes || result.changes.length === 0) {
-      return 'No changes detected';
+      return "No changes detected";
     }
 
     // Extract the actual diff section from the raw output
     const diffContent = this.extractDiffSection(result.rawOutput);
 
-    if (!diffContent || diffContent.trim() === '') {
+    if (!diffContent || diffContent.trim() === "") {
       // Fallback to simple summary if diff section extraction fails
       return result.changes
         .map((change) => {
           let symbol: string;
-          if (change.action === 'create') {
-            symbol = '+';
-          } else if (change.action === 'delete') {
-            symbol = '-';
+          if (change.action === "create") {
+            symbol = "+";
+          } else if (change.action === "delete") {
+            symbol = "-";
           } else {
-            symbol = '*';
+            symbol = "*";
           }
           return `${symbol} ${change.name} (${change.type})`;
         })
-        .join('\n');
+        .join("\n");
     }
 
     return diffContent;
@@ -499,7 +499,7 @@ No infrastructure changes detected for this operation.`;
    * Extract the diff section from SST raw output
    */
   private extractDiffSection(rawOutput: string): string {
-    const lines = rawOutput.split('\n');
+    const lines = rawOutput.split("\n");
     let diffStartIndex = -1;
 
     // Find the "✓ Generated" marker
@@ -512,39 +512,39 @@ No infrastructure changes detected for this operation.`;
     }
 
     if (diffStartIndex === -1 || diffStartIndex >= lines.length) {
-      return '';
+      return "";
     }
 
     // Get all lines after the "✓ Generated" marker
     const diffLines = lines.slice(diffStartIndex);
 
     // Remove any trailing empty lines
-    while (diffLines.length > 0 && diffLines.at(-1)?.trim() === '') {
+    while (diffLines.length > 0 && diffLines.at(-1)?.trim() === "") {
       diffLines.pop();
     }
 
-    return diffLines.join('\n').trim();
+    return diffLines.join("\n").trim();
   }
 
   /**
    * Format cleanup section
    */
   private formatCleanupSection(result: RemoveResult): string {
-    let section = '### 🗑️ Resource Cleanup';
+    let section = "### 🗑️ Resource Cleanup";
 
     switch (result.completionStatus) {
-      case 'complete':
+      case "complete":
         section += `\n\n✅ **All resources successfully removed**
 - Resources cleaned up: ${result.resourcesRemoved || 0}
 - No remaining resources`;
         break;
-      case 'partial':
+      case "partial":
         section += `\n\n⚠️ **Partial cleanup completed**
 - Resources cleaned up: ${result.resourcesRemoved || 0}
 - Some resources may still exist
 - Check logs for details on stuck resources`;
         break;
-      case 'failed':
+      case "failed":
         section += `\n\n❌ **Cleanup failed**
 - Operation encountered errors
 - Resources may still exist
@@ -572,9 +572,9 @@ No infrastructure changes detected for this operation.`;
    */
   private formatStatusBadge(result: BaseOperationResult): string {
     if (result.success) {
-      return '![Success](https://img.shields.io/badge/Status-Success-green)';
+      return "![Success](https://img.shields.io/badge/Status-Success-green)";
     }
-    return '![Failed](https://img.shields.io/badge/Status-Failed-red)';
+    return "![Failed](https://img.shields.io/badge/Status-Failed-red)";
   }
 
   /**
@@ -583,21 +583,21 @@ No infrastructure changes detected for this operation.`;
   private getStatusIcon(result: BaseOperationResult): string {
     if (result.success) {
       switch (result.operation) {
-        case 'deploy':
-          return '🚀';
-        case 'diff':
-          return '🔍';
-        case 'remove':
-          return '🗑️';
-        case 'stage':
-          return '🏷️';
+        case "deploy":
+          return "🚀";
+        case "diff":
+          return "🔍";
+        case "remove":
+          return "🗑️";
+        case "stage":
+          return "🏷️";
         default: {
           const _exhaustive: never = result.operation;
-          return '✅';
+          return "✅";
         }
       }
     }
-    return '❌';
+    return "❌";
   }
 
   /**
@@ -605,17 +605,17 @@ No infrastructure changes detected for this operation.`;
    */
   private formatResourceAction(action: string): string {
     switch (action.toLowerCase()) {
-      case 'created':
-      case 'create':
-        return '🆕 Created';
-      case 'updated':
-      case 'update':
-        return '📝 Updated';
-      case 'deleted':
-      case 'delete':
-        return '🗑️ Deleted';
-      case 'unchanged':
-        return '➖ Unchanged';
+      case "created":
+      case "create":
+        return "🆕 Created";
+      case "updated":
+      case "update":
+        return "📝 Updated";
+      case "deleted":
+      case "delete":
+        return "🗑️ Deleted";
+      case "unchanged":
+        return "➖ Unchanged";
       default:
         return `${action}`;
     }

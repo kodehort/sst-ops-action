@@ -3,8 +3,8 @@
  * Provides reliable SST CLI command execution for all operation types
  */
 
-import * as exec from '@actions/exec';
-import type { SSTOperation } from '../types/index.js';
+import * as exec from "@actions/exec";
+import type { SSTOperation } from "../types/index.js";
 
 /**
  * Result of executing a CLI command
@@ -31,7 +31,7 @@ export interface CLIResult {
 /**
  * Supported package managers/runners for SST commands
  */
-export const SST_RUNNERS = ['bun', 'npm', 'pnpm', 'yarn', 'sst'] as const;
+export const SST_RUNNERS = ["bun", "npm", "pnpm", "yarn", "sst"] as const;
 export type SSTRunner = (typeof SST_RUNNERS)[number];
 
 /**
@@ -107,11 +107,11 @@ export class SSTCLIExecutor {
 
       return {
         output: `Error executing SST command: ${errorMessage}`,
-        stdout: '',
+        stdout: "",
         stderr: errorMessage,
         exitCode: 1,
         duration,
-        command: command.join(' '),
+        command: command.join(" "),
         error: errorMessage,
         truncated: false,
         success: false,
@@ -129,26 +129,26 @@ export class SSTCLIExecutor {
     stage: string,
     options: CLIOptions
   ): string[] {
-    const runner = options.runner || 'bun';
+    const runner = options.runner || "bun";
     const command = this.buildRunnerCommand(runner, operation);
 
     // Add stage parameter
-    command.push('--stage', stage);
+    command.push("--stage", stage);
 
     // Add operation-specific arguments
     switch (operation) {
-      case 'deploy':
+      case "deploy":
         // Deploy-specific options
         break;
-      case 'diff':
+      case "diff":
         // Diff-specific options
         break;
-      case 'remove':
+      case "remove":
         // Remove-specific options
         // Auto-confirm removal to avoid interactive prompts
-        command.push('--yes');
+        command.push("--yes");
         break;
-      case 'stage':
+      case "stage":
         // Stage operation doesn't use SST CLI - handled separately
         break;
       default: {
@@ -174,17 +174,17 @@ export class SSTCLIExecutor {
     operation: SSTOperation
   ): string[] {
     switch (runner) {
-      case 'sst':
+      case "sst":
         // Direct SST binary execution
-        return ['sst', operation];
-      case 'bun':
-        return ['bun', 'sst', operation];
-      case 'npm':
-        return ['npm', 'run', 'sst', '--', operation];
-      case 'pnpm':
-        return ['pnpm', 'sst', operation];
-      case 'yarn':
-        return ['yarn', 'sst', operation];
+        return ["sst", operation];
+      case "bun":
+        return ["bun", "sst", operation];
+      case "npm":
+        return ["npm", "run", "sst", "--", operation];
+      case "pnpm":
+        return ["pnpm", "sst", operation];
+      case "yarn":
+        return ["yarn", "sst", operation];
       default: {
         const _exhaustive: never = runner;
         throw new Error(`Unsupported runner: ${_exhaustive}`);
@@ -201,14 +201,14 @@ export class SSTCLIExecutor {
   ): Promise<CLIResult> {
     const startTime = Date.now();
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let truncated = false;
     let exitCode = 0;
 
     try {
       if (!command[0]) {
-        throw new Error('Command array is empty');
+        throw new Error("Command array is empty");
       }
       const execPromise = exec.exec(command[0], command.slice(1), {
         ignoreReturnCode: true,
@@ -264,14 +264,14 @@ export class SSTCLIExecutor {
         error instanceof Error ? error.message : String(error);
 
       // Check if it's a timeout error
-      if (errorMessage.includes('timeout')) {
+      if (errorMessage.includes("timeout")) {
         return {
           output: `${stdout}${stderr}\nCommand timed out after ${options.timeout}ms`,
           stdout,
           stderr: `${stderr}\nCommand timed out after ${options.timeout}ms`,
           exitCode: 124, // Timeout exit code
           duration,
-          command: command.join(' '),
+          command: command.join(" "),
           error: `Command timed out after ${options.timeout}ms`,
           truncated,
         };
@@ -289,7 +289,7 @@ export class SSTCLIExecutor {
       stderr,
       exitCode,
       duration,
-      command: command.join(' '),
+      command: command.join(" "),
       error:
         exitCode !== 0
           ? `Command failed with exit code ${exitCode}`

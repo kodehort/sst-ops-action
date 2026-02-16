@@ -7,9 +7,9 @@
  * Simple error types for SST operations
  */
 export type ErrorType =
-  | 'input_validation'
-  | 'subprocess_error'
-  | 'output_parsing';
+  | "input_validation"
+  | "subprocess_error"
+  | "output_parsing";
 
 /**
  * Enhanced operation metadata for error context

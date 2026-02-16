@@ -188,7 +188,7 @@ export class PatternHelpers {
    * ```
    */
   static extractAllMatches(text: string, pattern: RegExp, group = 1): string[] {
-    const globalPattern = new RegExp(pattern.source, 'gm');
+    const globalPattern = new RegExp(pattern.source, "gm");
     return Array.from(text.matchAll(globalPattern), (m) =>
       m[group]?.trim()
     ).filter(Boolean) as string[];
@@ -237,12 +237,12 @@ export class PatternHelpers {
    */
   static cleanText(text: string): string {
     return text
-      .replace(UtilityPatterns.ansiCodes, '')
-      .replace(UtilityPatterns.lineEnding, '\n')
-      .split('\n')
-      .map((line) => line.replace(UtilityPatterns.trailingWhitespace, ''))
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n') // Collapse excessive blank lines
+      .replace(UtilityPatterns.ansiCodes, "")
+      .replace(UtilityPatterns.lineEnding, "\n")
+      .split("\n")
+      .map((line) => line.replace(UtilityPatterns.trailingWhitespace, ""))
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n") // Collapse excessive blank lines
       .trim();
   }
 

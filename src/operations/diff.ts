@@ -1,10 +1,10 @@
-import * as core from '@actions/core';
-import type { GitHubClient } from '../github/client';
-import { DiffParser } from '../parsers/diff-parser';
-import type { DiffResult, OperationOptions } from '../types';
-import type { SSTCLIExecutor } from '../utils/cli';
-import { logActionVersion } from '../utils/version';
-import { BaseOperation } from './base-operation';
+import * as core from "@actions/core";
+import type { GitHubClient } from "../github/client";
+import { DiffParser } from "../parsers/diff-parser";
+import type { DiffResult, OperationOptions } from "../types";
+import type { SSTCLIExecutor } from "../utils/cli";
+import { logActionVersion } from "../utils/version";
+import { BaseOperation } from "./base-operation";
 
 /**
  * Diff operation handler for SST infrastructure changes
@@ -34,7 +34,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
 
       // Execute SST CLI command
       const cliResult = await this.sstExecutor.executeSST(
-        'diff',
+        "diff",
         options.stage,
         {
           timeout: this.defaultTimeout,
@@ -47,7 +47,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       if (!cliResult.success) {
         return this.createFailureResult(
           options.stage,
-          cliResult.stderr || 'Unknown CLI error'
+          cliResult.stderr || "Unknown CLI error"
         );
       }
 
@@ -62,7 +62,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       if (!basicDiffResult.success) {
         return this.createFailureResult(
           options.stage,
-          'Failed to parse SST diff output'
+          "Failed to parse SST diff output"
         );
       }
 
@@ -73,7 +73,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
     } catch (error) {
       return this.createFailureResult(
         options.stage,
-        error instanceof Error ? error.message : 'Unknown operation error'
+        error instanceof Error ? error.message : "Unknown operation error"
       );
     }
   }
@@ -81,16 +81,16 @@ export class DiffOperation extends BaseOperation<DiffResult> {
   private createFailureResult(stage: string, error: string): DiffResult {
     return {
       success: false,
-      operation: 'diff',
+      operation: "diff",
       stage,
-      app: 'unknown',
-      rawOutput: '',
+      app: "unknown",
+      rawOutput: "",
       exitCode: -1,
       truncated: false,
       error,
-      completionStatus: 'failed',
+      completionStatus: "failed",
       plannedChanges: 0,
-      changeSummary: 'Failed to execute SST diff command',
+      changeSummary: "Failed to execute SST diff command",
       changes: [],
     };
   }

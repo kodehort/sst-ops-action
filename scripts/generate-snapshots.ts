@@ -10,8 +10,8 @@
  *   bun run scripts/generate-snapshots.ts --force                # Force regeneration
  */
 
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   generateSnapshots,
   getExamplesRoot,
@@ -19,11 +19,11 @@ import {
   loadInput,
   snapshotExists,
   validateSnapshot,
-} from '../__tests__/utils/snapshot-helpers.js';
-import { DeployParser } from '../src/parsers/deploy-parser.js';
-import { DiffParser } from '../src/parsers/diff-parser.js';
-import { RemoveParser } from '../src/parsers/remove-parser.js';
-import type { OperationResult, SSTOperation } from '../src/types/operations.js';
+} from "../__tests__/utils/snapshot-helpers.js";
+import { DeployParser } from "../src/parsers/deploy-parser.js";
+import { DiffParser } from "../src/parsers/diff-parser.js";
+import { RemoveParser } from "../src/parsers/remove-parser.js";
+import type { OperationResult, SSTOperation } from "../src/types/operations.js";
 
 // Parser instances
 const parsers = {
@@ -38,30 +38,29 @@ const STAGE_REGEX = /Stage:\s+(.+)/;
 
 // Command line argument parsing
 const args = process.argv.slice(2);
-const operation = args.includes('--operation')
-  ? (args[args.indexOf('--operation') + 1] as SSTOperation)
+const operation = args.includes("--operation")
+  ? (args[args.indexOf("--operation") + 1] as SSTOperation)
   : null;
-const name = args.includes('--name') ? args[args.indexOf('--name') + 1] : null;
-const validate = args.includes('--validate');
-const force = args.includes('--force');
+const name = args.includes("--name") ? args[args.indexOf("--name") + 1] : null;
+const validate = args.includes("--validate");
+const force = args.includes("--force");
 
 /**
  * Colors for console output
  */
 const colors = {
-  green: '\x1b[32m',
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
+  green: "\x1b[32m",
+  red: "\x1b[31m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
 };
 
 /**
  * Log with color
  */
 function log(message: string, color: string = colors.reset): void {
-  // biome-ignore lint/suspicious/noConsole: This is a CLI script that needs console output
   console.log(`${color}${message}${colors.reset}`);
 }
 
@@ -77,12 +76,12 @@ function parseOutput(
     const appMatch = rawOutput.match(APP_REGEX);
     const stageMatch = rawOutput.match(STAGE_REGEX);
 
-    const stage = stageMatch?.[1]?.trim() || 'unknown-stage';
-    const _app = appMatch?.[1]?.trim() || 'unknown-app';
+    const stage = stageMatch?.[1]?.trim() || "unknown-stage";
+    const _app = appMatch?.[1]?.trim() || "unknown-app";
 
     // Determine exit code based on success indicators
     let exitCode = 0;
-    if (rawOutput.includes('✕  Failed') || rawOutput.includes('Error:')) {
+    if (rawOutput.includes("✕  Failed") || rawOutput.includes("Error:")) {
       exitCode = 1;
     }
 
@@ -198,7 +197,7 @@ function generateOperationSnapshots(targetOperation: SSTOperation): void {
 function validateSnapshots(): void {
   log(`\n${colors.bold}🔍 Validating snapshots${colors.reset}`, colors.blue);
 
-  const operations: SSTOperation[] = ['diff', 'deploy', 'remove'];
+  const operations: SSTOperation[] = ["diff", "deploy", "remove"];
   let totalValid = 0;
   let totalInvalid = 0;
 
@@ -225,7 +224,7 @@ function validateSnapshots(): void {
     }
   }
 
-  log('\n📊 Validation Summary:');
+  log("\n📊 Validation Summary:");
   log(`   ✅ Valid: ${totalValid}`, colors.green);
   log(`   ❌ Invalid: ${totalInvalid}`, colors.red);
 
@@ -240,7 +239,7 @@ function validateSnapshots(): void {
 function listAvailableSnapshots(): void {
   log(`\n${colors.bold}📋 Available snapshots${colors.reset}`, colors.blue);
 
-  const operations: SSTOperation[] = ['diff', 'deploy', 'remove'];
+  const operations: SSTOperation[] = ["diff", "deploy", "remove"];
 
   for (const op of operations) {
     const snapshots = listSnapshots(op);
@@ -248,7 +247,7 @@ function listAvailableSnapshots(): void {
       log(`\n${op}:`);
       for (const snapshotName of snapshots) {
         const exists = snapshotExists(op, snapshotName);
-        const status = exists ? '✅' : '⚠️ ';
+        const status = exists ? "✅" : "⚠️ ";
         log(`   ${status} ${snapshotName}`);
       }
     }
@@ -260,12 +259,12 @@ function listAvailableSnapshots(): void {
  */
 function ensureDirectoryStructure(): void {
   const examplesRoot = getExamplesRoot();
-  const operations: SSTOperation[] = ['diff', 'deploy', 'remove'];
+  const operations: SSTOperation[] = ["diff", "deploy", "remove"];
 
   for (const op of operations) {
-    const inputDir = join(examplesRoot, 'inputs', op);
-    const snapshotDir = join(examplesRoot, 'snapshots', op);
-    const metadataDir = join(examplesRoot, 'metadata', op);
+    const inputDir = join(examplesRoot, "inputs", op);
+    const snapshotDir = join(examplesRoot, "snapshots", op);
+    const metadataDir = join(examplesRoot, "metadata", op);
 
     if (!existsSync(inputDir)) {
       log(`📁 Input directory missing: ${inputDir}`, colors.yellow);
@@ -301,7 +300,7 @@ function main(): void {
     generateOperationSnapshots(operation);
   } else {
     // Generate all snapshots
-    const operations: SSTOperation[] = ['diff', 'deploy', 'remove'];
+    const operations: SSTOperation[] = ["diff", "deploy", "remove"];
     for (const op of operations) {
       generateOperationSnapshots(op);
     }
@@ -310,7 +309,7 @@ function main(): void {
   // Show available snapshots
   listAvailableSnapshots();
 
-  log('\n✨ Snapshot generation complete!', colors.green);
+  log("\n✨ Snapshot generation complete!", colors.green);
 }
 
 main();

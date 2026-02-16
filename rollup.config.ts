@@ -1,40 +1,40 @@
-import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import commonjs from '@rollup/plugin-commonjs';
-import json from '@rollup/plugin-json';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import replace from '@rollup/plugin-replace';
-import terser from '@rollup/plugin-terser';
-import typescript from '@rollup/plugin-typescript';
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import replace from "@rollup/plugin-replace";
+import terser from "@rollup/plugin-terser";
+import typescript from "@rollup/plugin-typescript";
 
 // Plugin to generate enhanced build manifest with useful details for changelog and releases
 function generateBuildManifest() {
   return {
-    name: 'generate-build-manifest',
+    name: "generate-build-manifest",
     writeBundle(_options, bundle) {
       // Get main bundle file
-      const bundleFile = bundle['index.js'];
+      const bundleFile = bundle["index.js"];
       if (!bundleFile) {
-        throw new Error('Main bundle file not found');
+        throw new Error("Main bundle file not found");
       }
 
       // Calculate bundle size
       const bundleCode = bundleFile.code;
-      const bundleSize = Buffer.byteLength(bundleCode, 'utf8');
+      const bundleSize = Buffer.byteLength(bundleCode, "utf8");
       const bundleSizeMB = (bundleSize / (1024 * 1024)).toFixed(2);
 
       // Generate integrity hash
-      const hash = createHash('sha256');
+      const hash = createHash("sha256");
       hash.update(bundleCode);
-      const integrity = hash.digest('hex');
+      const integrity = hash.digest("hex");
 
       // Read package.json for version info
-      let packageInfo = { version: 'unknown' };
+      let packageInfo = { version: "unknown" };
       try {
-        const packageJson = readFileSync('package.json', 'utf8');
+        const packageJson = readFileSync("package.json", "utf8");
         packageInfo = JSON.parse(packageJson);
       } catch {
-        packageInfo = { version: 'unknown' };
+        packageInfo = { version: "unknown" };
       }
 
       // Create enhanced build manifest with useful details for releases
@@ -46,15 +46,15 @@ function generateBuildManifest() {
 
         // Build metadata
         buildTimestamp: new Date().toISOString(),
-        version: packageInfo.version || 'unknown',
+        version: packageInfo.version || "unknown",
         nodeVersion: process.version,
 
         // Build configuration
         sourcemap: true, // We always generate sourcemaps
         minified: true, // Using terser for minification
         treeshaken: true, // Using enhanced tree-shaking
-        format: 'es',
-        target: 'node20',
+        format: "es",
+        target: "node20",
 
         // Environment information
         platform: process.platform,
@@ -62,47 +62,60 @@ function generateBuildManifest() {
       };
 
       // Write manifest to dist folder
-      const manifestPath = 'dist/build-manifest.json';
+      const manifestPath = "dist/build-manifest.json";
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     },
   };
 }
 
 // Read package.json for version injection
-let packageVersion = 'unknown';
+let packageVersion = "unknown";
 try {
-  const packageJson = readFileSync('package.json', 'utf8');
+  const packageJson = readFileSync("package.json", "utf8");
   const packageInfo = JSON.parse(packageJson);
-  packageVersion = packageInfo.version || 'unknown';
+  packageVersion = packageInfo.version || "unknown";
 } catch {
-  packageVersion = 'unknown';
+  packageVersion = "unknown";
 }
 
 export default {
-  input: 'src/index.ts',
+  input: "src/index.ts",
   output: {
     esModule: true,
-    file: 'dist/index.js',
-    format: 'es',
+    file: "dist/index.js",
+    format: "es",
     sourcemap: true,
-    generatedCode: 'es2015',
+    generatedCode: "es2015",
     hoistTransitiveImports: false,
-    interop: 'auto',
+    interop: "auto",
   },
   treeshake: {
-    preset: 'recommended',
+    preset: "recommended",
     moduleSideEffects: false,
+  },
+  onwarn(warning, warn) {
+    // Suppress known harmless warnings from node_modules
+    if (warning.code === "THIS_IS_UNDEFINED") {
+      return;
+    }
+    if (
+      warning.code === "CIRCULAR_DEPENDENCY" &&
+      warning.ids?.every((id) => id.includes("node_modules"))
+    ) {
+      return;
+    }
+    warn(warning);
   },
   plugins: [
     replace({
       __ACTION_VERSION__: JSON.stringify(packageVersion),
       preventAssignment: true,
     }),
-    typescript(),
+    typescript({ sourceMap: true }),
     json(),
     nodeResolve({
       preferBuiltins: true,
-      exportConditions: ['node', 'import', 'module', 'default'],
+      exportConditions: ["node", "import", "module", "default"],
     }),
     commonjs({
       ignoreDynamicRequires: true,
