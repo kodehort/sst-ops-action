@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/sst-operations-action.git"
+    "url": "git+https://github.com/kodehort/sst-ops-action.git"
   },
   "keywords": [
     "github-actions",
