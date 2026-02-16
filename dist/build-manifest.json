@@ -2,14 +2,14 @@
   "bundleSize": 1578358,
   "bundleSizeMB": "1.51",
   "integrity": "947d1bdf6b817a2a1058a62835a69e3bf6153b76c2ebef215f08d024cbbb07cc",
-  "buildTimestamp": "2026-02-16T20:48:10.171Z",
+  "buildTimestamp": "2026-02-16T20:51:21.103Z",
   "version": "0.7.2",
-  "nodeVersion": "v20.19.4",
+  "nodeVersion": "v20.20.0",
   "sourcemap": true,
   "minified": true,
   "treeshaken": true,
   "format": "es",
   "target": "node20",
-  "platform": "darwin",
-  "arch": "arm64"
+  "platform": "linux",
+  "arch": "x64"
 }
