@@ -44,7 +44,7 @@ jobs:
         run: bun run test:coverage
         
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-${{ github.sha }}
@@ -105,7 +105,7 @@ jobs:
           echo "✅ Bundle syntax validation passed"
           
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ github.sha }}
           path: dist/
