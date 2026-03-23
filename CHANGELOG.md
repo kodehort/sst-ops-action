@@ -1,3 +1,47 @@
+# Release v0.7.10
+
+**Release Date:** 2026-03-23
+**Previous Version:** v0.7.9
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update vitest monorepo to v4.1.1 (#81) (`8afe88f`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578358 bytes)
+- **Integrity Hash:** `f22dcd8c856b7f0d...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.10
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_Fuawvk8SOzcskBg03Yei1UZFW6OSjG49TcD2
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.9...v0.7.10)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.10/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.9...v0.7.10
+
+---
+
 # Release v0.7.9
 
 **Release Date:** 2026-03-23
