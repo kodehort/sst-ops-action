@@ -77,8 +77,8 @@ describe("Operation Result Validation Integration", () => {
         summary: "3 changes detected",
         changes: [
           {
-            resourceType: "AWS::S3::Bucket",
-            resourceName: "my-bucket",
+            type: "AWS::S3::Bucket",
+            name: "my-bucket",
             action: "update",
             details: "Tags modified",
           },
@@ -119,8 +119,8 @@ describe("Operation Result Validation Integration", () => {
         resourcesRemoved: 10,
         removedResources: [
           {
-            resourceType: "AWS::DynamoDB::Table",
-            resourceName: "my-table",
+            type: "AWS::DynamoDB::Table",
+            name: "my-table",
             status: "removed",
           },
         ],

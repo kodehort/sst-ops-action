@@ -64,8 +64,8 @@ export const RawDiffResultSchema = z.object({
   changes: z
     .array(
       z.object({
-        resourceType: z.string(),
-        resourceName: z.string(),
+        type: z.string(),
+        name: z.string(),
         action: z.string(),
         details: z.string().optional(),
       })
@@ -89,8 +89,8 @@ export const RawRemoveResultSchema = z.object({
   removedResources: z
     .array(
       z.object({
-        resourceType: z.string(),
-        resourceName: z.string(),
+        type: z.string(),
+        name: z.string(),
         status: z.string(),
       })
     )
