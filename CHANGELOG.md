@@ -1,3 +1,47 @@
+# Release v0.7.11
+
+**Release Date:** 2026-03-23
+**Previous Version:** v0.7.10
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix(schemas): align validation field names with parser output (`e234b0b`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `b8cc2bc346afe499...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.11
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_W0RinE3SSSYiEkco3LcjDNRjPUmU2z0VJWb5
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.10...v0.7.11)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.11/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.10...v0.7.11
+
+---
+
 # Release v0.7.10
 
 **Release Date:** 2026-03-23
