@@ -501,13 +501,13 @@ jobs:
           - Update CHANGELOG.md with release notes
           - Add distribution files for release v${NEW_VERSION}"
 
-          # Create annotated tag
-          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
+          # Create annotated tag (force to handle retries)
+          git tag -fa "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
 
           $(cat RELEASE_NOTES.md)"
 
           # Push everything via git first (uses checkout credentials)
-          git push origin main "v${NEW_VERSION}"
+          git push --force origin main "v${NEW_VERSION}"
 
           # Update major version tag
           MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
@@ -525,6 +525,9 @@ jobs:
           if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
+
+          # Delete existing release if retrying
+          gh release delete "v${NEW_VERSION}" --yes 2>/dev/null || true
 
           gh release create "v${NEW_VERSION}" \
             --title "SST Ops Action v${NEW_VERSION}" \
