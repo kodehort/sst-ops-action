@@ -1,3 +1,49 @@
+# Release v0.7.12
+
+**Release Date:** 2026-03-24
+**Previous Version:** v0.7.11
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix(release): handle retry when tag/release already exist (`932fdb2`)
+- fix(release): separate git push from gh release create (`144d857`)
+- fix(release): use gh cli for release, push main last (`1b79c54`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `85ddb4d1a9bce9b4...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.12
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_Jy9uClTow3UaU3RsnTYs68J47h3TSd48BPMq
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.11...v0.7.12)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.12/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.11...v0.7.12
+
+---
+
 # Release v0.7.11
 
 **Release Date:** 2026-03-23
