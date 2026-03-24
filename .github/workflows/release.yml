@@ -506,38 +506,33 @@ jobs:
 
           $(cat RELEASE_NOTES.md)"
 
-          # Create GitHub release before pushing to main, since the push
-          # can invalidate GITHUB_TOKEN for subsequent steps
-          PRERELEASE="${{ github.event.inputs.prerelease }}"
+          # Push everything via git first (uses checkout credentials)
+          git push origin main "v${NEW_VERSION}"
+
+          # Update major version tag
+          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
+          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
+          git push -f origin "$MAJOR_VERSION"
+
+          echo "✅ Version committed and pushed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        run: |
+          NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
           PRERELEASE_FLAG=""
-          if [ "$PRERELEASE" = "true" ]; then
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
 
-          # Push tag first (doesn't trigger workflows, won't invalidate token)
-          git push origin "v${NEW_VERSION}"
-
-          # Create release while token is still valid
           gh release create "v${NEW_VERSION}" \
             --title "SST Ops Action v${NEW_VERSION}" \
             --notes-file ./RELEASE_NOTES.md \
             $PRERELEASE_FLAG
 
           echo "✅ Release v${NEW_VERSION} created"
-
-          # Update major version tag (e.g., v0 -> points to v0.7.11)
-          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
-          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
-          git push -f origin "$MAJOR_VERSION"
-
-          echo "✅ Major version tag updated: $MAJOR_VERSION"
-
-          # Push to main last since this may invalidate the token
-          git push origin main
-
-          echo "✅ Version committed and pushed"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-success:
