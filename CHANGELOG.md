@@ -1,3 +1,49 @@
+# Release v0.7.14
+
+**Release Date:** 2026-07-27
+**Previous Version:** v0.7.13
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency @rollup/plugin-terser to v1 (#72) (`a7086bd`)
+- chore(deps): update dependency yaml to v2.9.0 (#102) (`eb8772b`)
+- chore(deps): update dependency @rollup/plugin-commonjs to v29.0.3 (#101) (`e09c711`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `8653a941d3229063...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.14
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.13...v0.7.14)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.14/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.13...v0.7.14
+
+---
+
 # Release v0.7.13
 
 **Release Date:** 2026-07-27
