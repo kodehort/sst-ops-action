@@ -1,3 +1,48 @@
+# Release v0.7.18
+
+**Release Date:** 2026-07-27
+**Previous Version:** v0.7.17
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency zod to v4.4.3 (#104) (`bf37d80`)
+- chore(deps): update actions/cache action to v6 (#105) (`2024140`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `dd95e55f61224f62...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.18
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.17...v0.7.18)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.18/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.17...v0.7.18
+
+---
+
 # Release v0.7.17
 
 **Release Date:** 2026-07-27
