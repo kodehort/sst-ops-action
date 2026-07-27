@@ -125,8 +125,8 @@ describe("OperationRouter", () => {
         summary: "Infrastructure changes detected",
         changes: [
           {
-            resourceType: "function",
-            resourceName: "handler",
+            type: "function",
+            name: "handler",
             action: "create",
             details: "New Lambda function",
           },
@@ -160,8 +160,8 @@ describe("OperationRouter", () => {
         resourcesRemoved: 5,
         removedResources: [
           {
-            resourceType: "function",
-            resourceName: "handler",
+            type: "function",
+            name: "handler",
             status: "removed",
           },
         ],
@@ -260,10 +260,10 @@ describe("OperationRouter", () => {
         stage: "test-stage",
         metadata: { app: "test-app" },
         changes: [
-          { resourceType: "function", resourceName: "valid", action: "create" },
+          { type: "function", name: "valid", action: "create" },
           {
-            resourceType: "function",
-            resourceName: "invalid",
+            type: "function",
+            name: "invalid",
             action: "modify",
           },
         ],
@@ -285,13 +285,13 @@ describe("OperationRouter", () => {
         metadata: { app: "test-app" },
         removedResources: [
           {
-            resourceType: "function",
-            resourceName: "valid",
+            type: "function",
+            name: "valid",
             status: "removed",
           },
           {
-            resourceType: "function",
-            resourceName: "invalid",
+            type: "function",
+            name: "invalid",
             status: "invalid-status",
           },
         ],

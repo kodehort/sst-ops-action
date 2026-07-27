@@ -334,13 +334,9 @@ function transformDiffResult(
     plannedChanges: result.changesDetected || 0,
     changeSummary: result.summary || "No changes detected",
     changes: (result.changes || []).map((change) => ({
-      type: change.resourceType,
-      name: change.resourceName,
-      action: normalizeDiffAction(
-        change.action,
-        change.resourceName,
-        change.resourceType
-      ),
+      type: change.type,
+      name: change.name,
+      action: normalizeDiffAction(change.action, change.name, change.type),
       ...(change.details !== undefined && { details: change.details }),
     })),
     ...(result.error !== undefined && { error: result.error }),
@@ -370,12 +366,12 @@ function transformRemoveResult(
     completionStatus: result.completionStatus || "failed",
     resourcesRemoved: result.resourcesRemoved || 0,
     removedResources: (result.removedResources || []).map((resource) => ({
-      type: resource.resourceType,
-      name: resource.resourceName,
+      type: resource.type,
+      name: resource.name,
       status: normalizeRemoveStatus(
         resource.status,
-        resource.resourceName,
-        resource.resourceType
+        resource.name,
+        resource.type
       ),
     })),
     ...(result.error !== undefined && { error: result.error }),

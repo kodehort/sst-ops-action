@@ -212,7 +212,7 @@ jobs:
           echo "✅ Bundle verification passed"
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-build-${{ github.sha }}
           path: |
@@ -300,7 +300,7 @@ jobs:
           cache-key-suffix: -release
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-build-${{ github.sha }}
           path: ./
@@ -501,43 +501,41 @@ jobs:
           - Update CHANGELOG.md with release notes
           - Add distribution files for release v${NEW_VERSION}"
 
-          # Create annotated tag
-          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
+          # Create annotated tag (force to handle retries)
+          git tag -fa "v${NEW_VERSION}" -m "Release v${NEW_VERSION}
 
           $(cat RELEASE_NOTES.md)"
 
-          # Push changes and tag
-          git push origin main
-          git push origin "v${NEW_VERSION}"
+          # Push everything via git first (uses checkout credentials)
+          git push --force origin main "v${NEW_VERSION}"
 
-          echo "✅ Version committed and tagged"
+          # Update major version tag
+          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
+          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
+          git push -f origin "$MAJOR_VERSION"
+
+          echo "✅ Version committed and pushed"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: v${{ needs.determine-release.outputs.new-version }}
-          name: "SST Ops Action v${{ needs.determine-release.outputs.new-version }}"
-          body_path: ./RELEASE_NOTES.md
-          draft: false
-          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
-
-      - name: Update Major Version Tag
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
-          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
+          PRERELEASE_FLAG=""
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
 
-          echo "Updating major version tag: $MAJOR_VERSION"
+          # Delete existing release if retrying
+          gh release delete "v${NEW_VERSION}" --yes 2>/dev/null || true
 
-          # Create or update major version tag (e.g., v1, v2)
-          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
-          git push -f origin "$MAJOR_VERSION"
+          gh release create "v${NEW_VERSION}" \
+            --title "SST Ops Action v${NEW_VERSION}" \
+            --notes-file ./RELEASE_NOTES.md \
+            $PRERELEASE_FLAG
 
-          echo "✅ Major version tag updated: $MAJOR_VERSION"
+          echo "✅ Release v${NEW_VERSION} created"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   notify-success:
