@@ -1,3 +1,48 @@
+# Release v0.7.16
+
+**Release Date:** 2026-07-27
+**Previous Version:** v0.7.15
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): bump fast-xml-parser from 5.3.6 to 5.7.1 (#96) (`0f83f79`)
+- chore(deps): update dependency esbuild to ^0.28.0 [security] (#97) (`735c8c4`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `b28249c2e5736edf...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.16
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.15...v0.7.16)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.16/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.15...v0.7.16
+
+---
+
 # Release v0.7.15
 
 **Release Date:** 2026-07-27
