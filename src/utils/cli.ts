@@ -216,10 +216,7 @@ export class SSTCLIExecutor {
           stdout: (data: Buffer) => {
             const chunk = data.toString();
             if (stdout.length + chunk.length > options.maxOutputSize) {
-              stdout += chunk.substring(
-                0,
-                options.maxOutputSize - stdout.length
-              );
+              stdout += chunk.slice(0, options.maxOutputSize - stdout.length);
               truncated = true;
             } else {
               stdout += chunk;
@@ -228,10 +225,7 @@ export class SSTCLIExecutor {
           stderr: (data: Buffer) => {
             const chunk = data.toString();
             if (stderr.length + chunk.length > options.maxOutputSize) {
-              stderr += chunk.substring(
-                0,
-                options.maxOutputSize - stderr.length
-              );
+              stderr += chunk.slice(0, options.maxOutputSize - stderr.length);
               truncated = true;
             } else {
               stderr += chunk;
@@ -291,9 +285,9 @@ export class SSTCLIExecutor {
       duration,
       command: command.join(" "),
       error:
-        exitCode !== 0
-          ? `Command failed with exit code ${exitCode}`
-          : undefined,
+        exitCode === 0
+          ? undefined
+          : `Command failed with exit code ${exitCode}`,
       truncated,
     };
   }

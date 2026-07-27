@@ -284,7 +284,7 @@ function logErrorMetadata(error: ActionError): void {
     core.info(`Ref: ${metadata.ref}`);
   }
   if (metadata.sha) {
-    core.info(`SHA: ${metadata.sha.substring(0, 8)}`);
+    core.info(`SHA: ${metadata.sha.slice(0, 8)}`);
   }
 }
 

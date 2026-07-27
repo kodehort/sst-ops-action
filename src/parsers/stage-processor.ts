@@ -157,7 +157,7 @@ export class StageProcessor {
 
     // Apply truncation including the prefix
     if (stage.length > truncationLength) {
-      stage = stage.substring(0, truncationLength);
+      stage = stage.slice(0, truncationLength);
       // Clean up any trailing hyphens that might result from truncation
       stage = stage.replace(LEADING_TRAILING_HYPHENS_PATTERN, "");
     }

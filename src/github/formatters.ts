@@ -394,16 +394,16 @@ All resources have been successfully removed.`;
       return `\`${value}\``;
     }
 
-    // Single substring operation with early exit for non-http protocols
-    const prefix = value.substring(0, 8);
+    // Single slice operation with early exit for non-http protocols
+    const prefix = value.slice(0, 8);
     if (!prefix.startsWith("http")) {
       return `\`${value}\``;
     }
 
-    // Check for valid protocols with single substring result
+    // Check for valid protocols with single slice result
     const hasUrlProtocol =
       OperationFormatter.URL_PROTOCOLS.has(prefix) ||
-      OperationFormatter.URL_PROTOCOLS.has(prefix.substring(0, 7));
+      OperationFormatter.URL_PROTOCOLS.has(prefix.slice(0, 7));
 
     // Validate URL structure before creating markdown link to prevent broken links
     if (hasUrlProtocol && this.isValidUrl(value)) {

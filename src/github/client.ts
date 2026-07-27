@@ -195,11 +195,11 @@ export class GitHubClient {
         artifactOptions.name,
         [resultFile, outputFile, metadataFile],
         tempDir,
-        artifactOptions.retentionDays !== undefined
-          ? {
+        artifactOptions.retentionDays === undefined
+          ? {}
+          : {
               retentionDays: artifactOptions.retentionDays,
             }
-          : {}
       );
 
       core.info(
