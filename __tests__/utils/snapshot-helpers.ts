@@ -15,27 +15,27 @@ import type { OperationResult, SSTOperation } from "@/types/operations";
  */
 
 export interface SnapshotMetadata {
-  name: string;
-  operation: SSTOperation;
   app: string;
-  stage: string;
-  success: boolean;
   description?: string;
-  generatedAt: string;
   files: {
     input: string;
     comment: string;
     summary: string;
     metadata: string;
   };
+  generatedAt: string;
+  name: string;
+  operation: SSTOperation;
+  stage: string;
+  success: boolean;
 }
 
 export interface SnapshotData {
-  input: string;
   comment: string;
-  summary: string;
+  input: string;
   metadata: SnapshotMetadata;
   parsed: OperationResult;
+  summary: string;
 }
 
 const formatter = new OperationFormatter();
@@ -131,11 +131,11 @@ export function loadSnapshotData(
   const metadata = loadMetadata(operation, name);
 
   return {
-    input,
     comment,
-    summary,
+    input,
     metadata,
     parsed: metadata as any, // Will be populated by the parser
+    summary,
   };
 }
 
@@ -195,19 +195,19 @@ export function generateSnapshots(
 
   // Create metadata
   const metadata: SnapshotMetadata = {
+    app: parsed.app,
+    description: description || "",
+    files: {
+      comment: getSnapshotPath(operation, name, "comment"),
+      input: getInputPath(operation, name),
+      metadata: getMetadataPath(operation, name),
+      summary: getSnapshotPath(operation, name, "summary"),
+    },
+    generatedAt: new Date().toISOString(),
     name,
     operation,
-    app: parsed.app,
     stage: parsed.stage,
     success: parsed.success,
-    description: description || "",
-    generatedAt: new Date().toISOString(),
-    files: {
-      input: getInputPath(operation, name),
-      comment: getSnapshotPath(operation, name, "comment"),
-      summary: getSnapshotPath(operation, name, "summary"),
-      metadata: getMetadataPath(operation, name),
-    },
   };
 
   saveMetadata(operation, name, metadata);
@@ -228,16 +228,16 @@ export function compareWithSnapshot(
 
     if (!matches) {
       return {
-        matches: false,
         diff: `Expected:\n${existing}\n\nActual:\n${generated}`,
+        matches: false,
       };
     }
 
     return { matches: true };
   } catch (error) {
     return {
-      matches: false,
       diff: `Snapshot file not found or error loading: ${error}`,
+      matches: false,
     };
   }
 }
@@ -321,9 +321,9 @@ export function validateSnapshot(
       }
     }
 
-    return { valid: errors.length === 0, errors };
+    return { errors, valid: errors.length === 0 };
   } catch (error) {
     errors.push(`Validation error: ${error}`);
-    return { valid: false, errors };
+    return { errors, valid: false };
   }
 }

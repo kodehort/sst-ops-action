@@ -6,14 +6,14 @@ import { OperationParser } from "./operation-parser";
  * Based on real SST diff output format
  */
 const DIFF_PATTERNS = {
-  // Planned changes patterns - real SST format
-  PLANNED_CREATE: /^\+\s+(.+?)(?:\s+→\s+(.+))?$/,
-  PLANNED_UPDATE: /^\*\s+(.+?)(?:\s+→\s+(.+))?$/,
-  PLANNED_DELETE: /^-\s+(.+?)(?:\s+→\s+(.+))?$/,
+  DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
+  ERROR_MESSAGE: /^Error:\s*(.+)$/m,
 
   NO_CHANGES: /^No changes$/m,
-  ERROR_MESSAGE: /^Error:\s*(.+)$/m,
-  DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
+  // Planned changes patterns - real SST format
+  PLANNED_CREATE: /^\+\s+(.+?)(?:\s+→\s+(.+))?$/,
+  PLANNED_DELETE: /^-\s+(.+?)(?:\s+→\s+(.+))?$/,
+  PLANNED_UPDATE: /^\*\s+(.+?)(?:\s+→\s+(.+))?$/,
 } as const;
 
 /**
@@ -60,21 +60,21 @@ export class DiffParser extends OperationParser<DiffResult> {
 
     // Build result with all required properties
     const result: DiffResult = {
-      // Base operation result properties
-      success,
-      operation: "diff",
-      stage,
-      exitCode,
       app: commonInfo.app || "unknown-app",
-      rawOutput: processedOutput,
-      permalink: commonInfo.permalink || "",
+      changeSummary,
+      changes,
       completionStatus: commonInfo.completionStatus || "complete",
-      truncated: false,
+      exitCode,
+      operation: "diff",
+      permalink: commonInfo.permalink || "",
 
       // Diff-specific properties
       plannedChanges,
-      changeSummary,
-      changes,
+      rawOutput: processedOutput,
+      stage,
+      // Base operation result properties
+      success,
+      truncated: false,
     };
 
     return result;
@@ -150,10 +150,10 @@ export class DiffParser extends OperationParser<DiffResult> {
     const { name, type } = this.parseResourceIdentifier(resourceIdentifier);
 
     return {
-      type,
-      name,
       action,
       hasChildResource: Boolean(childResource),
+      name,
+      type,
     };
   }
 
@@ -202,7 +202,7 @@ export class DiffParser extends OperationParser<DiffResult> {
         (c) => c.name === name && c.type === type
       );
       if (!existingChange) {
-        changes.push({ type, name, action });
+        changes.push({ action, name, type });
       }
     } else {
       // Override any previous entry
@@ -210,9 +210,9 @@ export class DiffParser extends OperationParser<DiffResult> {
         (c) => c.name === name && c.type === type
       );
       if (existingIndex >= 0) {
-        changes[existingIndex] = { type, name, action };
+        changes[existingIndex] = { action, name, type };
       } else {
-        changes.push({ type, name, action });
+        changes.push({ action, name, type });
       }
     }
   }

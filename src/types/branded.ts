@@ -145,17 +145,6 @@ export const StageName = {
   },
 
   /**
-   * Create a stage name without validation
-   * Use only when you're certain the value is valid
-   *
-   * @param value Stage name string
-   * @returns StageName without validation
-   */
-  unsafe(value: string): StageName {
-    return value as StageName;
-  },
-
-  /**
    * Check if a string is a valid stage name without throwing
    *
    * @param value String to validate
@@ -178,6 +167,17 @@ export const StageName = {
    */
   toString(stageName: StageName): string {
     return stageName as string;
+  },
+
+  /**
+   * Create a stage name without validation
+   * Use only when you're certain the value is valid
+   *
+   * @param value Stage name string
+   * @returns StageName without validation
+   */
+  unsafe(value: string): StageName {
+    return value as StageName;
   },
 };
 
@@ -210,10 +210,6 @@ export const AppName = {
     return trimmed as AppName;
   },
 
-  unsafe(value: string): AppName {
-    return value as AppName;
-  },
-
   isValid(value: string): boolean {
     try {
       AppName.create(value);
@@ -225,6 +221,10 @@ export const AppName = {
 
   toString(appName: AppName): string {
     return appName as string;
+  },
+
+  unsafe(value: string): AppName {
+    return value as AppName;
   },
 };
 
@@ -239,12 +239,12 @@ export const ResourceName = {
     return value.trim() as ResourceName;
   },
 
-  unsafe(value: string): ResourceName {
-    return value as ResourceName;
-  },
-
   toString(resourceName: ResourceName): string {
     return resourceName as string;
+  },
+
+  unsafe(value: string): ResourceName {
+    return value as ResourceName;
   },
 };
 
@@ -275,10 +275,6 @@ export const ResourceType = {
     return trimmed as ResourceType;
   },
 
-  unsafe(value: string): ResourceType {
-    return value as ResourceType;
-  },
-
   isValid(value: string): boolean {
     try {
       ResourceType.create(value);
@@ -290,6 +286,10 @@ export const ResourceType = {
 
   toString(resourceType: ResourceType): string {
     return resourceType as string;
+  },
+
+  unsafe(value: string): ResourceType {
+    return value as ResourceType;
   },
 };
 
@@ -319,10 +319,6 @@ export const URL = {
     return trimmed as URL;
   },
 
-  unsafe(value: string): URL {
-    return value as URL;
-  },
-
   isValid(value: string): boolean {
     try {
       URL.create(value);
@@ -334,6 +330,10 @@ export const URL = {
 
   toString(url: URL): string {
     return url as string;
+  },
+
+  unsafe(value: string): URL {
+    return value as URL;
   },
 };
 
@@ -348,12 +348,12 @@ export const GitRef = {
     return value.trim() as GitRef;
   },
 
-  unsafe(value: string): GitRef {
-    return value as GitRef;
-  },
-
   toString(gitRef: GitRef): string {
     return gitRef as string;
+  },
+
+  unsafe(value: string): GitRef {
+    return value as GitRef;
   },
 };
 

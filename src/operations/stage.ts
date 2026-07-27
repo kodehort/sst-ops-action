@@ -26,8 +26,8 @@ export class StageOperation {
     // Process stage using GitHub context (no SST CLI execution needed)
     const processor = new StageProcessor();
     const result = processor.process({
-      truncationLength: options.truncationLength ?? 26,
       prefix: options.prefix ?? "pr-",
+      truncationLength: options.truncationLength ?? 26,
     });
 
     return result;

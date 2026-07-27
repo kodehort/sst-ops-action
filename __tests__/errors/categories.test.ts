@@ -17,13 +17,13 @@ describe("Error Categories", () => {
   describe("ActionError interface", () => {
     it("should create valid ActionError for input validation", () => {
       const error: ActionError = {
-        type: "input_validation",
-        message: "Invalid stage value",
-        shouldFailAction: true,
         details: {
           field: "stage",
           value: "invalid-stage",
         },
+        message: "Invalid stage value",
+        shouldFailAction: true,
+        type: "input_validation",
       };
 
       expect(error.type).toBe("input_validation");
@@ -35,17 +35,17 @@ describe("Error Categories", () => {
     it("should create valid ActionError for subprocess failure", () => {
       const originalError = new Error("Command failed");
       const error: ActionError = {
-        type: "subprocess_error",
-        message: "SST deploy failed",
-        shouldFailAction: true,
-        originalError,
         details: {
+          exitCode: 1,
           operation: "deploy",
           stage: "production",
-          exitCode: 1,
-          stdout: "Deployment output",
           stderr: "Error: Permission denied",
+          stdout: "Deployment output",
         },
+        message: "SST deploy failed",
+        originalError,
+        shouldFailAction: true,
+        type: "subprocess_error",
       };
 
       expect(error.type).toBe("subprocess_error");
@@ -57,14 +57,14 @@ describe("Error Categories", () => {
 
     it("should create valid ActionError for parsing failure", () => {
       const error: ActionError = {
-        type: "output_parsing",
-        message: "Failed to parse JSON output",
-        shouldFailAction: false, // Parsing errors don't fail the action
         details: {
           operation: "diff",
           stage: "staging",
           stdout: '{"invalid": json}',
         },
+        message: "Failed to parse JSON output",
+        shouldFailAction: false, // Parsing errors don't fail the action
+        type: "output_parsing",
       };
 
       expect(error.type).toBe("output_parsing");
@@ -74,9 +74,9 @@ describe("Error Categories", () => {
 
     it("should support optional fields", () => {
       const minimalError: ActionError = {
-        type: "input_validation",
         message: "Simple error",
         shouldFailAction: true,
+        type: "input_validation",
       };
 
       expect(minimalError.originalError).toBeUndefined();

@@ -13,68 +13,68 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("deploy operations", () => {
       it("should format successful deploy result correctly", () => {
         const deployResult: DeployResult = {
-          success: true,
-          operation: "deploy",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Deploy completed successfully",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
-          resourceChanges: 3,
+          exitCode: 0,
+          operation: "deploy",
           outputs: [
             { key: "API", value: "https://api.example.com" },
             { key: "Web", value: "https://web.example.com" },
           ],
-          resources: [
-            { type: "Function", name: "MyFunction", status: "created" },
-            { type: "Api", name: "MyApi", status: "updated" },
-          ],
           permalink:
             "https://console.sst.dev/test-app/staging/deployments/abc123",
+          rawOutput: "Deploy completed successfully",
+          resourceChanges: 3,
+          resources: [
+            { name: "MyFunction", status: "created", type: "Function" },
+            { name: "MyApi", status: "updated", type: "Api" },
+          ],
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(deployResult);
 
         expect(outputs).toEqual({
-          success: "true",
-          operation: "deploy",
-          stage: "staging",
-          completion_status: "complete",
           app: "test-app",
-          permalink:
-            "https://console.sst.dev/test-app/staging/deployments/abc123",
-          truncated: "false",
-          resource_changes: "3",
-          error: "",
-          outputs: JSON.stringify(deployResult.outputs),
-          resources: JSON.stringify(deployResult.resources),
-          diff_summary: "",
-          planned_changes: "",
-          resources_removed: "",
-          removed_resources: "",
+          completion_status: "complete",
           computed_stage: "",
-          ref: "",
+          diff_summary: "",
+          error: "",
           event_name: "",
           is_pull_request: "",
+          operation: "deploy",
+          outputs: JSON.stringify(deployResult.outputs),
+          permalink:
+            "https://console.sst.dev/test-app/staging/deployments/abc123",
+          planned_changes: "",
+          ref: "",
+          removed_resources: "",
+          resource_changes: "3",
+          resources: JSON.stringify(deployResult.resources),
+          resources_removed: "",
+          stage: "staging",
+          success: "true",
+          truncated: "false",
         });
       });
 
       it("should handle deploy result with missing optional fields", () => {
         const deployResult: DeployResult = {
-          success: false,
-          operation: "deploy",
-          stage: "production",
           app: "test-app",
-          rawOutput: "Deploy failed",
-          exitCode: 1,
-          truncated: false,
           completionStatus: "failed",
-          resourceChanges: 0,
-          outputs: [],
-          resources: [],
           error: "Deployment failed due to timeout",
+          exitCode: 1,
+          operation: "deploy",
+          outputs: [],
+          rawOutput: "Deploy failed",
+          resourceChanges: 0,
+          resources: [],
+          stage: "production",
+          success: false,
+          truncated: false,
         };
 
         const outputs =
@@ -95,71 +95,71 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("diff operations", () => {
       it("should format successful diff result correctly", () => {
         const diffResult: DiffResult = {
-          success: true,
-          operation: "diff",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Diff completed",
-          exitCode: 0,
-          truncated: false,
-          completionStatus: "complete",
-          plannedChanges: 2,
           changeSummary: "Found 2 planned changes: 1 creation, 1 update",
           changes: [
             {
-              type: "Function",
-              name: "MyFunction",
               action: "create",
               details: "",
+              name: "MyFunction",
+              type: "Function",
             },
             {
-              type: "Api",
-              name: "MyApi",
               action: "update",
               details: "config updated",
+              name: "MyApi",
+              type: "Api",
             },
           ],
+          completionStatus: "complete",
+          exitCode: 0,
+          operation: "diff",
+          plannedChanges: 2,
+          rawOutput: "Diff completed",
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(diffResult);
 
         expect(outputs).toEqual({
-          success: "true",
-          operation: "diff",
-          stage: "staging",
-          completion_status: "complete",
           app: "test-app",
-          permalink: "",
-          truncated: "false",
-          resource_changes: "2",
-          error: "",
-          outputs: "",
-          resources: "",
-          diff_summary: "Found 2 planned changes: 1 creation, 1 update",
-          planned_changes: "2",
-          resources_removed: "",
-          removed_resources: "",
+          completion_status: "complete",
           computed_stage: "",
-          ref: "",
+          diff_summary: "Found 2 planned changes: 1 creation, 1 update",
+          error: "",
           event_name: "",
           is_pull_request: "",
+          operation: "diff",
+          outputs: "",
+          permalink: "",
+          planned_changes: "2",
+          ref: "",
+          removed_resources: "",
+          resource_changes: "2",
+          resources: "",
+          resources_removed: "",
+          stage: "staging",
+          success: "true",
+          truncated: "false",
         });
       });
 
       it("should handle diff result with no changes", () => {
         const diffResult: DiffResult = {
-          success: true,
-          operation: "diff",
-          stage: "production",
           app: "test-app",
-          rawOutput: "No changes detected",
-          exitCode: 0,
-          truncated: false,
-          completionStatus: "complete",
-          plannedChanges: 0,
           changeSummary: "No changes detected",
           changes: [],
+          completionStatus: "complete",
+          exitCode: 0,
+          operation: "diff",
+          plannedChanges: 0,
+          rawOutput: "No changes detected",
+          stage: "production",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
@@ -176,62 +176,62 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("remove operations", () => {
       it("should format successful remove result correctly", () => {
         const removeResult: RemoveResult = {
-          success: true,
-          operation: "remove",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Remove completed",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
-          resourcesRemoved: 2,
+          exitCode: 0,
+          operation: "remove",
+          rawOutput: "Remove completed",
           removedResources: [
-            { type: "Function", name: "MyFunction", status: "removed" },
-            { type: "Api", name: "MyApi", status: "removed" },
+            { name: "MyFunction", status: "removed", type: "Function" },
+            { name: "MyApi", status: "removed", type: "Api" },
           ],
+          resourcesRemoved: 2,
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(removeResult);
 
         expect(outputs).toEqual({
-          success: "true",
-          operation: "remove",
-          stage: "staging",
-          completion_status: "complete",
           app: "test-app",
-          permalink: "",
-          truncated: "false",
-          resource_changes: "2",
-          error: "",
-          outputs: "",
-          resources: "",
-          diff_summary: "",
-          planned_changes: "",
-          resources_removed: "2",
-          removed_resources: JSON.stringify(removeResult.removedResources),
+          completion_status: "complete",
           computed_stage: "",
-          ref: "",
+          diff_summary: "",
+          error: "",
           event_name: "",
           is_pull_request: "",
+          operation: "remove",
+          outputs: "",
+          permalink: "",
+          planned_changes: "",
+          ref: "",
+          removed_resources: JSON.stringify(removeResult.removedResources),
+          resource_changes: "2",
+          resources: "",
+          resources_removed: "2",
+          stage: "staging",
+          success: "true",
+          truncated: "false",
         });
       });
 
       it("should handle remove result with partial failure", () => {
         const removeResult: RemoveResult = {
-          success: true,
-          operation: "remove",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Remove partially completed",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "partial",
-          resourcesRemoved: 1,
+          exitCode: 0,
+          operation: "remove",
+          rawOutput: "Remove partially completed",
           removedResources: [
-            { type: "Function", name: "MyFunction", status: "removed" },
-            { type: "Api", name: "MyApi", status: "failed" },
+            { name: "MyFunction", status: "removed", type: "Function" },
+            { name: "MyApi", status: "failed", type: "Api" },
           ],
+          resourcesRemoved: 1,
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
@@ -250,61 +250,61 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("stage operations", () => {
       it("should format successful stage result correctly", () => {
         const stageResult: StageResult = {
-          success: true,
-          operation: "stage",
-          stage: "feature-branch",
           app: "stage-calculator",
-          rawOutput:
-            "Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
           computedStage: "feature-branch",
-          ref: "feature/branch",
           eventName: "pull_request",
+          exitCode: 0,
           isPullRequest: true,
+          operation: "stage",
+          rawOutput:
+            "Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch",
+          ref: "feature/branch",
+          stage: "feature-branch",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
           OutputFormatter.formatOperationForGitHubActions(stageResult);
 
         expect(outputs).toEqual({
-          success: "true",
-          operation: "stage",
-          stage: "feature-branch",
-          completion_status: "complete",
           app: "",
-          permalink: "",
-          truncated: "false",
-          resource_changes: "",
-          error: "",
-          outputs: "",
-          resources: "",
-          diff_summary: "",
-          planned_changes: "",
-          resources_removed: "",
-          removed_resources: "",
+          completion_status: "complete",
           computed_stage: "feature-branch",
-          ref: "feature/branch",
+          diff_summary: "",
+          error: "",
           event_name: "pull_request",
           is_pull_request: "true",
+          operation: "stage",
+          outputs: "",
+          permalink: "",
+          planned_changes: "",
+          ref: "feature/branch",
+          removed_resources: "",
+          resource_changes: "",
+          resources: "",
+          resources_removed: "",
+          stage: "feature-branch",
+          success: "true",
+          truncated: "false",
         });
       });
 
       it("should format stage result for push event", () => {
         const stageResult: StageResult = {
-          success: true,
-          operation: "stage",
-          stage: "main",
           app: "stage-calculator",
-          rawOutput: "Stage computation successful",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
           computedStage: "main",
-          ref: "refs/heads/main",
           eventName: "push",
+          exitCode: 0,
           isPullRequest: false,
+          operation: "stage",
+          rawOutput: "Stage computation successful",
+          ref: "refs/heads/main",
+          stage: "main",
+          success: true,
+          truncated: false,
         };
 
         const outputs =
@@ -318,19 +318,19 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should handle stage result with missing optional fields", () => {
         const stageResult: StageResult = {
-          success: false,
-          operation: "stage",
-          stage: "fallback",
           app: "stage-calculator",
-          rawOutput: "Stage computation failed",
-          exitCode: 1,
-          truncated: false,
-          error: "Failed to compute stage from ref",
           completionStatus: "failed",
           computedStage: "fallback",
-          ref: "",
+          error: "Failed to compute stage from ref",
           eventName: "push",
+          exitCode: 1,
           isPullRequest: false,
+          operation: "stage",
+          rawOutput: "Stage computation failed",
+          ref: "",
+          stage: "fallback",
+          success: false,
+          truncated: false,
         };
 
         const outputs =
@@ -347,17 +347,17 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("edge cases and error handling", () => {
       it("should handle null and undefined values gracefully", () => {
         const result: OperationResult = {
-          success: true,
-          operation: "deploy",
-          stage: "staging",
           app: "",
-          rawOutput: "",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
-          resourceChanges: 0,
+          exitCode: 0,
+          operation: "deploy",
           outputs: [],
+          rawOutput: "",
+          resourceChanges: 0,
           resources: [],
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         const outputs = OutputFormatter.formatOperationForGitHubActions(result);
@@ -371,17 +371,17 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should handle JSON serialization errors gracefully", () => {
         const result: DeployResult = {
-          success: true,
-          operation: "deploy",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Deploy completed",
-          exitCode: 0,
-          truncated: false,
           completionStatus: "complete",
-          resourceChanges: 1,
+          exitCode: 0,
+          operation: "deploy",
           outputs: [],
+          rawOutput: "Deploy completed",
+          resourceChanges: 1,
           resources: [],
+          stage: "staging",
+          success: true,
+          truncated: false,
         };
 
         // Create a circular reference that would cause JSON.stringify to fail
@@ -397,17 +397,17 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should convert all values to strings", () => {
         const result: DiffResult = {
-          success: true,
-          operation: "diff",
-          stage: "staging",
           app: "test-app",
-          rawOutput: "Diff completed",
-          exitCode: 0,
-          truncated: true,
-          completionStatus: "complete",
-          plannedChanges: 5,
           changeSummary: "Found changes",
           changes: [],
+          completionStatus: "complete",
+          exitCode: 0,
+          operation: "diff",
+          plannedChanges: 5,
+          rawOutput: "Diff completed",
+          stage: "staging",
+          success: true,
+          truncated: true,
         };
 
         const outputs = OutputFormatter.formatOperationForGitHubActions(result);
@@ -423,21 +423,21 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
   describe("validateOutputs", () => {
     it("should pass validation for valid outputs", () => {
       const validOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "staging",
-        completion_status: "complete",
         app: "test-app",
-        permalink: "",
-        truncated: "false",
-        resource_changes: "3",
-        error: "",
-        outputs: "[]",
-        resources: "[]",
+        completion_status: "complete",
         diff_summary: "",
+        error: "",
+        operation: "deploy",
+        outputs: "[]",
+        permalink: "",
         planned_changes: "",
-        resources_removed: "",
         removed_resources: "",
+        resource_changes: "3",
+        resources: "[]",
+        resources_removed: "",
+        stage: "staging",
+        success: "true",
+        truncated: "false",
       };
 
       expect(() => {
@@ -447,8 +447,8 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should throw error for missing required fields", () => {
       const invalidOutputs = {
-        success: "true",
         operation: "deploy",
+        success: "true",
         // missing stage and completion_status
       };
 
@@ -459,10 +459,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate boolean field values", () => {
       const invalidOutputs = {
-        success: "invalid", // Should be 'true' or 'false'
+        completion_status: "complete",
         operation: "deploy",
         stage: "staging",
-        completion_status: "complete",
+        success: "invalid", // Should be 'true' or 'false'
         truncated: "false",
       };
 
@@ -473,10 +473,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate operation field values", () => {
       const invalidOutputs = {
-        success: "true",
+        completion_status: "complete",
         operation: "invalid-operation",
         stage: "staging",
-        completion_status: "complete",
+        success: "true",
         truncated: "false",
       };
 
@@ -487,10 +487,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate completion_status field values", () => {
       const invalidOutputs = {
-        success: "true",
+        completion_status: "invalid-status",
         operation: "deploy",
         stage: "staging",
-        completion_status: "invalid-status",
+        success: "true",
         truncated: "false",
       };
 
@@ -501,12 +501,12 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate numeric field values", () => {
       const invalidOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "staging",
         completion_status: "complete",
-        truncated: "false",
+        operation: "deploy",
         resource_changes: "not-a-number",
+        stage: "staging",
+        success: "true",
+        truncated: "false",
       };
 
       expect(() => {
@@ -516,12 +516,12 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate negative numbers are not allowed", () => {
       const invalidOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "staging",
         completion_status: "complete",
-        truncated: "false",
+        operation: "deploy",
         resource_changes: "-5",
+        stage: "staging",
+        success: "true",
+        truncated: "false",
       };
 
       expect(() => {
@@ -531,12 +531,12 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should validate JSON field values", () => {
       const invalidOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "staging",
         completion_status: "complete",
-        truncated: "false",
+        operation: "deploy",
         outputs: "invalid-json",
+        stage: "staging",
+        success: "true",
+        truncated: "false",
       };
 
       expect(() => {
@@ -546,17 +546,17 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
     it("should allow empty strings for optional fields", () => {
       const validOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "staging",
-        completion_status: "complete",
-        truncated: "false",
         app: "",
-        permalink: "",
+        completion_status: "complete",
         error: "",
+        operation: "deploy",
+        permalink: "",
         resource_changes: "",
-        urls: "",
         resources: "",
+        stage: "staging",
+        success: "true",
+        truncated: "false",
+        urls: "",
       };
 
       expect(() => {
@@ -593,10 +593,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("validateOperationConsistency", () => {
       it("should set default values for deploy operations", () => {
         const outputs: Record<string, string> = {
-          success: "true",
+          completion_status: "complete",
           operation: "deploy",
           stage: "staging",
-          completion_status: "complete",
+          success: "true",
         };
 
         OutputFormatter.validateOperationConsistency(outputs, "deploy");
@@ -607,10 +607,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should set default values for diff operations", () => {
         const outputs: Record<string, string> = {
-          success: "true",
+          completion_status: "complete",
           operation: "diff",
           stage: "staging",
-          completion_status: "complete",
+          success: "true",
         };
 
         OutputFormatter.validateOperationConsistency(outputs, "diff");
@@ -621,10 +621,10 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should set default values for remove operations", () => {
         const outputs: Record<string, string> = {
-          success: "true",
+          completion_status: "complete",
           operation: "remove",
           stage: "staging",
-          completion_status: "complete",
+          success: "true",
         };
 
         OutputFormatter.validateOperationConsistency(outputs, "remove");
@@ -635,12 +635,12 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should preserve existing values if already set", () => {
         const outputs: Record<string, string> = {
-          success: "true",
-          operation: "deploy",
-          stage: "staging",
           completion_status: "complete",
+          operation: "deploy",
           outputs: '[{"key":"API","value":"https://api.com"}]',
           resources: '[{"type":"Function","name":"MyFunc"}]',
+          stage: "staging",
+          success: "true",
         };
 
         OutputFormatter.validateOperationConsistency(outputs, "deploy");
@@ -665,9 +665,9 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
       it("should preserve existing stage values if already set", () => {
         const outputs: Record<string, string> = {
           computed_stage: "feature-branch",
-          ref: "feature/branch",
           event_name: "pull_request",
           is_pull_request: "true",
+          ref: "feature/branch",
         };
 
         OutputFormatter.validateOperationConsistency(outputs, "stage");

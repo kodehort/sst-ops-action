@@ -23,25 +23,24 @@ export const MetadataPatterns = {
   /** Matches: "App: my-app" or "➜ App: my-app" */
   app: /^(?:➜\s+)?App:\s+(.+)$/m,
 
-  /** Matches: "  Stage: production" */
-  stage: /^\s*Stage:\s+(.+)$/m,
-
   /** Matches: "Permalink: https://..." or "↗ Permalink: https://..." */
   permalink: /^(?:↗\s+)?Permalink:?\s+(https?:\/\/.+)$/m,
+
+  /** Matches: "  Stage: production" */
+  stage: /^\s*Stage:\s+(.+)$/m,
 } as const;
 
 /**
  * Completion status patterns
  */
 export const StatusPatterns = {
-  /** Matches: "✓ Complete" */
-  success: /^✓\s+Complete\s*$/m,
+  /** Matches: "✗ Failed" */
+  failed: /^✗\s+Failed\s*$/m,
 
   /** Matches: "⚠ Partial" */
   partial: /^⚠\s+Partial\s*$/m,
-
-  /** Matches: "✗ Failed" */
-  failed: /^✗\s+Failed\s*$/m,
+  /** Matches: "✓ Complete" */
+  success: /^✓\s+Complete\s*$/m,
 } as const;
 
 /**
@@ -70,13 +69,6 @@ export const ResourcePatterns = {
   created: /^\s*\+\s+(.+?)\s+([\w-]+)(?:\s+(.+))?$/,
 
   /**
-   * Matches resource update lines
-   * Format: "~ ResourceType resource-name (optional timing)"
-   * Example: "~ AWS::S3::Bucket my-bucket (1.5s)"
-   */
-  updated: /^\s*~\s+(.+?)\s+([\w-]+)(?:\s+(.+))?$/,
-
-  /**
    * Matches resource deletion lines
    * Format: "- ResourceType resource-name (optional timing)"
    * Example: "- AWS::DynamoDB::Table my-table (0.8s)"
@@ -95,6 +87,13 @@ export const ResourcePatterns = {
    * Format: "| resource information"
    */
   line: /^\|\s+(.+)$/m,
+
+  /**
+   * Matches resource update lines
+   * Format: "~ ResourceType resource-name (optional timing)"
+   * Example: "~ AWS::S3::Bucket my-bucket (1.5s)"
+   */
+  updated: /^\s*~\s+(.+?)\s+([\w-]+)(?:\s+(.+))?$/,
 } as const;
 
 /**
@@ -119,32 +118,30 @@ export const OutputPatterns = {
  * Section and structure patterns
  */
 export const SectionPatterns = {
+  /** Matches line containing only dashes (separator line) */
+  dashSeparator: /^-+$/m,
   /** Matches: "✓ Generated" - marks start of diff section */
   generated: /^✓\s+Generated\s*$/m,
 
   /** Matches multiple consecutive newlines */
   separator: /\n\n+/,
-
-  /** Matches line containing only dashes (separator line) */
-  dashSeparator: /^-+$/m,
 } as const;
 
 /**
  * Common utility patterns
  */
 export const UtilityPatterns = {
-  /** Matches Windows-style line endings (CRLF) */
-  lineEnding: /\r\n/g,
-
-  /** Matches trailing whitespace at end of line */
-  trailingWhitespace: /\s+$/,
-
   /** Matches ANSI color codes */
   // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequences require control characters
   ansiCodes: /\x1b\[\d+m/g,
+  /** Matches Windows-style line endings (CRLF) */
+  lineEnding: /\r\n/g,
 
   /** Matches timing information like "(2.1s)" or "2.1s" */
   timing: /\(?([\d.]+s)\)?/,
+
+  /** Matches trailing whitespace at end of line */
+  trailingWhitespace: /\s+$/,
 } as const;
 
 /**
@@ -282,11 +279,11 @@ export class PatternHelpers {
  */
 export const SSTPatterns = {
   metadata: MetadataPatterns,
-  status: StatusPatterns,
   operations: OperationPatterns,
-  resources: ResourcePatterns,
   outputs: OutputPatterns,
+  resources: ResourcePatterns,
   sections: SectionPatterns,
+  status: StatusPatterns,
   utilities: UtilityPatterns,
 } as const;
 

@@ -21,12 +21,12 @@ describe("OperationRouter", () => {
   };
 
   const defaultOptions: OperationOptions = {
-    stage: "test-stage",
-    token: "test-token",
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
     runner: "bun",
+    stage: "test-stage",
+    token: "test-token",
   };
 
   beforeEach(() => {
@@ -73,28 +73,28 @@ describe("OperationRouter", () => {
 
     it("should handle deploy operation successfully", async () => {
       const mockDeployResult = {
-        success: true,
-        stage: "test-stage",
         metadata: {
           app: "test-app",
-          rawOutput: "Deploy successful",
           cliExitCode: 0,
+          rawOutput: "Deploy successful",
           truncated: false,
         },
-        resourceChanges: 3,
         outputs: [
           { key: "api", value: "https://api.example.com" },
           { key: "web", value: "https://web.example.com" },
         ],
+        permalink: "https://console.sst.dev/deploy/123",
+        resourceChanges: 3,
         resources: [
           {
-            type: "function",
             name: "handler",
             status: "created",
             timing: "2s",
+            type: "function",
           },
         ],
-        permalink: "https://console.sst.dev/deploy/123",
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
@@ -113,24 +113,24 @@ describe("OperationRouter", () => {
 
     it("should handle diff operation successfully", async () => {
       const mockDiffResult = {
-        success: true,
-        stage: "test-stage",
-        metadata: {
-          app: "test-app",
-          rawOutput: "Diff completed",
-          cliExitCode: 0,
-          truncated: false,
-        },
-        changesDetected: 2,
-        summary: "Infrastructure changes detected",
         changes: [
           {
-            type: "function",
-            name: "handler",
             action: "create",
             details: "New Lambda function",
+            name: "handler",
+            type: "function",
           },
         ],
+        changesDetected: 2,
+        metadata: {
+          app: "test-app",
+          cliExitCode: 0,
+          rawOutput: "Diff completed",
+          truncated: false,
+        },
+        stage: "test-stage",
+        success: true,
+        summary: "Infrastructure changes detected",
       };
 
       mockOperation.execute.mockResolvedValue(mockDiffResult);
@@ -148,23 +148,23 @@ describe("OperationRouter", () => {
 
     it("should handle remove operation successfully", async () => {
       const mockRemoveResult = {
-        success: true,
-        stage: "test-stage",
+        completionStatus: "complete" as const,
         metadata: {
           app: "test-app",
-          rawOutput: "Remove completed",
           cliExitCode: 0,
+          rawOutput: "Remove completed",
           truncated: false,
         },
-        completionStatus: "complete" as const,
-        resourcesRemoved: 5,
         removedResources: [
           {
-            type: "function",
             name: "handler",
             status: "removed",
+            type: "function",
           },
         ],
+        resourcesRemoved: 5,
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockRemoveResult);
@@ -179,18 +179,18 @@ describe("OperationRouter", () => {
 
     it("should handle stage operation successfully", async () => {
       const mockStageResult = {
-        success: true,
-        operation: "stage" as const,
-        stage: "test-stage",
         app: "test-app",
-        rawOutput: "",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete" as const,
         computedStage: "pr-123",
-        ref: "refs/heads/feature-branch",
         eventName: "pull_request",
+        exitCode: 0,
         isPullRequest: true,
+        operation: "stage" as const,
+        rawOutput: "",
+        ref: "refs/heads/feature-branch",
+        stage: "test-stage",
+        success: true,
+        truncated: false,
       };
 
       mockOperation.execute.mockResolvedValue(mockStageResult);
@@ -216,13 +216,13 @@ describe("OperationRouter", () => {
 
     it("should normalize URL types correctly", async () => {
       const mockDeployResult = {
-        success: true,
-        stage: "test-stage",
         metadata: { app: "test-app" },
         outputs: [
           { key: "valid-api", value: "https://api.example.com" },
           { key: "invalid-type", value: "https://custom.example.com" },
         ],
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
@@ -236,13 +236,13 @@ describe("OperationRouter", () => {
 
     it("should normalize resource status correctly", async () => {
       const mockDeployResult = {
-        success: true,
-        stage: "test-stage",
         metadata: { app: "test-app" },
         resources: [
-          { type: "function", name: "valid", status: "created" },
-          { type: "function", name: "invalid", status: "invalid-status" },
+          { name: "valid", status: "created", type: "function" },
+          { name: "invalid", status: "invalid-status", type: "function" },
         ],
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);
@@ -256,17 +256,17 @@ describe("OperationRouter", () => {
 
     it("should normalize diff actions correctly", async () => {
       const mockDiffResult = {
-        success: true,
-        stage: "test-stage",
-        metadata: { app: "test-app" },
         changes: [
-          { type: "function", name: "valid", action: "create" },
+          { action: "create", name: "valid", type: "function" },
           {
-            type: "function",
-            name: "invalid",
             action: "modify",
+            name: "invalid",
+            type: "function",
           },
         ],
+        metadata: { app: "test-app" },
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockDiffResult);
@@ -280,21 +280,21 @@ describe("OperationRouter", () => {
 
     it("should normalize remove status correctly", async () => {
       const mockRemoveResult = {
-        success: true,
-        stage: "test-stage",
         metadata: { app: "test-app" },
         removedResources: [
           {
-            type: "function",
             name: "valid",
             status: "removed",
+            type: "function",
           },
           {
-            type: "function",
             name: "invalid",
             status: "invalid-status",
+            type: "function",
           },
         ],
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockRemoveResult);
@@ -308,8 +308,8 @@ describe("OperationRouter", () => {
 
     it("should handle missing optional fields gracefully", async () => {
       const mockDeployResult = {
-        success: true,
         stage: "test-stage",
+        success: true,
         // Missing metadata, urls, resources
       };
 
@@ -328,18 +328,18 @@ describe("OperationRouter", () => {
 
     it("should use fake token for stage operations", async () => {
       const mockStageResult = {
-        success: true,
-        operation: "stage" as const,
-        stage: "test-stage",
         app: "test-app",
-        rawOutput: "",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete" as const,
         computedStage: "main",
-        ref: "refs/heads/main",
         eventName: "push",
+        exitCode: 0,
         isPullRequest: false,
+        operation: "stage" as const,
+        rawOutput: "",
+        ref: "refs/heads/main",
+        stage: "test-stage",
+        success: true,
+        truncated: false,
       };
 
       mockOperation.execute.mockResolvedValue(mockStageResult);
@@ -360,30 +360,30 @@ describe("OperationRouter", () => {
 
     it("should preserve optional fields when present", async () => {
       const mockDeployResult = {
-        success: true,
-        stage: "test-stage",
+        error: "Warning message",
         metadata: {
           app: "test-app",
-          rawOutput: "Deploy output",
           cliExitCode: 0,
+          rawOutput: "Deploy output",
           truncated: true,
         },
-        error: "Warning message",
-        permalink: "https://console.sst.dev/123",
         outputs: [
           {
             key: "api",
             value: "https://api.example.com",
           },
         ],
+        permalink: "https://console.sst.dev/123",
         resources: [
           {
-            type: "function",
             name: "handler",
             status: "updated",
             timing: "3s",
+            type: "function",
           },
         ],
+        stage: "test-stage",
+        success: true,
       };
 
       mockOperation.execute.mockResolvedValue(mockDeployResult);

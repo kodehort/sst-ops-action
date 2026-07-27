@@ -28,11 +28,11 @@ vi.mock("../../src/outputs/formatter", () => ({
   },
 }));
 vi.mock("../../src/errors/error-handler", () => ({
-  handleError: vi.fn(),
   createInputValidationError: vi.fn(),
-  createSubprocessError: vi.fn(),
   createOutputParsingError: vi.fn(),
+  createSubprocessError: vi.fn(),
   fromValidationError: vi.fn(),
+  handleError: vi.fn(),
   isParsingError: vi.fn(),
 }));
 vi.mock("../../src/utils/validation", async (importOriginal) => {
@@ -40,8 +40,8 @@ vi.mock("../../src/utils/validation", async (importOriginal) => {
     await importOriginal<typeof import("../../src/utils/validation")>();
   return {
     ...original,
-    validateOperationWithContext: vi.fn(),
     createValidationContext: vi.fn(),
+    validateOperationWithContext: vi.fn(),
   };
 });
 
@@ -94,13 +94,13 @@ async function executeAction(env: Record<string, string>) {
     {} as any
   );
   vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    operation: operation as any,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
     commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
     failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
     maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    operation: operation as any,
     runner: "bun" as const,
+    stage,
+    token: env.INPUT_TOKEN || "fake-token",
   });
 
   // Mock operation execution based on the operation type
@@ -188,13 +188,13 @@ async function executeActionWithFailure(
     {} as any
   );
   vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    operation: operation as any,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
     commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
     failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
     maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    operation: operation as any,
     runner: "bun" as const,
+    stage,
+    token: env.INPUT_TOKEN || "fake-token",
   });
 
   // Mock failed operation execution
@@ -282,13 +282,13 @@ async function executeActionWithFailureAndContinue(
     {} as any
   );
   vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    operation: operation as any,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
     commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
     failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
     maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    operation: operation as any,
     runner: "bun" as const,
+    stage,
+    token: env.INPUT_TOKEN || "fake-token",
   });
 
   // Mock failed operation execution
@@ -440,13 +440,13 @@ async function executeActionWithTruncation(env: Record<string, string>) {
     {} as any
   );
   vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    operation: operation as any,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
     commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
     failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
     maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    operation: operation as any,
     runner: "bun" as const,
+    stage,
+    token: env.INPUT_TOKEN || "fake-token",
   });
 
   // Mock operation execution with truncated result
@@ -484,51 +484,51 @@ async function executeActionWithTruncation(env: Record<string, string>) {
  */
 function createMockOperationResult(operation: string, stage: string): any {
   const baseResult = {
-    success: true,
-    operation,
-    stage,
     app: "test-app",
-    rawOutput: `${operation} completed successfully`,
-    exitCode: 0,
-    truncated: false,
     completionStatus: "complete",
+    exitCode: 0,
+    operation,
+    rawOutput: `${operation} completed successfully`,
+    stage,
+    success: true,
+    truncated: false,
   };
 
   switch (operation) {
     case "deploy":
       return {
         ...baseResult,
-        resourceChanges: 5,
-        urls: [{ name: "API", url: "https://api.example.com", type: "api" }],
-        resources: [
-          { type: "Function", name: "TestFunction", status: "created" },
-        ],
-        permalink: "https://console.sst.dev/test-app/test-integration",
         error: undefined,
+        permalink: "https://console.sst.dev/test-app/test-integration",
+        resourceChanges: 5,
+        resources: [
+          { name: "TestFunction", status: "created", type: "Function" },
+        ],
+        urls: [{ name: "API", type: "api", url: "https://api.example.com" }],
       };
     case "diff":
       return {
         ...baseResult,
-        plannedChanges: 3,
         changeSummary: "Found 3 planned changes",
-        changes: [{ type: "Lambda", name: "Function1", action: "create" }],
+        changes: [{ action: "create", name: "Function1", type: "Lambda" }],
         error: undefined,
+        plannedChanges: 3,
       };
     case "remove":
       return {
         ...baseResult,
-        resourcesRemoved: 7,
-        removedResources: [
-          { type: "Function", name: "OldFunction", status: "removed" },
-        ],
         error: undefined,
+        removedResources: [
+          { name: "OldFunction", status: "removed", type: "Function" },
+        ],
+        resourcesRemoved: 7,
       };
     default:
       return {
         ...baseResult,
-        resourcesRemoved: 0,
-        removedResources: [],
         error: undefined,
+        removedResources: [],
+        resourcesRemoved: 0,
       };
   }
 }
@@ -558,14 +558,14 @@ function createMockFormattedOutputs(result: any) {
  */
 function createBaseOutputs(result: any) {
   return {
-    success: result.success ? "true" : "false",
-    operation: result.operation,
-    stage: result.stage,
-    completion_status: result.completionStatus,
     app: result.app,
-    truncated: result.truncated ? "true" : "false",
+    completion_status: result.completionStatus,
     error: result.error || "",
+    operation: result.operation,
     permalink: result.permalink || "",
+    stage: result.stage,
+    success: result.success ? "true" : "false",
+    truncated: result.truncated ? "true" : "false",
   };
 }
 
@@ -577,8 +577,8 @@ function createDeployOutputs(baseOutputs: any, result: any) {
     ...baseOutputs,
     operation: "deploy",
     resource_changes: String(result.resourceChanges || ""),
-    urls: JSON.stringify(result.urls || []),
     resources: JSON.stringify(result.resources || []),
+    urls: JSON.stringify(result.urls || []),
     ...getEmptyInfrastructureFields(),
   };
 }
@@ -589,12 +589,12 @@ function createDeployOutputs(baseOutputs: any, result: any) {
 function createDiffOutputs(baseOutputs: any, result: any) {
   return {
     ...baseOutputs,
-    operation: "diff",
-    resource_changes: String(result.plannedChanges || ""),
-    urls: "",
-    resources: "",
     diff_summary: result.changeSummary || "",
+    operation: "diff",
     planned_changes: String(result.plannedChanges || ""),
+    resource_changes: String(result.plannedChanges || ""),
+    resources: "",
+    urls: "",
     ...getEmptyInfrastructureFields(false),
   };
 }
@@ -605,14 +605,14 @@ function createDiffOutputs(baseOutputs: any, result: any) {
 function createRemoveOutputs(baseOutputs: any, result: any) {
   return {
     ...baseOutputs,
-    operation: "remove",
-    resource_changes: String(result.resourcesRemoved || ""),
-    urls: "",
-    resources: "",
     diff_summary: "",
+    operation: "remove",
     planned_changes: "",
-    resources_removed: String(result.resourcesRemoved || ""),
     removed_resources: JSON.stringify(result.removedResources || []),
+    resource_changes: String(result.resourcesRemoved || ""),
+    resources: "",
+    resources_removed: String(result.resourcesRemoved || ""),
+    urls: "",
     ...getEmptyInfrastructureFields(false),
   };
 }
@@ -622,25 +622,25 @@ function createRemoveOutputs(baseOutputs: any, result: any) {
  */
 function createStageOutputs(result: any) {
   return {
-    success: result.success ? "true" : "false",
-    operation: "stage",
-    stage: result.stage,
+    app: "",
     completion_status: result.completionStatus,
     computed_stage: result.computedStage || result.stage,
-    ref: result.ref || "",
+    diff_summary: "",
+    error: result.error || "",
     event_name: result.eventName || "",
     is_pull_request: result.isPullRequest ? "true" : "false",
-    app: "",
+    operation: "stage",
     permalink: "",
-    truncated: "false",
-    resource_changes: "",
-    error: result.error || "",
-    urls: "",
-    resources: "",
-    diff_summary: "",
     planned_changes: "",
-    resources_removed: "",
+    ref: result.ref || "",
     removed_resources: "",
+    resource_changes: "",
+    resources: "",
+    resources_removed: "",
+    stage: result.stage,
+    success: result.success ? "true" : "false",
+    truncated: "false",
+    urls: "",
   };
 }
 
@@ -649,8 +649,8 @@ function createStageOutputs(result: any) {
  */
 function getEmptyInfrastructureFields(includeStageFields = true) {
   const fields: any = {
-    resources_removed: "",
     removed_resources: "",
+    resources_removed: "",
   };
 
   if (includeStageFields) {
@@ -661,9 +661,9 @@ function getEmptyInfrastructureFields(includeStageFields = true) {
   return {
     ...fields,
     computed_stage: "",
-    ref: "",
     event_name: "",
     is_pull_request: "",
+    ref: "",
   };
 }
 
@@ -684,14 +684,14 @@ function _executeActionE2E(
       ...process.env,
       ...env,
       GITHUB_ACTIONS: "true",
-      GITHUB_WORKFLOW: "test-workflow",
-      GITHUB_RUN_ID: "123456",
-      GITHUB_RUN_NUMBER: "1",
-      GITHUB_REPOSITORY: "test-org/test-repo",
-      GITHUB_REF: "refs/heads/main",
-      GITHUB_SHA: "abc123def456",
       GITHUB_ACTOR: "test-actor",
       GITHUB_EVENT_NAME: "push",
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_REPOSITORY: "test-org/test-repo",
+      GITHUB_RUN_ID: "123456",
+      GITHUB_RUN_NUMBER: "1",
+      GITHUB_SHA: "abc123def456",
+      GITHUB_WORKFLOW: "test-workflow",
       ...Object.fromEntries(
         Object.entries(inputs).map(([key, value]) => [
           `INPUT_${key.toUpperCase().replace(/-/g, "_")}`,
@@ -701,8 +701,8 @@ function _executeActionE2E(
     };
 
     const child = spawn("node", [ACTION_DIST_PATH], {
-      stdio: "pipe",
       env: actionEnv,
+      stdio: "pipe",
     });
 
     let stdout = "";
@@ -720,9 +720,9 @@ function _executeActionE2E(
       child.kill("SIGTERM");
       resolve({
         exitCode: -1,
-        stdout,
-        stderr: stderr + "\nTimeout: Process killed",
         outputs: {},
+        stderr: stderr + "\nTimeout: Process killed",
+        stdout,
       });
     }, E2E_TIMEOUT);
 
@@ -742,9 +742,9 @@ function _executeActionE2E(
 
       resolve({
         exitCode: code || 0,
-        stdout,
-        stderr,
         outputs,
+        stderr,
+        stdout,
       });
     });
 
@@ -752,9 +752,9 @@ function _executeActionE2E(
       clearTimeout(timer);
       resolve({
         exitCode: -1,
-        stdout,
-        stderr: stderr + error.message,
         outputs: {},
+        stderr: stderr + error.message,
+        stdout,
       });
     });
   });
@@ -767,12 +767,12 @@ function _createTestProject(projectPath: string) {
   mkdirSync(projectPath, { recursive: true });
 
   const packageJson = {
-    name: "integration-test-project",
-    version: "0.1.0",
-    type: "module",
     dependencies: {
       sst: "^3.0.0",
     },
+    name: "integration-test-project",
+    type: "module",
+    version: "0.1.0",
   };
   writeFileSync(
     join(projectPath, "package.json"),
@@ -817,12 +817,12 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Deploy Operation - Complete Workflows", () => {
     it("should deploy application successfully with GitHub integration", async () => {
       const env = {
-        INPUT_OPERATION: "deploy",
-        INPUT_STAGE: "test-integration",
-        INPUT_TOKEN: "fake-token",
         "INPUT_COMMENT-MODE": "on-success",
         "INPUT_FAIL-ON-ERROR": "true",
         "INPUT_MAX-OUTPUT-SIZE": "50000",
+        INPUT_OPERATION: "deploy",
+        INPUT_STAGE: "test-integration",
+        INPUT_TOKEN: "fake-token",
       };
 
       // SST CLI execution is mocked through the router
@@ -841,11 +841,11 @@ describe("SST Operations Action - Integration Workflows", () => {
 
     it("should handle deployment failures with proper error reporting", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "always",
+        "INPUT_FAIL-ON-ERROR": "true",
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "test-integration",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "always",
-        "INPUT_FAIL-ON-ERROR": "true",
       };
 
       const result = await executeActionWithFailure(
@@ -862,11 +862,11 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Diff Operation - Planning Workflows", () => {
     it("should analyze deployment changes and report planned resources", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "always",
+        "INPUT_FAIL-ON-ERROR": "false",
         INPUT_OPERATION: "diff",
         INPUT_STAGE: "staging",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "always",
-        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       // SST CLI execution is mocked through the router
@@ -889,11 +889,11 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Remove Operation - Cleanup Workflows", () => {
     it("should remove deployed resources and report cleanup results", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "on-success",
+        "INPUT_FAIL-ON-ERROR": "true",
         INPUT_OPERATION: "remove",
         INPUT_STAGE: "temp-test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "on-success",
-        "INPUT_FAIL-ON-ERROR": "true",
       };
 
       // SST CLI execution is mocked through the router
@@ -916,11 +916,11 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Input Processing - Validation Workflows", () => {
     it("should validate user inputs and execute operations with proper configuration", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "never",
-        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeAction(env);
@@ -933,11 +933,11 @@ describe("SST Operations Action - Integration Workflows", () => {
 
     it("should support all operation types with appropriate input validation", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
         INPUT_OPERATION: "diff",
         INPUT_STAGE: "integration-test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "never",
-        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeAction(env);
@@ -952,11 +952,11 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("GitHub Integration - Comment Workflows", () => {
     it("should create PR comments based on configured comment mode", async () => {
       const env = {
+        "INPUT_COMMENT-MODE": "never",
+        "INPUT_FAIL-ON-ERROR": "false",
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_COMMENT-MODE": "never",
-        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       // SST CLI execution is mocked through the router
@@ -972,10 +972,10 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Error Handling - Recovery Workflows", () => {
     it("should continue execution when fail-on-error is disabled", async () => {
       const env = {
+        "INPUT_FAIL-ON-ERROR": "false",
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_FAIL-ON-ERROR": "false",
       };
 
       const result = await executeActionWithFailureAndContinue(
@@ -992,10 +992,10 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Output Management - Size Limit Workflows", () => {
     it("should truncate large outputs while preserving essential information", async () => {
       const env = {
+        "INPUT_MAX-OUTPUT-SIZE": "100", // Very small limit
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "test",
         INPUT_TOKEN: "fake-token",
-        "INPUT_MAX-OUTPUT-SIZE": "100", // Very small limit
       };
 
       const result = await executeActionWithTruncation(env);
@@ -1008,12 +1008,12 @@ describe("SST Operations Action - Integration Workflows", () => {
   describe("Environment Compatibility - CI/CD Workflows", () => {
     it("should execute successfully in various GitHub Actions environments", async () => {
       const env = {
+        CI: "true",
+        GITHUB_REF: "refs/heads/main",
+        GITHUB_REPOSITORY: "test-org/test-repo",
         INPUT_OPERATION: "deploy",
         INPUT_STAGE: "production",
         INPUT_TOKEN: "ghp_test_token_123",
-        GITHUB_REPOSITORY: "test-org/test-repo",
-        GITHUB_REF: "refs/heads/main",
-        CI: "true",
       };
 
       const result = await executeAction(env);

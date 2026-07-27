@@ -36,19 +36,19 @@ describe("RemoveParser", () => {
 
       // Verify parsed resources
       expect(result.removedResources[0]).toEqual({
-        type: "Function",
         name: "my-sst-app-staging-handler",
         status: "removed",
+        type: "Function",
       });
       expect(result.removedResources[1]).toEqual({
-        type: "Api",
         name: "my-sst-app-staging-api",
         status: "removed",
+        type: "Api",
       });
       expect(result.removedResources[2]).toEqual({
-        type: "Website",
         name: "my-sst-app-staging-site",
         status: "removed",
+        type: "Website",
       });
     });
 
@@ -122,9 +122,9 @@ describe("RemoveParser", () => {
         (r) => r.status === "failed"
       );
       expect(failedResource).toEqual({
-        type: "Api",
         name: "mixed-app-dev-graphql-api",
         status: "failed",
+        type: "Api",
       });
     });
 
@@ -155,9 +155,9 @@ describe("RemoveParser", () => {
         (r) => r.status === "skipped"
       );
       expect(skippedResource).toEqual({
-        type: "Database",
         name: "skipped-app-staging-db",
         status: "skipped",
+        type: "Database",
       });
     });
 
@@ -203,9 +203,9 @@ describe("RemoveParser", () => {
       expect(result.resourcesRemoved).toBe(1);
       expect(result.removedResources).toHaveLength(1);
       expect(result.removedResources[0]).toEqual({
-        type: "Function",
         name: "incomplete-app-staging-handler",
         status: "removed",
+        type: "Function",
       });
     });
 

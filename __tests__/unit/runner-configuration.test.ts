@@ -15,8 +15,8 @@ describe("Configurable Runner", () => {
     it("should build bun command correctly", async () => {
       const executor = new SSTCLIExecutor();
       const options: Partial<OperationOptions> = {
-        stage: "test",
         runner: "bun",
+        stage: "test",
       };
 
       // Access the private method through type assertion for testing
@@ -33,8 +33,8 @@ describe("Configurable Runner", () => {
     it("should build npm command correctly", async () => {
       const executor = new SSTCLIExecutor();
       const options: Partial<OperationOptions> = {
-        stage: "test",
         runner: "npm",
+        stage: "test",
       };
 
       // Access the private method through type assertion for testing
@@ -51,8 +51,8 @@ describe("Configurable Runner", () => {
     it("should build pnpm command correctly", async () => {
       const executor = new SSTCLIExecutor();
       const options: Partial<OperationOptions> = {
-        stage: "test",
         runner: "pnpm",
+        stage: "test",
       };
 
       // Access the private method through type assertion for testing
@@ -67,8 +67,8 @@ describe("Configurable Runner", () => {
     it("should build yarn command correctly", async () => {
       const executor = new SSTCLIExecutor();
       const options: Partial<OperationOptions> = {
-        stage: "test",
         runner: "yarn",
+        stage: "test",
       };
 
       // Access the private method through type assertion for testing
@@ -83,8 +83,8 @@ describe("Configurable Runner", () => {
     it("should build direct SST command correctly", async () => {
       const executor = new SSTCLIExecutor();
       const options: Partial<OperationOptions> = {
-        stage: "test",
         runner: "sst",
+        stage: "test",
       };
 
       // Access the private method through type assertion for testing

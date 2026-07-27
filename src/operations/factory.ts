@@ -17,7 +17,7 @@ import { StageOperation } from "./stage";
  * Base operation interface that all operations must implement
  */
 export interface BaseOperation {
-  execute(options: OperationOptions): Promise<unknown>;
+  execute: (options: OperationOptions) => Promise<unknown>;
 }
 
 /**

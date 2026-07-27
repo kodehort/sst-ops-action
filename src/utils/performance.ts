@@ -14,16 +14,16 @@ import * as core from "@actions/core";
  * Performance measurement result
  */
 export interface PerformanceMeasurement {
+  /** Duration in milliseconds */
+  duration: number;
+  /** End time in milliseconds (if completed) */
+  endTime?: number;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
   /** Name of the measured operation */
   name: string;
   /** Start time in milliseconds */
   startTime: number;
-  /** End time in milliseconds (if completed) */
-  endTime?: number;
-  /** Duration in milliseconds */
-  duration: number;
-  /** Additional metadata */
-  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -82,9 +82,9 @@ export class PerformanceTimer {
    */
   getMeasurement(): PerformanceMeasurement {
     const measurement: PerformanceMeasurement = {
+      duration: this.getDuration(),
       name: this.name,
       startTime: this.startTime,
-      duration: this.getDuration(),
     };
 
     if (this.endTime !== undefined) {
@@ -348,9 +348,9 @@ export function getMemoryUsage(): {
     if (typeof process !== "undefined" && process.memoryUsage) {
       const usage = process.memoryUsage();
       return {
-        heapUsed: formatBytes(usage.heapUsed),
-        heapTotal: formatBytes(usage.heapTotal),
         external: formatBytes(usage.external),
+        heapTotal: formatBytes(usage.heapTotal),
+        heapUsed: formatBytes(usage.heapUsed),
       };
     }
   } catch {

@@ -22,27 +22,27 @@ describe("OperationFormatter", () => {
   describe("formatOperationComment", () => {
     it("should format deploy comment correctly", () => {
       const deployResult = createMockDeployResult({
-        stage: "production",
         app: "my-app",
-        rawOutput: "Deploy completed successfully",
-        resourceChanges: 5,
         outputs: [
           { key: "app", value: "https://my-app.com" },
           { key: "api", value: "https://api.my-app.com" },
         ],
+        permalink: "https://console.sst.dev/my-app/production",
+        rawOutput: "Deploy completed successfully",
+        resourceChanges: 5,
         resources: [
           createMockDeployResource({
             name: "MyFunction",
-            type: "AWS::Lambda::Function",
             status: "created",
+            type: "AWS::Lambda::Function",
           }),
           createMockDeployResource({
             name: "MyTable",
-            type: "AWS::DynamoDB::Table",
             status: "updated",
+            type: "AWS::DynamoDB::Table",
           }),
         ],
-        permalink: "https://console.sst.dev/my-app/production",
+        stage: "production",
       }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
@@ -66,18 +66,18 @@ describe("OperationFormatter", () => {
 
     it("should format failed deploy comment correctly", () => {
       const failedDeployResult: DeployResult = {
-        success: false,
-        operation: "deploy",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Deploy failed",
-        exitCode: 1,
-        truncated: false,
         completionStatus: "failed",
-        resourceChanges: 0,
-        outputs: [],
-        resources: [],
         error: "Deployment failed due to insufficient permissions",
+        exitCode: 1,
+        operation: "deploy",
+        outputs: [],
+        rawOutput: "Deploy failed",
+        resourceChanges: 0,
+        resources: [],
+        stage: "staging",
+        success: false,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(failedDeployResult);
@@ -88,16 +88,16 @@ describe("OperationFormatter", () => {
 
     it("should format diff comment correctly", () => {
       const diffResult = createMockDiffResult({
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Diff completed",
-        plannedChanges: 6,
         changeSummary: "Plan: 3 to add, 2 to change, 1 to destroy",
         changes: [
-          { type: "Lambda", name: "Function1", action: "create" },
-          { type: "S3", name: "Bucket1", action: "update" },
-          { type: "DynamoDB", name: "Table1", action: "delete" },
+          { action: "create", name: "Function1", type: "Lambda" },
+          { action: "update", name: "Bucket1", type: "S3" },
+          { action: "delete", name: "Table1", type: "DynamoDB" },
         ],
+        plannedChanges: 6,
+        rawOutput: "Diff completed",
+        stage: "staging",
       }) as DiffResult;
 
       const comment = formatter.formatOperationComment(diffResult);
@@ -109,17 +109,17 @@ describe("OperationFormatter", () => {
 
     it("should format diff comment with no changes", () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "No changes",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 0,
         changeSummary: "",
         changes: [],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 0,
+        rawOutput: "No changes",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(diffResult);
@@ -159,17 +159,17 @@ $ bunx --bun astro build
 `;
 
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "dev",
         app: "kodehort-scratch",
-        rawOutput: realWorldOutput,
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 1,
         changeSummary: "1 changes planned",
-        changes: [{ type: "Astro", name: "Web", action: "create" }],
+        changes: [{ action: "create", name: "Web", type: "Astro" }],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 1,
+        rawOutput: realWorldOutput,
+        stage: "dev",
+        success: true,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(diffResult);
@@ -190,16 +190,16 @@ $ bunx --bun astro build
 
     it("should format remove comment correctly", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "pr-123",
         app: "my-app",
-        rawOutput: "Resources removed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 8,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Resources removed",
         removedResources: [],
+        resourcesRemoved: 8,
+        stage: "pr-123",
+        success: true,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(removeResult);
@@ -212,19 +212,19 @@ $ bunx --bun astro build
 
     it("should format partial remove comment correctly", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "pr-123",
         app: "my-app",
-        rawOutput: "Partial cleanup",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "partial",
-        resourcesRemoved: 5,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Partial cleanup",
         removedResources: [
-          { type: "Lambda", name: "Function1", status: "removed" },
-          { type: "S3", name: "Bucket1", status: "failed" },
+          { name: "Function1", status: "removed", type: "Lambda" },
+          { name: "Bucket1", status: "failed", type: "S3" },
         ],
+        resourcesRemoved: 5,
+        stage: "pr-123",
+        success: true,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(removeResult);
@@ -236,14 +236,14 @@ $ bunx --bun astro build
 
     it("should format generic comment for unknown operations", () => {
       const genericResult = {
-        success: true,
-        operation: "unknown" as any,
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Operation completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete" as const,
+        exitCode: 0,
+        operation: "unknown" as any,
+        rawOutput: "Operation completed",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const comment = formatter.formatOperationComment(genericResult);
@@ -256,20 +256,20 @@ $ bunx --bun astro build
   describe("formatOperationSummary", () => {
     it("should format deploy summary correctly", () => {
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "production",
         app: "my-app",
-        rawOutput: "Deploy completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 7,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [
           { key: "app", value: "https://my-app.com" },
           { key: "api", value: "https://api.my-app.com" },
         ],
+        rawOutput: "Deploy completed",
+        resourceChanges: 7,
         resources: [],
+        stage: "production",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(deployResult);
@@ -293,17 +293,17 @@ $ bunx --bun astro build
       }));
 
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Deploy completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 15,
+        exitCode: 0,
+        operation: "deploy",
         outputs,
+        rawOutput: "Deploy completed",
+        resourceChanges: 15,
         resources: [],
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(deployResult);
@@ -314,21 +314,21 @@ $ bunx --bun astro build
 
     it("should format diff summary correctly", () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Diff completed",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 6,
         changeSummary: "3 resources to create, 2 to update, 1 to destroy",
         changes: [
-          { type: "Lambda", name: "Function1", action: "create" },
-          { type: "S3", name: "Bucket1", action: "update" },
-          { type: "DynamoDB", name: "Table1", action: "delete" },
+          { action: "create", name: "Function1", type: "Lambda" },
+          { action: "update", name: "Bucket1", type: "S3" },
+          { action: "delete", name: "Table1", type: "DynamoDB" },
         ],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 6,
+        rawOutput: "Diff completed",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(diffResult);
@@ -344,17 +344,17 @@ $ bunx --bun astro build
 
     it("should format diff summary with no changes", () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "No changes",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 0,
         changeSummary: "",
         changes: [],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 0,
+        rawOutput: "No changes",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(diffResult);
@@ -366,19 +366,19 @@ $ bunx --bun astro build
 
     it("should format remove summary correctly", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "pr-123",
         app: "my-app",
-        rawOutput: "Cleanup completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 10,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Cleanup completed",
         removedResources: [
-          { type: "Lambda", name: "Function1", status: "removed" },
-          { type: "S3", name: "Bucket1", status: "removed" },
+          { name: "Function1", status: "removed", type: "Lambda" },
+          { name: "Bucket1", status: "removed", type: "S3" },
         ],
+        resourcesRemoved: 10,
+        stage: "pr-123",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(removeResult);
@@ -392,19 +392,19 @@ $ bunx --bun astro build
 
     it("should format partial remove summary correctly", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "pr-123",
         app: "my-app",
-        rawOutput: "Partial cleanup",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "partial",
-        resourcesRemoved: 5,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Partial cleanup",
         removedResources: [
-          { type: "Lambda", name: "Function1", status: "removed" },
-          { type: "S3", name: "Bucket1", status: "failed" },
+          { name: "Function1", status: "removed", type: "Lambda" },
+          { name: "Bucket1", status: "failed", type: "S3" },
         ],
+        resourcesRemoved: 5,
+        stage: "pr-123",
+        success: true,
+        truncated: false,
       };
 
       const summary = formatter.formatOperationSummary(removeResult);
@@ -415,24 +415,24 @@ $ bunx --bun astro build
 
     it("should include status badges", () => {
       const successResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Success",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 1,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [],
+        rawOutput: "Success",
+        resourceChanges: 1,
         resources: [],
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const failResult: DeployResult = {
         ...successResult,
-        success: false,
-        exitCode: 1,
         completionStatus: "failed",
+        exitCode: 1,
+        success: false,
       };
 
       const successSummary = formatter.formatOperationSummary(successResult);
@@ -450,37 +450,37 @@ $ bunx --bun astro build
   describe("resource formatting", () => {
     it("should format resource actions with appropriate icons", () => {
       const deployResult = createMockDeployResult({
-        stage: "staging",
         app: "my-app",
         rawOutput: "Deploy completed",
         resourceChanges: 5,
         resources: [
           createMockDeployResource({
             name: "Function1",
-            type: "AWS::Lambda::Function",
             status: "created",
+            type: "AWS::Lambda::Function",
           }),
           createMockDeployResource({
             name: "Function2",
-            type: "AWS::Lambda::Function",
             status: "updated",
+            type: "AWS::Lambda::Function",
           }),
           createMockDeployResource({
             name: "Table1",
-            type: "AWS::DynamoDB::Table",
             status: "updated",
+            type: "AWS::DynamoDB::Table",
           }),
           createMockDeployResource({
             name: "Bucket1",
-            type: "AWS::S3::Bucket",
             status: "updated",
+            type: "AWS::S3::Bucket",
           }),
           createMockDeployResource({
             name: "OldFunction",
-            type: "AWS::Lambda::Function",
             status: "updated",
+            type: "AWS::Lambda::Function",
           }),
         ],
+        stage: "staging",
       }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
@@ -491,14 +491,14 @@ $ bunx --bun astro build
 
     it("should limit displayed resources", () => {
       const deployResult = createMockDeployResult({
-        stage: "staging",
         app: "my-app",
         rawOutput: "Deploy completed",
         resourceChanges: 25,
         resources: createMockResourceBatch(25, {
-          type: "AWS::Lambda::Function",
           status: "created",
+          type: "AWS::Lambda::Function",
         }),
+        stage: "staging",
       }) as DeployResult;
 
       const comment = formatter.formatOperationComment(deployResult);
@@ -510,22 +510,22 @@ $ bunx --bun astro build
   describe("custom configuration", () => {
     it("should respect custom maxUrlsToShow configuration", () => {
       const customFormatter = new OperationFormatter({
-        includeTimestamp: true,
-        includeDuration: true,
         includeDebugInfo: false,
-        maxUrlsToShow: 3,
+        includeDuration: true,
+        includeTimestamp: true,
         maxResourcesToShow: 20,
+        maxUrlsToShow: 3,
       });
 
       const deployResult = createMockDeployResult({
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Deploy completed",
-        resourceChanges: 7,
         outputs: Array.from({ length: 7 }, (_, i) => ({
           key: `service${i}`,
           value: `https://service${i}.example.com`,
         })),
+        rawOutput: "Deploy completed",
+        resourceChanges: 7,
+        stage: "staging",
       }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
@@ -535,23 +535,23 @@ $ bunx --bun astro build
 
     it("should respect custom maxResourcesToShow configuration", () => {
       const customFormatter = new OperationFormatter({
-        includeTimestamp: true,
-        includeDuration: true,
         includeDebugInfo: false,
-        maxUrlsToShow: 10,
+        includeDuration: true,
+        includeTimestamp: true,
         maxResourcesToShow: 5,
+        maxUrlsToShow: 10,
       });
 
       const deployResult = createMockDeployResult({
-        stage: "staging",
         app: "my-app",
+        outputs: [],
         rawOutput: "Deploy completed",
         resourceChanges: 12,
-        outputs: [],
         resources: createMockResourceBatch(12, {
-          type: "AWS::Lambda::Function",
           status: "created",
+          type: "AWS::Lambda::Function",
         }),
+        stage: "staging",
       }) as DeployResult;
 
       const comment = customFormatter.formatOperationComment(deployResult);
@@ -564,7 +564,6 @@ $ bunx --bun astro build
     describe("URL detection with short strings", () => {
       it("should handle very short strings without errors", () => {
         const deployResult = createMockDeployResult({
-          stage: "test",
           app: "test-app",
           outputs: [
             { key: "short", value: "a" },
@@ -574,6 +573,7 @@ $ bunx --bun astro build
             { key: "valid_url", value: "https://example.com" },
             { key: "invalid_url", value: "not-a-url" },
           ],
+          stage: "test",
         }) as DeployResult;
 
         const comment = formatter.formatOperationComment(deployResult);
@@ -592,7 +592,6 @@ $ bunx --bun astro build
 
       it("should properly detect edge case URLs", () => {
         const deployResult = createMockDeployResult({
-          stage: "test",
           app: "test-app",
           outputs: [
             { key: "http_min", value: "http://" }, // Exactly 7 characters
@@ -600,6 +599,7 @@ $ bunx --bun astro build
             { key: "http_url", value: "http://example.com" },
             { key: "https_url", value: "https://example.com" },
           ],
+          stage: "test",
         }) as DeployResult;
 
         const comment = formatter.formatOperationComment(deployResult);
@@ -617,7 +617,6 @@ $ bunx --bun astro build
     describe("URL validation edge cases", () => {
       it("should handle malformed URLs with valid protocols", () => {
         const deployResult = createMockDeployResult({
-          stage: "test",
           app: "test-app",
           outputs: [
             { key: "malformed_spaces", value: "https://not a valid url" },
@@ -634,6 +633,7 @@ $ bunx --bun astro build
             },
             { key: "invalid_domain", value: "https://not..valid..domain" },
           ],
+          stage: "test",
         }) as DeployResult;
 
         const comment = formatter.formatOperationComment(deployResult);
@@ -660,7 +660,6 @@ $ bunx --bun astro build
 
       it("should handle various URL formats and edge cases", () => {
         const deployResult = createMockDeployResult({
-          stage: "test",
           app: "test-app",
           outputs: [
             { key: "port_url", value: "http://localhost:3000" },
@@ -676,6 +675,7 @@ $ bunx --bun astro build
             },
             { key: "protocol_only", value: "ftp://example.com" }, // Non-http protocol
           ],
+          stage: "test",
         }) as DeployResult;
 
         const comment = formatter.formatOperationComment(deployResult);
@@ -705,12 +705,12 @@ $ bunx --bun astro build
     describe("workflow summaries with edge cases", () => {
       it("should handle short strings in workflow summaries", () => {
         const deployResult = createMockDeployResult({
-          stage: "test",
           app: "test-app",
           outputs: [
             { key: "short", value: "ab" },
             { key: "url", value: "https://api.test.com" },
           ],
+          stage: "test",
         }) as DeployResult;
 
         const summary = formatter.formatOperationSummary(deployResult);
