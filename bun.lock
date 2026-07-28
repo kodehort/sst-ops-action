@@ -10,6 +10,7 @@
         "@actions/exec": "^3.0.0",
         "@actions/github": "^9.0.0",
         "@actions/io": "^3.0.2",
+        "picomatch": "^4.0.5",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -504,7 +505,7 @@
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
-    "picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
+    "picomatch": ["picomatch@4.0.5", "", {}, "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A=="],
 
     "postcss": ["postcss@8.5.6", "", { "dependencies": { "nanoid": "^3.3.11", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg=="],
 
@@ -632,6 +633,10 @@
 
     "@protobuf-ts/plugin/typescript": ["typescript@3.9.10", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-w6fIxVE/H1PkLKcCPsFqKE7Kv7QUwhU8qQY2MueZXWx5cPZdwFupLgKK3vntcK98BtNHZtAF4LA/yl2a7k8R6Q=="],
 
+    "@rollup/plugin-commonjs/picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
+
+    "@rollup/pluginutils/picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
+
     "@types/yaml/yaml": ["yaml@2.8.1", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw=="],
 
     "@vitest/mocker/estree-walker": ["estree-walker@3.0.3", "", { "dependencies": { "@types/estree": "^1.0.0" } }, "sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g=="],
@@ -660,11 +665,17 @@
 
     "tinyglobby/fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
+    "tinyglobby/picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
+
     "vite/esbuild": ["esbuild@0.27.3", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.27.3", "@esbuild/android-arm": "0.27.3", "@esbuild/android-arm64": "0.27.3", "@esbuild/android-x64": "0.27.3", "@esbuild/darwin-arm64": "0.27.3", "@esbuild/darwin-x64": "0.27.3", "@esbuild/freebsd-arm64": "0.27.3", "@esbuild/freebsd-x64": "0.27.3", "@esbuild/linux-arm": "0.27.3", "@esbuild/linux-arm64": "0.27.3", "@esbuild/linux-ia32": "0.27.3", "@esbuild/linux-loong64": "0.27.3", "@esbuild/linux-mips64el": "0.27.3", "@esbuild/linux-ppc64": "0.27.3", "@esbuild/linux-riscv64": "0.27.3", "@esbuild/linux-s390x": "0.27.3", "@esbuild/linux-x64": "0.27.3", "@esbuild/netbsd-arm64": "0.27.3", "@esbuild/netbsd-x64": "0.27.3", "@esbuild/openbsd-arm64": "0.27.3", "@esbuild/openbsd-x64": "0.27.3", "@esbuild/openharmony-arm64": "0.27.3", "@esbuild/sunos-x64": "0.27.3", "@esbuild/win32-arm64": "0.27.3", "@esbuild/win32-ia32": "0.27.3", "@esbuild/win32-x64": "0.27.3" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg=="],
 
     "vite/fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
+    "vite/picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
+
     "vitest/magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
+
+    "vitest/picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
 
     "wrap-ansi-cjs/ansi-styles": ["ansi-styles@4.3.0", "", { "dependencies": { "color-convert": "^2.0.1" } }, "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg=="],
 
