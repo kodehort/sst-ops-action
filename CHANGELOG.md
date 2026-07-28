@@ -222,6 +222,12 @@
 ## 🚀 What's New
 
 
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency @rollup/plugin-terser to v1 (#72) (`a7086bd`)
+- chore(deps): update dependency yaml to v2.9.0 (#102) (`eb8772b`)
+- chore(deps): update dependency @rollup/plugin-commonjs to v29.0.3 (#101) (`e09c711`)
+
 ## 📦 Bundle Information
 
 - **Bundle Size:** 1.51MB (1578264 bytes)
