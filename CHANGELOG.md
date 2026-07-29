@@ -1,3 +1,181 @@
+# Release v0.7.20
+
+**Release Date:** 2026-07-28
+**Previous Version:** v0.7.19
+
+## 🚀 What's New
+
+
+### 🐛 Bug Fixes
+
+- fix(deps): bump fast-xml-builder from 1.1.5 to 1.3.0 (#109) (`e3d831c`)
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency js-yaml to v5 (#113) (`c9a8080`)
+- chore(deps): bump undici from 6.24.1 to 6.28.0 (#106) (`03ed6a8`)
+- chore(deps): update actions/checkout action to v7 (#111) (`25a1e96`)
+- chore(deps): update actions/setup-node action to v7 (#112) (`79a9991`)
+- chore(deps): bump minimatch (#66) (`9b466e2`)
+- chore(deps): bump brace-expansion (#87) (`092094d`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `507e33413e2de6d0...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.20
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJYYm1JNjRBMHJBem91MHJNZ3dxNnRjMEtXd05OWXhILWt5Y21hdmE5dmFvVEpIbUtiRGtxMHBRIiwiZXhwIjoxNzg1MjMwNDc2LCJpYXQiOjE3ODUyMjY4NzYsImlzcyI6ImdpdGh1YiIsImp0aSI6IjJmNWM0YjIyLTc0ZmItNGVhMS05ZjM1LTI5Y2VhZTYwNDlmZiIsInZlciI6M30._pcR2jV2i4igNNPqpiISJTUCiwUEXH6BTdFqj5A0Zw1Z1ftxOLrBmTHVezIafdJ6NS2T49io85pb1tHcFlKnRA
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.19...v0.7.20)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.20/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.19...v0.7.20
+
+---
+
+# Release v0.7.19
+
+**Release Date:** 2026-07-28
+**Previous Version:** v0.7.18
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `45872675e5646816...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.19
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiIwMGZhVHVjVDFyU3JHNzIxTkNvbzVVb0lTQWZBY3h0bXhfR2FsbURqdm1uOWhmem56T2lIYTJRIiwiZXhwIjoxNzg1MjAxMjEzLCJpYXQiOjE3ODUxOTc2MTMsImlzcyI6ImdpdGh1YiIsImp0aSI6ImZmMjUxOTEzLTcwNTktNDc4NC1hYThhLWI5MDA2NmNhNWY3OSIsInZlciI6M30.hA5NzCAEV-e65FRp4ypgodVB6jSE80qZUoCNfe2Qrf9mLL3k9IiBewd92egiBgyHIoDq1xsp6wvYxDtSvg6e6A
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.18...v0.7.19)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.19/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.18...v0.7.19
+
+---
+
+# Release v0.7.18
+
+**Release Date:** 2026-07-27
+**Previous Version:** v0.7.17
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency zod to v4.4.3 (#104) (`bf37d80`)
+- chore(deps): update actions/cache action to v6 (#105) (`2024140`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `dd95e55f61224f62...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.18
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJ2UzBEc2lxa0hjanRTa0tPaVBSRWVUc3RYWU5oV1ZYTkhfekJDQlZ4U0UxbDA2X21HQ0I0ek5RIiwiZXhwIjoxNzg1MTk4MzY3LCJpYXQiOjE3ODUxOTQ3NjcsImlzcyI6ImdpdGh1YiIsImp0aSI6IjUwZTI3MzRlLWQ1NjMtNDAwNi04NDdjLTk0M2I5NDBjOGYyNSIsInZlciI6M30.qTSEEWbxXYRTMeYh3ohHJjfCtnyAiZP7gEeorPqh5bC_VFpIHUC3jS4a67KhtAS2RwdBuBi3SIozvIXrwyQBCw
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.17...v0.7.18)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.18/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.17...v0.7.18
+
+---
+
+# Release v0.7.17
+
+**Release Date:** 2026-07-27
+**Previous Version:** v0.7.16
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `b39203cf2b09089d...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.17
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJNNnViVjVqOEhNamliMVJ1bDVqNEJGMm5XVHlqcmlJbTNuUFFBRGlhRHUtYmYxSXZEcDZQWmhvIiwiZXhwIjoxNzg1MTk3NzM3LCJpYXQiOjE3ODUxOTQxMzcsImlzcyI6ImdpdGh1YiIsImp0aSI6IjYwOGQ5NWY0LWRlNTEtNDU2ZS05MmQ3LTdlNGQyN2QwOWE4NiIsInZlciI6M30.15f-_ZetYBgdsm7r6EZNGxqLB_A3h-koEVqEcGQeGJ9rO5eNkWxbdyxTMLz8FVwuZEb5dTGW_gS15CWSfTKTFg
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.16...v0.7.17)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.17/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.16...v0.7.17
+
+---
+
 # Release v0.7.16
 
 **Release Date:** 2026-07-27
@@ -97,6 +275,12 @@
 ## 🚀 What's New
 
 
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency @rollup/plugin-terser to v1 (#72) (`a7086bd`)
+- chore(deps): update dependency yaml to v2.9.0 (#102) (`eb8772b`)
+- chore(deps): update dependency @rollup/plugin-commonjs to v29.0.3 (#101) (`e09c711`)
+
 ## 📦 Bundle Information
 
 - **Bundle Size:** 1.51MB (1578264 bytes)
@@ -114,7 +298,7 @@
   with:
     operation: deploy  # deploy, diff, or remove
     stage: production
-    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJVR3NIb0ZfM3EtbDdfaEo0MHFBZmFfeHZ2VTFpSVJTLVdVQVl4eExuSGl2VkN6UUZETlpyNjRvIiwiZXhwIjoxNzg1MTk2ODYyLCJpYXQiOjE3ODUxOTMyNjIsImlzcyI6ImdpdGh1YiIsImp0aSI6ImE5Yzc1OWY5LTM2MmYtNDdlOS05N2E5LTdhYTQxYzc4ZmM1OCIsInZlciI6M30.i_ylBgIkSKqkZqcYUSmcQC7FKS83YaOkUmwx2qFb4_c6VQTwI_m8zjnYjzUSQNTbl3ORpx8vLSm5fg4LcgYykA
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiI0UTZfVnJWMEQ3QU40WU5fQWNWMGNqYUg3VFRtemtSaXdGcHRZSG41QVZpWG1OMDhlUHM2dzVFIiwiZXhwIjoxNzg1MTk3MDAwLCJpYXQiOjE3ODUxOTM0MDAsImlzcyI6ImdpdGh1YiIsImp0aSI6IjAyYzg5NjU4LTM5MjMtNDlkNi1iNDhjLWQyODA0ZTMxNjM2NSIsInZlciI6M30.ShqrVlBaCHyM9TWheH0oXSeNbGammATmhh1wiwNtdYKTEHGaPt75aWgke-XXF0-xbF9HFQjDz1eBXxBy5LpY8A
 ```
 
 ## 🔗 Links
