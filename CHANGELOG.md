@@ -63,7 +63,7 @@
   with:
     operation: deploy  # deploy, diff, or remove
     stage: production
-    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJ4MGpHUEVCaVRzSmlBUk1wTkQxbzJTQjRCTm1pNnNlRTVrbjVmUHFxX3hCTWRvakYwR1JNRWU4IiwiZXhwIjoxNzg1NDAzMjEzLCJpYXQiOjE3ODUzOTk2MTMsImlzcyI6ImdpdGh1YiIsImp0aSI6ImNlZTU5M2I1LWUyZTAtNDM3My04Y2Y5LTQzMTc4NjIwODkzZCIsInZlciI6M30.XfaXa9CiPG2J37HaM0b_vPKRvTwatV8-366I6kihOTnOp4HDHZPyCjT5T7oCzBFBOdEAm1kduIRgjdVYP9Q8vQ
+    token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## 🔗 Links
@@ -116,7 +116,7 @@
   with:
     operation: deploy  # deploy, diff, or remove
     stage: production
-    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJYYm1JNjRBMHJBem91MHJNZ3dxNnRjMEtXd05OWXhILWt5Y21hdmE5dmFvVEpIbUtiRGtxMHBRIiwiZXhwIjoxNzg1MjMwNDc2LCJpYXQiOjE3ODUyMjY4NzYsImlzcyI6ImdpdGh1YiIsImp0aSI6IjJmNWM0YjIyLTc0ZmItNGVhMS05ZjM1LTI5Y2VhZTYwNDlmZiIsInZlciI6M30._pcR2jV2i4igNNPqpiISJTUCiwUEXH6BTdFqj5A0Zw1Z1ftxOLrBmTHVezIafdJ6NS2T49io85pb1tHcFlKnRA
+    token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## 🔗 Links

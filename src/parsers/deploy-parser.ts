@@ -200,7 +200,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       (process.env.ACTIONS_STEP_DEBUG === "1" ||
         process.env.RUNNER_DEBUG === "1")
     ) {
-      // Cache truncated line to avoid repeated substring operations
+      // Cache truncated line to avoid repeated slice operations
       const logLine =
         trimmedLine.length > 100
           ? `${trimmedLine.slice(0, 100)}...`
