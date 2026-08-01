@@ -1,3 +1,43 @@
+# Release v0.7.21
+
+**Release Date:** 2026-07-30
+**Previous Version:** v0.7.20
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1578264 bytes)
+- **Integrity Hash:** `2062c29901460d78...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.21
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.20...v0.7.21)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.21/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.20...v0.7.21
+
+---
+
 # Release v0.7.20
 
 **Release Date:** 2026-07-28
@@ -5,6 +45,19 @@
 
 ## 🚀 What's New
 
+
+### 🐛 Bug Fixes
+
+- fix(deps): bump fast-xml-builder from 1.1.5 to 1.3.0 (#109) (`e3d831c`)
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency js-yaml to v5 (#113) (`c9a8080`)
+- chore(deps): bump undici from 6.24.1 to 6.28.0 (#106) (`03ed6a8`)
+- chore(deps): update actions/checkout action to v7 (#111) (`25a1e96`)
+- chore(deps): update actions/setup-node action to v7 (#112) (`79a9991`)
+- chore(deps): bump minimatch (#66) (`9b466e2`)
+- chore(deps): bump brace-expansion (#87) (`092094d`)
 
 ## 📦 Bundle Information
 
@@ -23,7 +76,7 @@
   with:
     operation: deploy  # deploy, diff, or remove
     stage: production
-    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiIxeFliMXR5amVyR0oyOURHaUJWUUo2RzBnN3R4SkNidW1tbGVEdGhKYVZPOWhCaW9jY2p3MnpZIiwiZXhwIjoxNzg1MjMwMzQ1LCJpYXQiOjE3ODUyMjY3NDUsImlzcyI6ImdpdGh1YiIsImp0aSI6IjdlZTBiYWQzLWJmMmYtNGUyOC1hMDExLWE0NDM1ZDU4N2VmMCIsInZlciI6M30.-7GmIVOolNuNKYoJ4WSvMW8eCXps2vsX04ArzOA1Cr4hm1TjjfDYT7YR8tAocAaRtiUkw0jsPCTUNHv07xE-6Q
+    token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## 🔗 Links

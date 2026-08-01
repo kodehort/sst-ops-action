@@ -1,6 +1,6 @@
 {
   "name": "sst-operations-action",
-  "version": "0.7.20",
+  "version": "0.7.21",
   "description": "A unified GitHub Action for SST operations: deploy, diff, and remove",
   "main": "dist/index.js",
   "scripts": {
@@ -57,7 +57,7 @@
     "@types/yaml": "^1.9.7",
     "@vitest/coverage-v8": "^4.0.18",
     "esbuild": "^0.28.0",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^5.0.0",
     "rollup": "^4.57.1",
     "typescript": "^5.9.3",
     "ultracite": "7.2.2",
