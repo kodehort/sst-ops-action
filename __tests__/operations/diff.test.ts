@@ -11,9 +11,9 @@ const mockSSTExecutor = {
 };
 
 const mockGitHubClient = {
-  postPRComment: vi.fn(),
   createOrUpdateComment: vi.fn(),
   createWorkflowSummary: vi.fn(),
+  postPRComment: vi.fn(),
 };
 
 const mockDiffParser = {
@@ -34,55 +34,55 @@ describe("Diff Operation - Change Analysis Workflows", () => {
 
   it("should execute diff operation successfully with changes detected", async () => {
     const options: OperationOptions = {
-      stage: "staging",
       maxOutputSize: 1_000_000,
+      stage: "staging",
     };
 
     const mockSSTResult = {
-      success: true,
+      duration: 5000,
+      exitCode: 0,
+      stderr: "",
       stdout: `Planned changes:
 + Function MyFunction
 ~ Bucket MyBucket (policy updated)
 - Database OldDatabase
 
 Monthly: $45.50 → $67.80 (+$22.30)`,
-      stderr: "",
-      exitCode: 0,
-      duration: 5000,
+      success: true,
     };
 
     const mockDiffResult = {
-      success: true,
-      operation: "diff" as const,
-      stage: "staging",
       app: "test-app",
-      rawOutput: "test output",
-      exitCode: 0,
-      truncated: false,
-      completionStatus: "complete" as const,
-      plannedChanges: 3,
       changeSummary:
         "Found 3 planned changes: 1 creation, 1 update, 1 deletion. Cost increase: +$22.30 monthly.",
       changes: [
         {
-          type: "Function",
-          name: "MyFunction",
           action: "create" as const,
           details: "",
+          name: "MyFunction",
+          type: "Function",
         },
         {
-          type: "Bucket",
-          name: "MyBucket",
           action: "update" as const,
           details: "policy updated",
+          name: "MyBucket",
+          type: "Bucket",
         },
         {
-          type: "Database",
-          name: "OldDatabase",
           action: "delete" as const,
           details: "",
+          name: "OldDatabase",
+          type: "Database",
         },
       ],
+      completionStatus: "complete" as const,
+      exitCode: 0,
+      operation: "diff" as const,
+      plannedChanges: 3,
+      rawOutput: "test output",
+      stage: "staging",
+      success: true,
+      truncated: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -95,8 +95,8 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     expect(result).toEqual(mockDiffResult);
 
     expect(mockSSTExecutor.executeSST).toHaveBeenCalledWith("diff", "staging", {
-      timeout: 300_000, // 5 minutes
       maxOutputSize: 1_000_000,
+      timeout: 300_000, // 5 minutes
     });
 
     expect(mockDiffParser.parse).toHaveBeenCalledWith(
@@ -119,25 +119,25 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     };
 
     const mockSSTResult = {
-      success: true,
-      stdout: "No changes detected.",
-      stderr: "",
-      exitCode: 0,
       duration: 2000,
+      exitCode: 0,
+      stderr: "",
+      stdout: "No changes detected.",
+      success: true,
     };
 
     const mockDiffResult = {
-      success: true,
-      operation: "diff" as const,
-      stage: "production",
       app: "test-app",
-      rawOutput: "test output",
-      exitCode: 0,
-      truncated: false,
-      completionStatus: "complete" as const,
-      plannedChanges: 0,
       changeSummary: "No changes detected.",
       changes: [],
+      completionStatus: "complete" as const,
+      exitCode: 0,
+      operation: "diff" as const,
+      plannedChanges: 0,
+      rawOutput: "test output",
+      stage: "production",
+      success: true,
+      truncated: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -164,34 +164,34 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     };
 
     const mockSSTResult = {
-      success: true,
+      duration: 3000,
+      exitCode: 0,
+      stderr: "",
       stdout: `Planned changes:
 - Function MyFunction
 
 Changes detected in infrastructure.`,
-      stderr: "",
-      exitCode: 0,
-      duration: 3000,
+      success: true,
     };
 
     const mockDiffResult = {
-      success: true,
-      operation: "diff" as const,
-      stage: "staging",
       app: "test-app",
-      rawOutput: "test output",
-      exitCode: 0,
-      truncated: false,
-      completionStatus: "complete" as const,
-      plannedChanges: 1,
       changeSummary: "Found 1 planned change: 1 deletion.",
       changes: [
         {
-          type: "Function",
-          name: "MyFunction",
           action: "delete" as const,
+          name: "MyFunction",
+          type: "Function",
         },
       ],
+      completionStatus: "complete" as const,
+      exitCode: 0,
+      operation: "diff" as const,
+      plannedChanges: 1,
+      rawOutput: "test output",
+      stage: "staging",
+      success: true,
+      truncated: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -217,11 +217,11 @@ Changes detected in infrastructure.`,
     };
 
     const mockSSTResult = {
-      success: false,
-      stdout: "",
-      stderr: "Authentication failed: Invalid SST token",
-      exitCode: 1,
       duration: 1000,
+      exitCode: 1,
+      stderr: "Authentication failed: Invalid SST token",
+      stdout: "",
+      success: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -229,18 +229,18 @@ Changes detected in infrastructure.`,
     const result = await diffOperation.execute(options);
 
     expect(result).toEqual({
-      success: false,
-      operation: "diff",
-      stage: "staging",
       app: "unknown",
-      rawOutput: "",
-      exitCode: -1,
-      truncated: false,
-      error: "Authentication failed: Invalid SST token",
-      completionStatus: "failed",
-      plannedChanges: 0,
       changeSummary: "Failed to execute SST diff command",
       changes: [],
+      completionStatus: "failed",
+      error: "Authentication failed: Invalid SST token",
+      exitCode: -1,
+      operation: "diff",
+      plannedChanges: 0,
+      rawOutput: "",
+      stage: "staging",
+      success: false,
+      truncated: false,
     });
 
     expect(mockDiffParser.parse).not.toHaveBeenCalled();
@@ -254,33 +254,33 @@ Changes detected in infrastructure.`,
     };
 
     const mockSSTResult = {
-      success: true,
+      duration: 3000,
+      exitCode: 0,
+      stderr: "",
       stdout: `Planned changes:
 + Function MyFunction`,
-      stderr: "",
-      exitCode: 0,
-      duration: 3000,
+      success: true,
     };
 
     const mockDiffResult = {
-      success: true,
-      operation: "diff" as const,
-      stage: "staging",
       app: "test-app",
-      rawOutput: "test output",
-      exitCode: 0,
-      truncated: false,
-      completionStatus: "complete" as const,
-      plannedChanges: 1,
       changeSummary: "Found 1 planned change: 1 creation.",
       changes: [
         {
-          type: "Function",
-          name: "MyFunction",
           action: "create" as const,
           details: "",
+          name: "MyFunction",
+          type: "Function",
         },
       ],
+      completionStatus: "complete" as const,
+      exitCode: 0,
+      operation: "diff" as const,
+      plannedChanges: 1,
+      rawOutput: "test output",
+      stage: "staging",
+      success: true,
+      truncated: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);

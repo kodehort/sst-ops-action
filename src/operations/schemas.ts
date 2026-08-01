@@ -11,8 +11,8 @@ import { z } from "zod";
 const OperationMetadataSchema = z
   .object({
     app: z.string().optional(),
-    rawOutput: z.string().optional(),
     cliExitCode: z.number().optional(),
+    rawOutput: z.string().optional(),
     truncated: z.boolean().optional(),
   })
   .optional();
@@ -22,11 +22,8 @@ const OperationMetadataSchema = z
  * Validates the result from DeployOperation.execute() before transformation
  */
 export const RawDeployResultSchema = z.object({
-  success: z.boolean(),
-  stage: z.string(),
-  metadata: OperationMetadataSchema,
   error: z.string().optional(),
-  resourceChanges: z.number().optional(),
+  metadata: OperationMetadataSchema,
   outputs: z
     .array(
       z.object({
@@ -35,17 +32,20 @@ export const RawDeployResultSchema = z.object({
       })
     )
     .optional(),
+  permalink: z.string().optional(),
+  resourceChanges: z.number().optional(),
   resources: z
     .array(
       z.object({
-        type: z.string(),
         name: z.string(),
         status: z.string(),
         timing: z.string().optional(),
+        type: z.string(),
       })
     )
     .optional(),
-  permalink: z.string().optional(),
+  stage: z.string(),
+  success: z.boolean(),
 });
 
 export type RawDeployResult = z.infer<typeof RawDeployResultSchema>;
@@ -55,22 +55,22 @@ export type RawDeployResult = z.infer<typeof RawDeployResultSchema>;
  * Validates the result from DiffOperation.execute() before transformation
  */
 export const RawDiffResultSchema = z.object({
-  success: z.boolean(),
-  stage: z.string(),
-  metadata: OperationMetadataSchema,
-  error: z.string().optional(),
-  changesDetected: z.number().optional(),
-  summary: z.string().optional(),
   changes: z
     .array(
       z.object({
-        type: z.string(),
-        name: z.string(),
         action: z.string(),
         details: z.string().optional(),
+        name: z.string(),
+        type: z.string(),
       })
     )
     .optional(),
+  changesDetected: z.number().optional(),
+  error: z.string().optional(),
+  metadata: OperationMetadataSchema,
+  stage: z.string(),
+  success: z.boolean(),
+  summary: z.string().optional(),
 });
 
 export type RawDiffResult = z.infer<typeof RawDiffResultSchema>;
@@ -80,21 +80,21 @@ export type RawDiffResult = z.infer<typeof RawDiffResultSchema>;
  * Validates the result from RemoveOperation.execute() before transformation
  */
 export const RawRemoveResultSchema = z.object({
-  success: z.boolean(),
-  stage: z.string(),
-  metadata: OperationMetadataSchema,
-  error: z.string().optional(),
   completionStatus: z.enum(["complete", "partial", "failed"]).optional(),
-  resourcesRemoved: z.number().optional(),
+  error: z.string().optional(),
+  metadata: OperationMetadataSchema,
   removedResources: z
     .array(
       z.object({
-        type: z.string(),
         name: z.string(),
         status: z.string(),
+        type: z.string(),
       })
     )
     .optional(),
+  resourcesRemoved: z.number().optional(),
+  stage: z.string(),
+  success: z.boolean(),
 });
 
 export type RawRemoveResult = z.infer<typeof RawRemoveResultSchema>;
@@ -114,7 +114,8 @@ export function validateRawDeployResult(result: unknown): RawDeployResult {
         (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Deploy operation result validation failed:\n${issues.join("\n")}`
+        `Deploy operation result validation failed:\n${issues.join("\n")}`,
+        { cause: error }
       );
     }
     throw error as Error;
@@ -136,7 +137,8 @@ export function validateRawDiffResult(result: unknown): RawDiffResult {
         (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Diff operation result validation failed:\n${issues.join("\n")}`
+        `Diff operation result validation failed:\n${issues.join("\n")}`,
+        { cause: error }
       );
     }
     throw error as Error;
@@ -158,7 +160,8 @@ export function validateRawRemoveResult(result: unknown): RawRemoveResult {
         (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
       );
       throw new Error(
-        `Remove operation result validation failed:\n${issues.join("\n")}`
+        `Remove operation result validation failed:\n${issues.join("\n")}`,
+        { cause: error }
       );
     }
     throw error as Error;

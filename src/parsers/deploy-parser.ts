@@ -36,9 +36,7 @@ export class DeployParser extends OperationParser<DeployResult> {
     // Handle output truncation if size limit specified
     const truncated = maxSize ? output.length > maxSize : false;
     const processedOutput =
-      maxSize && output.length > maxSize
-        ? output.substring(0, maxSize)
-        : output;
+      maxSize && output.length > maxSize ? output.slice(0, maxSize) : output;
 
     // Parse common information using base parser
     const lines = processedOutput.split("\n");
@@ -53,20 +51,20 @@ export class DeployParser extends OperationParser<DeployResult> {
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
     const result: DeployResult = {
-      success,
-      operation: "deploy",
-      stage,
       app: commonInfo.app || "",
-      rawOutput: processedOutput,
       exitCode,
+      operation: "deploy",
+      rawOutput: processedOutput,
+      stage,
+      success,
       truncated,
       ...(error && { error }),
       completionStatus:
         commonInfo.completionStatus || (success ? "complete" : "failed"),
       ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
+      outputs,
       resourceChanges: resources.length,
       resources,
-      outputs,
     };
 
     return result;
@@ -121,8 +119,8 @@ export class DeployParser extends OperationParser<DeployResult> {
       if (match?.[1] && match[2]) {
         const result = {
           name: match[1].trim(),
-          type: match[2].trim(),
           status,
+          type: match[2].trim(),
         };
 
         // Add timing if available
@@ -165,7 +163,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
 
       if (inOutputSection) {
-        outputSectionLines++;
+        outputSectionLines += 1;
         this.processOutputLine(trimmedLine, outputs);
       }
     }
@@ -205,7 +203,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       // Cache truncated line to avoid repeated substring operations
       const logLine =
         trimmedLine.length > 100
-          ? `${trimmedLine.substring(0, 100)}...`
+          ? `${trimmedLine.slice(0, 100)}...`
           : trimmedLine;
       core.debug(
         `Skipped potential output line: "${logLine}" (parsing failed)`
@@ -265,8 +263,8 @@ export class DeployParser extends OperationParser<DeployResult> {
     // Parse key: value format
     const colonIndex = line.indexOf(":");
     if (colonIndex > 0 && colonIndex < line.length - 1) {
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim();
+      const key = line.slice(0, colonIndex).trim();
+      const value = line.slice(colonIndex + 1).trim();
 
       if (key && value) {
         return { key, value };
@@ -293,7 +291,7 @@ export class DeployParser extends OperationParser<DeployResult> {
     ) {
       if (!key) {
         const truncatedLine =
-          line.length > 50 ? `${line.substring(0, 50)}...` : line;
+          line.length > 50 ? `${line.slice(0, 50)}...` : line;
         core.debug(`Malformed output line: empty key in "${truncatedLine}"`);
       } else if (!value) {
         core.debug(`Malformed output line: empty value for key "${key}"`);
@@ -332,11 +330,9 @@ export class DeployParser extends OperationParser<DeployResult> {
     }
 
     // Check for gRPC errors
-    if (GRPC_ERROR_PATTERN.test(output)) {
-      return "gRPC client error occurred during deployment";
-    }
-
-    return;
+    return GRPC_ERROR_PATTERN.test(output)
+      ? "gRPC client error occurred during deployment"
+      : undefined;
   }
 
   /**

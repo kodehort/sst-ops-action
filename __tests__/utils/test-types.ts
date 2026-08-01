@@ -46,17 +46,17 @@ export type MockSSTResource = DeepPartial<
 export const createMockDeployResult = (
   overrides: MockDeployResult = {}
 ): MockDeployResult => ({
-  success: true,
-  operation: "deploy",
-  stage: "test",
   app: "test-app",
-  rawOutput: "",
-  exitCode: 0,
-  truncated: false,
   completionStatus: "complete",
-  resourceChanges: 0,
+  exitCode: 0,
+  operation: "deploy",
   outputs: [],
+  rawOutput: "",
+  resourceChanges: 0,
   resources: [],
+  stage: "test",
+  success: true,
+  truncated: false,
   ...overrides,
 });
 
@@ -71,56 +71,56 @@ export const createMockDeployResource = (
   } = {}
 ) => ({
   name: "test-resource",
-  type: "TestResource",
   status: "created" as const,
+  type: "TestResource",
   ...overrides,
 });
 
 export const createMockDiffResult = (
   overrides: MockDiffResult = {}
 ): MockDiffResult => ({
-  success: true,
-  operation: "diff",
-  stage: "test",
   app: "test-app",
-  rawOutput: "",
-  exitCode: 0,
-  truncated: false,
-  completionStatus: "complete",
-  plannedChanges: 0,
   changeSummary: "",
   changes: [],
+  completionStatus: "complete",
+  exitCode: 0,
+  operation: "diff",
+  plannedChanges: 0,
+  rawOutput: "",
+  stage: "test",
+  success: true,
+  truncated: false,
   ...overrides,
 });
 
 export const createMockRemoveResult = (
   overrides: MockRemoveResult = {}
 ): MockRemoveResult => ({
-  success: true,
-  operation: "remove",
-  stage: "test",
   app: "test-app",
-  rawOutput: "",
-  exitCode: 0,
-  truncated: false,
   completionStatus: "complete",
-  resourcesRemoved: 0,
+  exitCode: 0,
+  operation: "remove",
+  rawOutput: "",
   removedResources: [],
+  resourcesRemoved: 0,
+  stage: "test",
+  success: true,
+  truncated: false,
   ...overrides,
 });
 
 export const createMockSSTCommandResult = (
   overrides: MockSSTCommandResult = {}
 ): MockSSTCommandResult => ({
-  success: true,
-  exitCode: 0,
-  stdout: "",
-  stderr: "",
-  duration: 1000,
-  executionTime: 1000,
   command: ["sst", "deploy"],
-  workingDirectory: "/test",
+  duration: 1000,
   environment: {},
+  executionTime: 1000,
+  exitCode: 0,
+  stderr: "",
+  stdout: "",
+  success: true,
+  workingDirectory: "/test",
   ...overrides,
 });
 
@@ -135,10 +135,10 @@ export const createMockSSTOutput = (
 export const createMockSSTResource = (
   overrides: MockSSTResource = {}
 ): MockSSTResource => ({
-  type: "TestResource",
-  name: "test-resource",
   logicalId: "test-logical-id",
+  name: "test-resource",
   status: "CREATE_COMPLETE",
+  type: "TestResource",
   ...overrides,
 });
 
@@ -153,9 +153,9 @@ export const createMockDiffChange = (
     details?: string;
   } = {}
 ) => ({
-  type: "TestResource",
-  name: "test-resource",
   action: "create" as const,
+  name: "test-resource",
+  type: "TestResource",
   ...overrides,
 });
 
@@ -169,9 +169,9 @@ export const createMockRemovedResource = (
     status?: "removed" | "failed" | "skipped";
   } = {}
 ) => ({
-  type: "TestResource",
   name: "test-resource",
   status: "removed" as const,
+  type: "TestResource",
   ...overrides,
 });
 
@@ -181,14 +181,13 @@ export const createMockRemovedResource = (
 export const createMockResourceBatch = (
   count: number,
   baseOverrides: any = {}
-): any[] => {
-  return Array.from({ length: count }, (_, i) => ({
+): any[] =>
+  Array.from({ length: count }, (_, i) => ({
     name: `Resource${i}`,
-    type: "AWS::Lambda::Function",
     status: "created",
+    type: "AWS::Lambda::Function",
     ...baseOverrides,
   }));
-};
 
 /**
  * Create a batch of mock outputs for testing large collections
@@ -196,12 +195,11 @@ export const createMockResourceBatch = (
 export const createMockOutputBatch = (
   count: number,
   baseOverrides: any = {}
-): MockSSTOutput[] => {
-  return Array.from({ length: count }, (_, i) =>
+): MockSSTOutput[] =>
+  Array.from({ length: count }, (_, i) =>
     createMockSSTOutput({
       key: `Service${i}`,
       value: `https://service${i}.example.com`,
       ...baseOverrides,
     })
   );
-};

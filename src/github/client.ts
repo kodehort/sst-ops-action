@@ -17,18 +17,18 @@ import { OperationFormatter } from "./formatters.js";
  * Comment creation options
  */
 interface CommentOptions {
-  updateExisting: boolean;
   commentMode: CommentMode;
   identifier?: string;
+  updateExisting: boolean;
 }
 
 /**
  * Artifact upload options
  */
 interface ArtifactOptions {
+  compressionLevel?: number;
   name: string;
   retentionDays?: number;
-  compressionLevel?: number;
 }
 
 /**
@@ -66,13 +66,14 @@ export class GitHubClient {
     try {
       await this.octokit.rest.issues.createComment({
         ...this.context.repo,
-        issue_number: this.context.payload.pull_request?.number || 0,
         body: commentWithMarker,
+        issue_number: this.context.payload.pull_request?.number || 0,
       });
       core.info(`Successfully posted ${operationType} PR comment`);
     } catch (error) {
       throw new Error(
-        `GitHub API error: ${error instanceof Error ? error.message : String(error)}`
+        `GitHub API error: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
       );
     }
   }
@@ -93,9 +94,9 @@ export class GitHubClient {
     }
 
     const commentOptions: CommentOptions = {
-      updateExisting: true,
       commentMode,
       identifier: `sst-${result.operation}`,
+      updateExisting: true,
       ...options,
     };
 
@@ -151,9 +152,9 @@ export class GitHubClient {
     options: Partial<ArtifactOptions> = {}
   ): Promise<void> {
     const artifactOptions: ArtifactOptions = {
+      compressionLevel: 6,
       name: `sst-${result.operation}-${result.stage}-${Date.now()}`,
       retentionDays: 30,
-      compressionLevel: 6,
       ...options,
     };
 
@@ -175,13 +176,13 @@ export class GitHubClient {
         metadataFile,
         JSON.stringify(
           {
+            app: result.app,
+            duration: this.calculateDuration(result),
+            exitCode: result.exitCode,
             operation: result.operation,
             stage: result.stage,
-            app: result.app,
-            timestamp: new Date().toISOString(),
             success: result.success,
-            exitCode: result.exitCode,
-            duration: this.calculateDuration(result),
+            timestamp: new Date().toISOString(),
             truncated: result.truncated,
           },
           null,
@@ -195,11 +196,11 @@ export class GitHubClient {
         artifactOptions.name,
         [resultFile, outputFile, metadataFile],
         tempDir,
-        artifactOptions.retentionDays !== undefined
-          ? {
+        artifactOptions.retentionDays === undefined
+          ? {}
+          : {
               retentionDays: artifactOptions.retentionDays,
             }
-          : {}
       );
 
       core.info(
@@ -259,8 +260,8 @@ export class GitHubClient {
 
     await this.octokit.rest.issues.createComment({
       ...this.context.repo,
-      issue_number: this.context.payload.pull_request?.number || 0,
       body,
+      issue_number: this.context.payload.pull_request?.number || 0,
     });
   }
 
@@ -293,15 +294,15 @@ export class GitHubClient {
       // Update existing comment
       await this.octokit.rest.issues.updateComment({
         ...this.context.repo,
-        comment_id: existingComment.id,
         body: commentWithMarker,
+        comment_id: existingComment.id,
       });
     } else {
       // Create new comment
       await this.octokit.rest.issues.createComment({
         ...this.context.repo,
-        issue_number: this.context.payload.pull_request?.number || 0,
         body: commentWithMarker,
+        issue_number: this.context.payload.pull_request?.number || 0,
       });
     }
   }

@@ -110,7 +110,7 @@ export class UnifiedErrorHandler {
   private static handleInputValidation(error: ValidationError | Error): void {
     if (error instanceof ValidationError) {
       const actionError = fromValidationError(error);
-      handleError(actionError, { stage: "unknown", failOnError: true });
+      handleError(actionError, { failOnError: true, stage: "unknown" });
     } else {
       const actionError = createInputValidationError(
         error.message,
@@ -118,7 +118,7 @@ export class UnifiedErrorHandler {
         undefined,
         error
       );
-      handleError(actionError, { stage: "unknown", failOnError: true });
+      handleError(actionError, { failOnError: true, stage: "unknown" });
     }
   }
 
@@ -187,8 +187,8 @@ export class UnifiedErrorHandler {
     const failOnErrorInput = core.getInput("fail-on-error") || "true";
 
     const basicOptions: OperationOptions = {
-      stage: core.getInput("stage") || "unknown",
       failOnError: failOnErrorInput === "true",
+      stage: core.getInput("stage") || "unknown",
     };
 
     const actionError = createSubprocessError(

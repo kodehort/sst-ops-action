@@ -85,7 +85,6 @@ function testOperationSnapshots(operation: OperationWithParser): void {
     const snapshots = listSnapshots(operation);
 
     if (snapshots.length === 0) {
-      // biome-ignore lint/suspicious/noSkippedTests: This is intentional for empty test cases
       it.skip(`No input files found for ${operation}`, () => {
         // Empty test case for operations with no input files
       });
@@ -117,7 +116,8 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             }
           } catch (error) {
             throw new Error(
-              `Failed to test comment snapshot for ${operation}/${name}: ${error}`
+              `Failed to test comment snapshot for ${operation}/${name}: ${error}`,
+              { cause: error }
             );
           }
         });
@@ -145,7 +145,8 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             }
           } catch (error) {
             throw new Error(
-              `Failed to test summary snapshot for ${operation}/${name}: ${error}`
+              `Failed to test summary snapshot for ${operation}/${name}: ${error}`,
+              { cause: error }
             );
           }
         });
@@ -169,7 +170,8 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             );
           } catch (error) {
             throw new Error(
-              `Failed to validate metadata for ${operation}/${name}: ${error}`
+              `Failed to validate metadata for ${operation}/${name}: ${error}`,
+              { cause: error }
             );
           }
         });
@@ -183,7 +185,8 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             expect(snapshotData.input.trim()).not.toBe("");
           } catch (error) {
             throw new Error(
-              `Failed to validate snapshot content for ${operation}/${name}: ${error}`
+              `Failed to validate snapshot content for ${operation}/${name}: ${error}`,
+              { cause: error }
             );
           }
         });
@@ -198,7 +201,7 @@ function testOperationSnapshots(operation: OperationWithParser): void {
       let validSnapshots = 0;
       for (const name of snapshots) {
         if (snapshotExists(operation, name)) {
-          validSnapshots++;
+          validSnapshots += 1;
         }
       }
 
@@ -221,7 +224,7 @@ describe("Snapshot Testing Suite", () => {
       const snapshotCounts = operations.map((op) => listSnapshots(op).length);
 
       // Ensure each operation has at least some test cases
-      for (let i = 0; i < operations.length; i++) {
+      for (let i = 0; i < operations.length; i += 1) {
         expect(snapshotCounts[i]).toBeGreaterThanOrEqual(1);
       }
     });

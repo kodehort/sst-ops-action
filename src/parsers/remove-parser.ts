@@ -29,24 +29,23 @@ export class RemoveParser extends OperationParser<RemoveResult> {
    * Remove-specific regex patterns for parsing resource removals
    */
   private readonly removePatterns = {
-    // Resource removal patterns
-    REMOVED_RESOURCE: REMOVED_RESOURCE_PATTERN,
-    FAILED_RESOURCE: FAILED_RESOURCE_PATTERN,
-    SKIPPED_RESOURCE: SKIPPED_RESOURCE_PATTERN,
-
     // Status indicators
     COMPLETE: COMPLETE_PATTERN,
-    PARTIAL_COMPLETION: PARTIAL_COMPLETION_PATTERN,
-    FAILED: FAILED_PATTERN,
-
-    // Resource count patterns
-    RESOURCES_REMOVED_COUNT: RESOURCES_REMOVED_COUNT_PATTERN,
-    NO_RESOURCES: NO_RESOURCES_PATTERN,
-    RESOURCES_SUMMARY: RESOURCES_SUMMARY_PATTERN,
 
     // Error patterns
     ERROR_MESSAGE: ERROR_MESSAGE_PATTERN,
+    FAILED: FAILED_PATTERN,
+    FAILED_RESOURCE: FAILED_RESOURCE_PATTERN,
+    NO_RESOURCES: NO_RESOURCES_PATTERN,
+    PARTIAL_COMPLETION: PARTIAL_COMPLETION_PATTERN,
     REMOVE_FAILED: REMOVE_FAILED_PATTERN,
+    // Resource removal patterns
+    REMOVED_RESOURCE: REMOVED_RESOURCE_PATTERN,
+
+    // Resource count patterns
+    RESOURCES_REMOVED_COUNT: RESOURCES_REMOVED_COUNT_PATTERN,
+    RESOURCES_SUMMARY: RESOURCES_SUMMARY_PATTERN,
+    SKIPPED_RESOURCE: SKIPPED_RESOURCE_PATTERN,
     TIMEOUT_MESSAGE: TIMEOUT_MESSAGE_PATTERN,
   };
 
@@ -77,20 +76,20 @@ export class RemoveParser extends OperationParser<RemoveResult> {
 
     // Build result with all required properties
     const result: RemoveResult = {
-      // Base operation result properties
-      success,
-      operation: "remove",
-      stage,
-      exitCode,
       app: commonInfo.app || "unknown-app",
-      rawOutput: processedOutput,
-      permalink: commonInfo.permalink || "",
       completionStatus,
-      truncated: false,
+      exitCode,
+      operation: "remove",
+      permalink: commonInfo.permalink || "",
+      rawOutput: processedOutput,
+      removedResources,
 
       // Remove-specific properties
       resourcesRemoved,
-      removedResources,
+      stage,
+      // Base operation result properties
+      success,
+      truncated: false,
     };
 
     return result;
@@ -146,9 +145,9 @@ export class RemoveParser extends OperationParser<RemoveResult> {
       const match = line.match(regex);
       if (match?.[1] && match[2]) {
         return {
-          type: match[1] || "unknown",
           name: match[2] || "unknown",
           status,
+          type: match[1] || "unknown",
         };
       }
     }
