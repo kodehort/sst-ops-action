@@ -33,22 +33,22 @@ describe("DiffParser", () => {
 
       // Verify parsed changes
       expect(result.changes[0]).toEqual({
-        type: "Function",
-        name: "NewHandler",
         action: "create",
         details: undefined,
+        name: "NewHandler",
+        type: "Function",
       });
       expect(result.changes[1]).toEqual({
-        type: "Api",
-        name: "Api",
         action: "update",
         details: undefined,
+        name: "Api",
+        type: "Api",
       });
       expect(result.changes[2]).toEqual({
-        type: "StaticSite",
-        name: "Website",
         action: "delete",
         details: undefined,
+        name: "Website",
+        type: "StaticSite",
       });
     });
 

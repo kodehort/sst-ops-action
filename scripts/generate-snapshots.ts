@@ -27,8 +27,8 @@ import type { OperationResult, SSTOperation } from "../src/types/operations.js";
 
 // Parser instances
 const parsers = {
-  diff: new DiffParser(),
   deploy: new DeployParser(),
+  diff: new DiffParser(),
   remove: new RemoveParser(),
 };
 
@@ -49,12 +49,12 @@ const force = args.includes("--force");
  * Colors for console output
  */
 const colors = {
+  blue: "\x1b[34m",
+  bold: "\x1b[1m",
   green: "\x1b[32m",
   red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
   reset: "\x1b[0m",
-  bold: "\x1b[1m",
+  yellow: "\x1b[33m",
 };
 
 /**
@@ -176,12 +176,12 @@ function generateOperationSnapshots(targetOperation: SSTOperation): void {
     const result = generateSnapshot(targetOperation, snapshotName, force);
     if (result) {
       if (force || !snapshotExists(targetOperation, snapshotName)) {
-        generated++;
+        generated += 1;
       } else {
-        skipped++;
+        skipped += 1;
       }
     } else {
-      failed++;
+      failed += 1;
     }
   }
 
@@ -213,13 +213,13 @@ function validateSnapshots(): void {
       const validation = validateSnapshot(op, snapshotName);
       if (validation.valid) {
         log(`   ✅ ${snapshotName}`, colors.green);
-        totalValid++;
+        totalValid += 1;
       } else {
         log(`   ❌ ${snapshotName}:`, colors.red);
         for (const error of validation.errors) {
           log(`      • ${error}`, colors.red);
         }
-        totalInvalid++;
+        totalInvalid += 1;
       }
     }
   }

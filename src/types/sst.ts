@@ -5,49 +5,47 @@
 
 export interface SSTConfig {
   name: string;
-  stage: string;
-  region: string;
   profile?: string;
+  region: string;
+  stage: string;
 }
 
 export interface SSTResource {
-  type: string;
-  name: string;
   logicalId: string;
+  name: string;
+  outputs?: Record<string, unknown>;
   physicalId?: string;
+  properties?: Record<string, unknown>;
   status:
     | "CREATE_COMPLETE"
     | "UPDATE_COMPLETE"
     | "DELETE_COMPLETE"
     | "FAILED"
     | "IN_PROGRESS";
-  properties?: Record<string, unknown>;
-  outputs?: Record<string, unknown>;
+  type: string;
 }
 
 export interface SSTUrl {
   name: string;
-  url: string;
   type: "api" | "web" | "function" | "other";
+  url: string;
 }
 
 export interface SSTDeployOutput {
   app: string;
-  stage: string;
+  duration: number;
+  errors?: string[];
+  outputs: Record<string, unknown>;
+  permalink?: string;
   region: string;
   resources: SSTResource[];
-  outputs: Record<string, unknown>;
-  duration: number;
+  stage: string;
   status: "success" | "failed" | "partial";
-  permalink?: string;
   warnings?: string[];
-  errors?: string[];
 }
 
 export interface SSTDiffOutput {
   app: string;
-  stage: string;
-  region: string;
   changes: Array<{
     action: "create" | "update" | "delete";
     type: string;
@@ -60,19 +58,22 @@ export interface SSTDiffOutput {
       removed: Record<string, unknown>;
     };
   }>;
+  errors?: string[];
+  region: string;
+  stage: string;
+  status: "success" | "failed";
   summary: {
     toCreate: number;
     toUpdate: number;
     toDelete: number;
     total: number;
   };
-  status: "success" | "failed";
-  errors?: string[];
 }
 
 export interface SSTRemoveOutput {
   app: string;
-  stage: string;
+  duration: number;
+  errors?: string[];
   region: string;
   removed: Array<{
     type: string;
@@ -81,61 +82,60 @@ export interface SSTRemoveOutput {
     status: "removed" | "failed" | "skipped";
     reason?: string;
   }>;
+  stage: string;
+  status: "success" | "failed" | "partial";
   summary: {
     totalRemoved: number;
     totalFailed: number;
     totalSkipped: number;
   };
-  duration: number;
-  status: "success" | "failed" | "partial";
-  errors?: string[];
   warnings?: string[];
 }
 
 export interface SSTCommandResult {
-  success: boolean;
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-  duration: number;
-  executionTime: number;
   command: string[];
-  workingDirectory: string;
+  duration: number;
   environment: Record<string, string>;
+  executionTime: number;
+  exitCode: number;
+  stderr: string;
+  stdout: string;
+  success: boolean;
+  workingDirectory: string;
 }
 
 export interface SSTParsePatterns {
   APP_INFO: RegExp;
-  STAGE_INFO: RegExp;
+  COMPLETION_FAILED: RegExp;
+  COMPLETION_SUCCESS: RegExp;
+  DURATION: RegExp;
+  ERROR: RegExp;
+  PERMALINK: RegExp;
   REGION_INFO: RegExp;
   RESOURCE_CREATED: RegExp;
-  RESOURCE_UPDATED: RegExp;
   RESOURCE_DELETED: RegExp;
   RESOURCE_FAILED: RegExp;
+  RESOURCE_UPDATED: RegExp;
+  STAGE_INFO: RegExp;
   URL_OUTPUT: RegExp;
-  PERMALINK: RegExp;
-  COMPLETION_SUCCESS: RegExp;
-  COMPLETION_FAILED: RegExp;
   WARNING: RegExp;
-  ERROR: RegExp;
-  DURATION: RegExp;
 }
 
 export interface SSTError {
   code: string;
-  message: string;
-  details?: string;
-  stack?: string;
   context?: {
     command: string;
     stage: string;
     resource?: string;
   };
+  details?: string;
+  message: string;
+  stack?: string;
 }
 
 export interface SSTValidationResult {
-  valid: boolean;
   errors: SSTError[];
-  warnings: string[];
   parsed?: SSTDeployOutput | SSTDiffOutput | SSTRemoveOutput;
+  valid: boolean;
+  warnings: string[];
 }

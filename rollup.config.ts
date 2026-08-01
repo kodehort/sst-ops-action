@@ -39,26 +39,26 @@ function generateBuildManifest() {
 
       // Create enhanced build manifest with useful details for releases
       const manifest = {
-        // Core bundle information
-        bundleSize,
-        bundleSizeMB,
-        integrity,
+        arch: process.arch,
 
         // Build metadata
         buildTimestamp: new Date().toISOString(),
-        version: packageInfo.version || "unknown",
-        nodeVersion: process.version,
-
-        // Build configuration
-        sourcemap: true, // We always generate sourcemaps
-        minified: true, // Using terser for minification
-        treeshaken: true, // Using enhanced tree-shaking
+        // Core bundle information
+        bundleSize,
+        bundleSizeMB,
         format: "es",
-        target: "node20",
+        integrity,
+        minified: true, // Using terser for minification
+        nodeVersion: process.version,
 
         // Environment information
         platform: process.platform,
-        arch: process.arch,
+
+        // Build configuration
+        sourcemap: true, // We always generate sourcemaps
+        target: "node20",
+        treeshaken: true, // Using enhanced tree-shaking
+        version: packageInfo.version || "unknown",
       };
 
       // Write manifest to dist folder
@@ -80,19 +80,6 @@ try {
 
 export default {
   input: "src/index.ts",
-  output: {
-    esModule: true,
-    file: "dist/index.js",
-    format: "es",
-    sourcemap: true,
-    generatedCode: "es2015",
-    hoistTransitiveImports: false,
-    interop: "auto",
-  },
-  treeshake: {
-    preset: "recommended",
-    moduleSideEffects: false,
-  },
   onwarn(warning, warn) {
     // Suppress known harmless warnings from node_modules
     if (warning.code === "THIS_IS_UNDEFINED") {
@@ -106,6 +93,15 @@ export default {
     }
     warn(warning);
   },
+  output: {
+    esModule: true,
+    file: "dist/index.js",
+    format: "es",
+    generatedCode: "es2015",
+    hoistTransitiveImports: false,
+    interop: "auto",
+    sourcemap: true,
+  },
   plugins: [
     replace({
       __ACTION_VERSION__: JSON.stringify(packageVersion),
@@ -114,29 +110,33 @@ export default {
     typescript({ sourceMap: true }),
     json(),
     nodeResolve({
-      preferBuiltins: true,
       exportConditions: ["node", "import", "module", "default"],
+      preferBuiltins: true,
     }),
     commonjs({
       ignoreDynamicRequires: true,
     }),
     terser({
       compress: {
-        ecma: 2020,
         drop_console: false,
         drop_debugger: true,
+        ecma: 2020,
         pure_funcs: [],
-      },
-      mangle: {
-        keep_classnames: true,
-        keep_fnames: /^(main|run|setup|teardown)$/,
       },
       format: {
         comments: false,
         ecma: 2020,
       },
+      mangle: {
+        keep_classnames: true,
+        keep_fnames: /^(main|run|setup|teardown)$/,
+      },
       sourceMap: true,
     }),
     generateBuildManifest(),
   ],
+  treeshake: {
+    moduleSideEffects: false,
+    preset: "recommended",
+  },
 };

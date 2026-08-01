@@ -4,37 +4,37 @@ import { beforeEach, vi } from "vitest";
 
 // Mock GitHub Actions core and github modules for tests
 vi.mock("@actions/core", () => ({
-  getInput: vi.fn(),
-  getBooleanInput: vi.fn(),
-  setOutput: vi.fn(),
-  setFailed: vi.fn(),
-  setSecret: vi.fn(),
-  info: vi.fn(),
-  warning: vi.fn(),
-  error: vi.fn(),
   debug: vi.fn(),
+  error: vi.fn(),
+  getBooleanInput: vi.fn(),
+  getInput: vi.fn(),
+  info: vi.fn(),
+  setFailed: vi.fn(),
+  setOutput: vi.fn(),
+  setSecret: vi.fn(),
   summary: {
-    addRaw: vi.fn().mockReturnThis(),
     addHeading: vi.fn().mockReturnThis(),
+    addRaw: vi.fn().mockReturnThis(),
     addSeparator: vi.fn().mockReturnThis(),
     write: vi.fn().mockResolvedValue(undefined),
   },
+  warning: vi.fn(),
 }));
 
 const mockContext = {
-  repo: {
-    owner: "test-owner",
-    repo: "test-repo",
-  },
+  eventName: "pull_request",
   issue: {
     number: 1,
   },
   payload: {
     pull_request: { number: 123 },
   },
-  eventName: "pull_request",
   ref: "refs/heads/main",
   ref_name: "main",
+  repo: {
+    owner: "test-owner",
+    repo: "test-repo",
+  },
 };
 
 vi.mock("@actions/github", () => ({
@@ -71,8 +71,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...actual,
-    writeFile: vi.fn(),
     mkdir: vi.fn(),
+    writeFile: vi.fn(),
   };
 });
 

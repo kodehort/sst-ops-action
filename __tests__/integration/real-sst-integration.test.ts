@@ -21,18 +21,18 @@ function createTestSSTProject(projectPath: string) {
 
   // Create package.json
   const packageJson = {
-    name: TEST_PROJECT_NAME,
-    version: "0.1.0",
-    type: "module",
-    scripts: {
-      dev: "sst dev",
-      build: "sst build",
-      deploy: "sst deploy",
-      remove: "sst remove",
-    },
     dependencies: {
       sst: "^3.0.0",
     },
+    name: TEST_PROJECT_NAME,
+    scripts: {
+      build: "sst build",
+      deploy: "sst deploy",
+      dev: "sst dev",
+      remove: "sst remove",
+    },
+    type: "module",
+    version: "0.1.0",
   };
   writeFileSync(
     join(projectPath, "package.json"),
@@ -91,13 +91,13 @@ function executeSSTCommand(
   return new Promise((resolve) => {
     const child = spawn("sst", command, {
       cwd,
-      stdio: "pipe",
       env: {
         ...process.env,
         // Add test-specific environment variables
         SST_STAGE: "test-integration",
         SST_TELEMETRY_DISABLED: "1",
       },
+      stdio: "pipe",
     });
 
     let stdout = "";
@@ -115,19 +115,19 @@ function executeSSTCommand(
       child.kill("SIGTERM");
       resolve({
         exitCode: -1,
-        stdout,
         stderr: stderr + "\nTimeout: Process killed",
+        stdout,
       });
     }, timeout);
 
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve({ exitCode: code || 0, stdout, stderr });
+      resolve({ exitCode: code || 0, stderr, stdout });
     });
 
     child.on("error", (error) => {
       clearTimeout(timer);
-      resolve({ exitCode: -1, stdout, stderr: stderr + error.message });
+      resolve({ exitCode: -1, stderr: stderr + error.message, stdout });
     });
   });
 }
@@ -148,8 +148,8 @@ describe("Real SST CLI Integration Tests", () => {
   afterEach(() => {
     // Clean up test project
     try {
-      rmSync(testProjectPath, { recursive: true, force: true });
-    } catch (_error) {
+      rmSync(testProjectPath, { force: true, recursive: true });
+    } catch {
       /* Ignore cleanup errors */
     }
   });

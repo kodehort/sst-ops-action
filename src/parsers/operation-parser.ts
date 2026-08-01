@@ -15,21 +15,21 @@ export abstract class OperationParser<T extends BaseOperationResult> {
   protected readonly patterns = {
     // App and stage information
     APP_INFO: SSTPatterns.metadata.app,
-    STAGE_INFO: SSTPatterns.metadata.stage,
-
-    // Permalink for SST console
-    PERMALINK: SSTPatterns.metadata.permalink,
+    COMPLETION_FAILED: SSTPatterns.status.failed,
+    COMPLETION_PARTIAL: SSTPatterns.status.partial,
 
     // Completion status patterns
     COMPLETION_SUCCESS: SSTPatterns.status.success,
-    COMPLETION_PARTIAL: SSTPatterns.status.partial,
-    COMPLETION_FAILED: SSTPatterns.status.failed,
 
     // Diff section marker
     DIFF_SECTION_START: SSTPatterns.sections.generated,
 
+    // Permalink for SST console
+    PERMALINK: SSTPatterns.metadata.permalink,
+
     // Generic resource patterns (to be extended by subclasses)
     RESOURCE_LINE: SSTPatterns.resources.line,
+    STAGE_INFO: SSTPatterns.metadata.stage,
     URL_LINE: SSTPatterns.outputs.url,
   };
 
@@ -82,7 +82,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       } else if (this.patterns.COMPLETION_FAILED.test(fullOutput)) {
         result.completionStatus = "failed";
       }
-    } catch (_error) {
+    } catch {
       // Parsing is optional - continue without it
     }
 
@@ -102,7 +102,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
   protected splitIntoSections(output: string): string[] {
     try {
       return output.split(SSTPatterns.sections.separator).filter(Boolean);
-    } catch (_error) {
+    } catch {
       // If splitting fails, return the whole output as single section
       return [output];
     }
@@ -128,7 +128,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     try {
       // Use centralized pattern helpers
       return this.helpers.cleanText(text);
-    } catch (_error) {
+    } catch {
       // If cleaning fails, return original text
       return text;
     }
@@ -152,7 +152,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     try {
       const startIndex = lines.findIndex((line) => startPattern.test(line));
       return startIndex >= 0 ? lines.slice(startIndex + 1) : [];
-    } catch (_error) {
+    } catch {
       return [];
     }
   }
@@ -197,7 +197,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       while ((match = globalPattern.exec(output)) !== null) {
         matches.push(match);
       }
-    } catch (_error) {
+    } catch {
       // If regex execution fails, return empty array
     }
 
@@ -263,7 +263,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     try {
       const match = text.match(pattern);
       return match?.[1] ? match[1].trim() : null;
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
@@ -309,7 +309,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     let diffStartIndex = -1;
 
     // Find the "✓ Generated" marker
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line && this.patterns.DIFF_SECTION_START.test(line)) {
         diffStartIndex = i + 1; // Start after the marker line

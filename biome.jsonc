@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/core"],
+  "extends": ["ultracite/biome/core"],
   "files": {
     "includes": ["**/*", "!dist/**/*", "!coverage/**/*", "!node_modules/**/*"]
   },
@@ -21,6 +21,16 @@
           "performance": {
             "noBarrelFile": "off",
             "noNamespaceImport": "off"
+          },
+          "suspicious": {
+            // Disabled: Biome 2.5.3's type inference for exhaustive switches
+            // over types derived from `z.infer<typeof z.discriminatedUnion(...)>`
+            // (and, transitively, plain union-typed discriminant fields such as
+            // `operation: SSTOperation`) incorrectly narrows to `never` after the
+            // first case, so every subsequent case is reported as unreachable
+            // even though it is reachable and required for exhaustiveness. This
+            // is an upstream false positive, not a real issue in this codebase.
+            "noUnnecessaryConditions": "off"
           }
         }
       }

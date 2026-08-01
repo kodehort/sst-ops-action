@@ -37,14 +37,14 @@ describe("Error Handler - Error Processing", () => {
       );
 
       expect(error).toEqual({
-        type: "input_validation",
-        message: "Invalid stage value",
-        shouldFailAction: true,
-        originalError: undefined,
         details: {
           field: "stage",
           value: "invalid-stage",
         },
+        message: "Invalid stage value",
+        originalError: undefined,
+        shouldFailAction: true,
+        type: "input_validation",
       });
     });
 
@@ -58,11 +58,11 @@ describe("Error Handler - Error Processing", () => {
       );
 
       expect(error).toEqual({
-        type: "input_validation",
-        message: "General validation error",
-        shouldFailAction: true,
-        originalError,
         details: undefined,
+        message: "General validation error",
+        originalError,
+        shouldFailAction: true,
+        type: "input_validation",
       });
     });
   });
@@ -153,8 +153,8 @@ describe("Error Handler - Error Processing", () => {
 
   describe("handleError", () => {
     const mockOptions: OperationOptions = {
-      stage: "staging",
       failOnError: true,
+      stage: "staging",
     };
 
     it("should fail action for validation errors", () => {
@@ -186,8 +186,8 @@ describe("Error Handler - Error Processing", () => {
       );
 
       const options: OperationOptions = {
-        stage: "production",
         failOnError: true,
+        stage: "production",
       };
 
       handleError(error, options);

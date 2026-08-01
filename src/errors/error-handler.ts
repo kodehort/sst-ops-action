@@ -20,9 +20,9 @@ export function createInputValidationError(
   originalError?: Error
 ): ActionError {
   const error: ActionError = {
-    type: "input_validation",
     message,
     shouldFailAction: true,
+    type: "input_validation",
   };
 
   if (originalError) {
@@ -42,13 +42,13 @@ export function createInputValidationError(
  */
 function createOperationMetadata(): OperationMetadata {
   const metadata: OperationMetadata = {
-    timestamp: new Date().toISOString(),
     actionVersion: getActionVersion(),
+    timestamp: new Date().toISOString(),
   };
 
   try {
     // Add GitHub context information if available
-    const context = github.context;
+    const { context } = github;
     if (context) {
       metadata.workflowId = context.workflow;
       metadata.runId = context.runId;
@@ -89,15 +89,15 @@ export function createSubprocessError(
   const operationMetadata = createOperationMetadata();
 
   const error: ActionError = {
-    type: "subprocess_error",
-    message,
-    shouldFailAction: true, // Non-zero exit code = fail action
     details: {
-      operation,
-      stage,
       exitCode,
       metadata: operationMetadata,
+      operation,
+      stage,
     },
+    message,
+    shouldFailAction: true, // Non-zero exit code = fail action
+    type: "subprocess_error",
   };
 
   if (originalError) {
@@ -134,14 +134,14 @@ export function createOutputParsingError(
   const operationMetadata = createOperationMetadata();
 
   const error: ActionError = {
-    type: "output_parsing",
-    message,
-    shouldFailAction: false, // Parsing errors don't fail the action
     details: {
+      metadata: operationMetadata,
       operation,
       stage,
-      metadata: operationMetadata,
     },
+    message,
+    shouldFailAction: false, // Parsing errors don't fail the action
+    type: "output_parsing",
   };
 
   if (originalError) {
@@ -314,7 +314,7 @@ function formatFailureMessage(
 
   // Add workflow context if available
   if (error.details?.metadata) {
-    const metadata = error.details.metadata;
+    const { metadata } = error.details;
     if (metadata.runId) {
       message += ` (Run #${metadata.runNumber || metadata.runId})`;
     }

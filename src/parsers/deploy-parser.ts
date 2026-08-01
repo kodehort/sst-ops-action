@@ -51,20 +51,20 @@ export class DeployParser extends OperationParser<DeployResult> {
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
     const result: DeployResult = {
-      success,
-      operation: "deploy",
-      stage,
       app: commonInfo.app || "",
-      rawOutput: processedOutput,
       exitCode,
+      operation: "deploy",
+      rawOutput: processedOutput,
+      stage,
+      success,
       truncated,
       ...(error && { error }),
       completionStatus:
         commonInfo.completionStatus || (success ? "complete" : "failed"),
       ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
+      outputs,
       resourceChanges: resources.length,
       resources,
-      outputs,
     };
 
     return result;
@@ -119,8 +119,8 @@ export class DeployParser extends OperationParser<DeployResult> {
       if (match?.[1] && match[2]) {
         const result = {
           name: match[1].trim(),
-          type: match[2].trim(),
           status,
+          type: match[2].trim(),
         };
 
         // Add timing if available
@@ -163,7 +163,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       }
 
       if (inOutputSection) {
-        outputSectionLines++;
+        outputSectionLines += 1;
         this.processOutputLine(trimmedLine, outputs);
       }
     }
@@ -330,11 +330,9 @@ export class DeployParser extends OperationParser<DeployResult> {
     }
 
     // Check for gRPC errors
-    if (GRPC_ERROR_PATTERN.test(output)) {
-      return "gRPC client error occurred during deployment";
-    }
-
-    return;
+    return GRPC_ERROR_PATTERN.test(output)
+      ? "gRPC client error occurred during deployment"
+      : undefined;
   }
 
   /**

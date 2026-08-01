@@ -17,10 +17,10 @@ const STARTS_WITH_DIGIT_PATTERN = /^(\d)/;
  * Options specific to stage processing
  */
 export interface StageProcessingOptions {
-  /** Maximum length for computed stage names */
-  truncationLength?: number;
   /** Prefix to add when stage name starts with a number */
   prefix?: string;
+  /** Maximum length for computed stage names */
+  truncationLength?: number;
 }
 
 /**
@@ -34,7 +34,7 @@ export class StageProcessor {
    * @returns Computed stage result
    */
   process(options: StageProcessingOptions): StageResult {
-    const context = github.context;
+    const { context } = github;
     const truncationLength = options.truncationLength ?? 26;
     const prefix = options.prefix ?? "pr-";
 
@@ -78,18 +78,18 @@ export class StageProcessor {
     const rawOutput = `Stage computation successful\nEvent: ${context.eventName}\nRef: ${ref || "undefined"}\nComputed Stage: ${finalStage}`;
 
     return {
-      success: true,
-      operation: "stage",
-      stage: finalStage,
       app: "stage-calculator",
-      rawOutput,
-      exitCode: 0,
-      truncated: false,
       completionStatus: "complete",
       computedStage: finalStage,
-      ref: ref || "",
       eventName: context.eventName,
+      exitCode: 0,
       isPullRequest: context.eventName === "pull_request",
+      operation: "stage",
+      rawOutput,
+      ref: ref || "",
+      stage: finalStage,
+      success: true,
+      truncated: false,
     };
   }
 
@@ -104,19 +104,19 @@ export class StageProcessor {
     const rawOutput = `Stage computation failed: ${errorMessage}`;
 
     return {
-      success: false,
-      operation: "stage",
-      stage: "",
       app: "stage-calculator",
-      rawOutput,
-      exitCode: 1,
-      truncated: false,
-      error: errorMessage,
       completionStatus: "failed",
       computedStage: "",
-      ref: "",
+      error: errorMessage,
       eventName: context.eventName,
+      exitCode: 1,
       isPullRequest: context.eventName === "pull_request",
+      operation: "stage",
+      rawOutput,
+      ref: "",
+      stage: "",
+      success: false,
+      truncated: false,
     };
   }
 

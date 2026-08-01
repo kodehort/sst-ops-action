@@ -18,12 +18,12 @@ describe("Stage Operation - Stage Computation Integration", () => {
 
     // Default options
     mockOptions = {
-      stage: "fallback-stage",
-      token: "test-token",
       commentMode: "never",
       failOnError: true,
       maxOutputSize: 1000,
       runner: "bun",
+      stage: "fallback-stage",
+      token: "test-token",
     };
 
     // Reset mocks

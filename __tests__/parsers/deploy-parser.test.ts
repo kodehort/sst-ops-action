@@ -138,9 +138,9 @@ describe("Deploy Parser - SST Output Processing", () => {
       expect(result.resources).toHaveLength(1);
       expect(result.resources[0]).toEqual({
         name: "Function",
-        type: "sst:aws:Function",
         status: "created",
         timing: "1.2s",
+        type: "sst:aws:Function",
       });
       expect(result.outputs).toHaveLength(0);
       expect(result.resourceChanges).toBe(1);

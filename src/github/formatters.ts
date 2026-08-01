@@ -19,22 +19,22 @@ const GENERATED_SECTION_PATTERN = /^✓\s+Generated\s*$/;
  * Format configuration for comments and summaries
  */
 interface FormatConfig {
-  includeTimestamp: boolean;
-  includeDuration: boolean;
   includeDebugInfo: boolean;
-  maxUrlsToShow: number;
+  includeDuration: boolean;
+  includeTimestamp: boolean;
   maxResourcesToShow: number;
+  maxUrlsToShow: number;
 }
 
 /**
  * Default format configuration
  */
 const DEFAULT_CONFIG: FormatConfig = {
-  includeTimestamp: true,
-  includeDuration: true,
   includeDebugInfo: false,
-  maxUrlsToShow: 10,
+  includeDuration: true,
+  includeTimestamp: true,
   maxResourcesToShow: 20,
+  maxUrlsToShow: 10,
 };
 
 /**
@@ -503,7 +503,7 @@ No infrastructure changes detected for this operation.`;
     let diffStartIndex = -1;
 
     // Find the "✓ Generated" marker
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line && GENERATED_SECTION_PATTERN.test(line)) {
         diffStartIndex = i + 1;

@@ -15,25 +15,25 @@ describe("Operation Result Validation Integration", () => {
   describe("Deploy Result Validation", () => {
     it("should validate valid deploy result", () => {
       const validResult = {
-        success: true,
-        stage: "production",
         metadata: {
           app: "my-app",
-          rawOutput: "output",
           cliExitCode: 0,
+          rawOutput: "output",
           truncated: false,
         },
-        resourceChanges: 5,
         outputs: [{ key: "ApiUrl", value: "https://api.example.com" }],
+        permalink: "https://console.sst.dev/...",
+        resourceChanges: 5,
         resources: [
           {
-            type: "AWS::Lambda::Function",
             name: "my-function",
             status: "created",
             timing: "2.1s",
+            type: "AWS::Lambda::Function",
           },
         ],
-        permalink: "https://console.sst.dev/...",
+        stage: "production",
+        success: true,
       };
 
       const validated = validateRawDeployResult(validResult);
@@ -55,8 +55,8 @@ describe("Operation Result Validation Integration", () => {
 
     it("should reject deploy result with wrong types", () => {
       const invalidResult = {
-        success: "true", // should be boolean
         stage: "production",
+        success: "true", // should be boolean
       };
 
       expect(() => validateRawDeployResult(invalidResult)).toThrow(
@@ -68,21 +68,21 @@ describe("Operation Result Validation Integration", () => {
   describe("Diff Result Validation", () => {
     it("should validate valid diff result", () => {
       const validResult = {
-        success: true,
-        stage: "staging",
+        changes: [
+          {
+            action: "update",
+            details: "Tags modified",
+            name: "my-bucket",
+            type: "AWS::S3::Bucket",
+          },
+        ],
+        changesDetected: 3,
         metadata: {
           app: "my-app",
         },
-        changesDetected: 3,
+        stage: "staging",
+        success: true,
         summary: "3 changes detected",
-        changes: [
-          {
-            type: "AWS::S3::Bucket",
-            name: "my-bucket",
-            action: "update",
-            details: "Tags modified",
-          },
-        ],
       };
 
       const validated = validateRawDiffResult(validResult);
@@ -93,10 +93,10 @@ describe("Operation Result Validation Integration", () => {
 
     it("should handle optional fields", () => {
       const minimalResult = {
-        success: false,
-        stage: "development",
-        metadata: {},
         error: "Failed to compute diff",
+        metadata: {},
+        stage: "development",
+        success: false,
       };
 
       const validated = validateRawDiffResult(minimalResult);
@@ -109,21 +109,21 @@ describe("Operation Result Validation Integration", () => {
   describe("Remove Result Validation", () => {
     it("should validate valid remove result", () => {
       const validResult = {
-        success: true,
-        stage: "test",
+        completionStatus: "complete" as const,
         metadata: {
           app: "my-app",
           cliExitCode: 0,
         },
-        completionStatus: "complete" as const,
-        resourcesRemoved: 10,
         removedResources: [
           {
-            type: "AWS::DynamoDB::Table",
             name: "my-table",
             status: "removed",
+            type: "AWS::DynamoDB::Table",
           },
         ],
+        resourcesRemoved: 10,
+        stage: "test",
+        success: true,
       };
 
       const validated = validateRawRemoveResult(validResult);
@@ -137,9 +137,9 @@ describe("Operation Result Validation Integration", () => {
 
       for (const status of validStatuses) {
         const result = {
-          success: true,
-          stage: "test",
           completionStatus: status as "complete" | "partial" | "failed",
+          stage: "test",
+          success: true,
         };
 
         expect(() => validateRawRemoveResult(result)).not.toThrow();
@@ -148,9 +148,9 @@ describe("Operation Result Validation Integration", () => {
 
     it("should reject invalid completion status", () => {
       const invalidResult = {
-        success: true,
-        stage: "test",
         completionStatus: "invalid-status" as any,
+        stage: "test",
+        success: true,
       };
 
       expect(() => validateRawRemoveResult(invalidResult)).toThrow();
@@ -162,26 +162,26 @@ describe("GitHub Actions Output Validation Integration", () => {
   describe("Deploy Output Validation", () => {
     it("should validate complete deploy outputs", () => {
       const deployOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "production",
-        completion_status: "complete",
         app: "my-app",
-        permalink: "https://console.sst.dev/...",
-        truncated: "false",
-        resource_changes: "5",
-        error: "",
-        outputs: '[{"key":"ApiUrl","value":"https://api.example.com"}]',
-        resources:
-          '[{"type":"AWS::Lambda::Function","name":"my-function","status":"created"}]',
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: '[{"key":"ApiUrl","value":"https://api.example.com"}]',
+        permalink: "https://console.sst.dev/...",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "5",
+        resources:
+          '[{"type":"AWS::Lambda::Function","name":"my-function","status":"created"}]',
+        resources_removed: "",
+        stage: "production",
+        success: "true",
+        truncated: "false",
       };
 
       const validated = validateOutputs(deployOutputs);
@@ -192,25 +192,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should reject invalid success value", () => {
       const invalidOutputs = {
-        success: "yes", // should be "true" or "false"
-        operation: "deploy",
-        stage: "production",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "",
+        resources: "",
+        resources_removed: "",
+        stage: "production",
+        success: "yes", // should be "true" or "false"
+        truncated: "",
       };
 
       expect(() => validateOutputs(invalidOutputs)).toThrow(
@@ -220,25 +220,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should reject invalid operation type", () => {
       const invalidOutputs = {
-        success: "true",
-        operation: "invalid-op", // should be one of the valid operations
-        stage: "production",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "invalid-op", // should be one of the valid operations
+        outputs: "",
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "",
+        resources: "",
+        resources_removed: "",
+        stage: "production",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(invalidOutputs)).toThrow(/expected one of/);
@@ -246,25 +246,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should validate JSON fields", () => {
       const validOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "production",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "[]", // valid JSON
-        resources: "[]", // valid JSON
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "[]", // valid JSON
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "[]", // valid JSON
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "[]", // valid JSON
+        resource_changes: "",
+        resources: "[]", // valid JSON
+        resources_removed: "",
+        stage: "production",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(validOutputs)).not.toThrow();
@@ -272,25 +272,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should reject invalid JSON in outputs field", () => {
       const invalidOutputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "production",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "{invalid json}", // invalid JSON
-        resources: "[]",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "{invalid json}", // invalid JSON
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "",
+        resources: "[]",
+        resources_removed: "",
+        stage: "production",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(invalidOutputs)).toThrow(/Invalid JSON/);
@@ -307,25 +307,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
       for (const url of validUrls) {
         const outputs = {
-          success: "true",
-          operation: "deploy",
-          stage: "test",
-          completion_status: "complete",
           app: "",
-          permalink: url,
-          truncated: "",
-          resource_changes: "",
-          error: "",
-          outputs: "",
-          resources: "",
-          diff_summary: "",
-          planned_changes: "",
-          resources_removed: "",
-          removed_resources: "",
+          completion_status: "complete",
           computed_stage: "",
-          ref: "",
+          diff_summary: "",
+          error: "",
           event_name: "",
           is_pull_request: "",
+          operation: "deploy",
+          outputs: "",
+          permalink: url,
+          planned_changes: "",
+          ref: "",
+          removed_resources: "",
+          resource_changes: "",
+          resources: "",
+          resources_removed: "",
+          stage: "test",
+          success: "true",
+          truncated: "",
         };
 
         expect(() => validateOutputs(outputs)).not.toThrow();
@@ -334,25 +334,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should accept empty string for permalink", () => {
       const outputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "test",
-        completion_status: "complete",
         app: "",
-        permalink: "", // empty is valid
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "", // empty is valid
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "",
+        resources: "",
+        resources_removed: "",
+        stage: "test",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(outputs)).not.toThrow();
@@ -360,25 +360,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should reject invalid URL format", () => {
       const outputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "test",
-        completion_status: "complete",
         app: "",
-        permalink: "not-a-url", // invalid URL
-        truncated: "",
-        resource_changes: "",
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "not-a-url", // invalid URL
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "",
+        resources: "",
+        resources_removed: "",
+        stage: "test",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(outputs)).toThrow(
@@ -390,25 +390,25 @@ describe("GitHub Actions Output Validation Integration", () => {
   describe("Numeric Field Validation", () => {
     it("should accept numeric strings", () => {
       const outputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "test",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "42",
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "10",
-        resources_removed: "5",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "",
+        planned_changes: "10",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "42",
+        resources: "",
+        resources_removed: "5",
+        stage: "test",
+        success: "true",
+        truncated: "",
       };
 
       const validated = validateOutputs(outputs);
@@ -419,25 +419,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should accept empty string for numeric fields", () => {
       const outputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "test",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "", // empty is valid
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "", // empty is valid
+        resources: "",
+        resources_removed: "",
+        stage: "test",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(outputs)).not.toThrow();
@@ -445,25 +445,25 @@ describe("GitHub Actions Output Validation Integration", () => {
 
     it("should reject non-numeric strings", () => {
       const outputs = {
-        success: "true",
-        operation: "deploy",
-        stage: "test",
-        completion_status: "complete",
         app: "",
-        permalink: "",
-        truncated: "",
-        resource_changes: "abc", // should be numeric
-        error: "",
-        outputs: "",
-        resources: "",
-        diff_summary: "",
-        planned_changes: "",
-        resources_removed: "",
-        removed_resources: "",
+        completion_status: "complete",
         computed_stage: "",
-        ref: "",
+        diff_summary: "",
+        error: "",
         event_name: "",
         is_pull_request: "",
+        operation: "deploy",
+        outputs: "",
+        permalink: "",
+        planned_changes: "",
+        ref: "",
+        removed_resources: "",
+        resource_changes: "abc", // should be numeric
+        resources: "",
+        resources_removed: "",
+        stage: "test",
+        success: "true",
+        truncated: "",
       };
 
       expect(() => validateOutputs(outputs)).toThrow(
@@ -476,32 +476,32 @@ describe("GitHub Actions Output Validation Integration", () => {
 describe("Error Message Quality", () => {
   it("should provide detailed error messages for validation failures", () => {
     const invalidOutputs = {
-      success: "maybe", // invalid
-      operation: "unknown-op", // invalid
-      stage: "", // invalid (empty)
-      completion_status: "done", // invalid
       app: "",
-      permalink: "ftp://invalid", // invalid protocol
-      truncated: "",
-      resource_changes: "not-a-number", // invalid
-      error: "",
-      outputs: "",
-      resources: "",
-      diff_summary: "",
-      planned_changes: "",
-      resources_removed: "",
-      removed_resources: "",
+      completion_status: "done", // invalid
       computed_stage: "",
-      ref: "",
+      diff_summary: "",
+      error: "",
       event_name: "",
       is_pull_request: "",
+      operation: "unknown-op", // invalid
+      outputs: "",
+      permalink: "ftp://invalid", // invalid protocol
+      planned_changes: "",
+      ref: "",
+      removed_resources: "",
+      resource_changes: "not-a-number", // invalid
+      resources: "",
+      resources_removed: "",
+      stage: "", // invalid (empty)
+      success: "maybe", // invalid
+      truncated: "",
     };
 
     try {
       validateOutputs(invalidOutputs);
       expect.fail("Should have thrown validation error");
     } catch (error) {
-      const message = (error as Error).message;
+      const { message } = error as Error;
       // Check that error message contains helpful information
       expect(message).toContain("validation failed");
       expect(message).toContain("-"); // Should have bullet points
