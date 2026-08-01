@@ -16,38 +16,34 @@ import {
   validateOutputs as validateWithSchema,
 } from "./schema";
 
-// Export the main function as default
-export { formatOperationForGitHubActions as default };
-
 /**
  * Standardized output format for GitHub Actions
  * All values must be strings as required by GitHub Actions
  */
 export interface StandardizedOutputs {
-  // Required outputs (always present)
-  success: string;
-  operation: string;
-  stage: string;
-  completion_status: string;
-
   // Common optional outputs
   app: string;
-  permalink: string;
-  truncated: string;
-  resource_changes: string;
+  completion_status: string;
+  computed_stage: string; // Computed stage name for stage operations
+  diff_summary: string; // Summary for diff operations
   error: string;
+  event_name: string; // GitHub event name for stage operations
+  is_pull_request: string; // Whether event is a pull request for stage operations
+  operation: string;
 
   // Operation-specific outputs
   outputs: string; // JSON array for deploy operations
-  resources: string; // JSON array for deploy operations
-  diff_summary: string; // Summary for diff operations
+  permalink: string;
   planned_changes: string; // Number for diff operations
-  resources_removed: string; // Number for remove operations
-  removed_resources: string; // JSON array for remove operations
-  computed_stage: string; // Computed stage name for stage operations
   ref: string; // Git ref for stage operations
-  event_name: string; // GitHub event name for stage operations
-  is_pull_request: string; // Whether event is a pull request for stage operations
+  removed_resources: string; // JSON array for remove operations
+  resource_changes: string;
+  resources: string; // JSON array for deploy operations
+  resources_removed: string; // Number for remove operations
+  stage: string;
+  // Required outputs (always present)
+  success: string;
+  truncated: string;
 }
 
 /**
@@ -59,33 +55,33 @@ export interface StandardizedOutputs {
  * Base outputs for infrastructure operations (deploy, diff, remove)
  */
 interface BaseInfrastructureOutputs {
-  success: string;
-  operation: string;
-  stage: string;
-  completion_status: string;
   app: string;
-  permalink: string;
-  truncated: string;
+  completion_status: string;
   error: string;
+  operation: string;
+  permalink: string;
+  stage: string;
+  success: string;
+  truncated: string;
 }
 
 /**
  * Deploy operation outputs
  */
 export interface DeployOutputs extends BaseInfrastructureOutputs {
-  operation: string; // 'deploy'
-  resource_changes: string;
-  outputs: string; // JSON object of generic deployment outputs
-  resources: string; // JSON array of deployed resources
+  computed_stage: string; // ''
   // Reset other operation fields
   diff_summary: string; // ''
-  planned_changes: string; // ''
-  resources_removed: string; // ''
-  removed_resources: string; // ''
-  computed_stage: string; // ''
-  ref: string; // ''
   event_name: string; // ''
   is_pull_request: string; // ''
+  operation: string; // 'deploy'
+  outputs: string; // JSON object of generic deployment outputs
+  planned_changes: string; // ''
+  ref: string; // ''
+  removed_resources: string; // ''
+  resource_changes: string;
+  resources: string; // JSON array of deployed resources
+  resources_removed: string; // ''
   // Index signature for Record<string, string> compatibility
   [key: string]: string;
 }
@@ -94,19 +90,19 @@ export interface DeployOutputs extends BaseInfrastructureOutputs {
  * Diff operation outputs
  */
 export interface DiffOutputs extends BaseInfrastructureOutputs {
-  operation: string; // 'diff'
-  resource_changes: string; // Same as planned_changes for consistency
-  planned_changes: string;
-  diff_summary: string;
-  // Reset other operation fields
-  outputs: string; // ''
-  resources: string; // ''
-  resources_removed: string; // ''
-  removed_resources: string; // ''
   computed_stage: string; // ''
-  ref: string; // ''
+  diff_summary: string;
   event_name: string; // ''
   is_pull_request: string; // ''
+  operation: string; // 'diff'
+  // Reset other operation fields
+  outputs: string; // ''
+  planned_changes: string;
+  ref: string; // ''
+  removed_resources: string; // ''
+  resource_changes: string; // Same as planned_changes for consistency
+  resources: string; // ''
+  resources_removed: string; // ''
   // Index signature for Record<string, string> compatibility
   [key: string]: string;
 }
@@ -115,19 +111,19 @@ export interface DiffOutputs extends BaseInfrastructureOutputs {
  * Remove operation outputs
  */
 export interface RemoveOutputs extends BaseInfrastructureOutputs {
-  operation: string; // 'remove'
-  resource_changes: string; // Same as resources_removed for consistency
-  resources_removed: string;
-  removed_resources: string; // JSON array of removed resources
-  // Reset other operation fields
-  outputs: string; // ''
-  resources: string; // ''
-  diff_summary: string; // ''
-  planned_changes: string; // ''
   computed_stage: string; // ''
-  ref: string; // ''
+  diff_summary: string; // ''
   event_name: string; // ''
   is_pull_request: string; // ''
+  operation: string; // 'remove'
+  // Reset other operation fields
+  outputs: string; // ''
+  planned_changes: string; // ''
+  ref: string; // ''
+  removed_resources: string; // JSON array of removed resources
+  resource_changes: string; // Same as resources_removed for consistency
+  resources: string; // ''
+  resources_removed: string;
   // Index signature for Record<string, string> compatibility
   [key: string]: string;
 }
@@ -136,26 +132,26 @@ export interface RemoveOutputs extends BaseInfrastructureOutputs {
  * Stage operation outputs - utility operation with minimal output
  */
 export interface StageOutputs {
-  success: string;
-  operation: string; // 'stage'
-  stage: string; // The computed stage name
-  completion_status: string;
-  computed_stage: string; // Same as stage for convenience
-  ref: string; // Git ref used for computation
-  event_name: string; // GitHub event name
-  is_pull_request: string; // Whether event is a pull request
   // Infrastructure fields not applicable
   app: string;
-  permalink: string;
-  truncated: string;
-  resource_changes: string;
-  error: string;
-  outputs: string;
-  resources: string;
+  completion_status: string;
+  computed_stage: string; // Same as stage for convenience
   diff_summary: string;
+  error: string;
+  event_name: string; // GitHub event name
+  is_pull_request: string; // Whether event is a pull request
+  operation: string; // 'stage'
+  outputs: string;
+  permalink: string;
   planned_changes: string;
-  resources_removed: string;
+  ref: string; // Git ref used for computation
   removed_resources: string;
+  resource_changes: string;
+  resources: string;
+  resources_removed: string;
+  stage: string; // The computed stage name
+  success: string;
+  truncated: string;
   // Index signature for Record<string, string> compatibility
   [key: string]: string;
 }
@@ -209,26 +205,26 @@ export function formatOperationForGitHubActions(
  */
 function formatDeployOperation(result: DeployResult): DeployOutputs {
   return {
-    success: String(result.success),
-    operation: "deploy",
-    stage: result.stage,
-    completion_status: result.completionStatus,
     app: result.app || "",
-    permalink: result.permalink || "",
-    truncated: String(result.truncated),
-    error: result.error || "",
-    resource_changes: String(result.resourceChanges || 0),
-    outputs: safeStringify(result.outputs || []),
-    resources: safeStringify(result.resources || []),
+    completion_status: result.completionStatus,
+    computed_stage: "",
     // Reset other operation fields
     diff_summary: "",
-    planned_changes: "",
-    resources_removed: "",
-    removed_resources: "",
-    computed_stage: "",
-    ref: "",
+    error: result.error || "",
     event_name: "",
     is_pull_request: "",
+    operation: "deploy",
+    outputs: safeStringify(result.outputs || []),
+    permalink: result.permalink || "",
+    planned_changes: "",
+    ref: "",
+    removed_resources: "",
+    resource_changes: String(result.resourceChanges || 0),
+    resources: safeStringify(result.resources || []),
+    resources_removed: "",
+    stage: result.stage,
+    success: String(result.success),
+    truncated: String(result.truncated),
   };
 }
 
@@ -237,26 +233,26 @@ function formatDeployOperation(result: DeployResult): DeployOutputs {
  */
 function formatDiffOperation(result: DiffResult): DiffOutputs {
   return {
-    success: String(result.success),
-    operation: "diff",
-    stage: result.stage,
-    completion_status: result.completionStatus,
     app: result.app || "",
-    permalink: result.permalink || "",
-    truncated: String(result.truncated),
-    error: result.error || "",
-    resource_changes: String(result.plannedChanges || 0),
-    planned_changes: String(result.plannedChanges || 0),
-    diff_summary: result.changeSummary || "",
-    // Reset other operation fields
-    outputs: "",
-    resources: "",
-    resources_removed: "",
-    removed_resources: "",
+    completion_status: result.completionStatus,
     computed_stage: "",
-    ref: "",
+    diff_summary: result.changeSummary || "",
+    error: result.error || "",
     event_name: "",
     is_pull_request: "",
+    operation: "diff",
+    // Reset other operation fields
+    outputs: "",
+    permalink: result.permalink || "",
+    planned_changes: String(result.plannedChanges || 0),
+    ref: "",
+    removed_resources: "",
+    resource_changes: String(result.plannedChanges || 0),
+    resources: "",
+    resources_removed: "",
+    stage: result.stage,
+    success: String(result.success),
+    truncated: String(result.truncated),
   };
 }
 
@@ -265,26 +261,26 @@ function formatDiffOperation(result: DiffResult): DiffOutputs {
  */
 function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
   return {
-    success: String(result.success),
-    operation: "remove",
-    stage: result.stage,
-    completion_status: result.completionStatus,
     app: result.app || "",
-    permalink: result.permalink || "",
-    truncated: String(result.truncated),
-    error: result.error || "",
-    resource_changes: String(result.resourcesRemoved || 0),
-    resources_removed: String(result.resourcesRemoved || 0),
-    removed_resources: safeStringify(result.removedResources || []),
-    // Reset other operation fields
-    outputs: "",
-    resources: "",
-    diff_summary: "",
-    planned_changes: "",
+    completion_status: result.completionStatus,
     computed_stage: "",
-    ref: "",
+    diff_summary: "",
+    error: result.error || "",
     event_name: "",
     is_pull_request: "",
+    operation: "remove",
+    // Reset other operation fields
+    outputs: "",
+    permalink: result.permalink || "",
+    planned_changes: "",
+    ref: "",
+    removed_resources: safeStringify(result.removedResources || []),
+    resource_changes: String(result.resourcesRemoved || 0),
+    resources: "",
+    resources_removed: String(result.resourcesRemoved || 0),
+    stage: result.stage,
+    success: String(result.success),
+    truncated: String(result.truncated),
   };
 }
 
@@ -293,26 +289,26 @@ function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
  */
 function formatStageOperation(result: StageResult): StageOutputs {
   return {
-    success: String(result.success),
-    operation: "stage",
-    stage: result.stage,
-    completion_status: result.completionStatus,
-    computed_stage: result.computedStage || result.stage,
-    ref: result.ref || "",
-    event_name: result.eventName || "",
-    is_pull_request: String(result.isPullRequest),
     // Infrastructure fields not applicable
     app: "",
-    permalink: "",
-    truncated: "false",
-    resource_changes: "",
-    error: result.error || "",
-    outputs: "",
-    resources: "",
+    completion_status: result.completionStatus,
+    computed_stage: result.computedStage || result.stage,
     diff_summary: "",
+    error: result.error || "",
+    event_name: result.eventName || "",
+    is_pull_request: String(result.isPullRequest),
+    operation: "stage",
+    outputs: "",
+    permalink: "",
     planned_changes: "",
-    resources_removed: "",
+    ref: result.ref || "",
     removed_resources: "",
+    resource_changes: "",
+    resources: "",
+    resources_removed: "",
+    stage: result.stage,
+    success: String(result.success),
+    truncated: "false",
   };
 }
 
@@ -327,7 +323,7 @@ function safeStringify(value: unknown): string {
 
   try {
     return JSON.stringify(value);
-  } catch (_error) {
+  } catch {
     return "";
   }
 }
@@ -445,8 +441,8 @@ export function validateOperationConsistency(
  */
 export const OutputFormatter = {
   formatOperationForGitHubActions,
-  validateOutputs,
   getExpectedFields,
   getRequiredFields,
   validateOperationConsistency,
+  validateOutputs,
 } as const;

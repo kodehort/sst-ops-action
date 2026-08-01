@@ -6,25 +6,25 @@ describe("OutputFormatter Integration", () => {
   describe("GitHub Actions workflow integration", () => {
     it("should produce consistent outputs for deploy workflow", () => {
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "production",
         app: "my-sst-app",
-        rawOutput: "Deploy completed successfully",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 5,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [
           { key: "API", value: "https://api.myapp.com" },
           { key: "Web", value: "https://myapp.com" },
         ],
-        resources: [
-          { type: "Function", name: "api-handler", status: "created" },
-          { type: "Api", name: "api-gateway", status: "updated" },
-        ],
         permalink:
           "https://console.sst.dev/my-sst-app/production/deployments/xyz789",
+        rawOutput: "Deploy completed successfully",
+        resourceChanges: 5,
+        resources: [
+          { name: "api-handler", status: "created", type: "Function" },
+          { name: "api-gateway", status: "updated", type: "Api" },
+        ],
+        stage: "production",
+        success: true,
+        truncated: false,
       };
 
       const outputs =
@@ -52,26 +52,26 @@ describe("OutputFormatter Integration", () => {
 
     it("should produce consistent outputs for diff workflow", () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "staging",
         app: "my-sst-app",
-        rawOutput: "Diff analysis completed",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 3,
         changeSummary: "Found 3 planned infrastructure changes",
         changes: [
-          { type: "Function", name: "handler", action: "create", details: "" },
+          { action: "create", details: "", name: "handler", type: "Function" },
           {
-            type: "Database",
-            name: "main-db",
             action: "update",
             details: "schema change",
+            name: "main-db",
+            type: "Database",
           },
-          { type: "Bucket", name: "assets", action: "delete", details: "" },
+          { action: "delete", details: "", name: "assets", type: "Bucket" },
         ],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 3,
+        rawOutput: "Diff analysis completed",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const outputs =
@@ -98,20 +98,20 @@ describe("OutputFormatter Integration", () => {
 
     it("should produce consistent outputs for remove workflow", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "staging",
         app: "my-sst-app",
-        rawOutput: "Resources removed successfully",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 7,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Resources removed successfully",
         removedResources: [
-          { type: "Function", name: "api-handler", status: "removed" },
-          { type: "Database", name: "main-db", status: "removed" },
-          { type: "Api", name: "api-gateway", status: "removed" },
+          { name: "api-handler", status: "removed", type: "Function" },
+          { name: "main-db", status: "removed", type: "Database" },
+          { name: "api-gateway", status: "removed", type: "Api" },
         ],
+        resourcesRemoved: 7,
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const outputs =
@@ -136,19 +136,19 @@ describe("OutputFormatter Integration", () => {
 
     it("should handle failed operations consistently", () => {
       const failedResult: DeployResult = {
-        success: false,
-        operation: "deploy",
-        stage: "production",
         app: "my-sst-app",
-        rawOutput: "Deploy failed: insufficient permissions",
-        exitCode: 1,
-        truncated: false,
         completionStatus: "failed",
-        resourceChanges: 0,
-        outputs: [],
-        resources: [],
         error:
           "AWS credentials do not have sufficient permissions to deploy to production",
+        exitCode: 1,
+        operation: "deploy",
+        outputs: [],
+        rawOutput: "Deploy failed: insufficient permissions",
+        resourceChanges: 0,
+        resources: [],
+        stage: "production",
+        success: false,
+        truncated: false,
       };
 
       const outputs =
@@ -168,20 +168,20 @@ describe("OutputFormatter Integration", () => {
 
     it("should handle partial completion consistently", () => {
       const partialResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "staging",
         app: "my-sst-app",
-        rawOutput: "Some resources could not be removed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "partial",
-        resourcesRemoved: 2,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Some resources could not be removed",
         removedResources: [
-          { type: "Function", name: "handler1", status: "removed" },
-          { type: "Function", name: "handler2", status: "removed" },
-          { type: "Database", name: "main-db", status: "failed" },
+          { name: "handler1", status: "removed", type: "Function" },
+          { name: "handler2", status: "removed", type: "Function" },
+          { name: "main-db", status: "failed", type: "Database" },
         ],
+        resourcesRemoved: 2,
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       const outputs =
@@ -199,44 +199,44 @@ describe("OutputFormatter Integration", () => {
 
     it("should maintain consistency across all operation types", () => {
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "test",
         app: "test-app",
-        rawOutput: "",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 1,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [],
+        rawOutput: "",
+        resourceChanges: 1,
         resources: [],
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "test",
         app: "test-app",
-        rawOutput: "",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 1,
         changeSummary: "",
         changes: [],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 1,
+        rawOutput: "",
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "test",
         app: "test-app",
-        rawOutput: "",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 1,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "",
         removedResources: [],
+        resourcesRemoved: 1,
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       const deployOutputs =

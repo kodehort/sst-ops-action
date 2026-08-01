@@ -11,33 +11,33 @@ describe("SST Output Validation", () => {
     it("should validate deploy output correctly", () => {
       const validDeployOutput: SSTDeployOutput = {
         app: "test-app",
-        stage: "test",
+        duration: 45_000,
+        outputs: {
+          ApiUrl: "https://api.example.com",
+        },
+        permalink: "https://console.sst.dev/test-app/test/deploy/123",
         region: "us-east-1",
         resources: [
           {
-            type: "Function",
-            name: "api-handler",
             logicalId: "ApiHandler",
-            physicalId: "test-app-test-api-handler-abc123",
-            status: "CREATE_COMPLETE",
-            properties: {
-              runtime: "nodejs20.x",
-              handler: "index.handler",
-              timeout: 30,
-              memory: 1024,
-            },
+            name: "api-handler",
             outputs: {
               arn: "arn:aws:lambda:us-east-1:123456789012:function:test-app-test-api-handler-abc123",
               name: "test-app-test-api-handler-abc123",
             },
+            physicalId: "test-app-test-api-handler-abc123",
+            properties: {
+              handler: "index.handler",
+              memory: 1024,
+              runtime: "nodejs20.x",
+              timeout: 30,
+            },
+            status: "CREATE_COMPLETE",
+            type: "Function",
           },
         ],
-        outputs: {
-          ApiUrl: "https://api.example.com",
-        },
-        duration: 45_000,
+        stage: "test",
         status: "success",
-        permalink: "https://console.sst.dev/test-app/test/deploy/123",
       };
 
       expect(() =>
@@ -50,53 +50,53 @@ describe("SST Output Validation", () => {
     it("should validate diff output correctly", () => {
       const validDiffOutput: SSTDiffOutput = {
         app: "test-app",
-        stage: "test",
-        region: "us-east-1",
         changes: [
           {
             action: "create",
-            type: "Function",
-            name: "new-handler",
             logicalId: "NewHandler",
-            reason: "New resource added",
+            name: "new-handler",
             properties: {
               added: {
-                runtime: "nodejs20.x",
                 handler: "new.handler",
+                runtime: "nodejs20.x",
               },
-              updated: {},
               removed: {},
+              updated: {},
             },
+            reason: "New resource added",
+            type: "Function",
           },
           {
             action: "update",
-            type: "Function",
-            name: "existing-handler",
             logicalId: "ExistingHandler",
-            reason: "Memory configuration changed",
+            name: "existing-handler",
             properties: {
               added: {},
+              removed: {},
               updated: {
                 memory: 512,
               },
-              removed: {},
             },
+            reason: "Memory configuration changed",
+            type: "Function",
           },
           {
             action: "delete",
-            type: "Function",
-            name: "old-handler",
             logicalId: "OldHandler",
+            name: "old-handler",
             reason: "Resource no longer needed",
+            type: "Function",
           },
         ],
+        region: "us-east-1",
+        stage: "test",
+        status: "success",
         summary: {
           toCreate: 1,
-          toUpdate: 1,
           toDelete: 1,
           total: 3,
+          toUpdate: 1,
         },
-        status: "success",
       };
 
       expect(() => validateSSTOutput(validDiffOutput, "diff")).not.toThrow();
@@ -107,37 +107,37 @@ describe("SST Output Validation", () => {
     it("should validate remove output correctly", () => {
       const validRemoveOutput: SSTRemoveOutput = {
         app: "test-app",
-        stage: "test",
+        duration: 30_000,
+        errors: ["Failed to remove Table: users - deletion protection enabled"],
         region: "us-east-1",
         removed: [
           {
-            type: "Function",
-            name: "api-handler",
             logicalId: "ApiHandler",
+            name: "api-handler",
             status: "removed",
+            type: "Function",
           },
           {
-            type: "Api",
-            name: "api",
             logicalId: "Api",
+            name: "api",
             status: "removed",
+            type: "Api",
           },
           {
-            type: "Table",
-            name: "users",
             logicalId: "UsersTable",
-            status: "failed",
+            name: "users",
             reason: "Table has deletion protection enabled",
+            status: "failed",
+            type: "Table",
           },
         ],
+        stage: "test",
+        status: "partial",
         summary: {
-          totalRemoved: 2,
           totalFailed: 1,
+          totalRemoved: 2,
           totalSkipped: 0,
         },
-        duration: 30_000,
-        status: "partial",
-        errors: ["Failed to remove Table: users - deletion protection enabled"],
         warnings: ["Some resources may take time to fully delete"],
       };
 
@@ -178,8 +178,8 @@ describe("SST Output Validation", () => {
     it("should throw error for deploy output missing required fields", () => {
       const incompleteDeployOutput = {
         app: "test-app",
-        stage: "test",
         region: "us-east-1",
+        stage: "test",
         // missing: resources, outputs, urls, duration, status
       };
 
@@ -191,8 +191,8 @@ describe("SST Output Validation", () => {
     it("should throw error for diff output missing required fields", () => {
       const incompleteDiffOutput = {
         app: "test-app",
-        stage: "test",
         region: "us-east-1",
+        stage: "test",
         // missing: changes, summary, status
       };
 
@@ -204,8 +204,8 @@ describe("SST Output Validation", () => {
     it("should throw error for remove output missing required fields", () => {
       const incompleteRemoveOutput = {
         app: "test-app",
-        stage: "test",
         region: "us-east-1",
+        stage: "test",
         // missing: removed, summary, duration, status
       };
 
@@ -217,8 +217,8 @@ describe("SST Output Validation", () => {
     it("should throw error for unsupported operations", () => {
       const validOutput = {
         app: "test-app",
-        stage: "test",
         region: "us-east-1",
+        stage: "test",
       };
 
       expect(() => validateSSTOutput(validOutput, "invalid" as any)).toThrow(
@@ -231,11 +231,11 @@ describe("SST Output Validation", () => {
     it("should handle empty arrays in deploy output", () => {
       const deployWithEmptyArrays: SSTDeployOutput = {
         app: "test-app",
-        stage: "test",
+        duration: 1000,
+        outputs: {},
         region: "us-east-1",
         resources: [], // empty array
-        outputs: {},
-        duration: 1000,
+        stage: "test",
         status: "success",
       };
 
@@ -247,16 +247,16 @@ describe("SST Output Validation", () => {
     it("should handle empty arrays in diff output", () => {
       const diffWithEmptyArrays: SSTDiffOutput = {
         app: "test-app",
-        stage: "test",
-        region: "us-east-1",
         changes: [], // empty array
+        region: "us-east-1",
+        stage: "test",
+        status: "success",
         summary: {
           toCreate: 0,
-          toUpdate: 0,
           toDelete: 0,
           total: 0,
+          toUpdate: 0,
         },
-        status: "success",
       };
 
       expect(() =>
@@ -267,16 +267,16 @@ describe("SST Output Validation", () => {
     it("should handle empty arrays in remove output", () => {
       const removeWithEmptyArrays: SSTRemoveOutput = {
         app: "test-app",
-        stage: "test",
+        duration: 1000,
         region: "us-east-1",
         removed: [], // empty array
+        stage: "test",
+        status: "success",
         summary: {
-          totalRemoved: 0,
           totalFailed: 0,
+          totalRemoved: 0,
           totalSkipped: 0,
         },
-        duration: 1000,
-        status: "success",
       };
 
       expect(() =>
@@ -287,15 +287,15 @@ describe("SST Output Validation", () => {
     it("should handle optional fields correctly", () => {
       const deployWithOptionalFields: SSTDeployOutput = {
         app: "test-app",
-        stage: "test",
+        duration: 1000,
+        errors: [], // empty errors array
+        outputs: {},
+        permalink: "https://console.sst.dev/test-app/test/deploy/123",
         region: "us-east-1",
         resources: [],
-        outputs: {},
-        duration: 1000,
+        stage: "test",
         status: "success",
-        permalink: "https://console.sst.dev/test-app/test/deploy/123",
         warnings: ["This is a warning"],
-        errors: [], // empty errors array
       };
 
       expect(() =>

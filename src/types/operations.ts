@@ -22,36 +22,36 @@ export type CommentMode = "always" | "on-success" | "on-failure" | "never";
 export type CompletionStatus = "complete" | "partial" | "failed";
 
 export interface OperationOptions {
-  stage: string;
-  token?: string;
   commentMode?: CommentMode;
   failOnError?: boolean;
   maxOutputSize?: number;
-  runner?: SSTRunner;
-  truncationLength?: number;
   prefix?: string;
+  runner?: SSTRunner;
+  stage: string;
+  token?: string;
+  truncationLength?: number;
 }
 
 export interface BaseOperationResult {
-  success: boolean;
-  operation: SSTOperation;
-  stage: string;
   app: string;
-  rawOutput: string;
-  exitCode: number;
-  truncated: boolean;
-  error?: string;
   completionStatus: CompletionStatus;
+  error?: string;
+  exitCode: number;
+  operation: SSTOperation;
   permalink?: string;
+  rawOutput: string;
+  stage: string;
+  success: boolean;
+  truncated: boolean;
 }
 
 export interface DeployResult extends BaseOperationResult {
   operation: "deploy";
-  resourceChanges: number;
   outputs: Array<{
     key: string;
     value: string;
   }>;
+  resourceChanges: number;
   resources: Array<{
     type: string;
     name: string;
@@ -61,8 +61,6 @@ export interface DeployResult extends BaseOperationResult {
 }
 
 export interface DiffResult extends BaseOperationResult {
-  operation: "diff";
-  plannedChanges: number;
   changeSummary: string;
   changes: Array<{
     type: string;
@@ -70,24 +68,26 @@ export interface DiffResult extends BaseOperationResult {
     action: "create" | "update" | "delete";
     details?: string;
   }>;
+  operation: "diff";
+  plannedChanges: number;
 }
 
 export interface RemoveResult extends BaseOperationResult {
   operation: "remove";
-  resourcesRemoved: number;
   removedResources: Array<{
     type: string;
     name: string;
     status: "removed" | "failed" | "skipped";
   }>;
+  resourcesRemoved: number;
 }
 
 export interface StageResult extends BaseOperationResult {
-  operation: "stage";
   computedStage: string;
-  ref: string;
   eventName: string;
   isPullRequest: boolean;
+  operation: "stage";
+  ref: string;
 }
 
 export type OperationResult =
@@ -97,39 +97,39 @@ export type OperationResult =
   | StageResult;
 
 export interface OperationContext {
+  actor: string;
   operation: SSTOperation;
   options: OperationOptions;
+  ref: string;
+  runId: string;
+  sha: string;
   startTime: Date;
   workflowId: string;
-  runId: string;
-  actor: string;
-  ref: string;
-  sha: string;
 }
 
 export interface ParsedSST {
   app: string;
-  stage: string;
-  region?: string;
-  outputs?: Record<string, unknown>;
   errors?: string[];
+  outputs?: Record<string, unknown>;
+  region?: string;
+  stage: string;
   warnings?: string[];
 }
 
 export interface ExecutionStats {
-  duration: number;
-  outputSize: number;
-  memoryUsage?: number;
   cpuTime?: number;
+  duration: number;
+  memoryUsage?: number;
+  outputSize: number;
 }
 
 export interface OperationMetadata {
-  version: string;
-  timestamp: string;
   environment: "github-actions";
   runner: {
     os: string;
     arch: string;
     nodeVersion: string;
   };
+  timestamp: string;
+  version: string;
 }

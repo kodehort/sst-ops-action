@@ -10,22 +10,22 @@ import type { SSTOperation } from "../types/index.js";
  * Result of executing a CLI command
  */
 export interface CLIResult {
-  /** Combined stdout and stderr output */
-  output: string;
-  /** Process exit code */
-  exitCode: number;
-  /** Execution duration in milliseconds */
-  duration: number;
   /** Full command that was executed */
   command: string;
+  /** Execution duration in milliseconds */
+  duration: number;
   /** Error message if command failed */
   error?: string | undefined;
-  /** Whether the output was truncated due to size limits */
-  truncated: boolean;
-  /** Raw stdout content */
-  stdout: string;
+  /** Process exit code */
+  exitCode: number;
+  /** Combined stdout and stderr output */
+  output: string;
   /** Raw stderr content */
   stderr: string;
+  /** Raw stdout content */
+  stdout: string;
+  /** Whether the output was truncated due to size limits */
+  truncated: boolean;
 }
 
 /**
@@ -38,26 +38,26 @@ export type SSTRunner = (typeof SST_RUNNERS)[number];
  * Options for CLI command execution
  */
 export interface CLIOptions {
-  /** Timeout in milliseconds (default: 15 minutes) */
-  timeout?: number | undefined;
-  /** Maximum output size in bytes (default: 50KB) */
-  maxOutputSize?: number | undefined;
   /** Arguments to pass to the SST command */
   args?: string[] | undefined;
+  /** Maximum output size in bytes (default: 50KB) */
+  maxOutputSize?: number | undefined;
   /** Package manager/runner to use for SST commands (default: 'bun') */
   runner?: SSTRunner | undefined;
+  /** Timeout in milliseconds (default: 15 minutes) */
+  timeout?: number | undefined;
 }
 
 /**
  * SST CLI command execution result
  */
 export interface SSTCommandResult extends CLIResult {
-  /** Whether the SST command succeeded */
-  success: boolean;
-  /** Stage that was operated on */
-  stage: string;
   /** Operation that was performed */
   operation: SSTOperation;
+  /** Stage that was operated on */
+  stage: string;
+  /** Whether the SST command succeeded */
+  success: boolean;
 }
 
 /**
@@ -86,8 +86,8 @@ export class SSTCLIExecutor {
       // Execute the command
       const result = await this.executeCommand(command, {
         ...options,
-        timeout,
         maxOutputSize,
+        timeout,
       });
 
       const duration = Date.now() - startTime;
@@ -95,10 +95,10 @@ export class SSTCLIExecutor {
 
       return {
         ...result,
-        success,
-        stage,
-        operation,
         duration,
+        operation,
+        stage,
+        success,
       };
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -106,17 +106,17 @@ export class SSTCLIExecutor {
         error instanceof Error ? error.message : String(error);
 
       return {
-        output: `Error executing SST command: ${errorMessage}`,
-        stdout: "",
-        stderr: errorMessage,
-        exitCode: 1,
-        duration,
         command: command.join(" "),
+        duration,
         error: errorMessage,
-        truncated: false,
-        success: false,
-        stage,
+        exitCode: 1,
         operation,
+        output: `Error executing SST command: ${errorMessage}`,
+        stage,
+        stderr: errorMessage,
+        stdout: "",
+        success: false,
+        truncated: false,
       };
     }
   }
@@ -213,28 +213,22 @@ export class SSTCLIExecutor {
       const execPromise = exec.exec(command[0], command.slice(1), {
         ignoreReturnCode: true,
         listeners: {
-          stdout: (data: Buffer) => {
-            const chunk = data.toString();
-            if (stdout.length + chunk.length > options.maxOutputSize) {
-              stdout += chunk.substring(
-                0,
-                options.maxOutputSize - stdout.length
-              );
-              truncated = true;
-            } else {
-              stdout += chunk;
-            }
-          },
           stderr: (data: Buffer) => {
             const chunk = data.toString();
             if (stderr.length + chunk.length > options.maxOutputSize) {
-              stderr += chunk.substring(
-                0,
-                options.maxOutputSize - stderr.length
-              );
+              stderr += chunk.slice(0, options.maxOutputSize - stderr.length);
               truncated = true;
             } else {
               stderr += chunk;
+            }
+          },
+          stdout: (data: Buffer) => {
+            const chunk = data.toString();
+            if (stdout.length + chunk.length > options.maxOutputSize) {
+              stdout += chunk.slice(0, options.maxOutputSize - stdout.length);
+              truncated = true;
+            } else {
+              stdout += chunk;
             }
           },
         },
@@ -266,34 +260,36 @@ export class SSTCLIExecutor {
       // Check if it's a timeout error
       if (errorMessage.includes("timeout")) {
         return {
-          output: `${stdout}${stderr}\nCommand timed out after ${options.timeout}ms`,
-          stdout,
-          stderr: `${stderr}\nCommand timed out after ${options.timeout}ms`,
-          exitCode: 124, // Timeout exit code
-          duration,
           command: command.join(" "),
+          duration,
           error: `Command timed out after ${options.timeout}ms`,
+          exitCode: 124, // Timeout exit code
+          output: `${stdout}${stderr}\nCommand timed out after ${options.timeout}ms`,
+          stderr: `${stderr}\nCommand timed out after ${options.timeout}ms`,
+          stdout,
           truncated,
         };
       }
 
-      throw new Error(`Failed to execute command: ${errorMessage}`);
+      throw new Error(`Failed to execute command: ${errorMessage}`, {
+        cause: error,
+      });
     }
 
     const duration = Date.now() - startTime;
     const output = stdout + stderr;
 
     return {
-      output,
-      stdout,
-      stderr,
-      exitCode,
-      duration,
       command: command.join(" "),
+      duration,
       error:
-        exitCode !== 0
-          ? `Command failed with exit code ${exitCode}`
-          : undefined,
+        exitCode === 0
+          ? undefined
+          : `Command failed with exit code ${exitCode}`,
+      exitCode,
+      output,
+      stderr,
+      stdout,
       truncated,
     };
   }

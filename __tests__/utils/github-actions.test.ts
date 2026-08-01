@@ -4,8 +4,8 @@ import { handleGitHubIntegrationError } from "../../src/utils/github-actions.js"
 
 // Mock @actions/core functions
 vi.mock("@actions/core", () => ({
-  info: vi.fn(),
   debug: vi.fn(),
+  info: vi.fn(),
 }));
 
 const { info, debug } = vi.mocked(core);

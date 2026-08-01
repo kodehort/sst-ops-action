@@ -15,25 +15,21 @@ export type ErrorType =
  * Enhanced operation metadata for error context
  */
 export interface OperationMetadata {
-  timestamp: string;
   actionVersion: string;
-  workflowId?: string;
-  runId?: number;
-  runNumber?: number;
   actor?: string;
   eventName?: string;
   ref?: string;
+  runId?: number;
+  runNumber?: number;
   sha?: string;
+  timestamp: string;
+  workflowId?: string;
 }
 
 /**
  * Simplified error information structure
  */
 export interface ActionError {
-  type: ErrorType;
-  message: string;
-  shouldFailAction: boolean;
-  originalError?: Error;
   details?: {
     operation?: string;
     stage?: string;
@@ -44,4 +40,8 @@ export interface ActionError {
     value?: unknown;
     metadata?: OperationMetadata;
   };
+  message: string;
+  originalError?: Error;
+  shouldFailAction: boolean;
+  type: ErrorType;
 }

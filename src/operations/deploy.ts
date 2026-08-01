@@ -38,9 +38,9 @@ export class DeployOperation extends BaseOperation<DeployResult> {
       "deploy",
       options.stage,
       {
-        timeout: this.defaultTimeout,
         maxOutputSize: options.maxOutputSize,
         runner: options.runner,
+        timeout: this.defaultTimeout,
       }
     );
 

@@ -37,9 +37,9 @@ export class DiffOperation extends BaseOperation<DiffResult> {
         "diff",
         options.stage,
         {
-          timeout: this.defaultTimeout,
           maxOutputSize: options.maxOutputSize,
           runner: options.runner,
+          timeout: this.defaultTimeout,
         }
       );
 
@@ -80,18 +80,18 @@ export class DiffOperation extends BaseOperation<DiffResult> {
 
   private createFailureResult(stage: string, error: string): DiffResult {
     return {
-      success: false,
-      operation: "diff",
-      stage,
       app: "unknown",
-      rawOutput: "",
-      exitCode: -1,
-      truncated: false,
-      error,
-      completionStatus: "failed",
-      plannedChanges: 0,
       changeSummary: "Failed to execute SST diff command",
       changes: [],
+      completionStatus: "failed",
+      error,
+      exitCode: -1,
+      operation: "diff",
+      plannedChanges: 0,
+      rawOutput: "",
+      stage,
+      success: false,
+      truncated: false,
     };
   }
 }

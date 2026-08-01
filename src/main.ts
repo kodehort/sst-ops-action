@@ -52,8 +52,8 @@ function computeStageFromContext(
 ): string {
   const processor = new StageProcessor();
   const result = processor.process({
-    truncationLength,
     prefix,
+    truncationLength,
   });
 
   if (result.success && result.computedStage) {
@@ -80,15 +80,15 @@ function collectRawInputs() {
   const prefix = core.getInput("prefix") || "pr-";
 
   return {
-    operation: operationInput,
-    stage,
-    token: core.getInput("token"),
     commentMode: core.getInput("comment-mode") || "on-success",
     failOnError: core.getBooleanInput("fail-on-error") ?? true,
     maxOutputSize: core.getInput("max-output-size") || "50000",
-    runner: validateSSTRunner(core.getInput("runner") || "bun"),
-    truncationLength,
+    operation: operationInput,
     prefix,
+    runner: validateSSTRunner(core.getInput("runner") || "bun"),
+    stage,
+    token: core.getInput("token"),
+    truncationLength,
   };
 }
 
@@ -165,8 +165,8 @@ function parseGitHubActionsInputs() {
  */
 function handleInputValidationError(error: unknown): void {
   UnifiedErrorHandler.handle({
-    type: "input-validation",
     error: error as ValidationError | Error,
+    type: "input-validation",
   });
 }
 
@@ -224,8 +224,8 @@ function handleOperationError(
 ): void {
   if (!(error instanceof Error)) {
     UnifiedErrorHandler.handle({
-      type: "unexpected",
       error,
+      type: "unexpected",
     });
     return;
   }
@@ -233,17 +233,17 @@ function handleOperationError(
   // Determine error type and route to appropriate handler
   if (isOutputFormattingError(error)) {
     UnifiedErrorHandler.handle({
-      type: "output-formatting",
       error,
       operation,
       options,
+      type: "output-formatting",
     });
   } else {
     UnifiedErrorHandler.handle({
-      type: "operation-execution",
       error,
       operation,
       options,
+      type: "operation-execution",
     });
   }
 }
@@ -253,8 +253,8 @@ function handleOperationError(
  */
 function handleUnexpectedError(error: unknown): never {
   UnifiedErrorHandler.handle({
-    type: "unexpected",
     error,
+    type: "unexpected",
   });
   // UnifiedErrorHandler.handle will throw, but TypeScript doesn't know that
   throw error;
@@ -280,12 +280,12 @@ function createOperationOptions(
       return {
         operation: inputs.operation,
         options: {
-          stage: inputs.stage || "",
-          token: inputs.token,
           commentMode: inputs.commentMode || "on-success",
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || "bun",
+          stage: inputs.stage || "",
+          token: inputs.token,
         },
       };
 
@@ -294,12 +294,12 @@ function createOperationOptions(
       return {
         operation: inputs.operation,
         options: {
-          stage: inputs.stage,
-          token: inputs.token,
           commentMode: inputs.commentMode || "on-success",
           failOnError: inputs.failOnError !== false,
           maxOutputSize: inputs.maxOutputSize || 50_000,
           runner: inputs.runner || "bun",
+          stage: inputs.stage,
+          token: inputs.token,
         },
       };
 
@@ -307,14 +307,14 @@ function createOperationOptions(
       return {
         operation: inputs.operation,
         options: {
-          stage: "",
-          token: "",
           commentMode: "never",
           failOnError: true,
           maxOutputSize: 50_000,
-          runner: "bun",
-          truncationLength: inputs.truncationLength || 26,
           prefix: inputs.prefix || "pr-",
+          runner: "bun",
+          stage: "",
+          token: "",
+          truncationLength: inputs.truncationLength || 26,
         },
       };
 
@@ -401,7 +401,7 @@ export async function run(): Promise<void> {
       } else if (inputs.operation === "deploy") {
         stage = inputs.stage || "auto";
       } else {
-        stage = inputs.stage;
+        ({ stage } = inputs);
       }
       core.info(
         `📝 Parsed inputs: ${inputs.operation} operation on stage "${stage}"`

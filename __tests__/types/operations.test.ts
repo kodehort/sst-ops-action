@@ -24,17 +24,17 @@ describe("Type Guards", () => {
   describe("Operation Result Type Guards", () => {
     it("should identify deploy results correctly", () => {
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "test",
         app: "test-app",
-        rawOutput: "test output",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 5,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [{ key: "api", value: "https://api.example.com" }],
-        resources: [{ type: "Function", name: "handler", status: "created" }],
+        rawOutput: "test output",
+        resourceChanges: 5,
+        resources: [{ name: "handler", status: "created", type: "Function" }],
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       expect(isDeployResult(deployResult)).toBe(true);
@@ -44,17 +44,17 @@ describe("Type Guards", () => {
 
     it("should identify diff results correctly", () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "test",
         app: "test-app",
-        rawOutput: "test output",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 3,
         changeSummary: "3 resources to create",
-        changes: [{ type: "Function", name: "handler", action: "create" }],
+        changes: [{ action: "create", name: "handler", type: "Function" }],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 3,
+        rawOutput: "test output",
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       expect(isDiffResult(diffResult)).toBe(true);
@@ -64,18 +64,18 @@ describe("Type Guards", () => {
 
     it("should identify remove results correctly", () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "test",
         app: "test-app",
-        rawOutput: "test output",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 2,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "test output",
         removedResources: [
-          { type: "Function", name: "handler", status: "removed" },
+          { name: "handler", status: "removed", type: "Function" },
         ],
+        resourcesRemoved: 2,
+        stage: "test",
+        success: true,
+        truncated: false,
       };
 
       expect(isRemoveResult(removeResult)).toBe(true);
