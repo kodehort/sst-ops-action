@@ -1,3 +1,49 @@
+# Release v0.7.23
+
+**Release Date:** 2026-08-02
+**Previous Version:** v0.7.22
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency js-yaml to v5.2.3 (#116) (`c92c2c6`)
+- chore(deps): update dependency rollup to v4.62.4 (#117) (`d269295`)
+- chore(deps): update dependency @biomejs/biome to v2.5.5 (#62) (`fee9f9a`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1585450 bytes)
+- **Integrity Hash:** `647dddbf4c217137...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.23
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.22...v0.7.23)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.23/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.22...v0.7.23
+
+---
+
 # Release v0.7.22
 
 **Release Date:** 2026-08-01
