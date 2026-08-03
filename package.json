@@ -2,27 +2,6 @@
   "name": "sst-operations-action",
   "version": "0.7.24",
   "description": "A unified GitHub Action for SST operations: deploy, diff, and remove",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "rollup --config rollup.config.ts --configPlugin 'typescript={\"sourceMap\":false}'",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit",
-    "format": "bunx ultracite@latest fix",
-    "format:check": "bunx ultracite@latest format --check",
-    "lint": "bunx ultracite@latest check",
-    "validate": "bun run typecheck && bun run lint && bun run test",
-    "dev": "bunx @github/local-action run . src/main.ts .env",
-    "snapshots:generate": "bun run scripts/generate-snapshots.ts",
-    "snapshots:generate:force": "bun run scripts/generate-snapshots.ts --force",
-    "snapshots:validate": "bun run scripts/generate-snapshots.ts --validate",
-    "test:snapshots": "vitest run __tests__/snapshots/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kodehort/sst-ops-action.git"
-  },
   "keywords": [
     "github-actions",
     "sst",
@@ -32,8 +11,31 @@
     "diff",
     "remove"
   ],
-  "author": "Your Organization",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kodehort/sst-ops-action.git"
+  },
   "license": "MIT",
+  "author": "Your Organization",
+  "sideEffects": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rollup --config rollup.config.ts --configPlugin 'typescript={\"sourceMap\":false}'",
+    "dev": "bunx @github/local-action run . src/main.ts .env",
+    "format": "bunx ultracite@latest fix",
+    "format:check": "bunx ultracite@latest format --check",
+    "lint": "bunx ultracite@latest check",
+    "snapshots:generate": "bun run scripts/generate-snapshots.ts",
+    "snapshots:generate:force": "bun run scripts/generate-snapshots.ts --force",
+    "snapshots:validate": "bun run scripts/generate-snapshots.ts --validate",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:snapshots": "vitest run __tests__/snapshots/",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "validate": "bun run typecheck && bun run lint && bun run test"
+  },
   "dependencies": {
     "@actions/artifact": "^6.1.0",
     "@actions/core": "^3.0.0",
@@ -66,7 +68,5 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "type": "module",
-  "sideEffects": false
+  }
 }
