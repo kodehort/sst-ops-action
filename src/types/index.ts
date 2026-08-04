@@ -308,11 +308,11 @@ export function isSSTError(error: unknown): error is SSTError {
  * These operations interact with AWS and require authentication
  */
 export interface BaseInfrastructureInputs {
-  token: string;
   commentMode?: CommentMode;
   failOnError?: boolean;
   maxOutputSize?: number;
   runner?: SSTRunner;
+  token: string;
 }
 
 /**
@@ -341,8 +341,8 @@ export interface RemoveInputs extends BaseInfrastructureInputs {
  * No token or infrastructure access required
  */
 export interface StageInputs {
-  truncationLength?: number;
   prefix?: string;
+  truncationLength?: number;
 }
 
 /**

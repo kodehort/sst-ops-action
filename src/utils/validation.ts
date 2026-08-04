@@ -20,37 +20,6 @@ const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
  * Common field schemas used across operations
  */
 const CommonFieldSchemas = {
-  operation: z
-    .string()
-    .min(1, "Operation is required and cannot be empty")
-    .refine((val) => isValidOperation(val), {
-      message: "Invalid operation. Must be one of: deploy, diff, remove, stage",
-    })
-    .transform((val) => val as SSTOperation),
-
-  stage: z
-    .string()
-    .min(1, "Stage cannot be empty")
-    .refine(
-      (val) =>
-        val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim()),
-      "Stage must contain only alphanumeric characters, hyphens, and underscores"
-    )
-    .transform((val) => val.trim()),
-
-  optionalStage: z
-    .string()
-    .optional()
-    .refine(
-      (val) =>
-        !val ||
-        (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())),
-      "Stage must contain only alphanumeric characters, hyphens, and underscores"
-    )
-    .transform((val) => val?.trim() || ""),
-
-  token: z.string().min(1, "Token cannot be empty"),
-
   commentMode: z
     .string()
     .default("on-success")
@@ -75,6 +44,35 @@ const CommonFieldSchemas = {
     )
     .transform((val) => validateMaxOutputSize(val))
     .default(50_000),
+  operation: z
+    .string()
+    .min(1, "Operation is required and cannot be empty")
+    .refine((val) => isValidOperation(val), {
+      message: "Invalid operation. Must be one of: deploy, diff, remove, stage",
+    })
+    .transform((val) => val as SSTOperation),
+
+  optionalStage: z
+    .string()
+    .optional()
+    .refine(
+      (val) =>
+        !val ||
+        (val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim())),
+      "Stage must contain only alphanumeric characters, hyphens, and underscores"
+    )
+    .transform((val) => val?.trim() || ""),
+
+  prefix: z
+    .string()
+    .refine((val) => val.length <= 10, {
+      message: "Prefix must be 10 characters or less",
+    })
+    .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
+      message:
+        "Prefix must contain only lowercase letters, numbers, and hyphens",
+    })
+    .default("pr-"),
 
   runner: z
     .string()
@@ -83,6 +81,18 @@ const CommonFieldSchemas = {
       message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(", ")}`,
     })
     .transform((val) => val as SSTRunner),
+
+  stage: z
+    .string()
+    .min(1, "Stage cannot be empty")
+    .refine(
+      (val) =>
+        val.trim().length > 0 && STAGE_VALIDATION_PATTERN.test(val.trim()),
+      "Stage must contain only alphanumeric characters, hyphens, and underscores"
+    )
+    .transform((val) => val.trim()),
+
+  token: z.string().min(1, "Token cannot be empty"),
 
   truncationLength: z
     .number()
@@ -99,28 +109,17 @@ const CommonFieldSchemas = {
       message: "Truncation length must be between 1 and 100 characters",
     })
     .default(26),
-
-  prefix: z
-    .string()
-    .refine((val) => val.length <= 10, {
-      message: "Prefix must be 10 characters or less",
-    })
-    .refine((val) => PREFIX_VALIDATION_PATTERN.test(val), {
-      message:
-        "Prefix must contain only lowercase letters, numbers, and hyphens",
-    })
-    .default("pr-"),
 };
 
 /**
  * Base schema for SST infrastructure operations
  */
 const BaseInfrastructureSchema = z.object({
-  token: CommonFieldSchemas.token,
   commentMode: CommonFieldSchemas.commentMode.optional(),
   failOnError: CommonFieldSchemas.failOnError.optional(),
   maxOutputSize: CommonFieldSchemas.maxOutputSize.optional(),
   runner: CommonFieldSchemas.runner.optional(),
+  token: CommonFieldSchemas.token,
 });
 
 /**
@@ -153,8 +152,8 @@ const RemoveInputsSchema = z
 const StageInputsSchema = z
   .object({
     operation: z.literal("stage"),
-    truncationLength: CommonFieldSchemas.truncationLength.optional(),
     prefix: CommonFieldSchemas.prefix.optional(),
+    truncationLength: CommonFieldSchemas.truncationLength.optional(),
   })
   .strict();
 
@@ -185,9 +184,10 @@ export class ValidationError extends Error {
     message: string,
     field: string,
     value: unknown,
-    suggestions: string[] = []
+    suggestions: string[] = [],
+    options?: { cause?: unknown }
   ) {
-    super(message);
+    super(message, options);
     this.name = "ValidationError";
     this.field = field;
     this.value = value;
@@ -207,19 +207,19 @@ function filterInputsByOperation(
     // Stage operations only need these fields
     return {
       operation: rawInputs.operation,
-      truncationLength: rawInputs.truncationLength,
       prefix: rawInputs.prefix,
+      truncationLength: rawInputs.truncationLength,
     };
   }
   // Infrastructure operations (deploy, diff, remove) need these fields
   return {
-    operation: rawInputs.operation,
-    stage: rawInputs.stage,
-    token: rawInputs.token,
     commentMode: rawInputs.commentMode,
     failOnError: rawInputs.failOnError,
     maxOutputSize: rawInputs.maxOutputSize,
+    operation: rawInputs.operation,
     runner: rawInputs.runner,
+    stage: rawInputs.stage,
+    token: rawInputs.token,
   };
 }
 
@@ -236,7 +236,7 @@ export function parseOperationInputs(
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
-      const issue = error.issues[0]; // Focus on first error for clarity
+      const [issue] = error.issues; // Focus on first error for clarity
       if (!issue) {
         throw error;
       }
@@ -249,11 +249,13 @@ export function parseOperationInputs(
         operation
       );
 
+      // biome-ignore lint/style/useErrorCause: cause is forwarded via the options param to super() in ValidationError's constructor
       throw new ValidationError(
         issue.message,
         String(fieldName),
         rawInputs[String(fieldName)],
-        suggestions
+        suggestions,
+        { cause: error }
       );
     }
     throw error;
@@ -437,7 +439,7 @@ export function validateInput<T>(
     return schema.parse(value);
   } catch (error) {
     if (error instanceof z.ZodError && error.issues.length > 0) {
-      const issue = error.issues[0];
+      const [issue] = error.issues;
       if (!issue) {
         throw error;
       }
@@ -448,7 +450,10 @@ export function validateInput<T>(
         "unknown"
       );
 
-      throw new ValidationError(issue.message, fieldName, value, suggestions);
+      // biome-ignore lint/style/useErrorCause: cause is forwarded via the options param to super() in ValidationError's constructor
+      throw new ValidationError(issue.message, fieldName, value, suggestions, {
+        cause: error,
+      });
     }
     throw error;
   }
@@ -458,8 +463,8 @@ export function validateInput<T>(
  * Create operation-specific validation context
  */
 export interface ValidationContext {
-  isProduction: boolean;
   allowFakeTokens: boolean;
+  isProduction: boolean;
 }
 
 /**
@@ -532,10 +537,10 @@ export function createValidationContext(
   env: Record<string, string | undefined> = process.env
 ): ValidationContext {
   return {
+    allowFakeTokens: Boolean(env.NODE_ENV === "test" || env.CI !== "true"),
     isProduction: Boolean(
       env.GITHUB_REF === "refs/heads/main" ||
         env.GITHUB_REF?.includes("refs/tags/")
     ),
-    allowFakeTokens: Boolean(env.NODE_ENV === "test" || env.CI !== "true"),
   };
 }

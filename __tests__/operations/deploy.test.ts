@@ -18,45 +18,45 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
   let mockGitHubClient: GitHubClient;
 
   const mockOperationOptions: OperationOptions = {
-    stage: "staging",
-    token: "ghp_test_token",
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
+    stage: "staging",
+    token: "ghp_test_token",
   };
 
   const mockCLIResult: SSTCommandResult = {
-    output: "SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n",
-    exitCode: 0,
-    duration: 45_000,
     command: "sst deploy --stage staging",
-    truncated: false,
-    stdout: "SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n",
-    stderr: "",
-    success: true,
-    stage: "staging",
+    duration: 45_000,
+    exitCode: 0,
     operation: "deploy",
+    output: "SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n",
+    stage: "staging",
+    stderr: "",
+    stdout: "SST Deploy\nApp: test-app\nStage: staging\n\n✓ Complete\n",
+    success: true,
+    truncated: false,
   };
 
   const mockDeployResult: DeployResult = {
-    success: true,
-    operation: "deploy",
-    stage: "staging",
     app: "test-app",
-    rawOutput: mockCLIResult.output,
-    exitCode: 0,
-    truncated: false,
     completionStatus: "complete",
-    resourceChanges: 3,
+    exitCode: 0,
+    operation: "deploy",
     outputs: [
       { key: "API", value: "https://api.staging.example.com" },
       { key: "Web", value: "https://staging.example.com" },
     ],
+    rawOutput: mockCLIResult.output,
+    resourceChanges: 3,
     resources: [
-      { type: "Function", name: "test-app-staging-handler", status: "created" },
-      { type: "Api", name: "test-app-staging-api", status: "created" },
-      { type: "Website", name: "test-app-staging-web", status: "created" },
+      { name: "test-app-staging-handler", status: "created", type: "Function" },
+      { name: "test-app-staging-api", status: "created", type: "Api" },
+      { name: "test-app-staging-web", status: "created", type: "Website" },
     ],
+    stage: "staging",
+    success: true,
+    truncated: false,
   };
 
   beforeEach(() => {
@@ -105,9 +105,9 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
         "deploy",
         "staging",
         {
-          timeout: 900_000,
           maxOutputSize: 50_000,
           runner: undefined,
+          timeout: 900_000,
         }
       );
 
@@ -159,39 +159,39 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
 
     it("should report failed deployment with error details", async () => {
       const failureCLIResult: SSTCommandResult = {
-        output: SST_DEPLOY_FAILURE_OUTPUT,
-        exitCode: 1,
-        duration: 30_000,
         command: "sst deploy --stage staging",
-        truncated: false,
-        stdout: SST_DEPLOY_FAILURE_OUTPUT,
-        stderr: "Deployment failed due to permission errors",
-        success: false,
-        stage: "staging",
+        duration: 30_000,
+        exitCode: 1,
         operation: "deploy",
+        output: SST_DEPLOY_FAILURE_OUTPUT,
+        stage: "staging",
+        stderr: "Deployment failed due to permission errors",
+        stdout: SST_DEPLOY_FAILURE_OUTPUT,
+        success: false,
+        truncated: false,
       };
 
       const failureDeployResult: DeployResult = {
-        success: false,
-        operation: "deploy",
-        stage: "staging",
         app: "my-sst-app",
-        rawOutput: SST_DEPLOY_FAILURE_OUTPUT,
-        exitCode: 1,
-        truncated: false,
         completionStatus: "failed",
-        resourceChanges: 1,
+        error: "Deployment failed due to permission errors",
+        exitCode: 1,
+        operation: "deploy",
         outputs: [],
-        resources: [
-          {
-            type: "Function",
-            name: "my-sst-app-staging-handler",
-            status: "created",
-          },
-        ],
         permalink:
           "https://console.sst.dev/my-sst-app/staging/deployments/ghi789",
-        error: "Deployment failed due to permission errors",
+        rawOutput: SST_DEPLOY_FAILURE_OUTPUT,
+        resourceChanges: 1,
+        resources: [
+          {
+            name: "my-sst-app-staging-handler",
+            status: "created",
+            type: "Function",
+          },
+        ],
+        stage: "staging",
+        success: false,
+        truncated: false,
       };
 
       // Mock parser to return failure result
@@ -244,14 +244,14 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
     it("should truncate large CLI outputs while preserving key information", async () => {
       const largeCLIResult: SSTCommandResult = {
         ...mockCLIResult,
-        truncated: true,
         output: `${mockCLIResult.output}... output truncated`,
+        truncated: true,
       };
 
       const truncatedDeployResult: DeployResult = {
         ...mockDeployResult,
-        truncated: true,
         rawOutput: largeCLIResult.output,
+        truncated: true,
       };
 
       const _mockParse = vi

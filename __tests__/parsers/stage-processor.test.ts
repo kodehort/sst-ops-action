@@ -196,8 +196,8 @@ describe("Stage Processor - GitHub Context Processing", () => {
         });
 
         const result = processor.process({
-          truncationLength: 15,
           prefix: "pr-",
+          truncationLength: 15,
         }); // Custom truncation length of 15
 
         expect(result.success).toBe(true);
@@ -233,8 +233,8 @@ describe("Stage Processor - GitHub Context Processing", () => {
         });
 
         const result = processor.process({
-          truncationLength: 26,
           prefix: "fix-",
+          truncationLength: 26,
         }); // Custom prefix 'fix-'
 
         expect(result.success).toBe(true);
@@ -250,8 +250,8 @@ describe("Stage Processor - GitHub Context Processing", () => {
         });
 
         const result = processor.process({
-          truncationLength: 26,
           prefix: "",
+          truncationLength: 26,
         }); // Empty prefix
 
         expect(result.success).toBe(true);
@@ -267,8 +267,8 @@ describe("Stage Processor - GitHub Context Processing", () => {
         });
 
         const result = processor.process({
-          truncationLength: 26,
           prefix: "custom-",
+          truncationLength: 26,
         }); // Custom prefix
 
         expect(result.success).toBe(true);
@@ -284,8 +284,8 @@ describe("Stage Processor - GitHub Context Processing", () => {
         });
 
         const result = processor.process({
-          truncationLength: 20,
           prefix: "issue-",
+          truncationLength: 20,
         }); // Custom prefix and truncation
 
         expect(result.success).toBe(true);

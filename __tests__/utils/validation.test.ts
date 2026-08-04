@@ -28,9 +28,9 @@ describe("Input Validation", () => {
   describe("createValidationContext", () => {
     it("should create context from environment variables", () => {
       const env = {
+        CI: "true",
         GITHUB_REF: "refs/heads/main",
         NODE_ENV: "test",
-        CI: "true",
       };
 
       const context = createValidationContext(env);
@@ -41,8 +41,8 @@ describe("Input Validation", () => {
 
     it("should detect production from tag refs", () => {
       const env = {
-        GITHUB_REF: "refs/tags/v1.0.0",
         CI: "true",
+        GITHUB_REF: "refs/tags/v1.0.0",
       };
 
       const context = createValidationContext(env);
@@ -88,13 +88,13 @@ describe("Input Validation", () => {
 
       it("should validate deploy operation with explicit stage", () => {
         const inputs = {
-          operation: "deploy",
-          token: "ghp_test_token",
-          stage: "production",
           commentMode: "always",
           failOnError: false,
           maxOutputSize: 100_000,
+          operation: "deploy",
           runner: "npm",
+          stage: "production",
+          token: "ghp_test_token",
         };
 
         const result = OperationInputsSchema.parse(inputs);
@@ -123,8 +123,8 @@ describe("Input Validation", () => {
       it("should validate diff operation with required stage", () => {
         const inputs = {
           operation: "diff",
-          token: "ghp_test_token",
           stage: "staging",
+          token: "ghp_test_token",
         };
 
         const result = OperationInputsSchema.parse(inputs);
@@ -148,8 +148,8 @@ describe("Input Validation", () => {
       it("should reject diff operation with empty stage", () => {
         const inputs = {
           operation: "diff",
-          token: "ghp_test_token",
           stage: "",
+          token: "ghp_test_token",
         };
 
         expect(() => OperationInputsSchema.parse(inputs)).toThrow();
@@ -160,8 +160,8 @@ describe("Input Validation", () => {
       it("should validate remove operation with required stage", () => {
         const inputs = {
           operation: "remove",
-          token: "ghp_test_token",
           stage: "pr-123",
+          token: "ghp_test_token",
         };
 
         const result = OperationInputsSchema.parse(inputs);
@@ -185,8 +185,8 @@ describe("Input Validation", () => {
       it("should reject remove operation with empty stage", () => {
         const inputs = {
           operation: "remove",
-          token: "ghp_test_token",
           stage: "",
+          token: "ghp_test_token",
         };
 
         expect(() => OperationInputsSchema.parse(inputs)).toThrow();
@@ -197,8 +197,8 @@ describe("Input Validation", () => {
       it("should validate stage operation with only stage-specific parameters", () => {
         const inputs = {
           operation: "stage",
-          truncationLength: 20,
           prefix: "feat-",
+          truncationLength: 20,
         };
 
         const result = OperationInputsSchema.parse(inputs);
@@ -248,8 +248,8 @@ describe("Input Validation", () => {
       it("should parse valid operation inputs successfully", () => {
         const rawInputs = {
           operation: "deploy",
-          token: "ghp_test_token",
           stage: "production",
+          token: "ghp_test_token",
         };
 
         const result = parseOperationInputs(rawInputs);
@@ -284,8 +284,8 @@ describe("Input Validation", () => {
       it("should validate operation inputs with context", () => {
         const rawInputs = {
           operation: "deploy",
-          token: "ghp_test_token",
           stage: "staging",
+          token: "ghp_test_token",
         };
 
         const result = validateOperationWithContext(rawInputs);
@@ -298,8 +298,8 @@ describe("Input Validation", () => {
       it("should reject production remove without confirmation", () => {
         const rawInputs = {
           operation: "remove",
-          token: "ghp_test_token",
           stage: "production",
+          token: "ghp_test_token",
         };
 
         const context = { isProduction: true };
@@ -312,11 +312,11 @@ describe("Input Validation", () => {
       it("should reject fake tokens in production for deploy", () => {
         const rawInputs = {
           operation: "deploy",
-          token: "fake-token",
           stage: "production",
+          token: "fake-token",
         };
 
-        const context = { isProduction: true, allowFakeTokens: false };
+        const context = { allowFakeTokens: false, isProduction: true };
 
         expect(() => validateOperationWithContext(rawInputs, context)).toThrow(
           ValidationError

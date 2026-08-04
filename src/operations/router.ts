@@ -281,28 +281,28 @@ function transformDeployResult(
   result: ReturnType<typeof validateRawDeployResult>
 ): DeployResult {
   return {
-    success: result.success,
-    operation: "deploy" as const,
-    stage: result.stage,
     app: result.metadata?.app || "unknown",
-    rawOutput: result.metadata?.rawOutput || "",
-    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
-    truncated: result.metadata?.truncated ?? false,
     completionStatus: result.success
       ? ("complete" as const)
       : ("failed" as const),
-    resourceChanges: result.resourceChanges || 0,
+    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
+    operation: "deploy" as const,
     outputs: result.outputs || [],
+    rawOutput: result.metadata?.rawOutput || "",
+    resourceChanges: result.resourceChanges || 0,
     resources: (result.resources || []).map((resource) => ({
-      type: resource.type,
       name: resource.name,
       status: normalizeResourceStatus(
         resource.status,
         resource.name,
         resource.type
       ),
+      type: resource.type,
       ...(resource.timing && { timing: resource.timing }),
     })),
+    stage: result.stage,
+    success: result.success,
+    truncated: result.metadata?.truncated ?? false,
     ...(result.error !== undefined && { error: result.error }),
     ...(result.permalink !== undefined && { permalink: result.permalink }),
   };
@@ -321,24 +321,24 @@ function transformDiffResult(
   result: ReturnType<typeof validateRawDiffResult>
 ): DiffResult {
   return {
-    success: result.success,
-    operation: "diff" as const,
-    stage: result.stage,
     app: result.metadata?.app || "unknown",
-    rawOutput: result.metadata?.rawOutput || "",
-    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
-    truncated: result.metadata?.truncated ?? false,
+    changeSummary: result.summary || "No changes detected",
+    changes: (result.changes || []).map((change) => ({
+      action: normalizeDiffAction(change.action, change.name, change.type),
+      name: change.name,
+      type: change.type,
+      ...(change.details !== undefined && { details: change.details }),
+    })),
     completionStatus: result.success
       ? ("complete" as const)
       : ("failed" as const),
+    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
+    operation: "diff" as const,
     plannedChanges: result.changesDetected || 0,
-    changeSummary: result.summary || "No changes detected",
-    changes: (result.changes || []).map((change) => ({
-      type: change.type,
-      name: change.name,
-      action: normalizeDiffAction(change.action, change.name, change.type),
-      ...(change.details !== undefined && { details: change.details }),
-    })),
+    rawOutput: result.metadata?.rawOutput || "",
+    stage: result.stage,
+    success: result.success,
+    truncated: result.metadata?.truncated ?? false,
     ...(result.error !== undefined && { error: result.error }),
   };
 }
@@ -356,24 +356,24 @@ function transformRemoveResult(
   result: ReturnType<typeof validateRawRemoveResult>
 ): RemoveResult {
   return {
-    success: result.success,
-    operation: "remove" as const,
-    stage: result.stage,
     app: result.metadata?.app || "unknown",
-    rawOutput: result.metadata?.rawOutput || "",
-    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
-    truncated: result.metadata?.truncated ?? false,
     completionStatus: result.completionStatus || "failed",
-    resourcesRemoved: result.resourcesRemoved || 0,
+    exitCode: result.metadata?.cliExitCode || (result.success ? 0 : 1),
+    operation: "remove" as const,
+    rawOutput: result.metadata?.rawOutput || "",
     removedResources: (result.removedResources || []).map((resource) => ({
-      type: resource.type,
       name: resource.name,
       status: normalizeRemoveStatus(
         resource.status,
         resource.name,
         resource.type
       ),
+      type: resource.type,
     })),
+    resourcesRemoved: result.resourcesRemoved || 0,
+    stage: result.stage,
+    success: result.success,
+    truncated: result.metadata?.truncated ?? false,
     ...(result.error !== undefined && { error: result.error }),
   };
 }
@@ -405,15 +405,15 @@ function createFailureResult(
   options: OperationOptions
 ): OperationResult {
   const baseResult = {
-    success: false,
-    operation: operationType,
-    stage: options.stage,
     app: "unknown",
-    rawOutput: error.stack || error.message,
-    exitCode: 1,
-    truncated: false,
     completionStatus: "failed" as const,
     error: error.message,
+    exitCode: 1,
+    operation: operationType,
+    rawOutput: error.stack || error.message,
+    stage: options.stage,
+    success: false,
+    truncated: false,
   };
 
   // Add operation-specific fields
@@ -422,33 +422,33 @@ function createFailureResult(
       return {
         ...baseResult,
         operation: "deploy" as const,
-        resourceChanges: 0,
         outputs: [],
+        resourceChanges: 0,
         resources: [],
       };
     case "diff":
       return {
         ...baseResult,
-        operation: "diff" as const,
-        plannedChanges: 0,
         changeSummary: "Operation failed",
         changes: [],
+        operation: "diff" as const,
+        plannedChanges: 0,
       };
     case "remove":
       return {
         ...baseResult,
         operation: "remove" as const,
-        resourcesRemoved: 0,
         removedResources: [],
+        resourcesRemoved: 0,
       };
     case "stage":
       return {
         ...baseResult,
-        operation: "stage" as const,
         computedStage: options.stage,
-        ref: "",
         eventName: "unknown",
         isPullRequest: false,
+        operation: "stage" as const,
+        ref: "",
       };
     default: {
       // Exhaustive check for TypeScript

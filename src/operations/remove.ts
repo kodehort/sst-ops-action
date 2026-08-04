@@ -38,9 +38,9 @@ export class RemoveOperation extends BaseOperation<RemoveResult> {
       "remove",
       options.stage,
       {
-        timeout: this.defaultTimeout,
         maxOutputSize: options.maxOutputSize,
         runner: options.runner,
+        timeout: this.defaultTimeout,
       }
     );
 

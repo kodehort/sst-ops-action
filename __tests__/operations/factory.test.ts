@@ -10,9 +10,9 @@ const mockSSTExecutor = {
 } as unknown as SSTCLIExecutor;
 
 const mockGitHubClient = {
-  postPRComment: vi.fn(),
   createOrUpdateComment: vi.fn(),
   createWorkflowSummary: vi.fn(),
+  postPRComment: vi.fn(),
 } as unknown as GitHubClient;
 
 describe("Operation Factory - Operation Creation", () => {

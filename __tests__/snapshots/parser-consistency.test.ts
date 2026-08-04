@@ -54,7 +54,6 @@ function testParserConsistency(operation: OperationWithParser): void {
     const snapshots = listSnapshots(operation);
 
     if (snapshots.length === 0) {
-      // biome-ignore lint/suspicious/noSkippedTests: This is intentional for empty test cases
       it.skip(`No input files found for ${operation}`, () => {
         // Empty test case for operations with no input files
       });
@@ -244,9 +243,9 @@ describe("Parser Consistency Testing", () => {
       // Test each operation's permalinks
       operations.forEach((operation) => {
         const snapshots = listSnapshots(operation);
-        const permalinkSnapshots = snapshots.filter((name) => {
-          return loadInput(operation, name).includes("↗  Permalink");
-        });
+        const permalinkSnapshots = snapshots.filter((name) =>
+          loadInput(operation, name).includes("↗  Permalink")
+        );
 
         // Test permalink extraction for snapshots that have them
         permalinkSnapshots.forEach((name) => {

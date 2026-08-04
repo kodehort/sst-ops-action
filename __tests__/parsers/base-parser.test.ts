@@ -22,26 +22,26 @@ const LINE_ENDING_PATTERN = /\r?\n/;
 class TestParser {
   protected readonly patterns = {
     APP_INFO: APP_INFO_PATTERN,
-    STAGE_INFO: STAGE_INFO_PATTERN,
-    PERMALINK: PERMALINK_PATTERN,
-    COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
-    COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
     COMPLETION_FAILED: COMPLETION_FAILED_PATTERN,
+    COMPLETION_PARTIAL: COMPLETION_PARTIAL_PATTERN,
+    COMPLETION_SUCCESS: COMPLETION_SUCCESS_PATTERN,
+    PERMALINK: PERMALINK_PATTERN,
+    STAGE_INFO: STAGE_INFO_PATTERN,
   };
 
   parse(output: string, stage: string, exitCode: number): BaseOperationResult {
     const commonInfo = this.parseCommonInfo(output.split("\n"));
 
     return {
-      success: exitCode === 0,
-      operation: "deploy",
-      stage,
-      exitCode,
       app: commonInfo.app || "",
       completionStatus: commonInfo.completionStatus || "failed",
+      exitCode,
+      operation: "deploy",
       permalink: commonInfo.permalink || "",
-      truncated: false,
       rawOutput: output,
+      stage,
+      success: exitCode === 0,
+      truncated: false,
     };
   }
 

@@ -9,14 +9,14 @@ class TestOperationParser extends OperationParser<BaseOperationResult> {
     const commonInfo = this.parseCommonInfo(lines);
 
     return {
-      success: this.isSuccessfulOperation(output, exitCode),
-      operation: "test" as any,
-      stage,
       app: commonInfo.app || "test-app",
-      rawOutput: output,
-      exitCode,
-      truncated: false,
       completionStatus: commonInfo.completionStatus || "failed",
+      exitCode,
+      operation: "test" as any,
+      rawOutput: output,
+      stage,
+      success: this.isSuccessfulOperation(output, exitCode),
+      truncated: false,
       ...commonInfo,
     };
   }

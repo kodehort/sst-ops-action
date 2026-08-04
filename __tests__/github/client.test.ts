@@ -15,21 +15,21 @@ const mockOctokit = {
   rest: {
     issues: {
       createComment: vi.fn(),
-      updateComment: vi.fn(),
       listComments: vi.fn(),
+      updateComment: vi.fn(),
     },
   },
 };
 
 // Mock github module
 vi.mock("@actions/github", () => ({
-  getOctokit: vi.fn(),
   context: {
-    repo: { owner: "test-owner", repo: "test-repo" },
     payload: {
       pull_request: { number: 123 },
     },
+    repo: { owner: "test-owner", repo: "test-repo" },
   },
+  getOctokit: vi.fn(),
 }));
 
 // Mock summary
@@ -67,25 +67,25 @@ describe("GitHub Client - API Integration", () => {
 
   describe("createOrUpdateComment", () => {
     const mockDeployResult = createMockDeployResult({
-      stage: "staging",
       app: "test-app",
-      rawOutput: "Deploy successful",
-      resourceChanges: 3,
       outputs: [
         { key: "app", value: "https://app.example.com" },
         { key: "api", value: "https://api.example.com" },
       ],
       permalink: "https://console.sst.dev/test-app/staging",
+      rawOutput: "Deploy successful",
+      resourceChanges: 3,
+      stage: "staging",
     }) as DeployResult;
 
     it('should create comment when comment mode is "always"', async () => {
       await client.createOrUpdateComment(mockDeployResult, "always");
 
       expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
+        body: expect.stringContaining("🚀 DEPLOY SUCCESS"),
+        issue_number: 123,
         owner: "test-owner",
         repo: "test-repo",
-        issue_number: 123,
-        body: expect.stringContaining("🚀 DEPLOY SUCCESS"),
       });
     });
 
@@ -104,19 +104,19 @@ describe("GitHub Client - API Integration", () => {
     it('should create comment on failure when mode is "on-failure"', async () => {
       const failedResult: DeployResult = {
         ...mockDeployResult,
-        success: false,
-        exitCode: 1,
         completionStatus: "failed",
         error: "Deployment failed",
+        exitCode: 1,
+        success: false,
       };
 
       await client.createOrUpdateComment(failedResult, "on-failure");
 
       expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
+        body: expect.stringContaining("❌ DEPLOY FAILED"),
+        issue_number: 123,
         owner: "test-owner",
         repo: "test-repo",
-        issue_number: 123,
-        body: expect.stringContaining("❌ DEPLOY FAILED"),
       });
     });
 
@@ -128,8 +128,8 @@ describe("GitHub Client - API Integration", () => {
 
     it("should update existing comment instead of creating new one", async () => {
       const existingComment = {
-        id: 456,
         body: "<!-- sst-deploy -->\nOld comment content",
+        id: 456,
       };
 
       mockOctokit.rest.issues.listComments.mockResolvedValue({
@@ -142,10 +142,10 @@ describe("GitHub Client - API Integration", () => {
 
       expect(mockOctokit.rest.issues.listComments).toHaveBeenCalled();
       expect(mockOctokit.rest.issues.updateComment).toHaveBeenCalledWith({
+        body: expect.stringContaining("<!-- sst-deploy -->"),
+        comment_id: 456,
         owner: "test-owner",
         repo: "test-repo",
-        comment_id: 456,
-        body: expect.stringContaining("<!-- sst-deploy -->"),
       });
     });
 
@@ -178,17 +178,17 @@ describe("GitHub Client - API Integration", () => {
 
   describe("createWorkflowSummary", () => {
     const mockDiffResult: DiffResult = {
-      success: true,
-      operation: "diff",
-      stage: "staging",
       app: "test-app",
-      rawOutput: "No changes detected",
-      exitCode: 0,
-      truncated: false,
-      completionStatus: "complete",
-      plannedChanges: 0,
       changeSummary: "No infrastructure changes detected",
       changes: [],
+      completionStatus: "complete",
+      exitCode: 0,
+      operation: "diff",
+      plannedChanges: 0,
+      rawOutput: "No changes detected",
+      stage: "staging",
+      success: true,
+      truncated: false,
     };
 
     it("should create workflow summary for successful operation", async () => {
@@ -204,10 +204,10 @@ describe("GitHub Client - API Integration", () => {
     it("should create workflow summary for failed operation", async () => {
       const failedResult: DiffResult = {
         ...mockDiffResult,
-        success: false,
-        exitCode: 1,
         completionStatus: "failed",
         error: "Operation failed",
+        exitCode: 1,
+        success: false,
       };
 
       await client.createWorkflowSummary(failedResult);
@@ -232,16 +232,16 @@ describe("GitHub Client - API Integration", () => {
 
   describe("uploadArtifacts", () => {
     const mockRemoveResult: RemoveResult = {
-      success: true,
-      operation: "remove",
-      stage: "pr-123",
       app: "test-app",
-      rawOutput: "Resources removed successfully",
-      exitCode: 0,
-      truncated: false,
       completionStatus: "complete",
-      resourcesRemoved: 5,
+      exitCode: 0,
+      operation: "remove",
+      rawOutput: "Resources removed successfully",
       removedResources: [],
+      resourcesRemoved: 5,
+      stage: "pr-123",
+      success: true,
+      truncated: false,
     };
 
     it("should upload artifacts successfully", async () => {
@@ -253,9 +253,9 @@ describe("GitHub Client - API Integration", () => {
 
     it("should use custom artifact options", async () => {
       await client.uploadArtifacts(mockRemoveResult, {
+        compressionLevel: 9,
         name: "custom-artifact",
         retentionDays: 7,
-        compressionLevel: 9,
       });
 
       // Verify DefaultArtifactClient constructor was called
@@ -284,21 +284,21 @@ describe("GitHub Client - API Integration", () => {
   describe("comment content formatting", () => {
     it("should format deploy comment with URLs and resource changes", async () => {
       const deployResult: DeployResult = {
-        success: true,
-        operation: "deploy",
-        stage: "production",
         app: "my-app",
-        rawOutput: "Deploy completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourceChanges: 5,
+        exitCode: 0,
+        operation: "deploy",
         outputs: [
           { key: "app", value: "https://my-app.com" },
           { key: "api", value: "https://api.my-app.com" },
         ],
-        resources: [],
         permalink: "https://console.sst.dev/my-app/production",
+        rawOutput: "Deploy completed",
+        resourceChanges: 5,
+        resources: [],
+        stage: "production",
+        success: true,
+        truncated: false,
       };
 
       await client.createOrUpdateComment(deployResult, "always");
@@ -318,20 +318,20 @@ describe("GitHub Client - API Integration", () => {
 
     it("should format diff comment with changes summary", async () => {
       const diffResult: DiffResult = {
-        success: true,
-        operation: "diff",
-        stage: "staging",
         app: "my-app",
-        rawOutput: "Diff completed",
-        exitCode: 0,
-        truncated: false,
-        completionStatus: "complete",
-        plannedChanges: 5,
         changeSummary: "3 resources to create, 2 to update",
         changes: [
-          { type: "Lambda", name: "Function1", action: "create" },
-          { type: "S3", name: "Bucket1", action: "update" },
+          { action: "create", name: "Function1", type: "Lambda" },
+          { action: "update", name: "Bucket1", type: "S3" },
         ],
+        completionStatus: "complete",
+        exitCode: 0,
+        operation: "diff",
+        plannedChanges: 5,
+        rawOutput: "Diff completed",
+        stage: "staging",
+        success: true,
+        truncated: false,
       };
 
       await client.createOrUpdateComment(diffResult, "always");
@@ -344,19 +344,19 @@ describe("GitHub Client - API Integration", () => {
 
     it("should format remove comment with cleanup status", async () => {
       const removeResult: RemoveResult = {
-        success: true,
-        operation: "remove",
-        stage: "pr-123",
         app: "my-app",
-        rawOutput: "Cleanup completed",
-        exitCode: 0,
-        truncated: false,
         completionStatus: "complete",
-        resourcesRemoved: 8,
+        exitCode: 0,
+        operation: "remove",
+        rawOutput: "Cleanup completed",
         removedResources: [
-          { type: "Lambda", name: "TestFunction", status: "removed" },
-          { type: "S3", name: "TestBucket", status: "removed" },
+          { name: "TestFunction", status: "removed", type: "Lambda" },
+          { name: "TestBucket", status: "removed", type: "S3" },
         ],
+        resourcesRemoved: 8,
+        stage: "pr-123",
+        success: true,
+        truncated: false,
       };
 
       await client.createOrUpdateComment(removeResult, "always");
