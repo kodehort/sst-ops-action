@@ -1,3 +1,43 @@
+# Release v0.7.26
+
+**Release Date:** 2026-08-04
+**Previous Version:** v0.7.25
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1585450 bytes)
+- **Integrity Hash:** `26274a564dd424d3...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.26
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.25...v0.7.26)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.26/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.25...v0.7.26
+
+---
+
 # Release v0.7.25
 
 **Release Date:** 2026-08-04
