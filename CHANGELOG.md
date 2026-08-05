@@ -1,3 +1,48 @@
+# Release v0.7.27
+
+**Release Date:** 2026-08-05
+**Previous Version:** v0.7.26
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps-dev): bump postcss from 8.5.22 to 8.5.25 (#122) (`acf0a1d`)
+- chore(deps): bump brace-expansion from 2.0.3 to 2.1.4 (#123) (`aaba4eb`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1585450 bytes)
+- **Integrity Hash:** `68e4df3e1c7dda69...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.27
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.26...v0.7.27)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.27/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.26...v0.7.27
+
+---
+
 # Release v0.7.26
 
 **Release Date:** 2026-08-04
