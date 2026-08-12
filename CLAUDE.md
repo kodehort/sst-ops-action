@@ -21,7 +21,7 @@ bun run test
 # Run tests in watch mode
 bun test:watch
 
-# Run tests with coverage (90% thresholds enforced)
+# Run tests with coverage (ratchet thresholds enforced, see vitest.config.ts)
 bun run test:coverage
 
 # Type checking
@@ -78,7 +78,11 @@ The action implements strict input validation with fail-fast behavior for critic
 
 ### Testing Strategy
 
-- Comprehensive test suite with 90% coverage thresholds
+- Comprehensive test suite with enforced coverage thresholds, set as a ratchet
+  just under current coverage (89% statements/lines, 79% branches, 97% functions).
+  Raise them in `vitest.config.ts` as coverage improves; never lower them. Keep
+  the `thresholds` object flat — Vitest reads an unrecognised key such as the
+  former `global` as a glob pattern, which silently enforces nothing.
 - Test organization mirrors source structure in `__tests__/`
 - Vitest for testing framework with global test setup
 - Integration tests for end-to-end operation validation

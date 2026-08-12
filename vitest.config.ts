@@ -20,13 +20,15 @@ export default defineConfig({
       ],
       provider: "v8",
       reporter: ["text", "json", "html"],
+      // Thresholds are flat here on purpose. Vitest treats an unrecognised key
+      // as a glob pattern, so the previous `global: { ... }` nesting matched no
+      // files and silently enforced nothing. Values are a ratchet set just
+      // under the current numbers: raise them as coverage improves, never lower.
       thresholds: {
-        global: {
-          branches: 90,
-          functions: 90,
-          lines: 90,
-          statements: 90,
-        },
+        branches: 79,
+        functions: 97,
+        lines: 89,
+        statements: 89,
       },
     },
     environment: "node",
