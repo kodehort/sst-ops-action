@@ -148,3 +148,37 @@ The `GitHubClient` (`src/github/client.ts`) uses the `OperationFormatter` for al
 - Resource change breakdowns with action icons
 - Console integration links
 - Consistent styling across all operations
+
+<!-- fallow:setup-hooks:start -->
+## Fallow local gate
+
+Before any `jj commit` (`ci`), `jj describe` (`desc`), `jj split`, `jj squash`, or `jj git push`, run `bun fallow audit --format json --quiet --explain --gate-marker agent`. If the verdict is `fail`, fix the reported findings before retrying. Treat JSON runtime errors like `{ "error": true, ... }` as non-blocking.
+
+A `PreToolUse` hook (`.claude/hooks/fallow-gate.sh`) enforces this automatically and exits 2 on a failing verdict. CI enforces the same audit in the `quality-gates` job (`.github/workflows/ci.yml`), which needs `fetch-depth: 0` to resolve the base ref and must run before the coverage step.
+
+Audit defaults to `gate=new-only`: only findings introduced by the current changeset affect the verdict. Inherited findings on touched files are reported under `attribution` and annotated with `introduced: false`, but do not block the commit. Set `"audit": { "gate": "all" }` in `.fallowrc.jsonc` to gate every finding in changed files.
+
+For non-skill agents, treat the task map below as the local onboarding source: run the listed fallow command before destructive edits, before commits, and before pull request handoff.
+
+**Re-installing overwrites the gate script.** `fallow hooks install --target agent --agent claude` rewrites `.claude/hooks/fallow-gate.sh` from the stock template. Re-apply both `# LOCAL EDIT` patches afterwards — the `bun fallow` runner probe and the `is_jj_write_command` tokenizer — then re-run the classification check. Without them the gate installs, looks healthy, and intercepts nothing.
+
+Do not run the `--agent codex` target here: it appends a stock `AGENTS.md` block that contradicts this one (it says `git commit`/`git push` and points at `fallow.toml` rather than `.fallowrc.jsonc`), leaving two disagreeing instruction files. This block is maintained by hand; the `claude` target does not touch it.
+
+## Fallow task map
+
+| When the agent is about to... | Run |
+|---|---|
+| delete an "unused" export or file | `bun fallow dead-code --trace <file>:<export>` |
+| prove a TypeScript symbol's exact consumers before refactoring | `bun fallow dead-code --type-aware --symbol-impact <file>:<export-or-class.method>` |
+| delete an "unused" dependency | `bun fallow dead-code --trace-dependency <name>` |
+| commit or open a PR | `bun fallow audit --base <ref>` |
+| prioritize refactoring | `bun fallow health --hotspots --targets` |
+| ask who owns code | `bun fallow health --ownership` |
+| check untested-but-reachable code | `bun fallow health --coverage-gaps` |
+| consolidate duplication | `bun fallow dupes --trace dup:<fingerprint>` |
+| find feature flags | `bun fallow flags` |
+| check which architecture rules apply to a file before changing it | `bun fallow guard <files>` |
+| surface security candidates | `bun fallow security` |
+| understand a finding | `bun fallow explain <issue-type>` |
+| scope a monorepo | `--workspace <glob> / --changed-workspaces <ref>` (global flags, prefix any command) |
+<!-- fallow:setup-hooks:end -->

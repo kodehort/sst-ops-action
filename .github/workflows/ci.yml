@@ -27,19 +27,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        
+        with:
+          # Full history so the fallow audit can resolve its base ref
+          fetch-depth: 0
+
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
           bun-version: ${{ env.BUN_VERSION }}
           cache-key-suffix: -quality
-        
+
       - name: Type Check
         run: bun run typecheck
-        
+
       - name: Lint
         run: bun run lint
-        
+
+      # Runs before the coverage step on purpose: a coverage/ directory present
+      # in the working tree but absent from fallow's base snapshot makes
+      # pre-existing CRAP findings register as newly introduced, failing the
+      # gate spuriously. Exits 1 only on a `fail` verdict (gate: new-only, so
+      # only findings this changeset introduces count).
+      - name: Dead Code Audit
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            bun fallow audit --base "origin/$BASE_REF"
+          else
+            bun fallow audit
+          fi
+
       - name: Test with Coverage
         run: bun run test:coverage
         
