@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { rethrowZodError } from "../utils/zod-error";
 
 /**
  * Metadata schema common to all operations
@@ -21,7 +22,7 @@ const OperationMetadataSchema = z
  * Raw deploy operation result schema
  * Validates the result from DeployOperation.execute() before transformation
  */
-export const RawDeployResultSchema = z.object({
+const RawDeployResultSchema = z.object({
   error: z.string().optional(),
   metadata: OperationMetadataSchema,
   outputs: z
@@ -54,7 +55,7 @@ export type RawDeployResult = z.infer<typeof RawDeployResultSchema>;
  * Raw diff operation result schema
  * Validates the result from DiffOperation.execute() before transformation
  */
-export const RawDiffResultSchema = z.object({
+const RawDiffResultSchema = z.object({
   changes: z
     .array(
       z.object({
@@ -79,7 +80,7 @@ export type RawDiffResult = z.infer<typeof RawDiffResultSchema>;
  * Raw remove operation result schema
  * Validates the result from RemoveOperation.execute() before transformation
  */
-export const RawRemoveResultSchema = z.object({
+const RawRemoveResultSchema = z.object({
   completionStatus: z.enum(["complete", "partial", "failed"]).optional(),
   error: z.string().optional(),
   metadata: OperationMetadataSchema,
@@ -109,16 +110,7 @@ export function validateRawDeployResult(result: unknown): RawDeployResult {
   try {
     return RawDeployResultSchema.parse(result);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
-      );
-      throw new Error(
-        `Deploy operation result validation failed:\n${issues.join("\n")}`,
-        { cause: error }
-      );
-    }
-    throw error as Error;
+    rethrowZodError(error, "Deploy operation result");
   }
 }
 
@@ -132,16 +124,7 @@ export function validateRawDiffResult(result: unknown): RawDiffResult {
   try {
     return RawDiffResultSchema.parse(result);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
-      );
-      throw new Error(
-        `Diff operation result validation failed:\n${issues.join("\n")}`,
-        { cause: error }
-      );
-    }
-    throw error as Error;
+    rethrowZodError(error, "Diff operation result");
   }
 }
 
@@ -155,15 +138,6 @@ export function validateRawRemoveResult(result: unknown): RawRemoveResult {
   try {
     return RawRemoveResultSchema.parse(result);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
-      );
-      throw new Error(
-        `Remove operation result validation failed:\n${issues.join("\n")}`,
-        { cause: error }
-      );
-    }
-    throw error as Error;
+    rethrowZodError(error, "Remove operation result");
   }
 }

@@ -14,12 +14,11 @@
  * Top-level regex patterns for performance
  * These are used in helper functions and should not be recreated on each call
  */
-const URL_TEST_PATTERN = /^https?:\/\//;
 
 /**
  * Metadata patterns for application and stage information
  */
-export const MetadataPatterns = {
+const MetadataPatterns = {
   /** Matches: "App: my-app" or "➜ App: my-app" */
   app: /^(?:➜\s+)?App:\s+(.+)$/m,
 
@@ -33,7 +32,7 @@ export const MetadataPatterns = {
 /**
  * Completion status patterns
  */
-export const StatusPatterns = {
+const StatusPatterns = {
   /** Matches: "✗ Failed" */
   failed: /^✗\s+Failed\s*$/m,
 
@@ -46,7 +45,7 @@ export const StatusPatterns = {
 /**
  * Operation start marker patterns
  */
-export const OperationPatterns = {
+const OperationPatterns = {
   /** Matches: "Deploy: my-app" or "→ Deploy: my-app" */
   deploy: /^(?:→\s+)?Deploy:\s+(.+)$/m,
 
@@ -60,7 +59,7 @@ export const OperationPatterns = {
 /**
  * Resource patterns for parsing infrastructure changes
  */
-export const ResourcePatterns = {
+const ResourcePatterns = {
   /**
    * Matches resource creation lines
    * Format: "+ ResourceType resource-name (optional timing)"
@@ -99,7 +98,7 @@ export const ResourcePatterns = {
 /**
  * Output and URL patterns
  */
-export const OutputPatterns = {
+const OutputPatterns = {
   /**
    * Matches key-value output pairs
    * Format: "OutputKey: value" or "OutputKey = value"
@@ -117,7 +116,7 @@ export const OutputPatterns = {
 /**
  * Section and structure patterns
  */
-export const SectionPatterns = {
+const SectionPatterns = {
   /** Matches line containing only dashes (separator line) */
   dashSeparator: /^-+$/m,
   /** Matches: "✓ Generated" - marks start of diff section */
@@ -130,7 +129,7 @@ export const SectionPatterns = {
 /**
  * Common utility patterns
  */
-export const UtilityPatterns = {
+const UtilityPatterns = {
   /** Matches ANSI color codes */
   // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequences require control characters
   ansiCodes: /\x1b\[\d+m/g,
@@ -150,88 +149,16 @@ export const UtilityPatterns = {
 // biome-ignore lint/complexity/noStaticOnlyClass: This is a namespace-like pattern for organizing pattern utility functions
 export class PatternHelpers {
   /**
-   * Extract a single match from text using a pattern
-   * Returns the specified capture group or null if no match
-   *
-   * @param text Text to search
-   * @param pattern Regex pattern
-   * @param group Capture group index (default: 1)
-   * @returns Matched string or null
-   *
-   * @example
-   * ```typescript
-   * const app = PatternHelpers.extractMatch(output, MetadataPatterns.app);
-   * // Returns: "my-app" or null
-   * ```
-   */
-  static extractMatch(text: string, pattern: RegExp, group = 1): string | null {
-    const match = text.match(pattern);
-    return match?.[group]?.trim() || null;
-  }
-
-  /**
-   * Extract all matches from text using a pattern
-   * Returns array of strings from the specified capture group
-   *
-   * @param text Text to search
-   * @param pattern Regex pattern (will be made global if not already)
-   * @param group Capture group index (default: 1)
-   * @returns Array of matched strings
-   *
-   * @example
-   * ```typescript
-   * const urls = PatternHelpers.extractAllMatches(output, OutputPatterns.url, 2);
-   * // Returns: ["https://api.example.com", "https://web.example.com"]
-   * ```
-   */
-  static extractAllMatches(text: string, pattern: RegExp, group = 1): string[] {
-    const globalPattern = new RegExp(pattern.source, "gm");
-    return Array.from(text.matchAll(globalPattern), (m) =>
-      m[group]?.trim()
-    ).filter(Boolean) as string[];
-  }
-
-  /**
-   * Test if text matches any of the provided patterns
-   *
-   * @param text Text to test
-   * @param patterns Array of regex patterns
-   * @returns true if any pattern matches
-   *
-   * @example
-   * ```typescript
-   * const isComplete = PatternHelpers.matchesAny(output, [
-   *   StatusPatterns.success,
-   *   StatusPatterns.partial
-   * ]);
-   * ```
-   */
-  static matchesAny(text: string, patterns: RegExp[]): boolean {
-    return patterns.some((p) => p.test(text));
-  }
-
-  /**
-   * Test if text matches all of the provided patterns
-   *
-   * @param text Text to test
-   * @param patterns Array of regex patterns
-   * @returns true if all patterns match
-   */
-  static matchesAll(text: string, patterns: RegExp[]): boolean {
-    return patterns.every((p) => p.test(text));
-  }
-
-  /**
    * Clean text by removing ANSI codes and normalizing line endings
+   *
+   * Reached as `this.helpers.cleanText(...)` via the `helpers` alias on
+   * OperationParser, which fallow's static analysis cannot follow — hence the
+   * suppression rather than a deletion.
    *
    * @param text Text to clean
    * @returns Cleaned text
-   *
-   * @example
-   * ```typescript
-   * const clean = PatternHelpers.cleanText(rawOutput);
-   * ```
    */
+  // fallow-ignore-next-line unused-class-member
   static cleanText(text: string): string {
     return text
       .replace(UtilityPatterns.ansiCodes, "")
@@ -241,36 +168,6 @@ export class PatternHelpers {
       .join("\n")
       .replace(/\n{3,}/g, "\n\n") // Collapse excessive blank lines
       .trim();
-  }
-
-  /**
-   * Check if a string is a valid URL
-   *
-   * @param str String to test
-   * @returns true if string is a URL
-   */
-  static isUrl(str: string): boolean {
-    return URL_TEST_PATTERN.test(str);
-  }
-
-  /**
-   * Parse timing information from a string
-   *
-   * @param str String containing timing like "(2.1s)"
-   * @returns Timing in seconds or null
-   *
-   * @example
-   * ```typescript
-   * const timing = PatternHelpers.parseTiming("(2.1s)");
-   * // Returns: 2.1
-   * ```
-   */
-  static parseTiming(str: string): number | null {
-    const match = str.match(UtilityPatterns.timing);
-    if (!match?.[1]) {
-      return null;
-    }
-    return Number.parseFloat(match[1]);
   }
 }
 
@@ -286,8 +183,3 @@ export const SSTPatterns = {
   status: StatusPatterns,
   utilities: UtilityPatterns,
 } as const;
-
-/**
- * Type for pattern categories
- */
-export type SSTPatternCategory = keyof typeof SSTPatterns;

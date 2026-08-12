@@ -278,6 +278,34 @@ describe("Input Validation", () => {
           expect(validationError.suggestions.length).toBeGreaterThan(0);
         }
       });
+
+      it.each([
+        ["commentMode", "sometimes", "Valid comment modes are"],
+        ["failOnError", "maybe", "Supported values"],
+        ["runner", "deno", "Valid runners are"],
+      ])(
+        "should suggest valid values for an invalid %s",
+        (field, value, expectedSuggestion) => {
+          const rawInputs = {
+            operation: "deploy",
+            stage: "production",
+            token: "ghp_test_token",
+            [field]: value,
+          };
+
+          try {
+            parseOperationInputs(rawInputs);
+            expect.unreachable(`${field} should have failed validation`);
+          } catch (error) {
+            expect(error).toBeInstanceOf(ValidationError);
+            const validationError = error as ValidationError;
+            expect(validationError.field).toBe(field);
+            expect(validationError.suggestions.join("\n")).toContain(
+              expectedSuggestion
+            );
+          }
+        }
+      );
     });
 
     describe("validateOperationWithContext", () => {

@@ -53,32 +53,6 @@ export class GitHubClient {
   }
 
   /**
-   * Post a PR comment (simplified interface for operations)
-   */
-  async postPRComment(comment: string, operationType: string): Promise<void> {
-    if (!this.context.payload.pull_request) {
-      core.debug("Not in PR context, skipping comment creation");
-      return;
-    }
-
-    const commentWithMarker = `<!-- sst-${operationType} -->\n${comment}`;
-
-    try {
-      await this.octokit.rest.issues.createComment({
-        ...this.context.repo,
-        body: commentWithMarker,
-        issue_number: this.context.payload.pull_request?.number || 0,
-      });
-      core.info(`Successfully posted ${operationType} PR comment`);
-    } catch (error) {
-      throw new Error(
-        `GitHub API error: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error }
-      );
-    }
-  }
-
-  /**
    * Create or update PR comment based on operation result
    */
   async createOrUpdateComment(
