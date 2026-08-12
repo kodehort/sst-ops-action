@@ -24,12 +24,12 @@ branding:
   icon: 'cloud'
   color: 'orange'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 ```
 
 **Runtime Requirements:**
-- Node.js 20 or higher (handled automatically by GitHub Actions)
+- Node.js 24 or higher (handled automatically by GitHub Actions)
 - GitHub Actions environment
 - Repository with SST configuration
 
