@@ -187,6 +187,12 @@ jobs:
           bun run typecheck
           bun run lint
           bun run test
+          # Whole-tree dead-code check rather than the changed-files `audit`
+          # that CI runs: a release builds from main, where there is no base
+          # ref to diff against and `audit` would be a no-op. Scoped to dead
+          # code on purpose — `fallow health` reports pre-existing high-CRAP
+          # functions and would block every release until that debt is paid.
+          bun fallow check --fail-on-issues --quiet
           echo "✅ All quality gates passed"
 
       - name: Build Production Bundle
