@@ -160,6 +160,8 @@ Before any `jj commit` (`ci`), `jj describe` (`desc`), `jj split`, `jj squash`, 
 
 A `PreToolUse` hook (`.claude/hooks/fallow-gate.sh`) enforces this automatically and exits 2 on a failing verdict. CI enforces the same audit in the `quality-gates` job (`.github/workflows/ci.yml`), which needs `fetch-depth: 0` to resolve the base ref and must run before the coverage step.
 
+Releases gate differently. `.github/workflows/release.yml` runs `fallow check --fail-on-issues` over the whole tree, because a release builds from `main` where there is no base ref and the changed-files `audit` would pass vacuously. It stays scoped to dead code: `fallow health` reports pre-existing high-CRAP functions and would block every release until that debt is paid.
+
 Audit defaults to `gate=new-only`: only findings introduced by the current changeset affect the verdict. Inherited findings on touched files are reported under `attribution` and annotated with `introduced: false`, but do not block the commit. Set `"audit": { "gate": "all" }` in `.fallowrc.jsonc` to gate every finding in changed files.
 
 For non-skill agents, treat the task map below as the local onboarding source: run the listed fallow command before destructive edits, before commits, and before pull request handoff.
