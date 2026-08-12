@@ -56,7 +56,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Install semantic-release dependencies
         run: |
@@ -340,6 +340,15 @@ jobs:
           npm version $NEW_VERSION --no-git-tag-version
 
           echo "✅ Version updated to $NEW_VERSION"
+
+      - name: Rebuild Bundle at Release Version
+        run: |
+          # The version is injected into the bundle at build time from
+          # package.json. The artifact from build-test-validate was built
+          # before the bump, so rebuild here or dist ships one version behind.
+          echo "🔨 Rebuilding bundle so the injected version matches the tag..."
+          bun run build
+          echo "✅ Bundle rebuilt at release version"
 
       - name: Generate Changelog
         id: changelog
