@@ -17,11 +17,12 @@
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node", "bun"],
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@tests/*": ["./__tests__/*"]
