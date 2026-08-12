@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { rethrowZodError } from "../utils/zod-error";
 
 /**
  * Zod schema for GitHub Actions outputs
@@ -14,7 +15,7 @@ import { z } from "zod";
  * Numeric values are represented as numeric strings
  * Empty values are represented as empty strings
  */
-export const GitHubActionsOutputSchema = z.object({
+const GitHubActionsOutputSchema = z.object({
   // Common optional outputs
   app: z.string().default(""),
   completion_status: z.enum(["complete", "partial", "failed"]),
@@ -92,7 +93,7 @@ export type ValidatedOutputs = z.infer<typeof GitHubActionsOutputSchema>;
  * Additional validation for JSON fields
  * Ensures that JSON string fields contain valid JSON
  */
-export function validateJSONFields(outputs: ValidatedOutputs): void {
+function validateJSONFields(outputs: ValidatedOutputs): void {
   const jsonFields = ["outputs", "resources", "removed_resources"] as const;
 
   for (const field of jsonFields) {
@@ -125,15 +126,6 @@ export function validateOutputs(outputs: unknown): ValidatedOutputs {
 
     return validated;
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const issues = error.issues.map(
-        (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
-      );
-      throw new Error(
-        `GitHub Actions output validation failed:\n${issues.join("\n")}`,
-        { cause: error }
-      );
-    }
-    throw error as Error;
+    rethrowZodError(error, "GitHub Actions output");
   }
 }
