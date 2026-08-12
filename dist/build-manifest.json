@@ -1,15 +1,15 @@
 {
   "arch": "x64",
-  "buildTimestamp": "2026-08-12T14:33:36.661Z",
+  "buildTimestamp": "2026-08-12T14:38:48.795Z",
   "bundleSize": 1584536,
   "bundleSizeMB": "1.51",
   "format": "es",
-  "integrity": "1ccd9a4772a53a99f19916c9f33a40f084bbcd342f760b7580962276ecce9ee3",
+  "integrity": "3ffa6987e95304a45e0d78d9875e88cf9a805bb55bd6e2fbe9747281519dbecd",
   "minified": true,
   "nodeVersion": "v24.18.0",
   "platform": "linux",
   "sourcemap": true,
   "target": "node24",
   "treeshaken": true,
-  "version": "0.7.41"
+  "version": "0.7.42"
 }
