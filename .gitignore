@@ -32,6 +32,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # lefthook
 .lefthook
 
+# Claude Code agent worktrees
+.claude/worktrees
+
 # IntelliJ based IDEs
 .idea
 
