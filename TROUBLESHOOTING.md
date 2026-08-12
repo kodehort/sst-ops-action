@@ -694,7 +694,7 @@ steps:
 # Ensure proper Node.js version
 - uses: actions/setup-node@v4
   with:
-    node-version: '20'  # Action requires Node.js 20+
+    node-version: '24'  # Action requires Node.js 24+
 ```
 
 #### Windows Runner Issues

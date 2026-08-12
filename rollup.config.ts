@@ -56,7 +56,7 @@ function generateBuildManifest() {
 
         // Build configuration
         sourcemap: true, // We always generate sourcemaps
-        target: "node20",
+        target: "node24",
         treeshaken: true, // Using enhanced tree-shaking
         version: packageInfo.version || "unknown",
       };
