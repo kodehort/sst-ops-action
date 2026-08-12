@@ -1,3 +1,43 @@
+# Release v0.7.33
+
+**Release Date:** 2026-08-12
+**Previous Version:** v0.7.32
+
+## 🚀 What's New
+
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1585450 bytes)
+- **Integrity Hash:** `a646e01f95cbdafe...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.33
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: \ghs_15368_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiJ5UkxNZnVCN25tNWVwVFBxWU1vMnBLTzF6Wmd1R3lsTnBZNXY5ZG03RnQtaERyNFJzcXBhY240IiwiZXhwIjoxNzg2NTMyNDcxLCJpYXQiOjE3ODY1Mjg4NzEsImlzcyI6ImdpdGh1YiIsImp0aSI6IjlhYzVjMWYwLTE4NTQtNDVmNi05YWExLTQ5MGQ1MDE0MzhkNiIsInZlciI6M30.n7z2EM-ytvToe170RmmP75638_otaHanupQX798t4PLPajoDydTa4b62KZ53ufA5WiIT9_MmBfJtnGjdfLbedQ
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.32...v0.7.33)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.33/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.32...v0.7.33
+
+---
+
 # Release v0.7.32
 
 **Release Date:** 2026-08-12
