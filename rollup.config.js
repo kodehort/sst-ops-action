@@ -5,7 +5,38 @@ import json from "@rollup/plugin-json";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
-import typescript from "@rollup/plugin-typescript";
+import { transform } from "esbuild";
+
+// Transpile TypeScript with esbuild. TypeScript 7 no longer exposes the classic
+// compiler API that @rollup/plugin-typescript drives. Type checking stays in
+// `bun run typecheck`; `verbatimModuleSyntax` keeps the source safe to strip
+// types file by file.
+function esbuildTranspile() {
+  return {
+    name: "esbuild-transpile",
+    async transform(code, id) {
+      if (!id.endsWith(".ts")) {
+        return null;
+      }
+
+      const result = await transform(code, {
+        loader: "ts",
+        sourcefile: id,
+        sourcemap: true,
+        target: "es2022",
+        tsconfigRaw: {
+          compilerOptions: {
+            target: "ES2022",
+            useDefineForClassFields: true,
+            verbatimModuleSyntax: true,
+          },
+        },
+      });
+
+      return { code: result.code, map: result.map };
+    },
+  };
+}
 
 // Plugin to generate enhanced build manifest with useful details for changelog and releases
 function generateBuildManifest() {
@@ -107,10 +138,13 @@ export default {
       __ACTION_VERSION__: JSON.stringify(packageVersion),
       preventAssignment: true,
     }),
-    typescript({ sourceMap: true }),
+    esbuildTranspile(),
     json(),
     nodeResolve({
       exportConditions: ["node", "import", "module", "default"],
+      // esbuild strips types but leaves extensionless imports alone, so the
+      // resolver has to try .ts before .js
+      extensions: [".ts", ".mjs", ".js", ".json", ".node"],
       preferBuiltins: true,
     }),
     commonjs({
