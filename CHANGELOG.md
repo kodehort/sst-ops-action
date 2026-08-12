@@ -1,3 +1,47 @@
+# Release v0.7.41
+
+**Release Date:** 2026-08-12
+**Previous Version:** v0.7.40
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore: ignore agent worktree scratch dirs (`8c09ed6`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.51MB (1584536 bytes)
+- **Integrity Hash:** `1ccd9a4772a53a99...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.41
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.40...v0.7.41)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.41/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.40...v0.7.41
+
+---
+
 # Release v0.7.40
 
 **Release Date:** 2026-08-12
