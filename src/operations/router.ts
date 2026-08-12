@@ -122,6 +122,56 @@ function transformToUnifiedResult(
 }
 
 /**
+ * Build the parenthesised debugging context shared by the normalizers below
+ *
+ * @returns e.g. " (resource: MyBucket, type: AWS::S3::Bucket)", or "" when
+ * neither detail is available
+ */
+function formatResourceContext({
+  resourceName,
+  resourceType,
+}: {
+  resourceName: string | undefined;
+  resourceType: string | undefined;
+}): string {
+  const context: string[] = [];
+  if (resourceName) {
+    context.push(`resource: ${resourceName}`);
+  }
+  if (resourceType) {
+    context.push(`type: ${resourceType}`);
+  }
+
+  return context.length > 0 ? ` (${context.join(", ")})` : "";
+}
+
+/**
+ * Return `value` when it is one of `validValues`, otherwise warn and fall back
+ *
+ * Each caller composes its own warning so the wording stays explicit and
+ * greppable rather than assembled from fragments.
+ */
+function normalizeEnumValue<T extends string>({
+  value,
+  validValues,
+  fallback,
+  warning,
+}: {
+  value: string;
+  validValues: readonly T[];
+  fallback: T;
+  warning: () => string;
+}): T {
+  if ((validValues as readonly string[]).includes(value)) {
+    return value as T;
+  }
+
+  core.warning(warning());
+
+  return fallback;
+}
+
+/**
  * Type guard to ensure resource status is valid
  *
  * Normalizes resource status values to ensure type safety. Unknown statuses
@@ -145,29 +195,20 @@ function normalizeResourceStatus(
     "deleted",
   ];
 
-  if ((validStatuses as readonly string[]).includes(status)) {
-    return status as "created" | "updated" | "deleted";
-  }
-
-  // Enhanced warning with context for debugging
-  const context: string[] = [];
-  if (resourceName) {
-    context.push(`resource: ${resourceName}`);
-  }
-  if (resourceType) {
-    context.push(`type: ${resourceType}`);
-  }
-
-  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
-
-  core.warning(
-    `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
-      `    Valid statuses: ${validStatuses.join(", ")}\n` +
-      `    Defaulting to: 'created'\n` +
-      "    This may indicate a new SST CLI output format."
-  );
-
-  return "created"; // Default to created instead of unchanged
+  return normalizeEnumValue({
+    fallback: "created",
+    validValues: validStatuses,
+    value: status,
+    warning: () => {
+      const contextStr = formatResourceContext({ resourceName, resourceType });
+      return (
+        `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
+        `    Valid statuses: ${validStatuses.join(", ")}\n` +
+        `    Defaulting to: 'created'\n` +
+        "    This may indicate a new SST CLI output format."
+      );
+    },
+  });
 }
 
 /**
@@ -194,29 +235,20 @@ function normalizeDiffAction(
     "delete",
   ];
 
-  if ((validActions as readonly string[]).includes(action)) {
-    return action as "create" | "update" | "delete";
-  }
-
-  // Enhanced warning with context for debugging
-  const context: string[] = [];
-  if (resourceName) {
-    context.push(`resource: ${resourceName}`);
-  }
-  if (resourceType) {
-    context.push(`type: ${resourceType}`);
-  }
-
-  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
-
-  core.warning(
-    `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
-      `    Valid actions: ${validActions.join(", ")}\n` +
-      `    Defaulting to: 'update'\n` +
-      "    This may indicate a new SST CLI diff format."
-  );
-
-  return "update";
+  return normalizeEnumValue({
+    fallback: "update",
+    validValues: validActions,
+    value: action,
+    warning: () => {
+      const contextStr = formatResourceContext({ resourceName, resourceType });
+      return (
+        `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
+        `    Valid actions: ${validActions.join(", ")}\n` +
+        `    Defaulting to: 'update'\n` +
+        "    This may indicate a new SST CLI diff format."
+      );
+    },
+  });
 }
 
 /**
@@ -243,29 +275,20 @@ function normalizeRemoveStatus(
     "skipped",
   ];
 
-  if ((validStatuses as readonly string[]).includes(status)) {
-    return status as "removed" | "failed" | "skipped";
-  }
-
-  // Enhanced warning with context for debugging
-  const context: string[] = [];
-  if (resourceName) {
-    context.push(`resource: ${resourceName}`);
-  }
-  if (resourceType) {
-    context.push(`type: ${resourceType}`);
-  }
-
-  const contextStr = context.length > 0 ? ` (${context.join(", ")})` : "";
-
-  core.warning(
-    `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
-      `    Valid statuses: ${validStatuses.join(", ")}\n` +
-      `    Defaulting to: 'failed' (conservative default for removals)\n` +
-      "    This may indicate a new SST CLI remove format."
-  );
-
-  return "failed";
+  return normalizeEnumValue({
+    fallback: "failed",
+    validValues: validStatuses,
+    value: status,
+    warning: () => {
+      const contextStr = formatResourceContext({ resourceName, resourceType });
+      return (
+        `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
+        `    Valid statuses: ${validStatuses.join(", ")}\n` +
+        `    Defaulting to: 'failed' (conservative default for removals)\n` +
+        "    This may indicate a new SST CLI remove format."
+      );
+    },
+  });
 }
 
 /**

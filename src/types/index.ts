@@ -10,44 +10,21 @@ export type {
   CompletionStatus,
   DeployResult,
   DiffResult,
-  ExecutionStats,
-  OperationContext,
-  OperationMetadata,
   OperationOptions,
   OperationResult,
-  ParsedSST,
   RemoveResult,
   SSTOperation,
   StageResult,
 } from "./operations.js";
 
-// GitHub Actions types
-export type {
-  ActionEnvironment,
-  ActionOutputs,
-  ArtifactInfo,
-  CommentMetadata,
-  DeployOutputs,
-  DiffOutputs,
-  GitHubContext,
-  RemoveOutputs,
-  WorkflowSummary,
-} from "./outputs.js";
-
 // SST CLI types
 export type {
-  SSTCommandResult,
-  SSTConfig,
   SSTDeployOutput,
   SSTDiffOutput,
   SSTError,
-  SSTParsePatterns,
   SSTRemoveOutput,
-  SSTResource,
-  SSTValidationResult,
 } from "./sst.js";
 
-import type { SSTRunner } from "../utils/cli.js";
 import type {
   CommentMode,
   CompletionStatus,
@@ -56,7 +33,6 @@ import type {
   OperationResult,
   RemoveResult,
   SSTOperation,
-  StageResult,
 } from "./operations.js";
 import { SST_OPERATIONS } from "./operations.js";
 import type {
@@ -88,10 +64,6 @@ export function isRemoveResult(
   result: OperationResult
 ): result is RemoveResult {
   return result.operation === "remove";
-}
-
-export function isStageResult(result: OperationResult): result is StageResult {
-  return result.operation === "stage";
 }
 
 /**
@@ -297,92 +269,3 @@ export function isSSTError(error: unknown): error is SSTError {
     typeof (error as SSTError).message === "string"
   );
 }
-
-/**
- * Operation-specific input schemas using discriminated unions
- * Each operation has different input requirements and validation rules
- */
-
-/**
- * Base schema for SST infrastructure operations (deploy, diff, remove)
- * These operations interact with AWS and require authentication
- */
-export interface BaseInfrastructureInputs {
-  commentMode?: CommentMode;
-  failOnError?: boolean;
-  maxOutputSize?: number;
-  runner?: SSTRunner;
-  token: string;
-}
-
-/**
- * Deploy operation inputs - can auto-compute stage from Git context
- */
-export interface DeployInputs extends BaseInfrastructureInputs {
-  stage?: string;
-}
-
-/**
- * Diff operation inputs - requires explicit stage for comparison target
- */
-export interface DiffInputs extends BaseInfrastructureInputs {
-  stage: string;
-}
-
-/**
- * Remove operation inputs - requires explicit stage for safety
- */
-export interface RemoveInputs extends BaseInfrastructureInputs {
-  stage: string;
-}
-
-/**
- * Stage operation inputs - standalone utility for stage name computation
- * No token or infrastructure access required
- */
-export interface StageInputs {
-  prefix?: string;
-  truncationLength?: number;
-}
-
-/**
- * Discriminated union of all operation-specific input types
- */
-export type OperationInputs =
-  | ({ operation: "deploy" } & DeployInputs)
-  | ({ operation: "diff" } & DiffInputs)
-  | ({ operation: "remove" } & RemoveInputs)
-  | ({ operation: "stage" } & StageInputs);
-
-/**
- * Type guards for operation input types
- */
-export function isDeployInputs(
-  inputs: OperationInputs
-): inputs is { operation: "deploy" } & DeployInputs {
-  return inputs.operation === "deploy";
-}
-
-export function isDiffInputs(
-  inputs: OperationInputs
-): inputs is { operation: "diff" } & DiffInputs {
-  return inputs.operation === "diff";
-}
-
-export function isRemoveInputs(
-  inputs: OperationInputs
-): inputs is { operation: "remove" } & RemoveInputs {
-  return inputs.operation === "remove";
-}
-
-export function isStageInputs(
-  inputs: OperationInputs
-): inputs is { operation: "stage" } & StageInputs {
-  return inputs.operation === "stage";
-}
-
-export { SST_RUNNERS } from "../utils/cli.js";
-/**
- * Re-export constants for convenient access
- */
-export { SST_OPERATIONS } from "./operations.js";

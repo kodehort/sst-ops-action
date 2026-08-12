@@ -50,14 +50,14 @@ export function getExamplesRoot(): string {
 /**
  * Get the path to an input file
  */
-export function getInputPath(operation: SSTOperation, name: string): string {
+function getInputPath(operation: SSTOperation, name: string): string {
   return join(getExamplesRoot(), "inputs", operation, `${name}.txt`);
 }
 
 /**
  * Get the path to a snapshot file
  */
-export function getSnapshotPath(
+function getSnapshotPath(
   operation: SSTOperation,
   name: string,
   type: "comment" | "summary"
@@ -68,7 +68,7 @@ export function getSnapshotPath(
 /**
  * Get the path to a metadata file
  */
-export function getMetadataPath(operation: SSTOperation, name: string): string {
+function getMetadataPath(operation: SSTOperation, name: string): string {
   return join(
     getExamplesRoot(),
     "metadata",
@@ -91,7 +91,7 @@ export function loadInput(operation: SSTOperation, name: string): string {
 /**
  * Load snapshot content (comment or summary)
  */
-export function loadSnapshot(
+function loadSnapshot(
   operation: SSTOperation,
   name: string,
   type: "comment" | "summary"
@@ -142,7 +142,7 @@ export function loadSnapshotData(
 /**
  * Save snapshot content to file
  */
-export function saveSnapshot(
+function saveSnapshot(
   operation: SSTOperation,
   name: string,
   type: "comment" | "summary",
@@ -161,7 +161,7 @@ export function saveSnapshot(
 /**
  * Save snapshot metadata
  */
-export function saveMetadata(
+function saveMetadata(
   operation: SSTOperation,
   name: string,
   metadata: SnapshotMetadata

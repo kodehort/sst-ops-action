@@ -404,13 +404,8 @@ function generateGeneralSuggestions(field: string): string[] {
         "Values are case-insensitive",
       ];
 
-    case "maxOutputSize":
-      return [
-        "Must be a number between 1000 and 1000000 (1MB)",
-        "Specify output size limit in bytes",
-        "Default is 50000 bytes (50KB)",
-        "Use larger values for verbose SST outputs",
-      ];
+    // No `maxOutputSize` case: that input is coerced and range-checked before
+    // Zod runs, so it throws a plain Error and never reaches this function.
 
     case "runner":
       return [
@@ -424,38 +419,6 @@ function generateGeneralSuggestions(field: string): string[] {
 
     default:
       return [];
-  }
-}
-
-/**
- * Validate individual GitHub Actions input with detailed error reporting
- */
-export function validateInput<T>(
-  value: unknown,
-  schema: z.ZodSchema<T>,
-  fieldName: string
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof z.ZodError && error.issues.length > 0) {
-      const [issue] = error.issues;
-      if (!issue) {
-        throw error;
-      }
-
-      const suggestions = generateOperationSuggestions(
-        fieldName,
-        issue,
-        "unknown"
-      );
-
-      // biome-ignore lint/style/useErrorCause: cause is forwarded via the options param to super() in ValidationError's constructor
-      throw new ValidationError(issue.message, fieldName, value, suggestions, {
-        cause: error,
-      });
-    }
-    throw error;
   }
 }
 

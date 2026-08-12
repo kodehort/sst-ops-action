@@ -17,36 +17,6 @@ import {
 } from "./schema";
 
 /**
- * Standardized output format for GitHub Actions
- * All values must be strings as required by GitHub Actions
- */
-export interface StandardizedOutputs {
-  // Common optional outputs
-  app: string;
-  completion_status: string;
-  computed_stage: string; // Computed stage name for stage operations
-  diff_summary: string; // Summary for diff operations
-  error: string;
-  event_name: string; // GitHub event name for stage operations
-  is_pull_request: string; // Whether event is a pull request for stage operations
-  operation: string;
-
-  // Operation-specific outputs
-  outputs: string; // JSON array for deploy operations
-  permalink: string;
-  planned_changes: string; // Number for diff operations
-  ref: string; // Git ref for stage operations
-  removed_resources: string; // JSON array for remove operations
-  resource_changes: string;
-  resources: string; // JSON array for deploy operations
-  resources_removed: string; // Number for remove operations
-  stage: string;
-  // Required outputs (always present)
-  success: string;
-  truncated: string;
-}
-
-/**
  * Operation-specific output interfaces using discriminated unions
  * Each operation type has different output fields and requirements
  */
@@ -68,7 +38,7 @@ interface BaseInfrastructureOutputs {
 /**
  * Deploy operation outputs
  */
-export interface DeployOutputs extends BaseInfrastructureOutputs {
+interface DeployOutputs extends BaseInfrastructureOutputs {
   computed_stage: string; // ''
   // Reset other operation fields
   diff_summary: string; // ''
@@ -89,7 +59,7 @@ export interface DeployOutputs extends BaseInfrastructureOutputs {
 /**
  * Diff operation outputs
  */
-export interface DiffOutputs extends BaseInfrastructureOutputs {
+interface DiffOutputs extends BaseInfrastructureOutputs {
   computed_stage: string; // ''
   diff_summary: string;
   event_name: string; // ''
@@ -110,7 +80,7 @@ export interface DiffOutputs extends BaseInfrastructureOutputs {
 /**
  * Remove operation outputs
  */
-export interface RemoveOutputs extends BaseInfrastructureOutputs {
+interface RemoveOutputs extends BaseInfrastructureOutputs {
   computed_stage: string; // ''
   diff_summary: string; // ''
   event_name: string; // ''
@@ -131,7 +101,7 @@ export interface RemoveOutputs extends BaseInfrastructureOutputs {
 /**
  * Stage operation outputs - utility operation with minimal output
  */
-export interface StageOutputs {
+interface StageOutputs {
   // Infrastructure fields not applicable
   app: string;
   completion_status: string;
@@ -159,7 +129,7 @@ export interface StageOutputs {
 /**
  * Discriminated union of all operation-specific output types
  */
-export type OperationOutputs =
+type OperationOutputs =
   | DeployOutputs
   | DiffOutputs
   | RemoveOutputs
@@ -169,7 +139,7 @@ export type OperationOutputs =
  * Format operation result for GitHub Actions output using discriminated unions
  * Provides type-safe operation-specific formatting with Zod validation
  */
-export function formatOperationForGitHubActions(
+function formatOperationForGitHubActions(
   result: OperationResult
 ): ValidatedOutputs {
   let outputs: OperationOutputs;
@@ -334,9 +304,7 @@ function safeStringify(value: unknown): string {
  *
  * This function now uses Zod schema validation for comprehensive type checking
  */
-export function validateOutputs(
-  outputs: Record<string, string>
-): ValidatedOutputs {
+function validateOutputs(outputs: Record<string, string>): ValidatedOutputs {
   return validateWithSchema(outputs);
 }
 
@@ -344,7 +312,7 @@ export function validateOutputs(
  * Get all expected output field names
  * Useful for documentation and testing
  */
-export function getExpectedFields(): string[] {
+function getExpectedFields(): string[] {
   return [
     "success",
     "operation",
@@ -371,7 +339,7 @@ export function getExpectedFields(): string[] {
 /**
  * Get required output field names
  */
-export function getRequiredFields(): string[] {
+function getRequiredFields(): string[] {
   return ["success", "operation", "stage", "completion_status"];
 }
 
@@ -413,7 +381,7 @@ function setStageDefaults(outputs: Record<string, string>): void {
  * Check if outputs are consistent with the operation type
  * Validates that operation-specific fields are set appropriately
  */
-export function validateOperationConsistency(
+function validateOperationConsistency(
   outputs: Record<string, string>,
   operation: string
 ): void {
