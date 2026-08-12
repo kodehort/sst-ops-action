@@ -12,7 +12,10 @@ on:
 
 jobs:
   claude-review:
-    if: github.event.pull_request.user.login != 'renovate[bot]'
+    # Bots are reviewed like anyone else; only explicit title opt-outs skip.
+    if: |
+      !contains(github.event.pull_request.title, '[skip-review]') &&
+      !contains(github.event.pull_request.title, '[WIP]')
 
     runs-on: ubuntu-latest
     permissions:
@@ -36,8 +39,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
+          # Pin the model; the action's own default (claude-sonnet-4) is retired.
+          model: "claude-opus-5"
 
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
@@ -69,8 +72,3 @@ jobs:
 
           # Optional: Add specific tools for running tests or linting
           allowed_tools: "Bash(bun run test),Bash(bun run lint),Bash(bun run typecheck)"
-
-          # Optional: Skip review for certain conditions
-          if: |
-            !contains(github.event.pull_request.title, '[skip-review]') &&
-            !contains(github.event.pull_request.title, '[WIP]')
