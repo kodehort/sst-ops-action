@@ -461,6 +461,10 @@ jobs:
           fi
 
           # Add usage example
+          # The token line needs two layers of escaping to survive as a literal
+          # placeholder: ${{ '${{' }} stops Actions expanding the expression (it
+          # used to substitute the real token into public release notes), and the
+          # leading backslash stops bash expanding it inside this heredoc.
           cat >> RELEASE_NOTES.md << EOF
           ## 🚀 Usage
 
@@ -470,7 +474,7 @@ jobs:
             with:
               operation: deploy  # deploy, diff, or remove
               stage: production
-              token: \${{ secrets.GITHUB_TOKEN }}
+              token: \${{ '${{' }} secrets.GITHUB_TOKEN }}
           \`\`\`
 
           ## 🔗 Links
@@ -485,6 +489,17 @@ jobs:
           EOF
 
           echo "✅ Release notes generated"
+
+      - name: Verify Release Notes Carry No Credentials
+        run: |
+          # Release notes land in a public release body and in CHANGELOG.md, so a
+          # substituted token here is a published credential. Fail loud instead.
+          if grep -qE '(ghs|ghp|gho|ghu|ghr|github_pat)_[A-Za-z0-9_]{8}' RELEASE_NOTES.md; then
+            echo "::error::Release notes contain what looks like a GitHub token. Refusing to publish."
+            exit 1
+          fi
+
+          echo "✅ No credentials in release notes"
 
       - name: Update CHANGELOG.md
         run: |
