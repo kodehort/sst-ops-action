@@ -31,8 +31,6 @@ describe("OutputFormatter Integration", () => {
         OutputFormatter.formatOperationForGitHubActions(deployResult);
 
       // Validate outputs are properly formatted
-      OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, "deploy");
 
       // Verify all required fields are strings
       expect(typeof outputs.success).toBe("string");
@@ -79,8 +77,6 @@ describe("OutputFormatter Integration", () => {
         OutputFormatter.formatOperationForGitHubActions(diffResult);
 
       // Validate outputs
-      OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, "diff");
 
       // Verify diff-specific fields
       expect(outputs.operation).toBe("diff");
@@ -119,8 +115,6 @@ describe("OutputFormatter Integration", () => {
         OutputFormatter.formatOperationForGitHubActions(removeResult);
 
       // Validate outputs
-      OutputFormatter.validateOutputs(outputs);
-      OutputFormatter.validateOperationConsistency(outputs, "remove");
 
       // Verify remove-specific fields
       expect(outputs.operation).toBe("remove");
@@ -156,7 +150,6 @@ describe("OutputFormatter Integration", () => {
         OutputFormatter.formatOperationForGitHubActions(failedResult);
 
       // Validate outputs
-      OutputFormatter.validateOutputs(outputs);
 
       // Verify failure handling
       expect(outputs.success).toBe("false");
@@ -189,7 +182,6 @@ describe("OutputFormatter Integration", () => {
         OutputFormatter.formatOperationForGitHubActions(partialResult);
 
       // Validate outputs
-      OutputFormatter.validateOutputs(outputs);
 
       // Verify partial completion handling
       expect(outputs.success).toBe("true");
@@ -248,28 +240,14 @@ describe("OutputFormatter Integration", () => {
       const removeOutputs =
         OutputFormatter.formatOperationForGitHubActions(removeResult);
 
-      // All should have the same required fields
-      const requiredFields = OutputFormatter.getRequiredFields();
-      for (const field of requiredFields) {
-        expect(deployOutputs).toHaveProperty(field);
-        expect(diffOutputs).toHaveProperty(field);
-        expect(removeOutputs).toHaveProperty(field);
-      }
+      // Every operation emits the same key set. This used to compare against
+      // getExpectedFields(), a hand-maintained restatement of the schema's own
+      // keys that #154 deleted; comparing the operations to each other needs
+      // no such list.
+      const deployKeys = Object.keys(deployOutputs).sort();
 
-      // All should have the same total number of fields
-      const allFields = OutputFormatter.getExpectedFields();
-      expect(Object.keys(deployOutputs)).toHaveLength(allFields.length);
-      expect(Object.keys(diffOutputs)).toHaveLength(allFields.length);
-      expect(Object.keys(removeOutputs)).toHaveLength(allFields.length);
-
-      // All should pass validation
-      expect(() =>
-        OutputFormatter.validateOutputs(deployOutputs)
-      ).not.toThrow();
-      expect(() => OutputFormatter.validateOutputs(diffOutputs)).not.toThrow();
-      expect(() =>
-        OutputFormatter.validateOutputs(removeOutputs)
-      ).not.toThrow();
+      expect(Object.keys(diffOutputs).sort()).toEqual(deployKeys);
+      expect(Object.keys(removeOutputs).sort()).toEqual(deployKeys);
     });
   });
 });

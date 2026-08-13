@@ -1,282 +1,72 @@
+/**
+ * The type module's remaining runtime surface.
+ *
+ * It used to export around ten validators, type guards and error constructors
+ * that nothing in `src/` called — reached only from this file, which is what
+ * made the dead-code tool report them as live. Three survive, and all three
+ * have production callers in `src/utils/validation.ts`.
+ */
+
 import { describe, expect, it } from "vitest";
-import type {
-  DeployResult,
-  DiffResult,
-  RemoveResult,
-  SSTError,
-} from "../../src/types/index.js";
 import {
-  createSSTError,
-  isDeployResult,
-  isDiffResult,
-  isRemoveResult,
-  isSSTError,
   isValidCommentMode,
-  isValidCompletionStatus,
   isValidOperation,
-  validateCommentMode,
   validateMaxOutputSize,
-  validateOperation,
-  validateStage,
 } from "../../src/types/index.js";
 
-describe("Type Guards", () => {
-  describe("Operation Result Type Guards", () => {
-    it("should identify deploy results correctly", () => {
-      const deployResult: DeployResult = {
-        app: "test-app",
-        completionStatus: "complete",
-        exitCode: 0,
-        operation: "deploy",
-        outputs: [{ key: "api", value: "https://api.example.com" }],
-        rawOutput: "test output",
-        resourceChanges: 5,
-        resources: [{ name: "handler", status: "created", type: "Function" }],
-        stage: "test",
-        success: true,
-        truncated: false,
-      };
-
-      expect(isDeployResult(deployResult)).toBe(true);
-      expect(isDiffResult(deployResult)).toBe(false);
-      expect(isRemoveResult(deployResult)).toBe(false);
-    });
-
-    it("should identify diff results correctly", () => {
-      const diffResult: DiffResult = {
-        app: "test-app",
-        changeSummary: "3 resources to create",
-        changes: [{ action: "create", name: "handler", type: "Function" }],
-        completionStatus: "complete",
-        diffSection: "",
-        exitCode: 0,
-        operation: "diff",
-        plannedChanges: 3,
-        rawOutput: "test output",
-        stage: "test",
-        success: true,
-        truncated: false,
-      };
-
-      expect(isDiffResult(diffResult)).toBe(true);
-      expect(isDeployResult(diffResult)).toBe(false);
-      expect(isRemoveResult(diffResult)).toBe(false);
-    });
-
-    it("should identify remove results correctly", () => {
-      const removeResult: RemoveResult = {
-        app: "test-app",
-        completionStatus: "complete",
-        exitCode: 0,
-        operation: "remove",
-        rawOutput: "test output",
-        removedResources: [
-          { name: "handler", status: "removed", type: "Function" },
-        ],
-        resourcesRemoved: 2,
-        stage: "test",
-        success: true,
-        truncated: false,
-      };
-
-      expect(isRemoveResult(removeResult)).toBe(true);
-      expect(isDeployResult(removeResult)).toBe(false);
-      expect(isDiffResult(removeResult)).toBe(false);
-    });
-  });
-
-  describe("String Validation Type Guards", () => {
-    it("should validate SST operations", () => {
-      expect(isValidOperation("deploy")).toBe(true);
-      expect(isValidOperation("diff")).toBe(true);
-      expect(isValidOperation("remove")).toBe(true);
-      expect(isValidOperation("invalid")).toBe(false);
-      expect(isValidOperation("")).toBe(false);
-    });
-
-    it("should validate comment modes", () => {
-      expect(isValidCommentMode("always")).toBe(true);
-      expect(isValidCommentMode("on-success")).toBe(true);
-      expect(isValidCommentMode("on-failure")).toBe(true);
-      expect(isValidCommentMode("never")).toBe(true);
-      expect(isValidCommentMode("invalid")).toBe(false);
-      expect(isValidCommentMode("")).toBe(false);
-    });
-
-    it("should validate completion statuses", () => {
-      expect(isValidCompletionStatus("complete")).toBe(true);
-      expect(isValidCompletionStatus("partial")).toBe(true);
-      expect(isValidCompletionStatus("failed")).toBe(true);
-      expect(isValidCompletionStatus("invalid")).toBe(false);
-      expect(isValidCompletionStatus("")).toBe(false);
-    });
-  });
-});
-
-describe("Validation Functions", () => {
-  describe("validateOperation", () => {
-    it("should validate correct operations", () => {
-      expect(validateOperation("deploy")).toBe("deploy");
-      expect(validateOperation("diff")).toBe("diff");
-      expect(validateOperation("remove")).toBe("remove");
-    });
-
-    it("should throw error for invalid operations", () => {
-      expect(() => validateOperation("invalid")).toThrow("Invalid operation");
-      expect(() => validateOperation("")).toThrow("Invalid operation");
-      expect(() => validateOperation(123)).toThrow(
-        "Operation must be a string"
-      );
-      expect(() => validateOperation(null)).toThrow(
-        "Operation must be a string"
-      );
-    });
-  });
-
-  describe("validateCommentMode", () => {
-    it("should validate correct comment modes", () => {
-      expect(validateCommentMode("always")).toBe("always");
-      expect(validateCommentMode("on-success")).toBe("on-success");
-      expect(validateCommentMode("on-failure")).toBe("on-failure");
-      expect(validateCommentMode("never")).toBe("never");
-    });
-
-    it("should throw error for invalid comment modes", () => {
-      expect(() => validateCommentMode("invalid")).toThrow(
-        "Invalid comment mode"
-      );
-      expect(() => validateCommentMode("")).toThrow("Invalid comment mode");
-      expect(() => validateCommentMode(123)).toThrow(
-        "Comment mode must be a string"
-      );
-    });
-  });
-
-  describe("validateStage", () => {
-    it("should validate correct stage names", () => {
-      expect(validateStage("production")).toBe("production");
-      expect(validateStage("staging")).toBe("staging");
-      expect(validateStage("dev-123")).toBe("dev-123");
-      expect(validateStage("test_env")).toBe("test_env");
-      expect(validateStage(" staging ")).toBe("staging"); // trims whitespace
-    });
-
-    it("should throw error for invalid stage names", () => {
-      expect(() => validateStage("")).toThrow(
-        "Stage must be a non-empty string"
-      );
-      expect(() => validateStage("  ")).toThrow(
-        "Stage must be a non-empty string"
-      );
-      expect(() => validateStage("stage with spaces")).toThrow(
-        "alphanumeric characters"
-      );
-      expect(() => validateStage("stage@special")).toThrow(
-        "alphanumeric characters"
-      );
-      expect(() => validateStage(123)).toThrow(
-        "Stage must be a non-empty string"
-      );
-    });
-  });
-
-  describe("validateMaxOutputSize", () => {
-    it("should validate correct output sizes", () => {
-      expect(validateMaxOutputSize(0)).toBe(0);
-      expect(validateMaxOutputSize(50_000)).toBe(50_000);
-      expect(validateMaxOutputSize("50000")).toBe(50_000);
-      expect(validateMaxOutputSize(1_048_576)).toBe(1_048_576); // 1MB
-    });
-
-    it("should throw error for invalid output sizes", () => {
-      expect(() => validateMaxOutputSize(-1)).toThrow("non-negative number");
-      expect(() => validateMaxOutputSize("invalid")).toThrow(
-        "non-negative number"
-      );
-      expect(() => validateMaxOutputSize(1_048_577)).toThrow(
-        "cannot exceed 1MB"
-      );
-      expect(() => validateMaxOutputSize(null)).toThrow("non-negative number");
-    });
-  });
-});
-
-describe("Error Utilities", () => {
-  describe("createSSTError", () => {
-    it("should create SST error objects", () => {
-      const error = createSSTError("TEST_ERROR", "Test error message");
-
-      expect(error.code).toBe("TEST_ERROR");
-      expect(error.message).toBe("Test error message");
-      expect(error.details).toBeUndefined();
-      expect(error.context).toBeUndefined();
-    });
-
-    it("should create SST error objects with details", () => {
-      const error = createSSTError(
-        "TEST_ERROR",
-        "Test error message",
-        "Additional details"
-      );
-
-      expect(error.code).toBe("TEST_ERROR");
-      expect(error.message).toBe("Test error message");
-      expect(error.details).toBe("Additional details");
-    });
-  });
-
-  describe("isSSTError", () => {
-    it("should identify valid SST errors", () => {
-      const error: SSTError = {
-        code: "TEST_ERROR",
-        message: "Test message",
-      };
-
-      expect(isSSTError(error)).toBe(true);
-    });
-
-    it("should reject invalid SST errors", () => {
-      expect(isSSTError(null)).toBe(false);
-      expect(isSSTError(undefined)).toBe(false);
-      expect(isSSTError("string")).toBe(false);
-      expect(isSSTError({})).toBe(false);
-      expect(isSSTError({ code: "TEST" })).toBe(false); // missing message
-      expect(isSSTError({ message: "Test" })).toBe(false); // missing code
-      expect(isSSTError({ code: 123, message: "Test" })).toBe(false); // invalid code type
-      expect(isSSTError({ code: "TEST", message: 123 })).toBe(false); // invalid message type
-    });
-  });
-});
-
-describe("Type System Integration", () => {
-  it("should work with all operation types in a unified way", () => {
-    const operations = ["deploy", "diff", "remove"] as const;
-
-    operations.forEach((operation) => {
+describe("isValidOperation", () => {
+  it("accepts every operation the action supports", () => {
+    for (const operation of ["deploy", "diff", "remove", "stage"]) {
       expect(isValidOperation(operation)).toBe(true);
-      expect(validateOperation(operation)).toBe(operation);
-    });
-  });
-
-  it("should provide consistent error handling across all validators", () => {
-    const validators = [
-      () => validateOperation("invalid"),
-      () => validateCommentMode("invalid"),
-      () => validateStage(""),
-      () => validateMaxOutputSize(-1),
-    ];
-
-    validators.forEach((validator) => {
-      expect(() => validator()).toThrow();
-    });
-  });
-
-  it("should handle type narrowing correctly", () => {
-    const operation: string = "deploy";
-
-    if (isValidOperation(operation)) {
-      // TypeScript should narrow the type here
-      expect(["deploy", "diff", "remove"]).toContain(operation);
     }
+  });
+
+  it("rejects anything else", () => {
+    expect(isValidOperation("invalid")).toBe(false);
+    expect(isValidOperation("")).toBe(false);
+    expect(isValidOperation("DEPLOY")).toBe(false);
+  });
+});
+
+describe("isValidCommentMode", () => {
+  it("accepts every comment mode", () => {
+    for (const mode of ["always", "on-success", "on-failure", "never"]) {
+      expect(isValidCommentMode(mode)).toBe(true);
+    }
+  });
+
+  it("rejects anything else", () => {
+    expect(isValidCommentMode("sometimes")).toBe(false);
+    expect(isValidCommentMode("")).toBe(false);
+  });
+});
+
+describe("validateMaxOutputSize", () => {
+  it("accepts a number in range", () => {
+    expect(validateMaxOutputSize(50_000)).toBe(50_000);
+  });
+
+  it("parses a numeric string, because Actions inputs arrive as text", () => {
+    expect(validateMaxOutputSize("50000")).toBe(50_000);
+  });
+
+  it("rejects a value below the floor", () => {
+    expect(() => validateMaxOutputSize(999)).toThrow("at least 1000 bytes");
+  });
+
+  it("rejects a value above the ceiling", () => {
+    expect(() => validateMaxOutputSize(2 * 1024 * 1024)).toThrow("exceed 1MB");
+  });
+
+  it("rejects what is not a number at all", () => {
+    expect(() => validateMaxOutputSize("not a number")).toThrow();
+    expect(() => validateMaxOutputSize(-1)).toThrow();
+  });
+
+  it("allows zero, which action.yml documents as unlimited", () => {
+    // The documentation and the implementation disagree about what 0 does
+    // once it reaches the CLI executor — see #160. This asserts only that
+    // validation lets it through, which it always has.
+    expect(validateMaxOutputSize(0)).toBe(0);
   });
 });

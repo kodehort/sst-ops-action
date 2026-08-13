@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { OperationOptions } from "../../src/types";
+import type { InfrastructureInputs } from "../../src/inputs/resolve";
 import {
   SST_RUNNERS,
   SSTCLIExecutor,
@@ -14,7 +14,7 @@ describe("Configurable Runner", () => {
   describe("CLI Command Building", () => {
     it("should build bun command correctly", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         runner: "bun",
         stage: "test",
       };
@@ -32,7 +32,7 @@ describe("Configurable Runner", () => {
 
     it("should build npm command correctly", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         runner: "npm",
         stage: "test",
       };
@@ -50,7 +50,7 @@ describe("Configurable Runner", () => {
 
     it("should build pnpm command correctly", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         runner: "pnpm",
         stage: "test",
       };
@@ -66,7 +66,7 @@ describe("Configurable Runner", () => {
 
     it("should build yarn command correctly", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         runner: "yarn",
         stage: "test",
       };
@@ -82,7 +82,7 @@ describe("Configurable Runner", () => {
 
     it("should build direct SST command correctly", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         runner: "sst",
         stage: "test",
       };
@@ -99,7 +99,7 @@ describe("Configurable Runner", () => {
 
     it("should default to bun when runner is not specified", async () => {
       const executor = new SSTCLIExecutor();
-      const options: Partial<OperationOptions> = {
+      const options: Partial<InfrastructureInputs> = {
         stage: "test",
         // runner not specified
       };

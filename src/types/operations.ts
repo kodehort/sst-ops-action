@@ -3,8 +3,6 @@
  * Defines the unified type system for deploy, diff, and remove operations
  */
 
-import type { SSTRunner } from "../utils/cli.js";
-
 /**
  * Array of all supported SST operations - single source of truth
  * Used to derive the SSTOperation type and validate operation values
@@ -33,17 +31,6 @@ export const COMMENT_MODES = [
 export type CommentMode = (typeof COMMENT_MODES)[number];
 
 export type CompletionStatus = "complete" | "partial" | "failed";
-
-export interface OperationOptions {
-  commentMode?: CommentMode;
-  failOnError?: boolean;
-  maxOutputSize?: number;
-  prefix?: string;
-  runner?: SSTRunner;
-  stage: string;
-  token?: string;
-  truncationLength?: number;
-}
 
 export interface BaseOperationResult {
   app: string;

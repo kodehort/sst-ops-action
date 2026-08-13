@@ -12,6 +12,24 @@
     // otherwise dominate the duplication and complexity findings.
     "dist/**"
   ],
+  // Tests are not entry points. Without this, every test file seeds the
+  // reachability graph, so an export reached only by the test written
+  // alongside it reads as live code — which is how ten runtime exports, a
+  // module describing JSON the SST CLI never emits, three formatter members
+  // and seven parser helpers all sat here with the tool reporting nothing.
+  //
+  // Scoped to dead-code: health and duplicate detection still want to see the
+  // test suite, which is a real part of the codebase.
+  "production": {
+    "deadCode": true
+  },
+  // An export used only by another symbol in its own file is used. It may
+  // still be worth un-exporting, but that is a style question, not dead code.
+  "ignoreExportsUsedInFile": true,
+  // Invoked through an interface or a bound closure the non-type-aware pass
+  // cannot follow. `fallow dead-code --production --type-aware` confirms all
+  // of these are reached; type-aware analysis is too slow for every commit.
+  "usedClassMembers": ["execute", "parse"],
   "audit": {
     // Only findings this changeset introduces fail the verdict, so a commit is
     // judged on what it adds rather than on debt it merely sits near. Inherited

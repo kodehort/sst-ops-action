@@ -304,22 +304,3 @@ export class SSTCLIExecutor {
     };
   }
 }
-
-/**
- * Create a new SST CLI executor instance
- */
-export function createSSTExecutor(): SSTCLIExecutor {
-  return new SSTCLIExecutor();
-}
-
-/**
- * Execute an SST command with default configuration
- */
-export function executeSST(
-  operation: SSTOperation,
-  stage: string,
-  options?: CLIOptions
-): Promise<SSTCommandResult> {
-  const executor = createSSTExecutor();
-  return executor.executeSST(operation, stage, options);
-}

@@ -24,7 +24,6 @@ vi.mock("../../src/operations/router", () => ({
 vi.mock("../../src/outputs/formatter", () => ({
   OutputFormatter: {
     formatOperationForGitHubActions: vi.fn(),
-    validateOutputs: vi.fn(),
   },
 }));
 vi.mock("../../src/errors/report-failure", async (importOriginal) => {
@@ -110,9 +109,6 @@ async function executeAction(env: Record<string, string>) {
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
-  );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
-    (out) => out as any
   );
 
   // Failure reporting shouldn't be called for successful operations
@@ -209,9 +205,6 @@ async function executeActionWithFailure(
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
-  );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
-    (out) => out as any
   );
 
   // vi.clearAllMocks() in setup wipes the call-through implementation the
@@ -311,9 +304,6 @@ async function executeActionWithFailureAndContinue(
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
-  );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
-    (out) => out as any
   );
 
   // Import and run the action
@@ -466,9 +456,6 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   const mockFormattedOutputs = createMockFormattedOutputs(mockResult);
   vi.mocked(OutputFormatter.formatOperationForGitHubActions).mockReturnValue(
     mockFormattedOutputs
-  );
-  vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
-    (out) => out as any
   );
 
   // Import and run the action

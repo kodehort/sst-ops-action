@@ -120,7 +120,13 @@ export class GitHubClient {
 
   /**
    * Upload artifacts for debugging purposes
+   *
+   * No production caller: the dead-code analysis now reports this rather than
+   * seeing its own test suite as a consumer. Deleting it is #153's job,
+   * because it orphans the @actions/artifact dependency and the stub helper
+   * it calls, which have to go in the same change.
    */
+  // fallow-ignore-next-line unused-class-member
   async uploadArtifacts(
     result: BaseOperationResult,
     options: Partial<ArtifactOptions> = {}
@@ -289,11 +295,4 @@ export class GitHubClient {
     // For now, return 0 as placeholder
     return 0;
   }
-}
-
-/**
- * Create GitHub client instance
- */
-export function createGitHubClient(token: string): GitHubClient {
-  return new GitHubClient(token);
 }
