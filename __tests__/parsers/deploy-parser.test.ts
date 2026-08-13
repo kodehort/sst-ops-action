@@ -23,7 +23,12 @@ describe("Deploy Parser - SST Output Processing", () => {
 
   describe("Deployment Output Parsing", () => {
     it("should parse successful deployment output", () => {
-      const result = parser.parse(SST_DEPLOY_SUCCESS_OUTPUT, "production", 0);
+      const result = parser.parse(
+        SST_DEPLOY_SUCCESS_OUTPUT,
+        "production",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("deploy");
@@ -78,7 +83,8 @@ describe("Deploy Parser - SST Output Processing", () => {
       const result = parser.parse(
         SST_DEPLOY_FAILURE_OUTPUT,
         "sst-ops-actions",
-        1
+        1,
+        false
       );
 
       expect(result.success).toBe(false);
@@ -110,7 +116,7 @@ describe("Deploy Parser - SST Output Processing", () => {
     });
 
     it("should handle malformed output gracefully", () => {
-      const result = parser.parse(MALFORMED_OUTPUT, "staging", 0);
+      const result = parser.parse(MALFORMED_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true); // Exit code 0
       expect(result.operation).toBe("deploy");
@@ -122,7 +128,7 @@ describe("Deploy Parser - SST Output Processing", () => {
     });
 
     it("should handle empty output", () => {
-      const result = parser.parse(EMPTY_OUTPUT, "staging", 0);
+      const result = parser.parse(EMPTY_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("deploy");
@@ -134,7 +140,7 @@ describe("Deploy Parser - SST Output Processing", () => {
     });
 
     it("should handle incomplete output", () => {
-      const result = parser.parse(INCOMPLETE_OUTPUT, "staging", 0);
+      const result = parser.parse(INCOMPLETE_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("deploy");
@@ -151,12 +157,26 @@ describe("Deploy Parser - SST Output Processing", () => {
       expect(result.resourceChanges).toBe(1);
     });
 
-    it("should properly set truncated flag based on output size", () => {
+    it("reports the truncation the CLI captured, and does not truncate again", () => {
+      // The parser used to take a size limit and slice the output itself,
+      // applying the same budget the CLI had already enforced. It now reports
+      // what it is told and leaves the text alone.
       const largeOutput = SST_DEPLOY_SUCCESS_OUTPUT.repeat(1000);
-      const result = parser.parse(largeOutput, "staging", 0, 1000); // max size 1000 bytes
+      const result = parser.parse(largeOutput, "staging", 0, true);
 
       expect(result.truncated).toBe(true);
-      expect(result.rawOutput.length).toBeLessThanOrEqual(1000);
+      expect(result.rawOutput).toBe(largeOutput);
+    });
+
+    it("reports no truncation when the CLI captured the whole run", () => {
+      const result = parser.parse(
+        SST_DEPLOY_SUCCESS_OUTPUT,
+        "staging",
+        0,
+        false
+      );
+
+      expect(result.truncated).toBe(false);
     });
 
     it("should extract resource changes correctly", () => {
@@ -178,7 +198,7 @@ SST 3.17.10  ready!
    Router: https://api.test.com
 `;
 
-      const result = parser.parse(mixedOutput, "staging", 0);
+      const result = parser.parse(mixedOutput, "staging", 0, false);
 
       expect(result.resourceChanges).toBe(5);
       expect(result.resources).toHaveLength(5);
@@ -222,7 +242,7 @@ SST 3.17.10  ready!
    Function: https://lambda.example.com
 `;
 
-      const result = parser.parse(urlOutput, "staging", 0);
+      const result = parser.parse(urlOutput, "staging", 0, false);
 
       expect(result.outputs).toHaveLength(5);
 
@@ -263,7 +283,7 @@ Error: invocation of aws:iam/getPolicyDocument:getPolicyDocument returned an err
 Additional context: AWS credentials invalid
 `;
 
-      const result = parser.parse(errorOutput, "staging", 1);
+      const result = parser.parse(errorOutput, "staging", 1, false);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
@@ -287,7 +307,7 @@ SST 3.17.10  ready!
 ✓  Complete
 `;
 
-      const result = parser.parse(malformedResourceOutput, "staging", 0);
+      const result = parser.parse(malformedResourceOutput, "staging", 0, false);
 
       // Should still parse what it can
       expect(result.success).toBe(true);
@@ -325,7 +345,7 @@ ${largeResourceList}
 `;
 
       const startTime = Date.now();
-      const result = parser.parse(largeOutput, "staging", 0);
+      const result = parser.parse(largeOutput, "staging", 0, false);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(1000); // Should complete in under 1 second
@@ -351,7 +371,7 @@ Database: postgres://localhost:5432/db
 VeryLongLine: ${"x".repeat(150)}
 `;
 
-      const result = parser.parse(outputWithMixedLines, "test", 0);
+      const result = parser.parse(outputWithMixedLines, "test", 0, false);
 
       // Should parse valid outputs
       expect(result.outputs).toEqual([
@@ -375,7 +395,7 @@ AnotherInvalidLine
 NoColonHere
 `;
 
-      const result = parser.parse(outputWithNoValidOutputs, "test", 0);
+      const result = parser.parse(outputWithNoValidOutputs, "test", 0, false);
 
       // Should not crash and return empty outputs
       expect(result.outputs).toEqual([]);
@@ -392,7 +412,7 @@ Unicode: 🚀 deployment complete
 Spaces:    value with spaces   
 `;
 
-      const result = parser.parse(outputWithSpecialChars, "test", 0);
+      const result = parser.parse(outputWithSpecialChars, "test", 0, false);
 
       expect(result.outputs).toEqual([
         { key: "Url", value: "https://example.com/path?param=value&other=123" },
@@ -415,7 +435,7 @@ describe("Real captured SST deploy failure output", () => {
   });
 
   it("takes the detailed-error branch", () => {
-    const result = parser.parse(capture, "sst-ops-actions", 1);
+    const result = parser.parse(capture, "sst-ops-actions", 1, false);
 
     expect(result.success).toBe(false);
     expect(result.completionStatus).toBe("failed");
@@ -443,7 +463,7 @@ describe("Malformed output lines", () => {
       "   ---",
     ].join("\n");
 
-    const result = parser.parse(output, "staging", 0);
+    const result = parser.parse(output, "staging", 0, false);
 
     expect(result.success).toBe(true);
     expect(result.outputs).toHaveLength(0);

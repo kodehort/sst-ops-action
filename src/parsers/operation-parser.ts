@@ -18,7 +18,17 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * @param exitCode CLI exit code
    * @returns Parsed operation result
    */
-  abstract parse(output: string, stage: string, exitCode: number): T;
+  /**
+   * @param truncated Whether the CLI capture hit its size budget. Truncation
+   *   is a fact about the capture, not about the text, so the parser is told
+   *   rather than trying to infer it.
+   */
+  abstract parse(
+    output: string,
+    stage: string,
+    exitCode: number,
+    truncated: boolean
+  ): T;
 
   /**
    * Parse common information present in all SST CLI outputs

@@ -183,6 +183,48 @@ describe("SST CLI Utilities - Command Execution", () => {
         expect(result.truncated).toBe(true);
         expect(result.output.length).toBe(50);
       });
+
+      it("enforces one budget across both streams, not one each", async () => {
+        // stdout and stderr used to be capped against the full budget
+        // independently and then concatenated, so the value every parser reads
+        // could reach twice the configured limit.
+        mockExec.exec.mockImplementation(
+          (_command: string, _args: string[], execOptions: any) => {
+            execOptions?.listeners?.stdout(Buffer.from("o".repeat(100)));
+            execOptions?.listeners?.stderr(Buffer.from("e".repeat(100)));
+            return 0;
+          }
+        );
+
+        const result = await executor.executeSST("deploy", "staging", {
+          maxOutputSize: 50,
+        });
+
+        expect(result.output.length).toBe(50);
+        expect(result.truncated).toBe(true);
+      });
+
+      it("keeps the streams in the order the process wrote them", async () => {
+        // The merged value was all of stdout followed by all of stderr, so
+        // anything on stderr landed after the final permalink line. The diff
+        // extractor takes every line after a marker, which swept relocated
+        // stderr content into the diff.
+        mockExec.exec.mockImplementation(
+          (_command: string, _args: string[], execOptions: any) => {
+            execOptions?.listeners?.stdout(Buffer.from("first\n"));
+            execOptions?.listeners?.stderr(Buffer.from("second\n"));
+            execOptions?.listeners?.stdout(Buffer.from("third\n"));
+            return 0;
+          }
+        );
+
+        const result = await executor.executeSST("deploy", "staging");
+
+        expect(result.output).toBe("first\nsecond\nthird\n");
+        // The separated streams stay available for diagnostics.
+        expect(result.stdout).toBe("first\nthird\n");
+        expect(result.stderr).toBe("second\n");
+      });
     });
   });
 

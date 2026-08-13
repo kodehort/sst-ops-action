@@ -17,12 +17,11 @@ export class DeployParser extends OperationParser<DeployResult> {
     output: string,
     stage: string,
     exitCode: number,
-    maxSize?: number
+    truncated: boolean
   ): DeployResult {
-    // Handle output truncation if size limit specified
-    const truncated = maxSize ? output.length > maxSize : false;
-    const processedOutput =
-      maxSize && output.length > maxSize ? output.slice(0, maxSize) : output;
+    // The CLI layer already enforced the size budget against a single buffer.
+    // A second layer here would apply the same limit twice.
+    const processedOutput = output;
 
     // Parse common information using base parser
     const lines = processedOutput.split("\n");

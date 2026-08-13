@@ -53,10 +53,13 @@ export class DiffOperation extends BaseOperation<DiffResult> {
 
       // Parse the diff output
       const parser = this.diffParser || new DiffParser();
+      // Reads the merged buffer, like deploy and remove. Reading stdout alone
+      // made anything the CLI wrote to stderr structurally invisible here.
       const basicDiffResult = parser.parse(
-        cliResult.stdout,
+        cliResult.output,
         options.stage,
-        cliResult.exitCode
+        cliResult.exitCode,
+        cliResult.truncated
       );
 
       if (!basicDiffResult.success) {

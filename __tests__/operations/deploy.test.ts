@@ -112,11 +112,14 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
       );
 
       // Verify parsing
+      // The size limit used to be handed to the parser, which applied the
+      // same budget the CLI had already enforced. It gets the captured
+      // truncation flag instead.
       expect(mockParse).toHaveBeenCalledWith(
         mockCLIResult.output,
         "staging",
         0,
-        50_000
+        mockCLIResult.truncated
       );
 
       // Verify GitHub integration

@@ -41,6 +41,12 @@ describe("Diff Operation - Change Analysis Workflows", () => {
     const mockSSTResult = {
       duration: 5000,
       exitCode: 0,
+      output: `Planned changes:
++ Function MyFunction
+~ Bucket MyBucket (policy updated)
+- Database OldDatabase
+
+Monthly: $45.50 → $67.80 (+$22.30)`,
       stderr: "",
       stdout: `Planned changes:
 + Function MyFunction
@@ -49,6 +55,7 @@ describe("Diff Operation - Change Analysis Workflows", () => {
 
 Monthly: $45.50 → $67.80 (+$22.30)`,
       success: true,
+      truncated: false,
     };
 
     const mockDiffResult = {
@@ -99,10 +106,14 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
       timeout: 300_000, // 5 minutes
     });
 
+    // Diff used to read stdout alone, which made anything the CLI wrote to
+    // stderr structurally invisible to it. It reads the merged buffer now, the
+    // same value deploy and remove read.
     expect(mockDiffParser.parse).toHaveBeenCalledWith(
-      mockSSTResult.stdout,
+      mockSSTResult.output,
       "staging",
-      0
+      0,
+      false
     );
     expect(mockGitHubClient.createOrUpdateComment).toHaveBeenCalledWith(
       mockDiffResult,
@@ -121,9 +132,11 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     const mockSSTResult = {
       duration: 2000,
       exitCode: 0,
+      output: "No changes detected.",
       stderr: "",
       stdout: "No changes detected.",
       success: true,
+      truncated: false,
     };
 
     const mockDiffResult = {
@@ -166,12 +179,17 @@ Monthly: $45.50 → $67.80 (+$22.30)`,
     const mockSSTResult = {
       duration: 3000,
       exitCode: 0,
+      output: `Planned changes:
+- Function MyFunction
+
+Changes detected in infrastructure.`,
       stderr: "",
       stdout: `Planned changes:
 - Function MyFunction
 
 Changes detected in infrastructure.`,
       success: true,
+      truncated: false,
     };
 
     const mockDiffResult = {
@@ -219,9 +237,11 @@ Changes detected in infrastructure.`,
     const mockSSTResult = {
       duration: 1000,
       exitCode: 1,
+      output: "",
       stderr: "Authentication failed: Invalid SST token",
       stdout: "",
       success: false,
+      truncated: false,
     };
 
     mockSSTExecutor.executeSST.mockResolvedValue(mockSSTResult);
@@ -256,10 +276,13 @@ Changes detected in infrastructure.`,
     const mockSSTResult = {
       duration: 3000,
       exitCode: 0,
+      output: `Planned changes:
++ Function MyFunction`,
       stderr: "",
       stdout: `Planned changes:
 + Function MyFunction`,
       success: true,
+      truncated: false,
     };
 
     const mockDiffResult = {

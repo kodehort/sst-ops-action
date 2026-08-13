@@ -11,7 +11,12 @@ export class DiffParser extends OperationParser<DiffResult> {
   /**
    * Parse SST diff output and extract planned changes
    */
-  parse(output: string, stage: string, exitCode: number): DiffResult {
+  parse(
+    output: string,
+    stage: string,
+    exitCode: number,
+    truncated: boolean
+  ): DiffResult {
     // Handle null/undefined input gracefully
     const processedOutput = this.cleanText(output || "");
     const lines = processedOutput.split("\n");
@@ -50,7 +55,7 @@ export class DiffParser extends OperationParser<DiffResult> {
       stage,
       // Base operation result properties
       success,
-      truncated: false,
+      truncated,
     };
 
     return result;

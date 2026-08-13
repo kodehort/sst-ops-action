@@ -102,7 +102,12 @@ function testOperationSnapshots(operation: OperationWithParser): void {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           const generated = formatter.formatOperationComment(parsed);
           const comparison = compareWithSnapshot(
@@ -127,7 +132,12 @@ function testOperationSnapshots(operation: OperationWithParser): void {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           const generated = formatter.formatOperationSummary(parsed);
           const comparison = compareWithSnapshot(
@@ -230,7 +240,7 @@ describe("Snapshot Testing Suite", () => {
             const rawOutput = loadInput(operation, name);
             const stage = extractStage(rawOutput);
             const exitCode = extractExitCode(rawOutput);
-            parsers[operation].parse(rawOutput, stage, exitCode);
+            parsers[operation].parse(rawOutput, stage, exitCode, false);
           }).not.toThrow();
         }
       }

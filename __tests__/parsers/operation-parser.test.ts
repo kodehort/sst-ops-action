@@ -4,7 +4,12 @@ import type { BaseOperationResult } from "@/types/operations";
 
 // Concrete implementation for testing the abstract OperationParser
 class TestOperationParser extends OperationParser<BaseOperationResult> {
-  parse(output: string, stage: string, exitCode: number): BaseOperationResult {
+  parse(
+    output: string,
+    stage: string,
+    exitCode: number,
+    truncated: boolean
+  ): BaseOperationResult {
     const lines = output.split("\n");
     const commonInfo = this.parseCommonInfo(lines);
 
@@ -16,7 +21,7 @@ class TestOperationParser extends OperationParser<BaseOperationResult> {
       rawOutput: output,
       stage,
       success: this.isSuccessfulOperation(output, exitCode),
-      truncated: false,
+      truncated,
       ...commonInfo,
     };
   }
@@ -426,7 +431,7 @@ Permalink: https://console.sst.dev/123
 | Bucket: assets
 Router: https://api.example.com`;
 
-      const result = parser.parse(output, "production", 0);
+      const result = parser.parse(output, "production", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.app).toBe("integration-test");
@@ -436,7 +441,7 @@ Router: https://api.example.com`;
 
     it("should handle error conditions in parse method", () => {
       const malformedOutput = "Invalid\0output\nwith\x00null\nbytes";
-      const result = parser.parse(malformedOutput, "test", 1);
+      const result = parser.parse(malformedOutput, "test", 1, false);
 
       expect(result.success).toBe(false);
       expect(result.stage).toBe("test");

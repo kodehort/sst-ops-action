@@ -23,7 +23,12 @@ describe("RemoveParser", () => {
 
   describe("parse", () => {
     it("should parse basic remove output with successful removals", () => {
-      const result = parser.parse(SST_REMOVE_SUCCESS_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_REMOVE_SUCCESS_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("remove");
@@ -54,7 +59,12 @@ describe("RemoveParser", () => {
     });
 
     it("should handle no resources to remove scenario", () => {
-      const result = parser.parse(SST_REMOVE_NO_RESOURCES_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_REMOVE_NO_RESOURCES_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("remove");
@@ -69,7 +79,8 @@ describe("RemoveParser", () => {
       const result = parser.parse(
         SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
         "production",
-        0
+        0,
+        false
       );
 
       expect(result.success).toBe(true);
@@ -98,7 +109,8 @@ describe("RemoveParser", () => {
       const result = parser.parse(
         SST_REMOVE_PARTIAL_WITH_FAILURES_OUTPUT,
         "development",
-        0
+        0,
+        false
       );
 
       expect(result.success).toBe(true);
@@ -130,7 +142,12 @@ describe("RemoveParser", () => {
     });
 
     it("should handle only failures scenario", () => {
-      const result = parser.parse(SST_REMOVE_ALL_FAILURES_OUTPUT, "staging", 1);
+      const result = parser.parse(
+        SST_REMOVE_ALL_FAILURES_OUTPUT,
+        "staging",
+        1,
+        false
+      );
 
       expect(result.success).toBe(false);
       expect(result.resourcesRemoved).toBe(0);
@@ -144,7 +161,12 @@ describe("RemoveParser", () => {
     });
 
     it("should handle skipped resources", () => {
-      const result = parser.parse(SST_REMOVE_WITH_SKIPPED_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_REMOVE_WITH_SKIPPED_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.resourcesRemoved).toBe(2);
@@ -163,7 +185,7 @@ describe("RemoveParser", () => {
     });
 
     it("should handle complete failure scenarios", () => {
-      const result = parser.parse(SST_REMOVE_ERROR_OUTPUT, "staging", 1);
+      const result = parser.parse(SST_REMOVE_ERROR_OUTPUT, "staging", 1, false);
 
       expect(result.success).toBe(false);
       expect(result.operation).toBe("remove");
@@ -175,7 +197,12 @@ describe("RemoveParser", () => {
     });
 
     it("should handle malformed output gracefully", () => {
-      const result = parser.parse(SST_REMOVE_MALFORMED_OUTPUT, "staging", 1);
+      const result = parser.parse(
+        SST_REMOVE_MALFORMED_OUTPUT,
+        "staging",
+        1,
+        false
+      );
 
       expect(result.success).toBe(false);
       expect(result.operation).toBe("remove");
@@ -185,7 +212,7 @@ describe("RemoveParser", () => {
     });
 
     it("should handle empty output", () => {
-      const result = parser.parse(EMPTY_OUTPUT, "staging", 0);
+      const result = parser.parse(EMPTY_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("remove");
@@ -196,7 +223,12 @@ describe("RemoveParser", () => {
     });
 
     it("should handle incomplete output", () => {
-      const result = parser.parse(SST_REMOVE_INCOMPLETE_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_REMOVE_INCOMPLETE_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("remove");
@@ -211,7 +243,12 @@ describe("RemoveParser", () => {
     });
 
     it("should provide consistent result structure", () => {
-      const result = parser.parse(SST_REMOVE_SUCCESS_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_REMOVE_SUCCESS_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       // All RemoveResult properties should be present
       expect(result).toHaveProperty("success");
@@ -235,12 +272,12 @@ describe("RemoveParser", () => {
     it("should be null-safe with undefined inputs", () => {
       expect(() => {
         // @ts-expect-error - testing runtime behavior
-        parser.parse(null, "staging", 0);
+        parser.parse(null, "staging", 0, false);
       }).not.toThrow();
 
       expect(() => {
         // @ts-expect-error - testing runtime behavior
-        parser.parse(undefined, "staging", 0);
+        parser.parse(undefined, "staging", 0, false);
       }).not.toThrow();
     });
   });
@@ -256,7 +293,7 @@ describe("Real captured SST remove output", () => {
   });
 
   it("parses as a successful removal", () => {
-    const result = parser.parse(capture, "prod", 0);
+    const result = parser.parse(capture, "prod", 0, false);
 
     expect(result.success).toBe(true);
     expect(result.completionStatus).toBe("complete");
@@ -267,7 +304,7 @@ describe("Real captured SST remove output", () => {
     // recognised this returned "failed", because nothing matched the real
     // output and it fell through to the exit code. success stays exit-code
     // driven; that wiring belongs to a later ticket.
-    const result = parser.parse(capture, "prod", 1);
+    const result = parser.parse(capture, "prod", 1, false);
 
     expect(result.completionStatus).toBe("complete");
   });
