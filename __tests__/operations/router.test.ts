@@ -15,6 +15,17 @@ import type {
 } from "@/types";
 import { SSTCLIExecutor } from "@/utils/cli";
 
+/**
+ * These fixtures are the shape a parser actually produces.
+ *
+ * They used to be metadata-envelope shaped — `{ metadata: { app, cliExitCode,
+ * rawOutput, truncated }, ... }` — which no parser has ever emitted. The router
+ * validated against that shape with every field optional, so validation passed
+ * with the envelope undefined and the transform rebuilt the result from
+ * nothing: `app` became the literal "unknown", `truncated` was always false,
+ * the real exit code was discarded, and `permalink` and `completionStatus` were
+ * dropped. These tests encoded that as correct.
+ */
 describe("OperationRouter", () => {
   let mockOperation: {
     execute: ReturnType<typeof vi.fn>;
@@ -27,6 +38,57 @@ describe("OperationRouter", () => {
     runner: "bun",
     stage: "test-stage",
     token: "test-token",
+  };
+
+  const deployResult: DeployResult = {
+    app: "kodehort-scratch",
+    completionStatus: "complete",
+    exitCode: 0,
+    operation: "deploy",
+    outputs: [
+      { key: "api", value: "https://api.example.com" },
+      { key: "web", value: "https://web.example.com" },
+    ],
+    permalink: "https://sst.dev/u/75c084c6",
+    rawOutput: "Deploy successful",
+    resourceChanges: 3,
+    resources: [
+      { name: "handler", status: "created", timing: "2s", type: "function" },
+    ],
+    stage: "test-stage",
+    success: true,
+    truncated: true,
+  };
+
+  const diffResult: DiffResult = {
+    app: "kodehort-scratch",
+    changeSummary: "3 changes planned",
+    changes: [{ action: "create", name: "handler", type: "function" }],
+    completionStatus: "complete",
+    exitCode: 0,
+    operation: "diff",
+    permalink: "https://sst.dev/u/abc123",
+    plannedChanges: 3,
+    rawOutput: "Diff generated",
+    stage: "test-stage",
+    success: true,
+    truncated: true,
+  };
+
+  const removeResult: RemoveResult = {
+    app: "kodehort-scratch",
+    completionStatus: "partial",
+    exitCode: 0,
+    operation: "remove",
+    permalink: "https://sst.dev/u/9d14bf2c",
+    rawOutput: "Removed",
+    removedResources: [
+      { name: "handler", status: "removed", type: "function" },
+    ],
+    resourcesRemoved: 1,
+    stage: "test-stage",
+    success: true,
+    truncated: true,
   };
 
   beforeEach(() => {
@@ -62,8 +124,10 @@ describe("OperationRouter", () => {
   });
 
   describe("executeOperation", () => {
-    it("should validate operation type before execution", async () => {
-      // Invalid operations should now throw during error result creation
+    it("should reject an unsupported operation type", async () => {
+      // The real guard, not the always-true stub the other cases use.
+      vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(false);
+
       await expect(
         executeOperation("invalid" as any, defaultOptions)
       ).rejects.toThrow(
@@ -71,110 +135,73 @@ describe("OperationRouter", () => {
       );
     });
 
-    it("should handle deploy operation successfully", async () => {
-      const mockDeployResult = {
-        metadata: {
-          app: "test-app",
-          cliExitCode: 0,
-          rawOutput: "Deploy successful",
-          truncated: false,
-        },
-        outputs: [
-          { key: "api", value: "https://api.example.com" },
-          { key: "web", value: "https://web.example.com" },
-        ],
-        permalink: "https://console.sst.dev/deploy/123",
-        resourceChanges: 3,
-        resources: [
-          {
-            name: "handler",
-            status: "created",
-            timing: "2s",
-            type: "function",
-          },
-        ],
-        stage: "test-stage",
-        success: true,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockDeployResult);
+    it("should return the deploy result unchanged", async () => {
+      mockOperation.execute.mockResolvedValue(deployResult);
 
       const result = await executeOperation("deploy", defaultOptions);
 
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe("deploy");
-      expect((result as DeployResult).resourceChanges).toBe(3);
-      expect((result as DeployResult).outputs).toHaveLength(2);
-      expect((result as DeployResult).resources).toHaveLength(1);
-      expect((result as DeployResult).permalink).toBe(
-        "https://console.sst.dev/deploy/123"
-      );
+      expect(result).toEqual(deployResult);
     });
 
-    it("should handle diff operation successfully", async () => {
-      const mockDiffResult = {
-        changes: [
-          {
-            action: "create",
-            details: "New Lambda function",
-            name: "handler",
-            type: "function",
-          },
-        ],
-        changesDetected: 2,
-        metadata: {
-          app: "test-app",
-          cliExitCode: 0,
-          rawOutput: "Diff completed",
-          truncated: false,
-        },
-        stage: "test-stage",
-        success: true,
-        summary: "Infrastructure changes detected",
-      };
+    it("should report the real app name, exit code and truncation for deploy", async () => {
+      mockOperation.execute.mockResolvedValue(deployResult);
 
-      mockOperation.execute.mockResolvedValue(mockDiffResult);
+      const result = (await executeOperation(
+        "deploy",
+        defaultOptions
+      )) as DeployResult;
+
+      // Each of these was destroyed by the transform: app became "unknown",
+      // truncated was forced false, and permalink was dropped entirely.
+      expect(result.app).toBe("kodehort-scratch");
+      expect(result.truncated).toBe(true);
+      expect(result.permalink).toBe("https://sst.dev/u/75c084c6");
+      expect(result.resourceChanges).toBe(3);
+      expect(result.outputs).toHaveLength(2);
+    });
+
+    it("should return the diff result unchanged", async () => {
+      mockOperation.execute.mockResolvedValue(diffResult);
 
       const result = await executeOperation("diff", defaultOptions);
 
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe("diff");
-      expect((result as DiffResult).plannedChanges).toBe(2);
-      expect((result as DiffResult).changeSummary).toBe(
-        "Infrastructure changes detected"
-      );
-      expect((result as DiffResult).changes).toHaveLength(1);
+      expect(result).toEqual(diffResult);
     });
 
-    it("should handle remove operation successfully", async () => {
-      const mockRemoveResult = {
-        completionStatus: "complete" as const,
-        metadata: {
-          app: "test-app",
-          cliExitCode: 0,
-          rawOutput: "Remove completed",
-          truncated: false,
-        },
-        removedResources: [
-          {
-            name: "handler",
-            status: "removed",
-            type: "function",
-          },
-        ],
-        resourcesRemoved: 5,
-        stage: "test-stage",
-        success: true,
-      };
+    it("should report the real planned changes and summary for diff", async () => {
+      mockOperation.execute.mockResolvedValue(diffResult);
 
-      mockOperation.execute.mockResolvedValue(mockRemoveResult);
+      const result = (await executeOperation(
+        "diff",
+        defaultOptions
+      )) as DiffResult;
+
+      // The transform read these from differently-named schema fields, so the
+      // output said "No changes detected" and 0 regardless of what was mapped.
+      expect(result.plannedChanges).toBe(3);
+      expect(result.changeSummary).toBe("3 changes planned");
+      expect(result.app).toBe("kodehort-scratch");
+    });
+
+    it("should return the remove result unchanged", async () => {
+      mockOperation.execute.mockResolvedValue(removeResult);
 
       const result = await executeOperation("remove", defaultOptions);
 
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe("remove");
-      expect((result as RemoveResult).resourcesRemoved).toBe(5);
-      expect((result as RemoveResult).removedResources).toHaveLength(1);
+      expect(result).toEqual(removeResult);
+    });
+
+    it("should preserve the parser's completion status for remove", async () => {
+      mockOperation.execute.mockResolvedValue(removeResult);
+
+      const result = (await executeOperation(
+        "remove",
+        defaultOptions
+      )) as RemoveResult;
+
+      // "partial" survives; the transform defaulted a missing value to "failed".
+      expect(result.completionStatus).toBe("partial");
+      expect(result.resourcesRemoved).toBe(1);
     });
 
     it("should handle stage operation successfully", async () => {
@@ -208,196 +235,52 @@ describe("OperationRouter", () => {
 
       const result = await executeOperation("deploy", defaultOptions);
 
+      // The router still owns failure-result construction — that is result
+      // shaping, not error reporting.
       expect(result.success).toBe(false);
       expect(result.error).toBe("Operation failed");
       expect(result.operation).toBe("deploy");
       expect(result.stage).toBe("test-stage");
     });
 
-    it("should normalize URL types correctly", async () => {
-      const mockDeployResult = {
-        metadata: { app: "test-app" },
-        outputs: [
-          { key: "valid-api", value: "https://api.example.com" },
-          { key: "invalid-type", value: "https://custom.example.com" },
-        ],
-        stage: "test-stage",
-        success: true,
-      };
+    it("should build an operation-specific failure result on throw", async () => {
+      mockOperation.execute.mockRejectedValue(new Error("boom"));
 
-      mockOperation.execute.mockResolvedValue(mockDeployResult);
+      const diff = (await executeOperation(
+        "diff",
+        defaultOptions
+      )) as DiffResult;
+      expect(diff.changeSummary).toBe("Operation failed");
+      expect(diff.plannedChanges).toBe(0);
+      expect(diff.changes).toEqual([]);
 
-      const result = await executeOperation("deploy", defaultOptions);
-
-      const deployResult = result as DeployResult;
-      expect(deployResult.outputs?.[0]?.key).toBe("valid-api");
-      expect(deployResult.outputs?.[1]?.key).toBe("invalid-type");
-    });
-
-    it("should normalize resource status correctly", async () => {
-      const mockDeployResult = {
-        metadata: { app: "test-app" },
-        resources: [
-          { name: "valid", status: "created", type: "function" },
-          { name: "invalid", status: "invalid-status", type: "function" },
-        ],
-        stage: "test-stage",
-        success: true,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockDeployResult);
-
-      const result = await executeOperation("deploy", defaultOptions);
-
-      const deployResult = result as DeployResult;
-      expect(deployResult.resources?.[0]?.status).toBe("created");
-      expect(deployResult.resources?.[1]?.status).toBe("created"); // Should normalize to 'created'
-    });
-
-    it("should normalize diff actions correctly", async () => {
-      const mockDiffResult = {
-        changes: [
-          { action: "create", name: "valid", type: "function" },
-          {
-            action: "modify",
-            name: "invalid",
-            type: "function",
-          },
-        ],
-        metadata: { app: "test-app" },
-        stage: "test-stage",
-        success: true,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockDiffResult);
-
-      const result = await executeOperation("diff", defaultOptions);
-
-      const diffResult = result as DiffResult;
-      expect(diffResult.changes?.[0]?.action).toBe("create");
-      expect(diffResult.changes?.[1]?.action).toBe("update"); // Should normalize to 'update'
-    });
-
-    it("should normalize remove status correctly", async () => {
-      const mockRemoveResult = {
-        metadata: { app: "test-app" },
-        removedResources: [
-          {
-            name: "valid",
-            status: "removed",
-            type: "function",
-          },
-          {
-            name: "invalid",
-            status: "invalid-status",
-            type: "function",
-          },
-        ],
-        stage: "test-stage",
-        success: true,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockRemoveResult);
-
-      const result = await executeOperation("remove", defaultOptions);
-
-      const removeResult = result as RemoveResult;
-      expect(removeResult.removedResources?.[0]?.status).toBe("removed");
-      expect(removeResult.removedResources?.[1]?.status).toBe("failed"); // Should normalize to 'failed'
-    });
-
-    it("should handle missing optional fields gracefully", async () => {
-      const mockDeployResult = {
-        stage: "test-stage",
-        success: true,
-        // Missing metadata, urls, resources
-      };
-
-      mockOperation.execute.mockResolvedValue(mockDeployResult);
-
-      const result = await executeOperation("deploy", defaultOptions);
-
-      expect(result.success).toBe(true);
-      expect((result as DeployResult).app).toBe("unknown");
-      expect((result as DeployResult).rawOutput).toBe("");
-      expect((result as DeployResult).exitCode).toBe(0);
-      expect((result as DeployResult).resourceChanges).toBe(0);
-      expect((result as DeployResult).outputs).toEqual([]);
-      expect((result as DeployResult).resources).toEqual([]);
+      const remove = (await executeOperation(
+        "remove",
+        defaultOptions
+      )) as RemoveResult;
+      expect(remove.removedResources).toEqual([]);
+      expect(remove.resourcesRemoved).toBe(0);
     });
 
     it("should use fake token for stage operations", async () => {
-      const mockStageResult = {
-        app: "test-app",
+      mockOperation.execute.mockResolvedValue({
+        app: "",
         completionStatus: "complete" as const,
-        computedStage: "main",
+        computedStage: "test-stage",
         eventName: "push",
         exitCode: 0,
         isPullRequest: false,
         operation: "stage" as const,
         rawOutput: "",
-        ref: "refs/heads/main",
+        ref: "",
         stage: "test-stage",
         success: true,
         truncated: false,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockStageResult);
+      });
 
       await executeOperation("stage", defaultOptions);
 
       expect(GitHubClient).toHaveBeenCalledWith("fake-token");
-    });
-
-    it("should create failure result for unknown operation type", async () => {
-      // Unknown operations should now throw during error result creation
-      await expect(
-        executeOperation("unknown" as any, defaultOptions)
-      ).rejects.toThrow(
-        "Cannot create error result for unknown operation: unknown"
-      );
-    });
-
-    it("should preserve optional fields when present", async () => {
-      const mockDeployResult = {
-        error: "Warning message",
-        metadata: {
-          app: "test-app",
-          cliExitCode: 0,
-          rawOutput: "Deploy output",
-          truncated: true,
-        },
-        outputs: [
-          {
-            key: "api",
-            value: "https://api.example.com",
-          },
-        ],
-        permalink: "https://console.sst.dev/123",
-        resources: [
-          {
-            name: "handler",
-            status: "updated",
-            timing: "3s",
-            type: "function",
-          },
-        ],
-        stage: "test-stage",
-        success: true,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockDeployResult);
-
-      const result = await executeOperation("deploy", defaultOptions);
-
-      expect(result.success).toBe(true);
-      expect((result as DeployResult).error).toBe("Warning message");
-      expect((result as DeployResult).permalink).toBe(
-        "https://console.sst.dev/123"
-      );
-      expect((result as DeployResult).truncated).toBe(true);
-      const deployResult = result as DeployResult;
-      expect(deployResult.resources?.[0]?.timing).toBe("3s");
     });
   });
 });
