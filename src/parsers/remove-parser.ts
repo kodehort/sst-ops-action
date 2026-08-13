@@ -40,7 +40,7 @@ export class RemoveParser extends OperationParser<RemoveResult> {
 
     // Build result with all required properties
     const result: RemoveResult = {
-      app: commonInfo.app || "unknown-app",
+      app: commonInfo.app || "",
       completionStatus,
       exitCode,
       operation: "remove",

@@ -41,7 +41,7 @@ export class DiffParser extends OperationParser<DiffResult> {
 
     // Build result with all required properties
     const result: DiffResult = {
-      app: commonInfo.app || "unknown-app",
+      app: commonInfo.app || "",
       changeSummary,
       changes,
       completionStatus: commonInfo.completionStatus || "complete",

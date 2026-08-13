@@ -61,7 +61,8 @@ describe("Stage Operation - Stage Computation Integration", () => {
       expect(result.ref).toBe("feature/user-authentication");
       expect(result.eventName).toBe("pull_request");
       expect(result.isPullRequest).toBe(true);
-      expect(result.app).toBe("stage-calculator");
+      // The stage operation never runs SST, so there is no app to name.
+      expect(result.app).toBe("");
       expect(result.completionStatus).toBe("complete");
       expect(result.exitCode).toBe(0);
       expect(result.truncated).toBe(false);

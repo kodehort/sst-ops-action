@@ -78,7 +78,7 @@ function parseOutput(
     const stageMatch = rawOutput.match(STAGE_REGEX);
 
     const stage = stageMatch?.[1]?.trim() || "unknown-stage";
-    const _app = appMatch?.[1]?.trim() || "unknown-app";
+    const _app = appMatch?.[1]?.trim() || "";
 
     // Determine exit code based on success indicators. The failure marker
     // comes from the shared pattern library rather than a hardcoded glyph:

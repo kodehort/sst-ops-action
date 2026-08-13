@@ -78,7 +78,7 @@ export class StageProcessor {
     const rawOutput = `Stage computation successful\nEvent: ${context.eventName}\nRef: ${ref || "undefined"}\nComputed Stage: ${finalStage}`;
 
     return {
-      app: "stage-calculator",
+      app: "",
       completionStatus: "complete",
       computedStage: finalStage,
       eventName: context.eventName,
@@ -104,7 +104,7 @@ export class StageProcessor {
     const rawOutput = `Stage computation failed: ${errorMessage}`;
 
     return {
-      app: "stage-calculator",
+      app: "",
       completionStatus: "failed",
       computedStage: "",
       error: errorMessage,

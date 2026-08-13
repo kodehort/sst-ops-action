@@ -76,7 +76,7 @@ function createFailureResult(
   options: OperationOptions
 ): OperationResult {
   const baseResult = {
-    app: "unknown",
+    app: "",
     completionStatus: "failed" as const,
     error: error.message,
     exitCode: 1,

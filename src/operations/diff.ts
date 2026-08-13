@@ -83,7 +83,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
 
   private createFailureResult(stage: string, error: string): DiffResult {
     return {
-      app: "unknown",
+      app: "",
       changeSummary: "Failed to execute SST diff command",
       changes: [],
       completionStatus: "failed",

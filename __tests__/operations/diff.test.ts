@@ -249,7 +249,7 @@ Changes detected in infrastructure.`,
     const result = await diffOperation.execute(options);
 
     expect(result).toEqual({
-      app: "unknown",
+      app: "",
       changeSummary: "Failed to execute SST diff command",
       changes: [],
       completionStatus: "failed",
