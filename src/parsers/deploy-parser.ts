@@ -7,26 +7,7 @@ import * as core from "@actions/core";
 import type { DeployResult } from "../types/operations";
 import { normalizeResourceStatus } from "./normalization";
 import { OperationParser } from "./operation-parser";
-
-// Real SST v3 output patterns based on actual deploy examples
-const RESOURCE_CREATED_PATTERN =
-  /^\|\s+Created\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
-const RESOURCE_UPDATED_PATTERN =
-  /^\|\s+Updated\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
-const RESOURCE_DELETED_PATTERN =
-  /^\|\s+Deleted\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
-
-// Error and completion patterns for real SST output
-// Marks the start of the outputs section, so it stays "Complete" only —
-// widening it would move where outputs begin.
-const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
-// U+2715 is what real SST emits; U+2717 and U+00D7 appear elsewhere in the
-// codebase for the same marker, so accept all three.
-const COMPLETION_FAILED_PATTERN = /^[✕✗×]\s+Failed\s*$/m;
-const ERROR_SECTION_START_PATTERN = /^Error:/m;
-const GRPC_ERROR_PATTERN = /grpc: the client/;
-const RESOURCE_NOT_EXIST_PATTERN = /resource '([^']+)' does not exist/;
-const PIPE_PREFIX_PATTERN = /^\|\s*/;
+import { SSTPatterns } from "./patterns";
 
 export class DeployParser extends OperationParser<DeployResult> {
   /**
@@ -114,9 +95,9 @@ export class DeployParser extends OperationParser<DeployResult> {
     timing?: string;
   } | null {
     const patterns = [
-      { regex: RESOURCE_CREATED_PATTERN, status: "created" as const },
-      { regex: RESOURCE_UPDATED_PATTERN, status: "updated" as const },
-      { regex: RESOURCE_DELETED_PATTERN, status: "deleted" as const },
+      { regex: SSTPatterns.deploy.resourceCreated, status: "created" as const },
+      { regex: SSTPatterns.deploy.resourceUpdated, status: "updated" as const },
+      { regex: SSTPatterns.deploy.resourceDeleted, status: "deleted" as const },
     ];
 
     for (const { regex, status } of patterns) {
@@ -166,7 +147,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       const trimmedLine = line.trim();
 
       // Check if we're in the completion/output section
-      if (COMPLETION_SUCCESS_PATTERN.test(trimmedLine)) {
+      if (SSTPatterns.deploy.completionSuccess.test(trimmedLine)) {
         inOutputSection = true;
         continue;
       }
@@ -289,7 +270,7 @@ export class DeployParser extends OperationParser<DeployResult> {
    */
   private parseErrorMessage(output: string): string | undefined {
     // Check for completion failure marker
-    if (COMPLETION_FAILED_PATTERN.test(output)) {
+    if (SSTPatterns.status.failed.test(output)) {
       return this.extractDetailedError(output);
     }
 
@@ -308,13 +289,13 @@ export class DeployParser extends OperationParser<DeployResult> {
    */
   private parseSpecificErrors(output: string): string | undefined {
     // Check for resource existence errors
-    const resourceError = output.match(RESOURCE_NOT_EXIST_PATTERN);
+    const resourceError = output.match(SSTPatterns.deploy.resourceNotExist);
     if (resourceError?.[1]) {
       return `Resource '${resourceError[1]}' does not exist`;
     }
 
     // Check for gRPC errors
-    return GRPC_ERROR_PATTERN.test(output)
+    return SSTPatterns.deploy.grpcError.test(output)
       ? "gRPC client error occurred during deployment"
       : undefined;
   }
@@ -328,7 +309,7 @@ export class DeployParser extends OperationParser<DeployResult> {
     const errorLines: string[] = [];
 
     for (const line of lines) {
-      if (ERROR_SECTION_START_PATTERN.test(line)) {
+      if (SSTPatterns.deploy.errorSectionStart.test(line)) {
         errorSection = true;
         errorLines.push(line.trim());
         continue;
@@ -359,7 +340,7 @@ export class DeployParser extends OperationParser<DeployResult> {
       const trimmed = line.trim();
 
       if (trimmed.startsWith("|") && trimmed.includes("Error")) {
-        errorMessages.push(trimmed.replace(PIPE_PREFIX_PATTERN, ""));
+        errorMessages.push(trimmed.replace(SSTPatterns.deploy.pipePrefix, ""));
       } else if (trimmed.startsWith("Error:")) {
         errorMessages.push(trimmed);
       }

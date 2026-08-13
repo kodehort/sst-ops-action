@@ -1,59 +1,13 @@
 import type { RemoveResult } from "../types/operations";
 import { normalizeRemoveStatus } from "./normalization";
 import { OperationParser } from "./operation-parser";
-
-/**
- * Remove-specific regex patterns for parsing resource removals
- */
-const REMOVED_RESOURCE_PATTERN = /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-const FAILED_RESOURCE_PATTERN = /^×\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-const SKIPPED_RESOURCE_PATTERN = /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-// Real remove output ends with "✓  Removed", which nothing here matched, and
-// carries trailing whitespace the old anchors did not tolerate. The failure
-// marker accepts all three glyphs the codebase has used for it (U+2715 is what
-// SST really emits; U+2717 and U+00D7 appear in older fixtures).
-const COMPLETE_PATTERN = /^✓\s+(?:Complete|Generated|Removed)\s*$/m;
-const PARTIAL_COMPLETION_PATTERN = /^⚠\s+Partial completion\s*$/m;
-const FAILED_PATTERN = /^[✕✗×]\s+Failed\s*$/m;
-const RESOURCES_REMOVED_COUNT_PATTERN =
-  /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?$/m;
-const NO_RESOURCES_PATTERN = /^No resources to remove$/m;
-const RESOURCES_SUMMARY_PATTERN =
-  /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?(?:,\s+(\d+)\s+skipped)?$/m;
-const ERROR_MESSAGE_PATTERN = /^Error:\s*(.+)$/m;
-const REMOVE_FAILED_PATTERN =
-  /Unable to connect|Permission denied|Error removing/i;
-const TIMEOUT_MESSAGE_PATTERN = /timeout|timed out/i;
+import { SSTPatterns } from "./patterns";
 
 /**
  * Parser for SST remove operation outputs
  * Extracts resource removal information and tracks success/failure status
  */
 export class RemoveParser extends OperationParser<RemoveResult> {
-  /**
-   * Remove-specific regex patterns for parsing resource removals
-   */
-  private readonly removePatterns = {
-    // Status indicators
-    COMPLETE: COMPLETE_PATTERN,
-
-    // Error patterns
-    ERROR_MESSAGE: ERROR_MESSAGE_PATTERN,
-    FAILED: FAILED_PATTERN,
-    FAILED_RESOURCE: FAILED_RESOURCE_PATTERN,
-    NO_RESOURCES: NO_RESOURCES_PATTERN,
-    PARTIAL_COMPLETION: PARTIAL_COMPLETION_PATTERN,
-    REMOVE_FAILED: REMOVE_FAILED_PATTERN,
-    // Resource removal patterns
-    REMOVED_RESOURCE: REMOVED_RESOURCE_PATTERN,
-
-    // Resource count patterns
-    RESOURCES_REMOVED_COUNT: RESOURCES_REMOVED_COUNT_PATTERN,
-    RESOURCES_SUMMARY: RESOURCES_SUMMARY_PATTERN,
-    SKIPPED_RESOURCE: SKIPPED_RESOURCE_PATTERN,
-    TIMEOUT_MESSAGE: TIMEOUT_MESSAGE_PATTERN,
-  };
-
   /**
    * Parse SST remove output and extract resource removal information
    */
@@ -136,12 +90,12 @@ export class RemoveParser extends OperationParser<RemoveResult> {
   } | null {
     const patterns = [
       {
-        regex: this.removePatterns.REMOVED_RESOURCE,
+        regex: SSTPatterns.remove.removedResource,
         status: "removed" as const,
       },
-      { regex: this.removePatterns.FAILED_RESOURCE, status: "failed" as const },
+      { regex: SSTPatterns.remove.failedResource, status: "failed" as const },
       {
-        regex: this.removePatterns.SKIPPED_RESOURCE,
+        regex: SSTPatterns.remove.skippedResource,
         status: "skipped" as const,
       },
     ];
@@ -174,13 +128,13 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     removedResources: Array<{ status: "removed" | "failed" | "skipped" }>
   ): "complete" | "partial" | "failed" {
     // Check for explicit completion status indicators
-    if (this.removePatterns.COMPLETE.test(output)) {
+    if (SSTPatterns.status.success.test(output)) {
       return "complete";
     }
-    if (this.removePatterns.PARTIAL_COMPLETION.test(output)) {
+    if (SSTPatterns.remove.partialCompletion.test(output)) {
       return "partial";
     }
-    if (this.removePatterns.FAILED.test(output)) {
+    if (SSTPatterns.status.failed.test(output)) {
       return "failed";
     }
 
@@ -215,12 +169,12 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     }
 
     // Check for remove-specific error patterns
-    if (this.removePatterns.REMOVE_FAILED.test(output)) {
+    if (SSTPatterns.remove.removeFailed.test(output)) {
       return false;
     }
 
     // Check for general error patterns from base parser
-    if (this.removePatterns.ERROR_MESSAGE.test(output)) {
+    if (SSTPatterns.errors.message.test(output)) {
       return false;
     }
 
