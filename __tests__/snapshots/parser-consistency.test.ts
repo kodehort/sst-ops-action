@@ -37,7 +37,7 @@ function extractStage(output: string): string {
  */
 function extractApp(output: string): string {
   const appMatch = output.match(/➜\s+App:\s+(.+)/);
-  return appMatch?.[1]?.trim() || "unknown-app";
+  return appMatch?.[1]?.trim() || "";
 }
 
 /**

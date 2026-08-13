@@ -250,7 +250,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
     describe("stage operations", () => {
       it("should format successful stage result correctly", () => {
         const stageResult: StageResult = {
-          app: "stage-calculator",
+          app: "",
           completionStatus: "complete",
           computedStage: "feature-branch",
           eventName: "pull_request",
@@ -293,7 +293,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should format stage result for push event", () => {
         const stageResult: StageResult = {
-          app: "stage-calculator",
+          app: "",
           completionStatus: "complete",
           computedStage: "main",
           eventName: "push",
@@ -318,7 +318,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
 
       it("should handle stage result with missing optional fields", () => {
         const stageResult: StageResult = {
-          app: "stage-calculator",
+          app: "",
           completionStatus: "failed",
           computedStage: "fallback",
           error: "Failed to compute stage from ref",

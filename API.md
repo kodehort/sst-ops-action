@@ -553,7 +553,7 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 **Description:** The SST application name  
 **Type:** String  
-**Format:** Application name from SST configuration  
+**Format:** Application name as SST reports it  
 
 **Usage:**
 ```yaml
@@ -568,8 +568,12 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 ```
 
 **Notes:**
-- Extracted from SST configuration (`sst.config.ts`)
-- Empty string if app name cannot be determined
+- Read from the `App:` line of the SST CLI's banner output. Nothing reads
+  `sst.config.ts` — the value is whatever SST printed for this run
+- Empty string if the app name cannot be determined. It is the single fallback:
+  every operation reports `""` rather than inventing a name, so `!= ''` is a
+  meaningful check in an Actions expression
+- Always empty for the `stage` operation, which never runs SST
 - Useful for multi-app repositories
 
 ---
