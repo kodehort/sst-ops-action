@@ -5,7 +5,7 @@
  */
 
 import type { GitHubClient } from "../github/client";
-import type { OperationOptions, SSTOperation } from "../types";
+import type { OperationOptions, OperationResult, SSTOperation } from "../types";
 import { SST_OPERATIONS } from "../types/operations";
 import type { SSTCLIExecutor } from "../utils/cli";
 import { DeployOperation } from "./deploy";
@@ -17,7 +17,7 @@ import { StageOperation } from "./stage";
  * Base operation interface that all operations must implement
  */
 export interface BaseOperation {
-  execute: (options: OperationOptions) => Promise<unknown>;
+  execute: (options: OperationOptions) => Promise<OperationResult>;
 }
 
 /**
