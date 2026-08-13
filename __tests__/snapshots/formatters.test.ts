@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { OperationFormatter } from "@/github/formatters";
 import { DeployParser } from "@/parsers/deploy-parser";
 import { DiffParser } from "@/parsers/diff-parser";
@@ -6,7 +6,6 @@ import { RemoveParser } from "@/parsers/remove-parser";
 import type { SSTOperation } from "@/types/operations";
 import {
   compareWithSnapshot,
-  generateSnapshots,
   listSnapshots,
   loadInput,
   loadSnapshotData,
@@ -30,35 +29,27 @@ type OperationWithParser = keyof typeof parsers;
 
 const formatter = new OperationFormatter();
 
-// Generate snapshots before running tests if they don't exist
-beforeAll(() => {
-  generateMissingSnapshots();
-});
+const REGENERATE_HINT =
+  "Snapshots are committed fixtures and are never generated during a test run. " +
+  "If the output is meant to change, run `bun run snapshots:generate:force`, " +
+  "review the diff, and commit it.";
 
 /**
- * Generate missing snapshots for test operations
+ * Fail on a missing snapshot rather than creating one.
+ *
+ * This suite used to regenerate missing snapshots in a `beforeAll` hook, so a
+ * deleted snapshot was silently recreated from whatever the code currently
+ * produced and then compared against itself. Only a *changed* snapshot could
+ * fail, which left an entire class of regression undetectable.
  */
-function generateMissingSnapshots(): void {
-  const operations: OperationWithParser[] = ["deploy", "diff", "remove"];
-
-  for (const operation of operations) {
-    const snapshots = listSnapshots(operation);
-    for (const name of snapshots) {
-      if (!snapshotExists(operation, name)) {
-        const rawOutput = loadInput(operation, name);
-        const parsed = parsers[operation].parse(
-          rawOutput,
-          extractStage(rawOutput),
-          extractExitCode(rawOutput)
-        );
-        generateSnapshots(
-          operation,
-          name,
-          parsed,
-          `Generated from ${name}.txt`
-        );
-      }
-    }
+function assertSnapshotCommitted(
+  operation: OperationWithParser,
+  name: string
+): void {
+  if (!snapshotExists(operation, name)) {
+    throw new Error(
+      `Missing committed snapshot for ${operation}/${name}. ${REGENERATE_HINT}`
+    );
   }
 }
 
@@ -93,62 +84,55 @@ function testOperationSnapshots(operation: OperationWithParser): void {
 
     snapshots.forEach((name) => {
       describe(`${name}`, () => {
+        it("should have a committed snapshot", () => {
+          assertSnapshotCommitted(operation, name);
+        });
+
         it("should match comment snapshot", () => {
-          try {
-            const rawOutput = loadInput(operation, name);
-            const stage = extractStage(rawOutput);
-            const exitCode = extractExitCode(rawOutput);
-            const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          assertSnapshotCommitted(operation, name);
 
-            const generated = formatter.formatOperationComment(parsed);
-            const comparison = compareWithSnapshot(
-              operation,
-              name,
-              "comment",
-              generated
-            );
+          const rawOutput = loadInput(operation, name);
+          const stage = extractStage(rawOutput);
+          const exitCode = extractExitCode(rawOutput);
+          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-            expect(comparison.matches).toBe(true);
-            if (comparison.diff) {
-              console.error(
-                `Comment snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
-              );
-            }
-          } catch (error) {
-            throw new Error(
-              `Failed to test comment snapshot for ${operation}/${name}: ${error}`,
-              { cause: error }
-            );
-          }
+          const generated = formatter.formatOperationComment(parsed);
+          const comparison = compareWithSnapshot(
+            operation,
+            name,
+            "comment",
+            generated
+          );
+
+          // The diff goes in the assertion message so a mismatch actually
+          // reports what changed. It used to be logged after the assertion,
+          // which threw first, so it never printed.
+          expect(
+            comparison.matches,
+            `Comment snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
+          ).toBe(true);
         });
 
         it("should match summary snapshot", () => {
-          try {
-            const rawOutput = loadInput(operation, name);
-            const stage = extractStage(rawOutput);
-            const exitCode = extractExitCode(rawOutput);
-            const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          assertSnapshotCommitted(operation, name);
 
-            const generated = formatter.formatOperationSummary(parsed);
-            const comparison = compareWithSnapshot(
-              operation,
-              name,
-              "summary",
-              generated
-            );
+          const rawOutput = loadInput(operation, name);
+          const stage = extractStage(rawOutput);
+          const exitCode = extractExitCode(rawOutput);
+          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
 
-            expect(comparison.matches).toBe(true);
-            if (comparison.diff) {
-              console.error(
-                `Summary snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
-              );
-            }
-          } catch (error) {
-            throw new Error(
-              `Failed to test summary snapshot for ${operation}/${name}: ${error}`,
-              { cause: error }
-            );
-          }
+          const generated = formatter.formatOperationSummary(parsed);
+          const comparison = compareWithSnapshot(
+            operation,
+            name,
+            "summary",
+            generated
+          );
+
+          expect(
+            comparison.matches,
+            `Summary snapshot mismatch for ${operation}/${name}:\n${comparison.diff}`
+          ).toBe(true);
         });
 
         it("should have consistent metadata", () => {
@@ -195,17 +179,16 @@ function testOperationSnapshots(operation: OperationWithParser): void {
 
     // Integration test for the operation as a whole
     it(`should have valid snapshots for all ${operation} examples`, () => {
-      const totalSnapshots = snapshots.length;
-      expect(totalSnapshots).toBeGreaterThan(0);
+      expect(snapshots.length).toBeGreaterThan(0);
 
-      let validSnapshots = 0;
-      for (const name of snapshots) {
-        if (snapshotExists(operation, name)) {
-          validSnapshots += 1;
-        }
-      }
+      const missing = snapshots.filter(
+        (name) => !snapshotExists(operation, name)
+      );
 
-      expect(validSnapshots).toBe(totalSnapshots);
+      expect(
+        missing,
+        `Inputs without a committed snapshot: ${missing.join(", ")}. ${REGENERATE_HINT}`
+      ).toEqual([]);
     });
   });
 }
@@ -254,9 +237,7 @@ describe("Snapshot Testing Suite", () => {
       for (const operation of operations) {
         const snapshots = listSnapshots(operation);
         for (const name of snapshots) {
-          if (!snapshotExists(operation, name)) {
-            continue;
-          }
+          assertSnapshotCommitted(operation as OperationWithParser, name);
 
           const snapshotData = loadSnapshotData(operation, name);
 
