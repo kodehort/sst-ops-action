@@ -1,18 +1,18 @@
 import * as core from "@actions/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fromValidationError, handleError } from "../src/errors/error-handler";
+import { reportFailure } from "../src/errors/report-failure";
 
 vi.mock("../src/inputs/compute-stage", () => ({
   computeStageFromGitContext: vi.fn(() => "computed-stage"),
 }));
 
-// Mock the error handler functions
-vi.mock("../src/errors/error-handler", () => ({
-  createInputValidationError: vi.fn(),
-  createSubprocessError: vi.fn(),
-  fromValidationError: vi.fn(),
-  handleError: vi.fn(),
-}));
+// Spied, not stubbed: these tests assert both that reporting happened and
+// what the user is shown, and there is one reporter now.
+vi.mock("../src/errors/report-failure", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../src/errors/report-failure")>();
+  return { ...original, reportFailure: vi.fn(original.reportFailure) };
+});
 
 import { computeStageFromGitContext } from "../src/inputs/compute-stage";
 import { run } from "../src/main";
@@ -100,7 +100,6 @@ describe("Main Entry Point - Action Execution", () => {
     );
 
     // Spy on the error handler (but let it run to test actual error logging)
-    vi.spyOn({ handleError }, "handleError");
 
     // Mock all core functions with spies
     vi.spyOn(core, "info").mockImplementation(() => {
@@ -374,21 +373,10 @@ describe("Main Entry Point - Action Execution", () => {
       // Invalid operation should throw immediately and be handled by handleUnexpectedError
       await run();
 
-      // In this case, handleError is called but not core.error directly
-      expect(vi.mocked(handleError)).toHaveBeenCalled();
+      expect(vi.mocked(reportFailure)).toHaveBeenCalled();
     });
 
     it("should validate required inputs", async () => {
-      // Temporarily use real error handling functions for this test
-      const {
-        handleError: realHandleError,
-        fromValidationError: realFromValidationError,
-      } = (await vi.importActual("../src/errors/error-handler")) as any;
-      vi.mocked(handleError).mockImplementation(realHandleError as any);
-      vi.mocked(fromValidationError).mockImplementation(
-        realFromValidationError as any
-      );
-
       vi.spyOn(core, "getInput").mockImplementation((name: string) => {
         if (name === "operation") {
           return "deploy";
@@ -405,10 +393,9 @@ describe("Main Entry Point - Action Execution", () => {
 
       await run();
 
-      expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining("🔴 unknown input_validation:")
+      expect(core.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining("SST action failed:")
       );
-      expect(vi.mocked(handleError)).toHaveBeenCalled();
     });
 
     it("should throw when operation input is missing", async () => {
@@ -422,7 +409,7 @@ describe("Main Entry Point - Action Execution", () => {
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining("🔴 unknown input_validation:")
+        expect.stringContaining("Invalid input:")
       );
     });
 
@@ -437,7 +424,7 @@ describe("Main Entry Point - Action Execution", () => {
       await run();
 
       expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining("🔴 unknown input_validation:")
+        expect.stringContaining("Invalid input:")
       );
     });
 
@@ -459,7 +446,7 @@ describe("Main Entry Point - Action Execution", () => {
 
       await run();
 
-      expect(handleError).toHaveBeenCalled();
+      expect(reportFailure).toHaveBeenCalled();
     });
   });
 
@@ -550,7 +537,7 @@ describe("Main Entry Point - Action Execution", () => {
       expect(core.error).toHaveBeenCalledWith(
         "Failed to set outputs: Output formatting failed"
       );
-      expect(vi.mocked(handleError)).toHaveBeenCalled();
+      expect(vi.mocked(reportFailure)).toHaveBeenCalled();
     });
   });
 
@@ -563,26 +550,21 @@ describe("Main Entry Point - Action Execution", () => {
 
       await run();
 
-      expect(vi.mocked(handleError)).toHaveBeenCalled();
+      expect(vi.mocked(reportFailure)).toHaveBeenCalled();
     });
 
-    it("should handle error handler failures gracefully", async () => {
-      const operationError = new Error("Operation failed");
+    it("reports a thrown operation error in the same format as a failed result", async () => {
       vi.spyOn(operationRouter, "executeOperation").mockRejectedValueOnce(
-        operationError
+        new Error("Operation failed")
       );
-
-      vi.mocked(handleError).mockImplementationOnce(() => {
-        throw new Error("Error handler failed");
-      });
 
       await run();
 
-      expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining("Error handling failed")
-      );
+      // The same shape a non-zero SST exit produces. Those two paths used to
+      // print different things: this one went through the elaborate handler,
+      // the common one terminated at a bare failure call in the entry point.
       expect(core.setFailed).toHaveBeenCalledWith(
-        "Action failed: Operation failed"
+        "SST deploy operation failed: Operation failed"
       );
     });
   });
