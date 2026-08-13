@@ -12,6 +12,7 @@ import {
   SST_DEPLOY_FAILURE_OUTPUT,
   SST_DEPLOY_SUCCESS_OUTPUT,
 } from "../fixtures/sst-outputs";
+import { loadInput } from "../utils/snapshot-helpers";
 
 describe("Deploy Parser - SST Output Processing", () => {
   let parser: DeployParser;
@@ -86,9 +87,13 @@ describe("Deploy Parser - SST Output Processing", () => {
       expect(result.completionStatus).toBe("failed");
       expect(result.exitCode).toBe(1);
       expect(result.error).toBeDefined();
-      expect(result.error).toContain(
-        "Resource 'E3EDFTB7D6VMW5' does not exist"
-      );
+      // The fixture carried U+2717 where the real capture it was transcribed
+      // from has U+2715, so the failure marker did not match and this fell
+      // through to the specific-error path, asserting
+      // "Resource 'E3EDFTB7D6VMW5' does not exist". With the marker repaired
+      // it takes the detailed-error branch, as the real capture always did.
+      expect(result.error).toContain("Router sst:aws:Router");
+      expect(result.error).toContain("getPolicyDocument");
 
       // Should capture resource information even on failure
       const createdResources = result.resources.filter(
@@ -396,5 +401,51 @@ Spaces:    value with spaces
         { key: "Spaces", value: "value with spaces" },
       ]);
     });
+  });
+});
+
+describe("Real captured SST deploy failure output", () => {
+  const parser = new DeployParser();
+  const capture = loadInput("deploy", "failed-deployment");
+
+  it("uses U+2715 for the failure marker", () => {
+    // The unit fixture transcribed from this capture carried U+2717, so it
+    // exercised a different error branch than production ever did.
+    expect(capture).toContain("✕  Failed");
+  });
+
+  it("takes the detailed-error branch", () => {
+    const result = parser.parse(capture, "sst-ops-actions", 1);
+
+    expect(result.success).toBe(false);
+    expect(result.completionStatus).toBe("failed");
+    // The detailed branch reports the failing resource and the underlying
+    // error; the specific-error path it used to reach for the corrupted
+    // fixture returned only "Resource ... does not exist".
+    expect(result.error).toContain("Router sst:aws:Router");
+    expect(result.error).toContain("getPolicyDocument");
+  });
+});
+
+describe("Malformed output lines", () => {
+  const parser = new DeployParser();
+
+  it("ignores lines in the outputs section that are not key: value", () => {
+    const output = [
+      "SST 3.17.10  ready!",
+      "",
+      "➜  App:        test-app",
+      "   Stage:      staging",
+      "",
+      "✓  Complete",
+      "   Router:",
+      "   : orphaned-value",
+      "   ---",
+    ].join("\n");
+
+    const result = parser.parse(output, "staging", 0);
+
+    expect(result.success).toBe(true);
+    expect(result.outputs).toHaveLength(0);
   });
 });

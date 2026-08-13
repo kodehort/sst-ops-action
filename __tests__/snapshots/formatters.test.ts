@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { OperationFormatter } from "@/github/formatters";
 import { DeployParser } from "@/parsers/deploy-parser";
 import { DiffParser } from "@/parsers/diff-parser";
+import { SSTPatterns } from "@/parsers/patterns";
 import { RemoveParser } from "@/parsers/remove-parser";
 import type { SSTOperation } from "@/types/operations";
 import {
@@ -63,9 +64,16 @@ function extractStage(output: string): string {
 
 /**
  * Extract exit code from SST output
+ *
+ * Reads the failure marker from the shared pattern library rather than
+ * restating the glyph. The literal used to be hardcoded here, in
+ * parser-consistency.test.ts and in the snapshot generator — three copies that
+ * had to agree with the parsers, and silently did not.
  */
 function extractExitCode(output: string): number {
-  return output.includes("✕  Failed") || output.includes("Error:") ? 1 : 0;
+  return SSTPatterns.status.failed.test(output) || output.includes("Error:")
+    ? 1
+    : 0;
 }
 
 /**

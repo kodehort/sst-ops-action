@@ -7,9 +7,13 @@ import { OperationParser } from "./operation-parser";
 const REMOVED_RESOURCE_PATTERN = /^-\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
 const FAILED_RESOURCE_PATTERN = /^×\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
 const SKIPPED_RESOURCE_PATTERN = /^~\s+(\w+)\s+(.+?)(?:\s+\(([^)]+)\))?$/;
-const COMPLETE_PATTERN = /^✓\s+Complete$/m;
-const PARTIAL_COMPLETION_PATTERN = /^⚠\s+Partial completion$/m;
-const FAILED_PATTERN = /^×\s+Failed$/m;
+// Real remove output ends with "✓  Removed", which nothing here matched, and
+// carries trailing whitespace the old anchors did not tolerate. The failure
+// marker accepts all three glyphs the codebase has used for it (U+2715 is what
+// SST really emits; U+2717 and U+00D7 appear in older fixtures).
+const COMPLETE_PATTERN = /^✓\s+(?:Complete|Generated|Removed)\s*$/m;
+const PARTIAL_COMPLETION_PATTERN = /^⚠\s+Partial completion\s*$/m;
+const FAILED_PATTERN = /^[✕✗×]\s+Failed\s*$/m;
 const RESOURCES_REMOVED_COUNT_PATTERN =
   /^(\d+)\s+resources?\s+removed(?:,\s+(\d+)\s+failed)?$/m;
 const NO_RESOURCES_PATTERN = /^No resources to remove$/m;

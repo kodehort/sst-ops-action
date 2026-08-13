@@ -22,6 +22,7 @@ import {
 } from "../__tests__/utils/snapshot-helpers.js";
 import { DeployParser } from "../src/parsers/deploy-parser.js";
 import { DiffParser } from "../src/parsers/diff-parser.js";
+import { SSTPatterns } from "../src/parsers/patterns.js";
 import { RemoveParser } from "../src/parsers/remove-parser.js";
 import type { OperationResult, SSTOperation } from "../src/types/operations.js";
 
@@ -79,9 +80,15 @@ function parseOutput(
     const stage = stageMatch?.[1]?.trim() || "unknown-stage";
     const _app = appMatch?.[1]?.trim() || "unknown-app";
 
-    // Determine exit code based on success indicators
+    // Determine exit code based on success indicators. The failure marker
+    // comes from the shared pattern library rather than a hardcoded glyph:
+    // this check used to restate the glyph out-of-band, compensating for a
+    // parse path a corrupted fixture had broken.
     let exitCode = 0;
-    if (rawOutput.includes("✕  Failed") || rawOutput.includes("Error:")) {
+    if (
+      SSTPatterns.status.failed.test(rawOutput) ||
+      rawOutput.includes("Error:")
+    ) {
       exitCode = 1;
     }
 

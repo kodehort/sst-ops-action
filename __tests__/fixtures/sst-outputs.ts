@@ -106,7 +106,7 @@ resource 'E3EDFTB7D6VMW5' does not exist
 19:50:52 [build] ✓ Completed in 180ms.
 19:50:52 [build] Building static entrypoints...
 19:50:53 [vite] ✓ built in 1.20s
-19:50:52 [build] ✓ Completed in 1.27s.
+19:50:53 [build] ✓ Completed in 1.27s.
 
  generating static routes
 19:50:54 ▶ src/pages/index.astro
@@ -129,7 +129,7 @@ Error: invocation of aws:iam/getPolicyDocument:getPolicyDocument returned an err
   promise: Promise { <rejected> [Circular *1] }
 }
 
-✗  Failed
+✕  Failed
 
 Router sst:aws:Router → RouterCdnDistribution aws:cloudfront:Distribution
 resource 'E3EDFTB7D6VMW5' does not exist

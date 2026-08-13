@@ -1,10 +1,10 @@
 {
   "arch": "arm64",
-  "buildTimestamp": "2026-08-13T09:45:39.608Z",
-  "bundleSize": 1574866,
+  "buildTimestamp": "2026-08-13T10:16:10.161Z",
+  "bundleSize": 1574651,
   "bundleSizeMB": "1.50",
   "format": "es",
-  "integrity": "818bf4a301865ab52b3caef8404e5bb441e4630bdf2bec05d6d6ecd65b1fb745",
+  "integrity": "779949820f5627e17ddd0169bcf9cb03b46542bdf250c12a036b2d1ba6f4b794",
   "minified": true,
   "nodeVersion": "v24.19.0",
   "platform": "darwin",

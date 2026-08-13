@@ -10,6 +10,7 @@ import {
   SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
   SST_REMOVE_WITH_SKIPPED_OUTPUT,
 } from "@tests/fixtures/sst-outputs";
+import { loadInput } from "@tests/utils/snapshot-helpers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { RemoveParser } from "@/parsers/remove-parser";
 
@@ -242,5 +243,32 @@ describe("RemoveParser", () => {
         parser.parse(undefined, "staging", 0);
       }).not.toThrow();
     });
+  });
+});
+
+describe("Real captured SST remove output", () => {
+  const parser = new RemoveParser();
+  const capture = loadInput("remove", "complete-cleanup");
+
+  it("ends with the marker SST actually emits", () => {
+    // Not "✓ Complete", which is what the parser used to look for.
+    expect(capture).toContain("✓  Removed");
+  });
+
+  it("parses as a successful removal", () => {
+    const result = parser.parse(capture, "prod", 0);
+
+    expect(result.success).toBe(true);
+    expect(result.completionStatus).toBe("complete");
+  });
+
+  it("reads completion from the marker, not the exit code", () => {
+    // The marker is authoritative for completionStatus. Before the marker was
+    // recognised this returned "failed", because nothing matched the real
+    // output and it fell through to the exit code. success stays exit-code
+    // driven; that wiring belongs to a later ticket.
+    const result = parser.parse(capture, "prod", 1);
+
+    expect(result.completionStatus).toBe("complete");
   });
 });
