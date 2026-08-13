@@ -14,6 +14,15 @@ inputs:
     description: 'Use frozen lockfile for reproducible installs'
     required: false
     default: 'true'
+  cache-node-modules:
+    description: >-
+      Cache node_modules alongside the Bun download cache. Set to false where a
+      byte-exact build matters. The restore-keys prefix can restore a
+      node_modules tree built from a different lockfile, and
+      `bun install --frozen-lockfile` then runs incrementally on top of it,
+      leaving a tree the lockfile never described.
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -22,8 +31,9 @@ runs:
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: ${{ inputs.bun-version }}
-        
+
     - name: Cache Dependencies
+      if: inputs.cache-node-modules == 'true'
       uses: actions/cache@v6
       with:
         path: |
@@ -32,7 +42,19 @@ runs:
         key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-bun-
-          
+
+    # Caches only the downloaded tarballs, never the resolved tree, so
+    # node_modules is always built fresh from bun.lock.
+    - name: Cache Bun Downloads Only
+      if: inputs.cache-node-modules != 'true'
+      uses: actions/cache@v6
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-downloads-${{ hashFiles('**/bun.lock') }}${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          ${{ runner.os }}-bun-downloads-
+
+
     - name: Install Dependencies
       shell: bash
       run: |

@@ -86,10 +86,33 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
           cache-key-suffix: -build
-          
+          # The drift check below compares bytes, so node_modules must come
+          # from bun.lock alone and never from a restore-keys prefix hit.
+          cache-node-modules: 'false'
+
       - name: Build Distribution
         run: bun run build
-        
+
+      # The action runs from the committed dist/, so a rebuild has to reproduce
+      # it byte for byte. Without this, a PR that forgets to rebuild goes green
+      # and ships stale code.
+      #
+      # build-manifest.json is excluded on purpose: it records the build
+      # timestamp, platform, arch and Node version, so it can never match.
+      - name: Verify Committed Bundle Is In Sync
+        run: |
+          if ! git diff --exit-code --quiet -- dist/index.js dist/index.js.map; then
+            echo "dist/index.js committed: $(git show HEAD:dist/index.js | sha256sum | cut -d' ' -f1)"
+            echo "dist/index.js rebuilt:   $(sha256sum dist/index.js | cut -d' ' -f1)"
+            echo ""
+            echo "Release commits are tagged [skip ci], so a stale bundle"
+            echo "committed by a release first surfaces here, on the next PR."
+            echo "::error::Committed bundle is stale. Run 'bun run build' and commit dist/."
+            exit 1
+          fi
+          echo "✅ Committed bundle matches a fresh build"
+
+
       - name: Extract Bundle Information
         id: bundle-info
         run: |
@@ -157,8 +180,13 @@ jobs:
             echo "❌ **Build & Verify**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
           
-          # Distribution is now built on-demand, no check needed
-          echo "📦 **Distribution**: Built on-demand during releases" >> $GITHUB_STEP_SUMMARY
+          # The committed dist/ is what the action runs, so Build & Verify
+          # checks a fresh build reproduces it byte for byte.
+          if [ "${{ needs.build-and-verify.result }}" = "success" ]; then
+            echo "📦 **Distribution**: Committed bundle matches a fresh build" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📦 **Distribution**: Not verified — see Build & Verify" >> $GITHUB_STEP_SUMMARY
+          fi
           
       - name: Set Status
         run: |
