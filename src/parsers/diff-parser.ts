@@ -1,4 +1,5 @@
 import type { DiffResult } from "../types/operations";
+import { type DiffAction, normalizeDiffAction } from "./normalization";
 import { OperationParser } from "./operation-parser";
 
 /**
@@ -146,8 +147,10 @@ export class DiffParser extends OperationParser<DiffResult> {
       return null;
     }
 
-    const action = this.parseAction(symbol);
+    // Identifier first, so an unrecognised symbol can be warned about with the
+    // resource named.
     const { name, type } = this.parseResourceIdentifier(resourceIdentifier);
+    const action = this.parseAction(symbol, name, type);
 
     return {
       action,
@@ -160,14 +163,26 @@ export class DiffParser extends OperationParser<DiffResult> {
   /**
    * Parse action from symbol
    */
-  private parseAction(symbol: string): "create" | "update" | "delete" {
-    if (symbol === "+") {
-      return "create";
+  private parseAction(
+    symbol: string,
+    resourceName?: string,
+    resourceType?: string
+  ): DiffAction {
+    // The capture group only admits +, * and -, so the map is exhaustive in
+    // practice. Anything else used to fall silently into "delete"; it now
+    // warns and takes the documented 'update' fallback instead.
+    const bySymbol: Record<string, DiffAction> = {
+      "-": "delete",
+      "*": "update",
+      "+": "create",
+    };
+
+    const action = bySymbol[symbol];
+    if (action) {
+      return action;
     }
-    if (symbol === "*") {
-      return "update";
-    }
-    return "delete";
+
+    return normalizeDiffAction(symbol, resourceName, resourceType);
   }
 
   /**
