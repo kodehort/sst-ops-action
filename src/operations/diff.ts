@@ -88,6 +88,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       changeSummary: "Failed to execute SST diff command",
       changes: [],
       completionStatus: "failed",
+      diffSection: "",
       error,
       exitCode: -1,
       operation: "diff",

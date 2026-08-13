@@ -52,6 +52,7 @@ describe("OperationRouter", () => {
     changeSummary: "3 changes planned",
     changes: [{ action: "create", name: "handler", type: "function" }],
     completionStatus: "complete",
+    diffSection: "",
     exitCode: 0,
     operation: "diff",
     permalink: "https://sst.dev/u/abc123",

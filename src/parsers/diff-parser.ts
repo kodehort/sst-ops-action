@@ -24,8 +24,9 @@ export class DiffParser extends OperationParser<DiffResult> {
     // Parse common information from base parser (uses full output for header info)
     const commonInfo = this.parseCommonInfo(lines);
 
-    // Extract only the diff section for parsing changes
-    const _diffSection = this.extractDiffSection(processedOutput);
+    // Extracted once, here, and carried on the result. The formatter used to
+    // scan the raw output for it a second time with its own copy of this.
+    const diffSection = this.extractDiffSection(processedOutput);
 
     // Determine success based on exit code and error patterns
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
@@ -45,6 +46,7 @@ export class DiffParser extends OperationParser<DiffResult> {
       changeSummary,
       changes,
       completionStatus: commonInfo.completionStatus || "complete",
+      diffSection,
       exitCode,
       operation: "diff",
       permalink: commonInfo.permalink || "",

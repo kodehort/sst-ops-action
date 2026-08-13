@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { OperationFormatter } from "../../src/github/formatters.js";
+import { DiffParser } from "../../src/parsers/diff-parser.js";
 import type {
   DeployResult,
   DiffResult,
@@ -113,6 +114,7 @@ describe("OperationFormatter", () => {
         changeSummary: "",
         changes: [],
         completionStatus: "complete",
+        diffSection: "",
         exitCode: 0,
         operation: "diff",
         plannedChanges: 0,
@@ -158,19 +160,16 @@ $ bunx --bun astro build
    - environment.GITHUB_TOKEN
 `;
 
-      const diffResult: DiffResult = {
-        app: "kodehort-scratch",
-        changeSummary: "1 changes planned",
-        changes: [{ action: "create", name: "Web", type: "Astro" }],
-        completionStatus: "complete",
-        exitCode: 0,
-        operation: "diff",
-        plannedChanges: 1,
-        rawOutput: realWorldOutput,
-        stage: "dev",
-        success: true,
-        truncated: false,
-      };
+      // Built by the parser rather than by hand. The formatter now reads the
+      // diff section off the result, so a hand-written fixture would be
+      // asserting against a shape no parser produces — the same drift that
+      // #146 found in the deploy capture.
+      const diffResult = new DiffParser().parse(
+        realWorldOutput,
+        "dev",
+        0,
+        false
+      );
 
       const comment = formatter.formatOperationComment(diffResult);
 
@@ -322,6 +321,7 @@ $ bunx --bun astro build
           { action: "delete", name: "Table1", type: "DynamoDB" },
         ],
         completionStatus: "complete",
+        diffSection: "",
         exitCode: 0,
         operation: "diff",
         plannedChanges: 6,
@@ -348,6 +348,7 @@ $ bunx --bun astro build
         changeSummary: "",
         changes: [],
         completionStatus: "complete",
+        diffSection: "",
         exitCode: 0,
         operation: "diff",
         plannedChanges: 0,

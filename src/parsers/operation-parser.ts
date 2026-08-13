@@ -285,7 +285,16 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * providing clean diff content for formatting and analysis.
    *
    * @param output Raw output from SST diff command
-   * @returns Diff section content, or original output if marker not found
+   * There were two implementations of this, one here and one inside the
+   * comment formatter, and they disagreed on the no-match case: this one
+   * returned the entire original output, the formatter's returned an empty
+   * string. The formatter's behaviour is the one that survives — the other
+   * fallback would render a whole raw CLI capture into a pull request comment
+   * where nothing renders today. That disagreement is also why this method's
+   * result could be computed and thrown away in the diff parser without
+   * anyone noticing.
+   *
+   * @returns Diff section content, or an empty string if the marker is absent
    */
   protected extractDiffSection(output: string): string {
     const lines = output.split("\n");
@@ -300,12 +309,16 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       }
     }
 
-    // If we found the marker, return everything after it
-    if (diffStartIndex >= 0 && diffStartIndex < lines.length) {
-      return lines.slice(diffStartIndex).join("\n").trim();
+    if (diffStartIndex === -1 || diffStartIndex >= lines.length) {
+      return "";
     }
 
-    // Fallback: return original output if no marker found
-    return output;
+    const diffLines = lines.slice(diffStartIndex);
+
+    while (diffLines.length > 0 && diffLines.at(-1)?.trim() === "") {
+      diffLines.pop();
+    }
+
+    return diffLines.join("\n").trim();
   }
 }
