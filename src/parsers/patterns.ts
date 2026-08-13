@@ -222,14 +222,9 @@ export class PatternHelpers {
   /**
    * Clean text by removing ANSI codes and normalizing line endings
    *
-   * Reached as `this.helpers.cleanText(...)` via the `helpers` alias on
-   * OperationParser, which fallow's static analysis cannot follow — hence the
-   * suppression rather than a deletion.
-   *
    * @param text Text to clean
    * @returns Cleaned text
    */
-  // fallow-ignore-next-line unused-class-member
   static cleanText(text: string): string {
     return text
       .replace(UtilityPatterns.ansiCodes, "")

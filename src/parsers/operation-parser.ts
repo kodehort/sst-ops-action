@@ -5,39 +5,12 @@ import { PatternHelpers, SSTPatterns } from "./patterns";
  * Abstract base parser for SST CLI outputs
  * Provides common parsing patterns and utilities for operations that parse CLI output
  *
- * Now uses centralized patterns from patterns.ts for consistency and maintainability
+ * Reads patterns straight from patterns.ts. It used to re-expose them under a
+ * second set of names, which meant one pattern could be referred to three
+ * ways — by its library name, by the alias, and by whatever private copy a
+ * concrete parser had made.
  */
 export abstract class OperationParser<T extends BaseOperationResult> {
-  /**
-   * Common regex patterns for extracting information from SST CLI outputs
-   * Using centralized pattern library for consistency
-   */
-  protected readonly patterns = {
-    // App and stage information
-    APP_INFO: SSTPatterns.metadata.app,
-    COMPLETION_FAILED: SSTPatterns.status.failed,
-    COMPLETION_PARTIAL: SSTPatterns.status.partial,
-
-    // Completion status patterns
-    COMPLETION_SUCCESS: SSTPatterns.status.success,
-
-    // Diff section marker
-    DIFF_SECTION_START: SSTPatterns.sections.generated,
-
-    // Permalink for SST console
-    PERMALINK: SSTPatterns.metadata.permalink,
-
-    // Generic resource patterns (to be extended by subclasses)
-    RESOURCE_LINE: SSTPatterns.resources.line,
-    STAGE_INFO: SSTPatterns.metadata.stage,
-    URL_LINE: SSTPatterns.outputs.url,
-  };
-
-  /**
-   * Pattern helper utilities for common operations
-   */
-  protected readonly helpers = PatternHelpers;
-
   /**
    * Abstract method that must be implemented by subclasses
    * @param output Raw SST CLI output
@@ -63,23 +36,23 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
     try {
       // Extract app name
-      const appMatch = fullOutput.match(this.patterns.APP_INFO);
+      const appMatch = fullOutput.match(SSTPatterns.metadata.app);
       if (appMatch?.[1]) {
         result.app = appMatch[1].trim();
       }
 
       // Extract permalink
-      const permalinkMatch = fullOutput.match(this.patterns.PERMALINK);
+      const permalinkMatch = fullOutput.match(SSTPatterns.metadata.permalink);
       if (permalinkMatch?.[1]) {
         result.permalink = permalinkMatch[1].trim();
       }
 
       // Extract completion status
-      if (this.patterns.COMPLETION_SUCCESS.test(fullOutput)) {
+      if (SSTPatterns.status.success.test(fullOutput)) {
         result.completionStatus = "complete";
-      } else if (this.patterns.COMPLETION_PARTIAL.test(fullOutput)) {
+      } else if (SSTPatterns.status.partial.test(fullOutput)) {
         result.completionStatus = "partial";
-      } else if (this.patterns.COMPLETION_FAILED.test(fullOutput)) {
+      } else if (SSTPatterns.status.failed.test(fullOutput)) {
         result.completionStatus = "failed";
       }
     } catch {
@@ -127,7 +100,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
 
     try {
       // Use centralized pattern helpers
-      return this.helpers.cleanText(text);
+      return PatternHelpers.cleanText(text);
     } catch {
       // If cleaning fails, return original text
       return text;
@@ -216,9 +189,9 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    */
   protected extractResourceLines(lines: string[]): string[] {
     return lines
-      .filter((line) => this.patterns.RESOURCE_LINE.test(line))
+      .filter((line) => SSTPatterns.resources.line.test(line))
       .map((line) => {
-        const match = line.match(this.patterns.RESOURCE_LINE);
+        const match = line.match(SSTPatterns.resources.line);
         return match?.[1] ? match[1].trim() : line;
       });
   }
@@ -239,7 +212,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
   ): Array<{ type: string; url: string }> {
     return lines
       .map((line) => {
-        const match = line.match(this.patterns.URL_LINE);
+        const match = line.match(SSTPatterns.outputs.url);
         if (match?.[1] && match?.[2]) {
           return {
             type: match[1].toLowerCase(),
@@ -286,7 +259,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     }
 
     // Secondary indicators: completion status patterns
-    if (this.patterns.COMPLETION_FAILED.test(output)) {
+    if (SSTPatterns.status.failed.test(output)) {
       return false;
     }
 
@@ -311,7 +284,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
     // Find the "✓ Generated" marker
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      if (line && this.patterns.DIFF_SECTION_START.test(line)) {
+      if (line && SSTPatterns.sections.generated.test(line)) {
         diffStartIndex = i + 1; // Start after the marker line
         break;
       }
