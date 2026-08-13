@@ -352,16 +352,27 @@ more diff content`;
       expect(result).toBe("diff content here\nmore diff content");
     });
 
-    it("should return original output when marker not found", () => {
+    it("returns nothing when the marker is absent", () => {
+      // There were two implementations of this and they disagreed here: this
+      // one returned the entire original output, the comment formatter's
+      // returned an empty string. The formatter's wins, because the other
+      // fallback would render a whole raw CLI capture into a pull request
+      // comment where nothing renders today.
       const output = "no marker here\ndiff content";
-      const result = parser.testExtractDiffSection(output);
-      expect(result).toBe(output);
+
+      expect(parser.testExtractDiffSection(output)).toBe("");
     });
 
-    it("should handle marker at end of output", () => {
+    it("returns nothing when the marker is the last line", () => {
       const output = "Building...\n✓ Generated";
-      const result = parser.testExtractDiffSection(output);
-      expect(result).toBe("Building...\n✓ Generated"); // Returns original when marker is at end
+
+      expect(parser.testExtractDiffSection(output)).toBe("");
+    });
+
+    it("drops trailing blank lines after the section", () => {
+      const output = "✓ Generated\ndiff content\n\n\n";
+
+      expect(parser.testExtractDiffSection(output)).toBe("diff content");
     });
 
     it("should handle empty lines after marker", () => {

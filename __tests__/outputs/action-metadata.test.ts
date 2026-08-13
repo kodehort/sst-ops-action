@@ -107,6 +107,7 @@ const diff: DiffResult = {
   changeSummary: "1 change planned",
   changes: [],
   completionStatus: "complete",
+  diffSection: "",
   exitCode: 0,
   operation: "diff",
   plannedChanges: 1,

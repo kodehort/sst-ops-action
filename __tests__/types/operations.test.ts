@@ -48,6 +48,7 @@ describe("Type Guards", () => {
         changeSummary: "3 resources to create",
         changes: [{ action: "create", name: "handler", type: "Function" }],
         completionStatus: "complete",
+        diffSection: "",
         exitCode: 0,
         operation: "diff",
         plannedChanges: 3,

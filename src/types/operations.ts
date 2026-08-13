@@ -81,6 +81,14 @@ export interface DiffResult extends BaseOperationResult {
     action: "create" | "update" | "delete";
     details?: string;
   }>;
+  /**
+   * The diff SST printed, extracted from the raw output.
+   *
+   * Carried on the result so the formatter renders what the parser found
+   * rather than re-scanning the CLI capture itself. Empty when SST emitted no
+   * diff section.
+   */
+  diffSection: string;
   operation: "diff";
   plannedChanges: number;
 }

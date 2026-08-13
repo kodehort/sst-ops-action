@@ -92,6 +92,7 @@ function createFailureResult(
         ...baseResult,
         changeSummary: "Operation failed",
         changes: [],
+        diffSection: "",
         operation: "diff" as const,
         plannedChanges: 0,
       };

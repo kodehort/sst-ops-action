@@ -200,6 +200,7 @@ describe("Main Entry Point - Action Execution", () => {
         changeSummary: "Found 5 planned changes",
         changes: [],
         completionStatus: "complete" as const,
+        diffSection: "",
         exitCode: 0,
         operation: "diff" as const,
         plannedChanges: 5,
