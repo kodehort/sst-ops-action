@@ -113,7 +113,7 @@ jobs:
     
     environment:
       name: staging
-      url: ${{ steps.deploy.outputs.urls && fromJson(steps.deploy.outputs.urls)[0] }}
+      url: ${{ steps.deploy.outputs.outputs && fromJson(steps.deploy.outputs.outputs)[0].value }}
     
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
@@ -121,7 +121,7 @@ jobs:
     
     outputs:
       deployment_success: ${{ steps.deploy.outputs.success }}
-      deployment_urls: ${{ steps.deploy.outputs.urls }}
+      deployment_outputs: ${{ steps.deploy.outputs.outputs }}
       app_name: ${{ steps.deploy.outputs.app }}
     
     steps:
@@ -167,7 +167,10 @@ jobs:
         with:
           script: |
             const success = '${{ steps.deploy.outputs.success }}' === 'true';
-            const urls = JSON.parse('${{ steps.deploy.outputs.urls || "[]" }}');
+            const deployed = JSON.parse('${{ steps.deploy.outputs.outputs || "[]" }}');
+            const urls = deployed
+              .map(o => o.value)
+              .filter(v => String(v).startsWith('http'));
             
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
@@ -202,13 +205,14 @@ jobs:
       - name: Run Integration Tests
         env:
           # Pass deployment URLs to integration tests
-          STAGING_URLS: ${{ needs.deploy-staging.outputs.deployment_urls }}
+          STAGING_OUTPUTS: ${{ needs.deploy-staging.outputs.deployment_outputs }}
           TEST_ENVIRONMENT: staging
         run: |
           echo "Running integration tests against staging environment..."
           
           # Extract first URL for testing
-          STAGING_URL=$(echo '${{ needs.deploy-staging.outputs.deployment_urls }}' | jq -r '.[0] // ""')
+          STAGING_URL=$(echo "$STAGING_OUTPUTS" \
+            | jq -r 'first(.[].value | select(type == "string" and startswith("http"))) // ""')
           
           if [ -n "$STAGING_URL" ]; then
             echo "Testing against: $STAGING_URL"
@@ -235,7 +239,7 @@ jobs:
       - name: Performance Tests
         continue-on-error: true
         env:
-          STAGING_URL: ${{ fromJson(needs.deploy-staging.outputs.deployment_urls)[0] }}
+          STAGING_URL: ${{ fromJson(needs.deploy-staging.outputs.deployment_outputs)[0].value }}
         run: |
           if [ -n "$STAGING_URL" ]; then
             echo "Running basic performance checks..."
@@ -261,7 +265,7 @@ jobs:
     # Production environment with protection rules
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.urls && fromJson(steps.deploy.outputs.urls)[0] }}
+      url: ${{ steps.deploy.outputs.outputs && fromJson(steps.deploy.outputs.outputs)[0].value }}
     
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
@@ -269,7 +273,7 @@ jobs:
     
     outputs:
       deployment_success: ${{ steps.deploy.outputs.success }}
-      deployment_urls: ${{ steps.deploy.outputs.urls }}
+      deployment_outputs: ${{ steps.deploy.outputs.outputs }}
     
     steps:
       - name: Checkout
@@ -330,10 +334,11 @@ jobs:
           echo "- **Resources Changed**: ${{ steps.deploy.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployment Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
           
-          URLS='${{ steps.deploy.outputs.urls }}'
-          if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+          URLS=$(echo '${{ steps.deploy.outputs.outputs }}' \
+            | jq -r '.[].value | select(type == "string" and startswith("http"))')
+          if [ -n "$URLS" ]; then
             echo "- **Live URLs**:" >> $GITHUB_STEP_SUMMARY
-            echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+            echo "$URLS" | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
           fi
           
           if [ -n "${{ steps.deploy.outputs.permalink }}" ]; then
@@ -354,13 +359,13 @@ jobs:
       # Validate production deployment
       - name: Production Health Checks
         env:
-          PRODUCTION_URLS: ${{ needs.deploy-production.outputs.deployment_urls }}
+          PRODUCTION_OUTPUTS: ${{ needs.deploy-production.outputs.deployment_outputs }}
         run: |
           echo "Validating production deployment..."
           
-          URLS='${{ needs.deploy-production.outputs.deployment_urls }}'
-          
-          for url in $(echo "$URLS" | jq -r '.[]'); do
+          URLS=$(echo "$PRODUCTION_OUTPUTS" | jq -r '.[].value | select(type == "string" and startswith("http"))')
+
+          for url in $URLS; do
             echo "Validating: $url"
             
             # Health check with retry logic

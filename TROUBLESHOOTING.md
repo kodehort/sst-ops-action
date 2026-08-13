@@ -394,7 +394,7 @@ Warning: Resource changes could not be determined
   run: |
     echo "Success: '${{ steps.deploy.outputs.success }}'"
     echo "Operation: '${{ steps.deploy.outputs.operation }}'"
-    echo "URLs: '${{ steps.deploy.outputs.urls }}'"
+    echo "Outputs: '${{ steps.deploy.outputs.outputs }}'"
     echo "Resource Changes: '${{ steps.deploy.outputs.resource_changes }}'"
 ```
 
@@ -589,7 +589,7 @@ Error: Resource with identifier [xyz] already exists
     echo "App: '${{ steps.deploy.outputs.app }}'"
     echo "Completion Status: '${{ steps.deploy.outputs.completion_status }}'"
     echo "Resource Changes: '${{ steps.deploy.outputs.resource_changes }}'"
-    echo "URLs: '${{ steps.deploy.outputs.urls }}'"
+    echo "Outputs: '${{ steps.deploy.outputs.outputs }}'"
     echo "Permalink: '${{ steps.deploy.outputs.permalink }}'"
     echo "Truncated: '${{ steps.deploy.outputs.truncated }}'"
 
