@@ -4,8 +4,9 @@
  */
 
 import * as core from "@actions/core";
+import type { StageInputs } from "../inputs/resolve";
 import { StageProcessor } from "../parsers/stage-processor";
-import type { OperationOptions, StageResult } from "../types";
+import type { StageResult } from "../types";
 import { logActionVersion } from "../utils/version";
 
 /**
@@ -15,19 +16,21 @@ import { logActionVersion } from "../utils/version";
 export class StageOperation {
   /**
    * Execute stage calculation operation
-   * @param options Operation configuration options
+   * @param inputs Resolved inputs for the stage operation
    * @returns Parsed stage result with computed stage name
    */
   // biome-ignore lint/suspicious/useAwait: Async required for BaseOperation interface consistency
-  async execute(options: OperationOptions): Promise<StageResult> {
+  async execute(inputs: StageInputs): Promise<StageResult> {
     // Log action version at the start
     logActionVersion(core.info);
 
     // Process stage using GitHub context (no SST CLI execution needed)
     const processor = new StageProcessor();
+    // No defaults here. The resolver applied them once, which is why this
+    // reads the values straight through.
     const result = processor.process({
-      prefix: options.prefix ?? "pr-",
-      truncationLength: options.truncationLength ?? 26,
+      prefix: inputs.prefix,
+      truncationLength: inputs.truncationLength,
     });
 
     return result;

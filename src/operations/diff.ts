@@ -1,7 +1,8 @@
 import * as core from "@actions/core";
 import type { GitHubClient } from "../github/client";
+import type { InfrastructureInputs } from "../inputs/resolve";
 import { DiffParser } from "../parsers/diff-parser";
-import type { DiffResult, OperationOptions } from "../types";
+import type { DiffResult } from "../types";
 import type { SSTCLIExecutor } from "../utils/cli";
 import { logActionVersion } from "../utils/version";
 import { BaseOperation } from "./base-operation";
@@ -27,7 +28,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
     }
   }
 
-  async execute(options: OperationOptions): Promise<DiffResult> {
+  async execute(inputs: InfrastructureInputs): Promise<DiffResult> {
     try {
       // Log action version at the start
       logActionVersion(core.info);
@@ -35,10 +36,10 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       // Execute SST CLI command
       const cliResult = await this.sstExecutor.executeSST(
         "diff",
-        options.stage,
+        inputs.stage,
         {
-          maxOutputSize: options.maxOutputSize,
-          runner: options.runner,
+          maxOutputSize: inputs.maxOutputSize,
+          runner: inputs.runner,
           timeout: this.defaultTimeout,
         }
       );
@@ -46,7 +47,7 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       // Handle CLI execution failure
       if (!cliResult.success) {
         return this.createFailureResult(
-          options.stage,
+          inputs.stage,
           cliResult.stderr || "Unknown CLI error"
         );
       }
@@ -57,25 +58,25 @@ export class DiffOperation extends BaseOperation<DiffResult> {
       // made anything the CLI wrote to stderr structurally invisible here.
       const basicDiffResult = parser.parse(
         cliResult.output,
-        options.stage,
+        inputs.stage,
         cliResult.exitCode,
         cliResult.truncated
       );
 
       if (!basicDiffResult.success) {
         return this.createFailureResult(
-          options.stage,
+          inputs.stage,
           "Failed to parse SST diff output"
         );
       }
 
       // Perform GitHub integration in parallel (non-blocking)
-      await this.performGitHubIntegration(basicDiffResult, options);
+      await this.performGitHubIntegration(basicDiffResult, inputs.commentMode);
 
       return basicDiffResult;
     } catch (error) {
       return this.createFailureResult(
-        options.stage,
+        inputs.stage,
         error instanceof Error ? error.message : "Unknown operation error"
       );
     }

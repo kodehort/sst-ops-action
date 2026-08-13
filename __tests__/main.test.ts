@@ -2,6 +2,10 @@ import * as core from "@actions/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fromValidationError, handleError } from "../src/errors/error-handler";
 
+vi.mock("../src/inputs/compute-stage", () => ({
+  computeStageFromGitContext: vi.fn(() => "computed-stage"),
+}));
+
 // Mock the error handler functions
 vi.mock("../src/errors/error-handler", () => ({
   createInputValidationError: vi.fn(),
@@ -10,6 +14,7 @@ vi.mock("../src/errors/error-handler", () => ({
   handleError: vi.fn(),
 }));
 
+import { computeStageFromGitContext } from "../src/inputs/compute-stage";
 import { run } from "../src/main";
 
 import * as operationRouter from "../src/operations/router";
@@ -147,18 +152,26 @@ describe("Main Entry Point - Action Execution", () => {
       expect(core.info).toHaveBeenCalledWith(
         "🚀 Starting SST Operations Action"
       );
-      expect(core.info).toHaveBeenCalledWith(
-        '📝 Parsed inputs: deploy operation on stage "staging"'
-      );
+      // Exactly once. It fired twice on every real run: the entry point logged
+      // it, and so did input parsing, each with its own copy of the
+      // display-name logic.
+      const parsedInputLines = vi
+        .mocked(core.info)
+        .mock.calls.filter(([line]) =>
+          String(line).startsWith("📝 Parsed inputs")
+        );
+      expect(parsedInputLines).toEqual([
+        ['📝 Parsed inputs: deploy operation on stage "staging"'],
+      ]);
       expect(core.info).toHaveBeenCalledWith(
         "🔧 Executing deploy operation..."
       );
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        "deploy",
         expect.objectContaining({
           commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 50_000,
+          operation: "deploy",
           runner: "bun",
           stage: "staging",
           token: "fake-token",
@@ -203,11 +216,11 @@ describe("Main Entry Point - Action Execution", () => {
       await run();
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        "diff",
         expect.objectContaining({
           commentMode: "always",
           failOnError: true,
           maxOutputSize: 50_000,
+          operation: "diff",
           runner: "bun",
           stage: "production",
           token: "ghp_test123",
@@ -255,11 +268,11 @@ describe("Main Entry Point - Action Execution", () => {
       await run();
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        "remove",
         expect.objectContaining({
           commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 50_000,
+          operation: "remove",
           runner: "bun",
           stage: "staging",
           token: "fake-token",
@@ -427,32 +440,25 @@ describe("Main Entry Point - Action Execution", () => {
       );
     });
 
-    it("should throw when stage computation fails", async () => {
-      // Mock the StageProcessor to fail
-      const { StageProcessor } = (await vi.importActual(
-        "../src/parsers/stage-processor"
-      )) as any;
-      vi.spyOn(StageProcessor.prototype, "process").mockReturnValue({
-        error: "Failed to generate a valid stage name from Git context",
-        exitCode: 1,
-        success: false,
+    it("reports a failure to compute a deploy stage", async () => {
+      // This used to reach the failure branch with
+      // `vi.spyOn(StageProcessor.prototype, "process")` — prototype surgery
+      // standing in for a seam that did not exist. The computation is injected
+      // now, so the adapter is mocked at its module boundary, and its own
+      // behaviour is covered in __tests__/inputs/compute-stage.test.ts.
+      vi.mocked(computeStageFromGitContext).mockImplementation(() => {
+        throw new Error(
+          "Failed to compute stage from Git context: no usable ref"
+        );
       });
 
-      vi.spyOn(core, "getInput").mockImplementation((name: string) => {
-        if (name === "operation") {
-          return "deploy";
-        }
-        if (name === "stage") {
-          return ""; // Empty stage to trigger computation
-        }
-        return "";
-      });
+      vi.spyOn(core, "getInput").mockImplementation((name: string) =>
+        name === "operation" ? "deploy" : ""
+      );
 
       await run();
 
-      expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining("❌ Failed to compute stage from Git context")
-      );
+      expect(handleError).toHaveBeenCalled();
     });
   });
 
@@ -669,11 +675,11 @@ describe("Main Entry Point - Action Execution", () => {
       );
 
       expect(operationRouter.executeOperation).toHaveBeenCalledWith(
-        "deploy",
         expect.objectContaining({
           commentMode: "on-success",
           failOnError: true,
           maxOutputSize: 100_000,
+          operation: "deploy",
           runner: "bun",
           stage: "production",
           token: "ghp_real_token_123",

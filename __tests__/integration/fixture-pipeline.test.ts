@@ -21,24 +21,28 @@ vi.mock("@/utils/cli");
 
 import { GitHubClient } from "@/github/client";
 import { OperationFormatter } from "@/github/formatters";
+import type { InfrastructureInputs } from "@/inputs/resolve";
 import { executeOperation } from "@/operations/router";
-import type {
-  DeployResult,
-  DiffResult,
-  OperationOptions,
-  RemoveResult,
-} from "@/types";
+import type { DeployResult, DiffResult, RemoveResult } from "@/types";
 import { SSTCLIExecutor } from "@/utils/cli";
 import { loadInput } from "../utils/snapshot-helpers";
 
-const options: OperationOptions = {
-  commentMode: "never",
-  failOnError: true,
-  maxOutputSize: 500_000,
-  runner: "bun",
-  stage: "sst-ops-actions",
-  token: "test-token",
-};
+/** Resolved inputs for one of the three operations that run the SST CLI. */
+function inputsFor(
+  operation: InfrastructureInputs["operation"],
+  overrides: Partial<InfrastructureInputs> = {}
+): InfrastructureInputs {
+  return {
+    commentMode: "never",
+    failOnError: true,
+    maxOutputSize: 500_000,
+    operation,
+    runner: "bun",
+    stage: "sst-ops-actions",
+    token: "test-token",
+    ...overrides,
+  };
+}
 
 /**
  * Stub the CLI seam with a real captured SST run.
@@ -76,7 +80,9 @@ describe("Captured CLI output through parser, router and formatter", () => {
   it("reports the real app name for a captured deploy", async () => {
     withCapture(loadInput("deploy", "output-deployment"), 0);
 
-    const result = (await executeOperation("deploy", options)) as DeployResult;
+    const result = (await executeOperation(
+      inputsFor("deploy")
+    )) as DeployResult;
 
     // The transform used to make this the literal string "unknown" on every
     // run, for every operation.
@@ -92,7 +98,9 @@ describe("Captured CLI output through parser, router and formatter", () => {
   it("reports the real app name and permalink for a captured failed deploy", async () => {
     withCapture(loadInput("deploy", "failed-deployment"), 1);
 
-    const result = (await executeOperation("deploy", options)) as DeployResult;
+    const result = (await executeOperation(
+      inputsFor("deploy")
+    )) as DeployResult;
 
     expect(result.app).toBe("kodehort-scratch");
     expect(result.success).toBe(false);
@@ -106,7 +114,7 @@ describe("Captured CLI output through parser, router and formatter", () => {
   it("reports the real planned-change count for a captured diff", async () => {
     withCapture(loadInput("diff", "complex-changes"), 0);
 
-    const result = (await executeOperation("diff", options)) as DiffResult;
+    const result = (await executeOperation(inputsFor("diff"))) as DiffResult;
 
     expect(result.app).not.toBe("unknown");
     // The transform read this from a differently-named schema field, so the
@@ -120,7 +128,9 @@ describe("Captured CLI output through parser, router and formatter", () => {
   it("reports the real app name and completion status for a captured remove", async () => {
     withCapture(loadInput("remove", "complete-cleanup"), 0);
 
-    const result = (await executeOperation("remove", options)) as RemoveResult;
+    const result = (await executeOperation(
+      inputsFor("remove")
+    )) as RemoveResult;
 
     expect(result.app).not.toBe("unknown");
     // Read from the "✓  Removed" marker the parser now recognises, rather than
@@ -143,7 +153,7 @@ describe("Captured CLI output through parser, router and formatter", () => {
   ] as const)("reports truncation for %s", async (operation, fixture) => {
     withCapture(loadInput(operation, fixture), 0, true);
 
-    const result = await executeOperation(operation, options);
+    const result = await executeOperation(inputsFor(operation));
 
     expect(result.truncated).toBe(true);
   });
@@ -157,7 +167,7 @@ describe("Captured CLI output through parser, router and formatter", () => {
     async (operation, fixture) => {
       withCapture(loadInput(operation, fixture), 0, false);
 
-      const result = await executeOperation(operation, options);
+      const result = await executeOperation(inputsFor(operation));
 
       expect(result.truncated).toBe(false);
     }

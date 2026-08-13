@@ -16,6 +16,22 @@ import type { SSTRunner } from "./cli.js";
 import { SST_RUNNERS } from "./cli.js";
 import { isZodError } from "./zod-error.js";
 
+/**
+ * The value each optional input takes when it is not set.
+ *
+ * Exported so the schema and the stage-computation step read the same
+ * constant. Deploy may compute its stage from Git context, which needs the
+ * prefix and truncation length even though those inputs belong to the stage
+ * operation, and that was the second place they used to be defaulted.
+ */
+export const INPUT_DEFAULTS = {
+  commentMode: "on-success",
+  maxOutputSize: 50_000,
+  prefix: "pr-",
+  runner: "bun",
+  truncationLength: 26,
+} as const;
+
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 
@@ -25,7 +41,7 @@ const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 const CommonFieldSchemas = {
   commentMode: z
     .string()
-    .default("on-success")
+    .default(INPUT_DEFAULTS.commentMode)
     .refine((val) => isValidCommentMode(val), {
       message: `Invalid comment mode. Must be one of: ${COMMENT_MODES.join(", ")}`,
     })
@@ -45,7 +61,7 @@ const CommonFieldSchemas = {
       })
     )
     .transform((val) => validateMaxOutputSize(val))
-    .default(50_000),
+    .default(INPUT_DEFAULTS.maxOutputSize),
   operation: z
     .string()
     .min(1, "Operation is required and cannot be empty")
@@ -74,11 +90,11 @@ const CommonFieldSchemas = {
       message:
         "Prefix must contain only lowercase letters, numbers, and hyphens",
     })
-    .default("pr-"),
+    .default(INPUT_DEFAULTS.prefix),
 
   runner: z
     .string()
-    .default("bun")
+    .default(INPUT_DEFAULTS.runner)
     .refine((val): val is SSTRunner => SST_RUNNERS.includes(val as SSTRunner), {
       message: `Invalid runner. Must be one of: ${SST_RUNNERS.join(", ")}`,
     })
@@ -110,17 +126,17 @@ const CommonFieldSchemas = {
     .refine((val) => val > 0 && val <= 100, {
       message: "Truncation length must be between 1 and 100 characters",
     })
-    .default(26),
+    .default(INPUT_DEFAULTS.truncationLength),
 };
 
 /**
  * Base schema for SST infrastructure operations
  */
 const BaseInfrastructureSchema = z.object({
-  commentMode: CommonFieldSchemas.commentMode.optional(),
-  failOnError: CommonFieldSchemas.failOnError.optional(),
-  maxOutputSize: CommonFieldSchemas.maxOutputSize.optional(),
-  runner: CommonFieldSchemas.runner.optional(),
+  commentMode: CommonFieldSchemas.commentMode,
+  failOnError: CommonFieldSchemas.failOnError,
+  maxOutputSize: CommonFieldSchemas.maxOutputSize,
+  runner: CommonFieldSchemas.runner,
   token: CommonFieldSchemas.token,
 });
 
@@ -130,7 +146,7 @@ const BaseInfrastructureSchema = z.object({
 const DeployInputsSchema = z
   .object({
     operation: z.literal("deploy"),
-    stage: CommonFieldSchemas.optionalStage.optional(),
+    stage: CommonFieldSchemas.optionalStage,
   })
   .extend(BaseInfrastructureSchema.shape)
   .strict();
@@ -153,9 +169,10 @@ const RemoveInputsSchema = z
 
 const StageInputsSchema = z
   .object({
+    failOnError: CommonFieldSchemas.failOnError,
     operation: z.literal("stage"),
-    prefix: CommonFieldSchemas.prefix.optional(),
-    truncationLength: CommonFieldSchemas.truncationLength.optional(),
+    prefix: CommonFieldSchemas.prefix,
+    truncationLength: CommonFieldSchemas.truncationLength,
   })
   .strict();
 
@@ -206,8 +223,10 @@ function filterInputsByOperation(
   const operation = rawInputs.operation as string;
 
   if (operation === "stage") {
-    // Stage operations only need these fields
+    // Stage operations only need these fields. fail-on-error is included
+    // because action.yml documents it as applying to every operation type.
     return {
+      failOnError: rawInputs.failOnError,
       operation: rawInputs.operation,
       prefix: rawInputs.prefix,
       truncationLength: rawInputs.truncationLength,

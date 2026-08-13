@@ -5,8 +5,9 @@
 
 import * as core from "@actions/core";
 import type { GitHubClient } from "../github/client";
+import type { InfrastructureInputs } from "../inputs/resolve";
 import { RemoveParser } from "../parsers/remove-parser";
-import type { OperationOptions, RemoveResult } from "../types";
+import type { RemoveResult } from "../types";
 import type { SSTCLIExecutor } from "../utils/cli";
 import { logActionVersion } from "../utils/version";
 import { BaseOperation } from "./base-operation";
@@ -26,20 +27,20 @@ export class RemoveOperation extends BaseOperation<RemoveResult> {
 
   /**
    * Execute SST remove operation with full workflow
-   * @param options Operation configuration options
+   * @param inputs Resolved inputs for this operation
    * @returns Parsed remove result with resource cleanup information
    */
-  async execute(options: OperationOptions): Promise<RemoveResult> {
+  async execute(inputs: InfrastructureInputs): Promise<RemoveResult> {
     // Log action version at the start
     logActionVersion(core.info);
 
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
       "remove",
-      options.stage,
+      inputs.stage,
       {
-        maxOutputSize: options.maxOutputSize,
-        runner: options.runner,
+        maxOutputSize: inputs.maxOutputSize,
+        runner: inputs.runner,
         timeout: this.defaultTimeout,
       }
     );
@@ -48,13 +49,13 @@ export class RemoveOperation extends BaseOperation<RemoveResult> {
     const parser = new RemoveParser();
     const result = parser.parse(
       cliResult.output,
-      options.stage,
+      inputs.stage,
       cliResult.exitCode,
       cliResult.truncated
     );
 
     // Perform GitHub integration in parallel (non-blocking)
-    await this.performGitHubIntegration(result, options);
+    await this.performGitHubIntegration(result, inputs.commentMode);
 
     return result;
   }

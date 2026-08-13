@@ -7,13 +7,9 @@ vi.mock("@/utils/cli");
 import { GitHubClient } from "@/github/client";
 import { OperationFactory } from "@/operations/factory";
 import { executeOperation } from "@/operations/router";
-import type {
-  DeployResult,
-  DiffResult,
-  OperationOptions,
-  RemoveResult,
-} from "@/types";
+import type { DeployResult, DiffResult, RemoveResult } from "@/types";
 import { SSTCLIExecutor } from "@/utils/cli";
+import { infrastructureInputs, stageInputs } from "../utils/resolved-inputs";
 
 /**
  * These fixtures are the shape a parser actually produces.
@@ -29,15 +25,6 @@ import { SSTCLIExecutor } from "@/utils/cli";
 describe("OperationRouter", () => {
   let mockOperation: {
     execute: ReturnType<typeof vi.fn>;
-  };
-
-  const defaultOptions: OperationOptions = {
-    commentMode: "on-success",
-    failOnError: true,
-    maxOutputSize: 50_000,
-    runner: "bun",
-    stage: "test-stage",
-    token: "test-token",
   };
 
   const deployResult: DeployResult = {
@@ -99,9 +86,10 @@ describe("OperationRouter", () => {
       execute: vi.fn(),
     };
 
-    // Mock OperationFactory methods
+    // Mock OperationFactory methods. createOperation returns a thunk bound to
+    // the resolved inputs, so the stub is a function rather than an object.
     vi.spyOn(OperationFactory.prototype, "createOperation").mockReturnValue(
-      mockOperation as any
+      (() => (mockOperation.execute as () => unknown)()) as any
     );
     vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(true);
     vi.spyOn(OperationFactory, "getSupportedOperations").mockReturnValue([
@@ -129,7 +117,7 @@ describe("OperationRouter", () => {
       vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(false);
 
       await expect(
-        executeOperation("invalid" as any, defaultOptions)
+        executeOperation({ operation: "invalid" } as any)
       ).rejects.toThrow(
         "Cannot create error result for unknown operation: invalid"
       );
@@ -138,7 +126,9 @@ describe("OperationRouter", () => {
     it("should return the deploy result unchanged", async () => {
       mockOperation.execute.mockResolvedValue(deployResult);
 
-      const result = await executeOperation("deploy", defaultOptions);
+      const result = await executeOperation(
+        infrastructureInputs("deploy", { stage: "test-stage" })
+      );
 
       expect(result).toEqual(deployResult);
     });
@@ -147,8 +137,7 @@ describe("OperationRouter", () => {
       mockOperation.execute.mockResolvedValue(deployResult);
 
       const result = (await executeOperation(
-        "deploy",
-        defaultOptions
+        infrastructureInputs("deploy", { stage: "test-stage" })
       )) as DeployResult;
 
       // Each of these was destroyed by the transform: app became "unknown",
@@ -163,7 +152,9 @@ describe("OperationRouter", () => {
     it("should return the diff result unchanged", async () => {
       mockOperation.execute.mockResolvedValue(diffResult);
 
-      const result = await executeOperation("diff", defaultOptions);
+      const result = await executeOperation(
+        infrastructureInputs("diff", { stage: "test-stage" })
+      );
 
       expect(result).toEqual(diffResult);
     });
@@ -172,8 +163,7 @@ describe("OperationRouter", () => {
       mockOperation.execute.mockResolvedValue(diffResult);
 
       const result = (await executeOperation(
-        "diff",
-        defaultOptions
+        infrastructureInputs("diff", { stage: "test-stage" })
       )) as DiffResult;
 
       // The transform read these from differently-named schema fields, so the
@@ -186,7 +176,9 @@ describe("OperationRouter", () => {
     it("should return the remove result unchanged", async () => {
       mockOperation.execute.mockResolvedValue(removeResult);
 
-      const result = await executeOperation("remove", defaultOptions);
+      const result = await executeOperation(
+        infrastructureInputs("remove", { stage: "test-stage" })
+      );
 
       expect(result).toEqual(removeResult);
     });
@@ -195,8 +187,7 @@ describe("OperationRouter", () => {
       mockOperation.execute.mockResolvedValue(removeResult);
 
       const result = (await executeOperation(
-        "remove",
-        defaultOptions
+        infrastructureInputs("remove", { stage: "test-stage" })
       )) as RemoveResult;
 
       // "partial" survives; the transform defaulted a missing value to "failed".
@@ -222,7 +213,7 @@ describe("OperationRouter", () => {
 
       mockOperation.execute.mockResolvedValue(mockStageResult);
 
-      const result = await executeOperation("stage", defaultOptions);
+      const result = await executeOperation(stageInputs());
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("stage");
@@ -233,7 +224,9 @@ describe("OperationRouter", () => {
       const mockError = new Error("Operation failed");
       mockOperation.execute.mockRejectedValue(mockError);
 
-      const result = await executeOperation("deploy", defaultOptions);
+      const result = await executeOperation(
+        infrastructureInputs("deploy", { stage: "test-stage" })
+      );
 
       // The router still owns failure-result construction — that is result
       // shaping, not error reporting.
@@ -247,16 +240,14 @@ describe("OperationRouter", () => {
       mockOperation.execute.mockRejectedValue(new Error("boom"));
 
       const diff = (await executeOperation(
-        "diff",
-        defaultOptions
+        infrastructureInputs("diff", { stage: "test-stage" })
       )) as DiffResult;
       expect(diff.changeSummary).toBe("Operation failed");
       expect(diff.plannedChanges).toBe(0);
       expect(diff.changes).toEqual([]);
 
       const remove = (await executeOperation(
-        "remove",
-        defaultOptions
+        infrastructureInputs("remove", { stage: "test-stage" })
       )) as RemoveResult;
       expect(remove.removedResources).toEqual([]);
       expect(remove.resourcesRemoved).toBe(0);
@@ -278,9 +269,12 @@ describe("OperationRouter", () => {
         truncated: false,
       });
 
-      await executeOperation("stage", defaultOptions);
+      await executeOperation(stageInputs());
 
-      expect(GitHubClient).toHaveBeenCalledWith("fake-token");
+      // The stage operation used to be handed the sentinel token
+      // "fake-token" so a GitHub client could be constructed for it and then
+      // never used. It has no token now, and no client is built.
+      expect(GitHubClient).not.toHaveBeenCalled();
     });
   });
 });
