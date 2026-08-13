@@ -1,38 +1,13 @@
 import type { DiffResult } from "../types/operations";
 import { type DiffAction, normalizeDiffAction } from "./normalization";
 import { OperationParser } from "./operation-parser";
-
-/**
- * Diff-specific regex patterns for parsing planned changes
- * Based on real SST diff output format
- */
-const DIFF_PATTERNS = {
-  DIFF_FAILED: /Unable to generate diff|Permission denied|Error parsing/i,
-  ERROR_MESSAGE: /^Error:\s*(.+)$/m,
-
-  NO_CHANGES: /^No changes$/m,
-  // Planned changes patterns - real SST format
-  PLANNED_CREATE: /^\+\s+(.+?)(?:\s+→\s+(.+))?$/,
-  PLANNED_DELETE: /^-\s+(.+?)(?:\s+→\s+(.+))?$/,
-  PLANNED_UPDATE: /^\*\s+(.+?)(?:\s+→\s+(.+))?$/,
-} as const;
-
-/**
- * Regex patterns for parsing top-level resource changes
- */
-const TOP_LEVEL_RESOURCE_PATTERN = /^([+*-])\s+([^\s].*?)(?:\s+→\s+(.+))?$/;
-const INDENTED_CHILD_PATTERN = /^\s+[+*-]/;
+import { SSTPatterns } from "./patterns";
 
 /**
  * Parser for SST diff operation outputs
  * Extracts planned infrastructure changes without deploying
  */
 export class DiffParser extends OperationParser<DiffResult> {
-  /**
-   * Diff-specific regex patterns for parsing planned changes
-   */
-  private readonly diffPatterns = DIFF_PATTERNS;
-
   /**
    * Parse SST diff output and extract planned changes
    */
@@ -125,7 +100,7 @@ export class DiffParser extends OperationParser<DiffResult> {
    * Check if a line is an indented child property
    */
   private isIndentedChild(line: string): boolean {
-    return INDENTED_CHILD_PATTERN.test(line);
+    return SSTPatterns.diff.indentedChild.test(line);
   }
 
   /**
@@ -137,7 +112,7 @@ export class DiffParser extends OperationParser<DiffResult> {
     action: "create" | "update" | "delete";
     hasChildResource: boolean;
   } | null {
-    const topLevelMatch = line.match(TOP_LEVEL_RESOURCE_PATTERN);
+    const topLevelMatch = line.match(SSTPatterns.diff.topLevelResource);
     if (!topLevelMatch) {
       return null;
     }
@@ -274,12 +249,12 @@ export class DiffParser extends OperationParser<DiffResult> {
     exitCode: number
   ): string {
     // Check for explicit "No changes" message
-    if (this.diffPatterns.NO_CHANGES.test(output)) {
+    if (SSTPatterns.diff.noChanges.test(output)) {
       return "No changes";
     }
 
     // Check for error scenarios - only return error message for actual failures with non-zero exit code
-    if (exitCode !== 0 && this.diffPatterns.DIFF_FAILED.test(output)) {
+    if (exitCode !== 0 && SSTPatterns.diff.failed.test(output)) {
       return "Diff parsing failed - unable to determine changes";
     }
 
@@ -297,12 +272,12 @@ export class DiffParser extends OperationParser<DiffResult> {
     }
 
     // Check for diff-specific error patterns
-    if (this.diffPatterns.DIFF_FAILED.test(output)) {
+    if (SSTPatterns.diff.failed.test(output)) {
       return false;
     }
 
     // Check for general error patterns from base parser
-    if (this.diffPatterns.ERROR_MESSAGE.test(output)) {
+    if (SSTPatterns.errors.message.test(output)) {
       return false;
     }
 
