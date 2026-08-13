@@ -1,3 +1,51 @@
+# Release v0.7.44
+
+**Release Date:** 2026-08-13
+**Previous Version:** v0.7.43
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- refactor(github): read the Generated marker from the pattern library (#147) (`e44fa83`)
+- refactor(parsers): read patterns from the library, not a second set of names (#147) (`69dcb61`)
+- test: delete the base-parser test that re-implements its subject (#147) (`7d1d42d`)
+- refactor(parsers): make the pattern library the only place SST output is matched (#147) (`5f8ba29`)
+- docs: declare the outputs the action actually emits (#138) (`511e6cc`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 1.50MB (1570769 bytes)
+- **Integrity Hash:** `e934d4d7886212b9...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.7.44
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.7.43...v0.7.44)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.7.44/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.7.43...v0.7.44
+
+---
+
 # Release v0.7.43
 
 **Release Date:** 2026-08-13
