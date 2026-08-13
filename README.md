@@ -62,9 +62,14 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `operation` | Operation performed | All |
 | `stage` | Stage operated on | All |
 | `app` | SST app name | deploy, diff, remove |
-| `resource_changes` | Number of resource changes | deploy, remove |
-| `outputs` | JSON array of deployment outputs (key/value pairs) | deploy |
+| `resource_changes` | Number of resource changes; mirrors `planned_changes` for diff and `resources_removed` for remove | deploy, diff, remove |
+| `outputs` | JSON array of deployment outputs (`key`/`value` pairs) | deploy |
+| `resources` | JSON array of reported resources (`name`/`type`/`status`) | deploy |
 | `diff_summary` | Summary of planned changes | diff |
+| `planned_changes` | Number of changes SST plans to make | diff |
+| `resources_removed` | Number of resources removed | remove |
+| `removed_resources` | JSON array of removed resources (`name`/`type`/`status`) | remove |
+| `error` | Error message when the operation fails; empty on success | All |
 | `completion_status` | `complete`, `partial`, or `failed` | All |
 | `permalink` | SST Console permalink | deploy, diff, remove |
 | `truncated` | Whether output was truncated | All |

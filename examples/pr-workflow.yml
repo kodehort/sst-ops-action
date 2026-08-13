@@ -173,7 +173,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const urls = JSON.parse('${{ steps.deploy.outputs.urls }}');
+            // Every output the app declared, as {key, value} pairs.
+            const deployed = JSON.parse('${{ steps.deploy.outputs.outputs }}' || '[]');
+            const urls = deployed.filter(o => String(o.value).startsWith('http'));
             const stage = '${{ steps.deploy.outputs.stage }}';
             const app = '${{ steps.deploy.outputs.app }}';
             const changes = '${{ steps.deploy.outputs.resource_changes }}';
@@ -187,8 +189,8 @@ jobs:
             
             if (urls.length > 0) {
               comment += '\n**Deployed URLs**:\n';
-              urls.forEach(url => {
-                comment += `- ${url}\n`;
+              urls.forEach(({ key, value }) => {
+                comment += `- ${key}: ${value}\n`;
               });
             }
             

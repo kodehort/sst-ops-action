@@ -176,6 +176,9 @@ jobs:
     name: Deploy with Error Handling
     runs-on: ubuntu-latest
     needs: pre-deployment-validation
+    
+    outputs:
+      deployment_outputs: ${{ steps.final-status.outputs.deployment_outputs }}
     if: |
       needs.pre-deployment-validation.outputs.validation_passed == 'true' ||
       github.event.inputs.force_deployment == 'true'
@@ -318,25 +321,25 @@ jobs:
             echo "final_success=true" >> $GITHUB_OUTPUT
             echo "final_attempt=primary" >> $GITHUB_OUTPUT
             echo "resource_changes=${{ steps.deploy-primary.outputs.resource_changes }}" >> $GITHUB_OUTPUT
-            echo "urls=${{ steps.deploy-primary.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "deployment_outputs=${{ steps.deploy-primary.outputs.outputs }}" >> $GITHUB_OUTPUT
             echo "permalink=${{ steps.deploy-primary.outputs.permalink }}" >> $GITHUB_OUTPUT
           elif [ "${{ steps.deploy-retry.outputs.success }}" = "true" ]; then
             echo "final_success=true" >> $GITHUB_OUTPUT
             echo "final_attempt=retry" >> $GITHUB_OUTPUT
             echo "resource_changes=${{ steps.deploy-retry.outputs.resource_changes }}" >> $GITHUB_OUTPUT
-            echo "urls=${{ steps.deploy-retry.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "deployment_outputs=${{ steps.deploy-retry.outputs.outputs }}" >> $GITHUB_OUTPUT
             echo "permalink=${{ steps.deploy-retry.outputs.permalink }}" >> $GITHUB_OUTPUT
           elif [ "${{ steps.deploy-final.outputs.success }}" = "true" ]; then
             echo "final_success=true" >> $GITHUB_OUTPUT
             echo "final_attempt=final" >> $GITHUB_OUTPUT
             echo "resource_changes=${{ steps.deploy-final.outputs.resource_changes }}" >> $GITHUB_OUTPUT
-            echo "urls=${{ steps.deploy-final.outputs.urls }}" >> $GITHUB_OUTPUT
+            echo "deployment_outputs=${{ steps.deploy-final.outputs.outputs }}" >> $GITHUB_OUTPUT
             echo "permalink=${{ steps.deploy-final.outputs.permalink }}" >> $GITHUB_OUTPUT
           else
             echo "final_success=false" >> $GITHUB_OUTPUT
             echo "final_attempt=all_failed" >> $GITHUB_OUTPUT
             echo "resource_changes=0" >> $GITHUB_OUTPUT
-            echo "urls=[]" >> $GITHUB_OUTPUT
+            echo "deployment_outputs=[]" >> $GITHUB_OUTPUT
             echo "permalink=" >> $GITHUB_OUTPUT
           fi
 
@@ -373,10 +376,11 @@ jobs:
             echo "### Deployment Results" >> $GITHUB_STEP_SUMMARY
             echo "- **Resources Changed**: ${{ steps.final-status.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
             
-            URLS='${{ steps.final-status.outputs.urls }}'
-            if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+            URLS=$(echo '${{ steps.final-status.outputs.deployment_outputs }}' \
+              | jq -r '.[].value | select(type == "string" and startswith("http"))')
+            if [ -n "$URLS" ]; then
               echo "- **Deployed URLs**:" >> $GITHUB_STEP_SUMMARY
-              echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+              echo "$URLS" | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
             fi
             
             if [ -n "${{ steps.final-status.outputs.permalink }}" ]; then
@@ -393,7 +397,8 @@ jobs:
             const success = '${{ steps.final-status.outputs.final_success }}' === 'true';
             const attempt = '${{ steps.final-status.outputs.final_attempt }}';
             const stage = '${{ steps.params.outputs.stage }}';
-            const urls = JSON.parse('${{ steps.final-status.outputs.urls }}' || '[]');
+            const deployed = JSON.parse('${{ steps.final-status.outputs.deployment_outputs }}' || '[]');
+            const urls = deployed.filter(o => String(o.value).startsWith('http'));
             
             let comment = `## ${success ? '🚀' : '❌'} Deployment ${success ? 'Successful' : 'Failed'}\n\n`;
             comment += `**Stage**: ${stage}\n`;
@@ -406,7 +411,7 @@ jobs:
               
               if (urls.length > 0) {
                 comment += '- **Deployed URLs**:\n';
-                urls.forEach(url => comment += `  - ${url}\n`);
+                urls.forEach(({ key, value }) => comment += `  - ${key}: ${value}\n`);
               }
               
               if ('${{ steps.final-status.outputs.permalink }}') {
@@ -461,9 +466,10 @@ jobs:
         run: |
           echo "Validating deployed application..."
           
-          URLS='${{ needs.deploy-with-error-handling.outputs.urls }}'
-          
-          if [ "$URLS" = "[]" ] || [ -z "$URLS" ]; then
+          URLS=$(echo '${{ needs.deploy-with-error-handling.outputs.deployment_outputs }}' \
+            | jq -r '.[].value | select(type == "string" and startswith("http"))')
+
+          if [ -z "$URLS" ]; then
             echo "No URLs to validate"
             echo "health_check_passed=true" >> $GITHUB_OUTPUT
             exit 0
@@ -471,7 +477,7 @@ jobs:
           
           ALL_HEALTHY=true
           
-          for url in $(echo "$URLS" | jq -r '.[]'); do
+          for url in $URLS; do
             echo "Checking health for: $url"
             
             # Try health endpoint first

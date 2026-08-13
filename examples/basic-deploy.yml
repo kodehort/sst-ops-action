@@ -114,11 +114,14 @@ jobs:
           if [ "${{ steps.deploy.outputs.success }}" = "true" ]; then
             echo "- **Resources Changed**: ${{ steps.deploy.outputs.resource_changes }}" >> $GITHUB_STEP_SUMMARY
             
-            # Display deployed URLs if available
-            URLS='${{ steps.deploy.outputs.urls }}'
-            if [ "$URLS" != "[]" ] && [ -n "$URLS" ]; then
+            # Display deployed URLs if available. The action emits every
+            # output the app declared, as {key, value} pairs, so pick out the
+            # URL-shaped ones.
+            URLS=$(echo '${{ steps.deploy.outputs.outputs }}' \
+              | jq -r '.[].value | select(type == "string" and startswith("http"))')
+            if [ -n "$URLS" ]; then
               echo "- **Deployed URLs**:" >> $GITHUB_STEP_SUMMARY
-              echo "$URLS" | jq -r '.[] | "  - " + .' >> $GITHUB_STEP_SUMMARY
+              echo "$URLS" | sed 's/^/  - /' >> $GITHUB_STEP_SUMMARY
             fi
             
             # Include console permalink if available
@@ -132,12 +135,13 @@ jobs:
       # Optional: Run basic health checks on deployed URLs
       # This demonstrates post-deployment validation
       - name: Health Check
-        if: steps.deploy.outputs.success == 'true' && steps.deploy.outputs.urls != '[]'
+        if: steps.deploy.outputs.success == 'true' && steps.deploy.outputs.outputs != '[]'
         run: |
           echo "Running health checks on deployed URLs..."
-          URLS='${{ steps.deploy.outputs.urls }}'
-          
-          for url in $(echo "$URLS" | jq -r '.[]'); do
+          URLS=$(echo '${{ steps.deploy.outputs.outputs }}' \
+            | jq -r '.[].value | select(type == "string" and startswith("http"))')
+
+          for url in $URLS; do
             echo "Checking: $url"
             
             # Simple HTTP health check

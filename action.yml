@@ -99,9 +99,16 @@ outputs:
   stage:
     description: "The stage that was operated on"
   resource_changes:
-    description: "Number of resource changes made (deploy/remove only)"
+    description: |
+      Number of resource changes, as a numeric string:
+      • deploy: resources created, updated or deleted
+      • diff: same value as planned_changes
+      • remove: same value as resources_removed
+      • stage: empty
+  resources:
+    description: "JSON array of the resources SST reported, each with name, type and status (deploy only; empty for other operations)"
   outputs:
-    description: "JSON array of generic outputs from deployment (replaces urls)"
+    description: "JSON array of generic outputs from the deployment, each with key and value (deploy only; empty for other operations)"
   app:
     description: "The SST app name"
   completion_status:
@@ -112,6 +119,14 @@ outputs:
     description: "Whether the operation output was truncated"
   diff_summary:
     description: "Summary of planned changes (diff only)"
+  planned_changes:
+    description: "Number of changes SST plans to make, as a numeric string (diff only; empty for other operations)"
+  resources_removed:
+    description: "Number of resources removed, as a numeric string (remove only; empty for other operations)"
+  removed_resources:
+    description: "JSON array of the resources SST removed, each with name, type and status (remove only; empty for other operations)"
+  error:
+    description: "Error message when the operation fails; empty on success (all operations)"
   computed_stage:
     description: "The computed stage name (stage only)"
   ref:

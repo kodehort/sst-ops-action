@@ -604,22 +604,22 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 ---
 
-### `urls` (Deploy Only)
+### `outputs` (Deploy Only)
 
-**Description:** Deployed application URLs extracted from generic outputs  
-**Type:** String (JSON Array)  
-**Format:** JSON-encoded array of URLs  
+**Description:** Generic outputs declared by the SST application
+**Type:** String (JSON Array)
+**Format:** JSON-encoded array of `{ "key": ..., "value": ... }` objects
 
 **Example Values:**
 ```json
-["https://api.example.com"]
-["https://web.example.com", "https://api.example.com"]
+[{"key":"Api","value":"https://api.example.com"}]
+[{"key":"Web","value":"https://web.example.com"},{"key":"Api","value":"https://api.example.com"}]
 []
 ```
 
 **Usage:**
 ```yaml
-- name: Extract URLs
+- name: Deploy
   id: deploy
   uses: kodehort/sst-operations-action@v1
   with:
@@ -627,40 +627,51 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
     stage: production
     token: ${{ secrets.GITHUB_TOKEN }}
 
-- name: Process URLs
+- name: Use deployment outputs
   run: |
-    URLS='${{ steps.deploy.outputs.urls }}'
-    echo "Raw URLs: $URLS"
-    
-    # Parse JSON array
-    echo "First URL: $(echo '$URLS' | jq -r '.[0] // "none"')"
-    
-    # Set as environment variables
-    API_URL=$(echo '$URLS' | jq -r '.[] | select(contains("api"))')
-    WEB_URL=$(echo '$URLS' | jq -r '.[] | select(contains("web"))')
-    
-    echo "API_URL=$API_URL" >> $GITHUB_ENV
-    echo "WEB_URL=$WEB_URL" >> $GITHUB_ENV
+    OUTPUTS='${{ steps.deploy.outputs.outputs }}'
 
-- name: Test Deployed URLs
-  run: |
-    for url in $(echo '${{ steps.deploy.outputs.urls }}' | jq -r '.[]'); do
-      echo "Testing: $url"
+    # Look one up by name
+    API_URL=$(echo "$OUTPUTS" | jq -r '.[] | select(.key == "Api") | .value')
+    echo "API_URL=$API_URL" >> $GITHUB_ENV
+
+    # Or iterate every URL-shaped value
+    for url in $(echo "$OUTPUTS" | jq -r '.[].value | select(startswith("http"))'); do
       curl -f "$url/health" || echo "Health check failed for $url"
     done
 ```
 
-**URL Types:**
-- API endpoints (API Gateway, ALB)
-- Web applications (CloudFront, S3)
-- Function URLs (Lambda)
-- WebSocket APIs
+**Notes:**
+- Only populated for `deploy` operations; empty string for `diff`, `remove` and `stage`
+- Empty array `[]` if the deployment declared no outputs
+- Whatever the SST app declares, not only URLs — parse by `key` rather than assuming position
+
+---
+
+### `resources` (Deploy Only)
+
+**Description:** The resources SST reported during the deployment
+**Type:** String (JSON Array)
+**Format:** JSON-encoded array of `{ "name": ..., "type": ..., "status": ... }` objects
+
+**Example Values:**
+```json
+[{"name":"MyFunction","type":"Function","status":"created"}]
+[]
+```
+
+**Usage:**
+```yaml
+- name: Report created resources
+  run: |
+    echo '${{ steps.deploy.outputs.resources }}' \
+      | jq -r '.[] | select(.status == "created") | "\(.type) \(.name)"'
+```
 
 **Notes:**
-- Only populated for `deploy` operations
-- Empty array `[]` if no URLs found in outputs
-- JSON parsing required to extract individual URLs
-- URLs are extracted from the generic SST outputs during parsing
+- Only populated for `deploy` operations; empty string for `diff`, `remove` and `stage`
+- `resource_changes` is the count of this array's entries
+- `status` is normalised by the parser (e.g. `created`, `updated`, `deleted`, `failed`)
 
 ---
 
@@ -696,6 +707,77 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 - Only populated for `diff` operations
 - Empty string if no changes or parsing failed
 - Human-readable format for notifications and reports
+
+---
+
+### `planned_changes` (Diff Only)
+
+**Description:** Number of changes SST plans to make
+**Type:** String (Integer)
+**Format:** Numeric string
+
+**Example Values:**
+```
+"0"
+"27"
+```
+
+**Usage:**
+```yaml
+- name: Gate on planned changes
+  run: |
+    if [ "${{ steps.diff.outputs.planned_changes }}" != "0" ]; then
+      echo "Infrastructure changes are pending review"
+    fi
+```
+
+**Notes:**
+- Only populated for `diff` operations; empty string for `deploy`, `remove` and `stage`
+- `resource_changes` carries the same value for `diff`, so either can be read
+
+---
+
+### `resources_removed` (Remove Only)
+
+**Description:** Number of resources removed
+**Type:** String (Integer)
+**Format:** Numeric string
+
+**Usage:**
+```yaml
+- name: Report cleanup
+  run: echo "Removed ${{ steps.cleanup.outputs.resources_removed }} resources"
+```
+
+**Notes:**
+- Only populated for `remove` operations; empty string for `deploy`, `diff` and `stage`
+- `resource_changes` carries the same value for `remove`
+
+---
+
+### `removed_resources` (Remove Only)
+
+**Description:** The resources SST removed
+**Type:** String (JSON Array)
+**Format:** JSON-encoded array of `{ "name": ..., "type": ..., "status": ... }` objects
+
+**Example Values:**
+```json
+[{"name":"MyFunction","type":"Function","status":"removed"}]
+[]
+```
+
+**Usage:**
+```yaml
+- name: List removed resources
+  run: |
+    echo '${{ steps.cleanup.outputs.removed_resources }}' \
+      | jq -r '.[] | "\(.type) \(.name)"'
+```
+
+**Notes:**
+- Only populated for `remove` operations; empty string for `deploy`, `diff` and `stage`
+- Note the name: `resources_removed` is the count, `removed_resources` is the list
 
 ---
 
@@ -955,6 +1037,28 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 ---
 
+### `error`
+
+**Description:** Error message when the operation fails
+**Type:** String
+**Format:** Plain text; empty on success
+
+**Usage:**
+```yaml
+- name: Report failure
+  if: failure()
+  run: |
+    echo "SST ${{ steps.sst.outputs.operation }} failed:"
+    echo "${{ steps.sst.outputs.error }}"
+```
+
+**Notes:**
+- Populated for every operation, including `stage`
+- Empty string when the operation succeeded, so test for emptiness rather than presence
+- Set independently of `fail-on-error`: with `fail-on-error: false` the workflow continues and this output is the way to detect the failure
+
+---
+
 ## Operations
 
 Detailed behavior for each operation type.
@@ -979,7 +1083,8 @@ Detailed behavior for each operation type.
 
 **Outputs Populated:**
 - All standard outputs
-- `urls` - Array of URLs extracted from generic outputs
+- `outputs` - JSON array of the app's declared outputs, as `{key, value}` pairs
+- `resources` - JSON array of the resources SST reported
 - `resource_changes` - Number of resources modified
 
 **Example:**
@@ -995,8 +1100,8 @@ Detailed behavior for each operation type.
     
 - name: Test Deployed Application
   run: |
-    URLS='${{ steps.deploy.outputs.urls }}'
-    for url in $(echo "$URLS" | jq -r '.[]'); do
+    URLS=$(echo '${{ steps.deploy.outputs.outputs }}' | jq -r '.[].value | select(type == "string" and startswith("http"))')
+    for url in $URLS; do
       curl -f "$url/health" || exit 1
     done
 ```
@@ -1236,12 +1341,12 @@ Detailed behavior for each operation type.
   run: |
     if [ "${{ steps.deploy.outputs.success }}" = "true" ]; then
       echo "✅ Deployment successful"
-      echo "URLs deployed: ${{ steps.deploy.outputs.urls }}"
+      echo "Outputs: ${{ steps.deploy.outputs.outputs }}"
       echo "Resources changed: ${{ steps.deploy.outputs.resource_changes }}"
       
       # Run health checks
-      URLS='${{ steps.deploy.outputs.urls }}'
-      for url in $(echo "$URLS" | jq -r '.[]'); do
+      URLS=$(echo '${{ steps.deploy.outputs.outputs }}' | jq -r '.[].value | select(type == "string" and startswith("http"))')
+      for url in $URLS; do
         echo "Testing: $url"
         curl -f "$url/health" || exit 1
       done
@@ -1401,7 +1506,9 @@ stage: "staging"
 app: "my-app"
 completion_status: "failed"
 resource_changes: "0"
-urls: "[]"
+outputs: "[]"
+resources: "[]"
+error: "Deployment failed: <reason>"
 truncated: "false"
 permalink: ""
 ```
