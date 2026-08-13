@@ -100,6 +100,47 @@ function shouldFail(failure: Failure): boolean {
   }
 }
 
+/** Which input was wrong, and what to do about it. */
+function logInvalidInput(error: unknown): void {
+  if (!(error instanceof ValidationError)) {
+    return;
+  }
+
+  core.error(`Invalid input: ${error.field} = ${String(error.value)}`);
+  for (const suggestion of error.suggestions) {
+    core.info(`  • ${suggestion}`);
+  }
+}
+
+/** What the CLI exited with, when it ran at all. */
+function logExitCode(result: OperationResult): void {
+  if (result.exitCode !== 0) {
+    core.info(`Exit code: ${result.exitCode}`);
+  }
+}
+
+/**
+ * Whether the operation itself may have succeeded.
+ *
+ * Recognised by type. This distinction used to be drawn by matching loose
+ * phrases against the message, and it matters: only the reporting of the
+ * result failed here, not the operation.
+ */
+function logOutputWritingHint(error: unknown): void {
+  if (error instanceof OutputFormattingError) {
+    core.info(
+      "The operation itself may have completed; the failure was in writing its outputs."
+    );
+  }
+}
+
+/** Stack traces go to the debug channel, not the log. */
+function logStack(error: unknown): void {
+  if (error instanceof Error && error.stack) {
+    core.debug(`Stack trace: ${error.stack}`);
+  }
+}
+
 /**
  * Log the context that is not already in the message.
  *
@@ -107,36 +148,21 @@ function shouldFail(failure: Failure): boolean {
  * GitHub Actions shows all of those around the log already.
  */
 function logContext(failure: Failure): void {
-  if (failure.type === "input-validation") {
-    const { error } = failure;
-    if (error instanceof ValidationError) {
-      core.error(`Invalid input: ${error.field} = ${String(error.value)}`);
-      for (const suggestion of error.suggestions) {
-        core.info(`  • ${suggestion}`);
-      }
-    }
+  switch (failure.type) {
+    case "input-validation":
+      logInvalidInput(failure.error);
+      break;
+    case "result":
+      logExitCode(failure.result);
+      break;
+    case "operation":
+      logOutputWritingHint(failure.error);
+      break;
+    default:
+      break;
   }
 
-  if (failure.type === "result" && failure.result.exitCode !== 0) {
-    core.info(`Exit code: ${failure.result.exitCode}`);
-  }
-
-  // Recognised by type. This distinction used to be drawn by matching loose
-  // phrases against the message, and it matters: the operation itself may
-  // have succeeded and only the reporting of it failed.
-  if (
-    failure.type === "operation" &&
-    failure.error instanceof OutputFormattingError
-  ) {
-    core.info(
-      "The operation itself may have completed; the failure was in writing its outputs."
-    );
-  }
-
-  const error = "error" in failure ? failure.error : undefined;
-  if (error instanceof Error && error.stack) {
-    core.debug(`Stack trace: ${error.stack}`);
-  }
+  logStack("error" in failure ? failure.error : undefined);
 }
 
 /**
