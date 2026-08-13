@@ -3,17 +3,13 @@
  * Provides operation-specific formatting with rich markdown support
  */
 
+import { SSTPatterns } from "../parsers/patterns.js";
 import type {
   BaseOperationResult,
   DeployResult,
   DiffResult,
   RemoveResult,
 } from "../types/index.js";
-
-/**
- * Regex pattern for finding the Generated section marker
- */
-const GENERATED_SECTION_PATTERN = /^✓\s+Generated\s*$/;
 
 /**
  * Format configuration for comments and summaries
@@ -505,7 +501,7 @@ No infrastructure changes detected for this operation.`;
     // Find the "✓ Generated" marker
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      if (line && GENERATED_SECTION_PATTERN.test(line)) {
+      if (line && SSTPatterns.sections.generated.test(line)) {
         diffStartIndex = i + 1;
         break;
       }
