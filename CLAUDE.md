@@ -79,10 +79,21 @@ The action implements strict input validation with fail-fast behavior for critic
 ### Testing Strategy
 
 - Comprehensive test suite with enforced coverage thresholds, set as a ratchet
-  just under current coverage (89% statements/lines, 79% branches, 97% functions).
-  Raise them in `vitest.config.ts` as coverage improves; never lower them. Keep
-  the `thresholds` object flat — Vitest reads an unrecognised key such as the
-  former `global` as a glob pattern, which silently enforces nothing.
+  just under current coverage (89% statements/lines, 79% branches, 95% functions).
+  Keep the `thresholds` object in `vitest.config.ts` flat — Vitest reads an
+  unrecognised key such as the former `global` as a glob pattern, which silently
+  enforces nothing.
+- Coverage ratchet rule: raise thresholds as coverage improves. **Never lower a
+  threshold to accommodate new untested code.** Re-baselining downwards is
+  permitted when the sole cause is deleting covered code — coverage is a ratio,
+  so removing well-tested code lowers the aggregate even though the codebase
+  improved. When you re-baseline, the commit body must state the before/after
+  numbers and name deletion as the cause.
+- `functions` was re-baselined 97 → 95 under #136 as a one-off, for granularity
+  rather than deletion: ~240 functions means each is worth ~0.42 points, so a
+  threshold 0.08 under the actual value broke CI after eight tested-function
+  deletions. Statements, branches and lines count in the thousands and move
+  smoothly, so they stay tight.
 - Test organization mirrors source structure in `__tests__/`
 - Vitest for testing framework with global test setup
 - Integration tests for end-to-end operation validation

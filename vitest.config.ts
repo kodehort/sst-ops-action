@@ -22,11 +22,23 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       // Thresholds are flat here on purpose. Vitest treats an unrecognised key
       // as a glob pattern, so the previous `global: { ... }` nesting matched no
-      // files and silently enforced nothing. Values are a ratchet set just
-      // under the current numbers: raise them as coverage improves, never lower.
+      // files and silently enforced nothing.
+      //
+      // Ratchet rule: never lower a threshold to accommodate new untested code.
+      // Raise them as coverage improves. Re-baselining downwards is permitted
+      // only when the sole cause is deleting covered code, and the commit body
+      // must state the before/after numbers and that cause.
+      //
+      // `functions` is a one-off exception re-baselined 97 -> 95 under #136, for
+      // granularity rather than deletion: there are only ~240 functions, so each
+      // one is worth ~0.42 points, and at 97.08% actual the old threshold left
+      // 0.08 points of headroom — CI broke after deleting eight tested functions.
+      // Statements, branches and lines count in the thousands and move smoothly,
+      // so they keep tight thresholds. At 95 the metric still fails if ~5
+      // untested functions are added, while tolerating ~100 tested deletions.
       thresholds: {
         branches: 79,
-        functions: 97,
+        functions: 95,
         lines: 89,
         statements: 89,
       },
