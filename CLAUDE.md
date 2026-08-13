@@ -114,6 +114,26 @@ The action implements strict input validation with fail-fast behavior for critic
 - Uses Rollup bundler with terser for efficient, minified packaging
 - Distribution files are built during development and CI/CD, committed to repository for GitHub Actions compatibility
 
+**The committed bundle is gated.** CI fails when `dist/index.js` or
+`dist/index.js.map` differ from a fresh build, so rebuild and commit `dist/`
+with any source change. Check locally with
+`git diff -- dist/index.js dist/index.js.map`. `dist/build-manifest.json` is
+excluded from the gate — it records build timestamp, platform, arch and Node
+version, so it never matches.
+
+The build is byte-reproducible across platforms, but only from a clean
+`bun install --frozen-lockfile`. An incrementally-updated `node_modules` can
+hold a tree the lockfile never described (nested duplicate copies rather than
+hoisted ones), which changes the bundle. If a rebuild drifts unexpectedly,
+`/bin/rm -rf node_modules && bun install --frozen-lockfile` first.
+
+Rollup must run under real Node, not Bun. Bun lists `undici` in
+`module.builtinModules`, so under Bun the resolver would treat a real
+dependency as a builtin and leave a bare import in a bundle that ships without
+`node_modules` — it passes `node -c`, then fails at runtime. `rollup.config.js`
+names the exception explicitly, so a Bun-only environment now builds correctly,
+but prefer an environment with `node` on `PATH`.
+
 ### Distribution Strategy
 
 - **Development**: `dist/` folder is built locally for testing and committed for GitHub Actions compatibility
