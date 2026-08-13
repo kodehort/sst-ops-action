@@ -33,13 +33,26 @@ const MetadataPatterns = {
  * Completion status patterns
  */
 const StatusPatterns = {
-  /** Matches: "✗ Failed" */
-  failed: /^✗\s+Failed\s*$/m,
+  /**
+   * Matches: "✕ Failed".
+   *
+   * Real SST output uses U+2715 (✕). The codebase previously carried three
+   * different glyphs for this one marker — U+2715, U+2717 (✗) and U+00D7 (×) —
+   * so all three are accepted. An unmatched marker fails silently, degrading
+   * error extraction without failing anything, and one real capture is thin
+   * evidence for narrowing to a single glyph.
+   */
+  failed: /^[✕✗×]\s+Failed\s*$/m,
 
   /** Matches: "⚠ Partial" */
   partial: /^⚠\s+Partial\s*$/m,
-  /** Matches: "✓ Complete" */
-  success: /^✓\s+Complete\s*$/m,
+  /**
+   * Matches: "✓ Complete", "✓ Generated", "✓ Removed".
+   *
+   * Real remove output ends with "✓  Removed", which no pattern in the
+   * codebase matched.
+   */
+  success: /^✓\s+(?:Complete|Generated|Removed)\s*$/m,
 } as const;
 
 /**

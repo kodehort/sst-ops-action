@@ -16,8 +16,12 @@ const RESOURCE_DELETED_PATTERN =
   /^\|\s+Deleted\s+(.+?)\s+(.+?)(?:\s+\(([\d.]+s)\))?$/;
 
 // Error and completion patterns for real SST output
+// Marks the start of the outputs section, so it stays "Complete" only —
+// widening it would move where outputs begin.
 const COMPLETION_SUCCESS_PATTERN = /^✓\s+Complete\s*$/m;
-const COMPLETION_FAILED_PATTERN = /^✕\s+Failed\s*$/m;
+// U+2715 is what real SST emits; U+2717 and U+00D7 appear elsewhere in the
+// codebase for the same marker, so accept all three.
+const COMPLETION_FAILED_PATTERN = /^[✕✗×]\s+Failed\s*$/m;
 const ERROR_SECTION_START_PATTERN = /^Error:/m;
 const GRPC_ERROR_PATTERN = /grpc: the client/;
 const RESOURCE_NOT_EXIST_PATTERN = /resource '([^']+)' does not exist/;
@@ -269,34 +273,9 @@ export class DeployParser extends OperationParser<DeployResult> {
       if (key && value) {
         return { key, value };
       }
-
-      // Log malformed key-value pairs for debugging
-      this.logMalformedOutputLine(line, key, value);
     }
 
     return null;
-  }
-
-  /**
-   * Log structured information about malformed key-value pairs if debug is enabled
-   */
-  private logMalformedOutputLine(
-    line: string,
-    key: string,
-    value: string
-  ): void {
-    if (
-      process.env.ACTIONS_STEP_DEBUG === "1" ||
-      process.env.RUNNER_DEBUG === "1"
-    ) {
-      if (!key) {
-        const truncatedLine =
-          line.length > 50 ? `${line.slice(0, 50)}...` : line;
-        core.debug(`Malformed output line: empty key in "${truncatedLine}"`);
-      } else if (!value) {
-        core.debug(`Malformed output line: empty value for key "${key}"`);
-      }
-    }
   }
 
   /**

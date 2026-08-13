@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DeployParser } from "@/parsers/deploy-parser";
 import { DiffParser } from "@/parsers/diff-parser";
+import { SSTPatterns } from "@/parsers/patterns";
 import { RemoveParser } from "@/parsers/remove-parser";
 import {
   listSnapshots,
@@ -43,7 +44,9 @@ function extractApp(output: string): string {
  * Extract exit code from SST output
  */
 function extractExitCode(output: string): number {
-  return output.includes("✕  Failed") || output.includes("Error:") ? 1 : 0;
+  return SSTPatterns.status.failed.test(output) || output.includes("Error:")
+    ? 1
+    : 0;
 }
 
 /**
@@ -228,7 +231,7 @@ describe("Parser Consistency Testing", () => {
           // Failed operations should contain error indicators
           if (!parsed.success) {
             expect(
-              rawOutput.includes("✕  Failed") ||
+              SSTPatterns.status.failed.test(rawOutput) ||
                 rawOutput.includes("Error:") ||
                 rawOutput.includes("failed")
             ).toBe(true);
