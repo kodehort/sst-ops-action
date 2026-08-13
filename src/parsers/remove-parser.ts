@@ -1,4 +1,5 @@
 import type { RemoveResult } from "../types/operations";
+import { normalizeRemoveStatus } from "./normalization";
 import { OperationParser } from "./operation-parser";
 
 /**
@@ -148,10 +149,15 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     for (const { regex, status } of patterns) {
       const match = line.match(regex);
       if (match?.[1] && match[2]) {
+        const name = match[2] || "unknown";
+        const type = match[1] || "unknown";
         return {
-          name: match[2] || "unknown",
-          status,
-          type: match[1] || "unknown",
+          name,
+          // Normalised here, where the CLI string arrives, rather than two
+          // modules downstream in the router. Unknown values fall back to
+          // 'failed', the conservative default for removals.
+          status: normalizeRemoveStatus(status, name, type),
+          type,
         };
       }
     }

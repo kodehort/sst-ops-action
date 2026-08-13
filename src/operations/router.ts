@@ -4,8 +4,12 @@
  * Provides unified interface and consistent error handling
  */
 
-import * as core from "@actions/core";
 import { GitHubClient } from "../github/client";
+import {
+  normalizeDiffAction,
+  normalizeRemoveStatus,
+  normalizeResourceStatus,
+} from "../parsers/normalization";
 import type {
   DeployResult,
   DiffResult,
@@ -119,176 +123,6 @@ function transformToUnifiedResult(
       );
     }
   }
-}
-
-/**
- * Build the parenthesised debugging context shared by the normalizers below
- *
- * @returns e.g. " (resource: MyBucket, type: AWS::S3::Bucket)", or "" when
- * neither detail is available
- */
-function formatResourceContext({
-  resourceName,
-  resourceType,
-}: {
-  resourceName: string | undefined;
-  resourceType: string | undefined;
-}): string {
-  const context: string[] = [];
-  if (resourceName) {
-    context.push(`resource: ${resourceName}`);
-  }
-  if (resourceType) {
-    context.push(`type: ${resourceType}`);
-  }
-
-  return context.length > 0 ? ` (${context.join(", ")})` : "";
-}
-
-/**
- * Return `value` when it is one of `validValues`, otherwise warn and fall back
- *
- * Each caller composes its own warning so the wording stays explicit and
- * greppable rather than assembled from fragments.
- */
-function normalizeEnumValue<T extends string>({
-  value,
-  validValues,
-  fallback,
-  warning,
-}: {
-  value: string;
-  validValues: readonly T[];
-  fallback: T;
-  warning: () => string;
-}): T {
-  if ((validValues as readonly string[]).includes(value)) {
-    return value as T;
-  }
-
-  core.warning(warning());
-
-  return fallback;
-}
-
-/**
- * Type guard to ensure resource status is valid
- *
- * Normalizes resource status values to ensure type safety. Unknown statuses
- * default to 'created' to provide a safe fallback behavior.
- *
- * Enhanced error messages include context for debugging.
- *
- * @param status Raw resource status from SST CLI output
- * @param resourceName Optional resource name for context
- * @param resourceType Optional resource type for context
- * @returns Normalized resource status ('created' | 'updated' | 'deleted')
- */
-function normalizeResourceStatus(
-  status: string,
-  resourceName?: string,
-  resourceType?: string
-): "created" | "updated" | "deleted" {
-  const validStatuses: Array<"created" | "updated" | "deleted"> = [
-    "created",
-    "updated",
-    "deleted",
-  ];
-
-  return normalizeEnumValue({
-    fallback: "created",
-    validValues: validStatuses,
-    value: status,
-    warning: () => {
-      const contextStr = formatResourceContext({ resourceName, resourceType });
-      return (
-        `⚠️  Unknown resource status encountered: '${status}'${contextStr}\n` +
-        `    Valid statuses: ${validStatuses.join(", ")}\n` +
-        `    Defaulting to: 'created'\n` +
-        "    This may indicate a new SST CLI output format."
-      );
-    },
-  });
-}
-
-/**
- * Type guard to ensure diff action is valid
- *
- * Normalizes diff action types for consistent handling. Unknown actions
- * default to 'update' as the most common operation type.
- *
- * Enhanced error messages include context for debugging.
- *
- * @param action Raw diff action from SST CLI output
- * @param resourceName Optional resource name for context
- * @param resourceType Optional resource type for context
- * @returns Normalized diff action ('create' | 'update' | 'delete')
- */
-function normalizeDiffAction(
-  action: string,
-  resourceName?: string,
-  resourceType?: string
-): "create" | "update" | "delete" {
-  const validActions: Array<"create" | "update" | "delete"> = [
-    "create",
-    "update",
-    "delete",
-  ];
-
-  return normalizeEnumValue({
-    fallback: "update",
-    validValues: validActions,
-    value: action,
-    warning: () => {
-      const contextStr = formatResourceContext({ resourceName, resourceType });
-      return (
-        `⚠️  Unknown diff action encountered: '${action}'${contextStr}\n` +
-        `    Valid actions: ${validActions.join(", ")}\n` +
-        `    Defaulting to: 'update'\n` +
-        "    This may indicate a new SST CLI diff format."
-      );
-    },
-  });
-}
-
-/**
- * Type guard to ensure remove status is valid
- *
- * Normalizes remove operation status values. Unknown statuses default
- * to 'failed' to err on the side of caution for removal operations.
- *
- * Enhanced error messages include context for debugging.
- *
- * @param status Raw remove status from SST CLI output
- * @param resourceName Optional resource name for context
- * @param resourceType Optional resource type for context
- * @returns Normalized remove status ('removed' | 'failed' | 'skipped')
- */
-function normalizeRemoveStatus(
-  status: string,
-  resourceName?: string,
-  resourceType?: string
-): "removed" | "failed" | "skipped" {
-  const validStatuses: Array<"removed" | "failed" | "skipped"> = [
-    "removed",
-    "failed",
-    "skipped",
-  ];
-
-  return normalizeEnumValue({
-    fallback: "failed",
-    validValues: validStatuses,
-    value: status,
-    warning: () => {
-      const contextStr = formatResourceContext({ resourceName, resourceType });
-      return (
-        `⚠️  Unknown remove status encountered: '${status}'${contextStr}\n` +
-        `    Valid statuses: ${validStatuses.join(", ")}\n` +
-        `    Defaulting to: 'failed' (conservative default for removals)\n` +
-        "    This may indicate a new SST CLI remove format."
-      );
-    },
-  });
 }
 
 /**

@@ -5,6 +5,7 @@
 
 import * as core from "@actions/core";
 import type { DeployResult } from "../types/operations";
+import { normalizeResourceStatus } from "./normalization";
 import { OperationParser } from "./operation-parser";
 
 // Real SST v3 output patterns based on actual deploy examples
@@ -121,10 +122,14 @@ export class DeployParser extends OperationParser<DeployResult> {
     for (const { regex, status } of patterns) {
       const match = line.match(regex);
       if (match?.[1] && match[2]) {
+        const name = match[1].trim();
+        const type = match[2].trim();
         const result = {
-          name: match[1].trim(),
-          status,
-          type: match[2].trim(),
+          name,
+          // Normalised here, where the CLI string arrives, rather than two
+          // modules downstream in the router.
+          status: normalizeResourceStatus(status, name, type),
+          type,
         };
 
         // Add timing if available
