@@ -76,13 +76,17 @@ describe("Resolving action inputs", () => {
     });
 
     it("prefers what the user set over the default", () => {
+      // Not "prod": createValidationContext reads GITHUB_REF, and on a run
+      // from main it reports isProduction, which makes a remove against a
+      // stage containing "prod" throw. This test is about defaults, so the
+      // stage name has no business deciding whether it passes.
       withInputs({
         "comment-mode": "always",
         "fail-on-error": "false",
         "max-output-size": "1000",
         operation: "remove",
         runner: "sst",
-        stage: "prod",
+        stage: "staging",
         token: "t",
       });
 
