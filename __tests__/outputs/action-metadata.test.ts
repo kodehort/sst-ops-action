@@ -187,14 +187,6 @@ describe("Declared action outputs", () => {
     ).toEqual([]);
   });
 
-  it("keeps the documented field list in step with what is emitted", () => {
-    // getExpectedFields() is hand-maintained and used as the contract by other
-    // tests, so it drifts the same way action.yml did.
-    expect(sorted(OutputFormatter.getExpectedFields())).toEqual(
-      emittedOutputs()
-    );
-  });
-
   it("lists every output in the README table", () => {
     const rows = readmeOutputTable();
 

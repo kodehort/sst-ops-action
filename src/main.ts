@@ -121,11 +121,11 @@ function logOperationSummary(result: OperationResult): void {
  */
 function setGitHubActionsOutputs(result: OperationResult): void {
   try {
+    // Already validated: formatOperationForGitHubActions runs the schema
+    // before returning. Validating again here was a second pass over the same
+    // object with the same validator.
     const formattedOutputs =
       OutputFormatter.formatOperationForGitHubActions(result);
-
-    // Validate outputs before setting them
-    OutputFormatter.validateOutputs(formattedOutputs);
 
     // Set all outputs
     for (const [key, value] of Object.entries(formattedOutputs)) {

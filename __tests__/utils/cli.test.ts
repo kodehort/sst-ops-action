@@ -2,12 +2,7 @@ import { access } from "node:fs";
 import * as mockExecModule from "@actions/exec";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SSTOperation } from "../../src/types/index.js";
-import {
-  type CLIOptions,
-  createSSTExecutor,
-  executeSST,
-  SSTCLIExecutor,
-} from "../../src/utils/cli.js";
+import { type CLIOptions, SSTCLIExecutor } from "../../src/utils/cli.js";
 
 const mockExec = mockExecModule as any;
 const mockAccess = access as any;
@@ -225,37 +220,6 @@ describe("SST CLI Utilities - Command Execution", () => {
         expect(result.stdout).toBe("first\nthird\n");
         expect(result.stderr).toBe("second\n");
       });
-    });
-  });
-
-  describe("Factory Functions", () => {
-    it("should execute SST command with default executor", async () => {
-      const operation: SSTOperation = "deploy";
-      const stage = "production";
-
-      mockExec.exec.mockImplementation(
-        (_command: string, _args: string[], options: any) => {
-          if (options?.listeners?.stdout) {
-            options.listeners.stdout(Buffer.from("Deploy complete\n"));
-          }
-          return 0;
-        }
-      );
-
-      const result = await executeSST(operation, stage);
-
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe("deploy");
-      expect(result.stage).toBe("production");
-    });
-
-    it("should create new executor instance", () => {
-      const executor1 = createSSTExecutor();
-      const executor2 = createSSTExecutor();
-
-      expect(executor1).toBeInstanceOf(SSTCLIExecutor);
-      expect(executor2).toBeInstanceOf(SSTCLIExecutor);
-      expect(executor1).not.toBe(executor2);
     });
   });
 

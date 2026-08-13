@@ -95,10 +95,6 @@ describe("Main Entry Point - Action Execution", () => {
       truncated: "false",
     });
 
-    vi.spyOn(OutputFormatter, "validateOutputs").mockImplementation(
-      (outputs) => outputs as any
-    );
-
     // Spy on the error handler (but let it run to test actual error logging)
 
     // Mock all core functions with spies
@@ -475,7 +471,6 @@ describe("Main Entry Point - Action Execution", () => {
       expect(
         OutputFormatter.formatOperationForGitHubActions
       ).toHaveBeenCalledWith(mockResult);
-      expect(OutputFormatter.validateOutputs).toHaveBeenCalled();
       expect(core.setOutput).toHaveBeenCalledWith("success", "true");
       expect(core.setOutput).toHaveBeenCalledWith("operation", "deploy");
       expect(core.setOutput).toHaveBeenCalledWith("stage", "staging");

@@ -2,7 +2,7 @@ import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createGitHubClient, GitHubClient } from "../../src/github/client.js";
+import { GitHubClient } from "../../src/github/client.js";
 import type {
   DeployResult,
   DiffResult,
@@ -369,15 +369,5 @@ describe("GitHub Client - API Integration", () => {
       expect(commentBody).toContain("Resources cleaned up: 8");
       expect(commentBody).toContain("All resources successfully removed");
     });
-  });
-});
-
-describe("createGitHubClient", () => {
-  it("should create a GitHubClient instance", () => {
-    const token = "test-token";
-    const client = createGitHubClient(token);
-
-    expect(client).toBeInstanceOf(GitHubClient);
-    expect(github.getOctokit).toHaveBeenCalledWith(token);
   });
 });

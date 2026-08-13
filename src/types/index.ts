@@ -7,10 +7,8 @@
 export type {
   BaseOperationResult,
   CommentMode,
-  CompletionStatus,
   DeployResult,
   DiffResult,
-  OperationOptions,
   OperationResult,
   RemoveResult,
   SSTOperation,
@@ -21,58 +19,9 @@ export type {
 // callers get the single source rather than restating it.
 export { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
 
-// SST CLI types
-export type {
-  SSTDeployOutput,
-  SSTDiffOutput,
-  SSTError,
-  SSTRemoveOutput,
-} from "./sst.js";
-
-import type {
-  CommentMode,
-  CompletionStatus,
-  DeployResult,
-  DiffResult,
-  OperationResult,
-  RemoveResult,
-  SSTOperation,
-} from "./operations.js";
+import type { CommentMode, SSTOperation } from "./operations.js";
 import { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
-import type {
-  SSTDeployOutput,
-  SSTDiffOutput,
-  SSTError,
-  SSTRemoveOutput,
-} from "./sst.js";
 
-/**
- * Regular expression for validating SST stage names
- */
-const SST_STAGE_NAME_PATTERN = /^[a-zA-Z0-9-_]+$/;
-
-/**
- * Type guards for operation results
- */
-export function isDeployResult(
-  result: OperationResult
-): result is DeployResult {
-  return result.operation === "deploy";
-}
-
-export function isDiffResult(result: OperationResult): result is DiffResult {
-  return result.operation === "diff";
-}
-
-export function isRemoveResult(
-  result: OperationResult
-): result is RemoveResult {
-  return result.operation === "remove";
-}
-
-/**
- * Type guards for SST operations
- */
 export function isValidOperation(operation: string): operation is SSTOperation {
   return SST_OPERATIONS.includes(operation as SSTOperation);
 }
@@ -81,60 +30,9 @@ export function isValidCommentMode(mode: string): mode is CommentMode {
   return COMMENT_MODES.includes(mode as CommentMode);
 }
 
-export function isValidCompletionStatus(
-  status: string
-): status is CompletionStatus {
-  return ["complete", "partial", "failed"].includes(status);
-}
-
 /**
  * Validation utilities
  */
-export function validateOperation(operation: unknown): SSTOperation {
-  if (typeof operation !== "string") {
-    throw new Error("Operation must be a string");
-  }
-
-  if (!isValidOperation(operation)) {
-    throw new Error(
-      `Invalid operation: ${operation}. Must be one of: deploy, diff, remove, stage`
-    );
-  }
-
-  return operation;
-}
-
-export function validateCommentMode(mode: unknown): CommentMode {
-  if (typeof mode !== "string") {
-    throw new Error("Comment mode must be a string");
-  }
-
-  if (!isValidCommentMode(mode)) {
-    throw new Error(
-      `Invalid comment mode: ${mode}. Must be one of: always, on-success, on-failure, never`
-    );
-  }
-
-  return mode;
-}
-
-export function validateStage(stage: unknown): string {
-  if (typeof stage !== "string" || stage.trim() === "") {
-    throw new Error("Stage must be a non-empty string");
-  }
-
-  const trimmedStage = stage.trim();
-
-  // Basic validation for SST stage naming
-  if (!SST_STAGE_NAME_PATTERN.test(trimmedStage)) {
-    throw new Error(
-      "Stage must contain only alphanumeric characters, hyphens, and underscores"
-    );
-  }
-
-  return trimmedStage;
-}
-
 export function validateMaxOutputSize(size: unknown): number {
   const parsed = typeof size === "string" ? Number.parseInt(size, 10) : size;
 
@@ -154,122 +52,4 @@ export function validateMaxOutputSize(size: unknown): number {
   }
 
   return parsed;
-}
-
-/**
- * SST output validation
- */
-export function validateSSTOutput(
-  output: unknown,
-  operation: SSTOperation
-): SSTDeployOutput | SSTDiffOutput | SSTRemoveOutput {
-  if (!output || typeof output !== "object") {
-    throw new Error("SST output must be an object");
-  }
-
-  const obj = output as Record<string, unknown>;
-
-  if (typeof obj.app !== "string" || typeof obj.stage !== "string") {
-    throw new Error("SST output must include app and stage");
-  }
-
-  switch (operation) {
-    case "deploy":
-      return validateDeployOutput(obj);
-    case "diff":
-      return validateDiffOutput(obj);
-    case "remove":
-      return validateRemoveOutput(obj);
-    case "stage":
-      // Stage operation doesn't use SST output validation - it computes stage internally
-      throw new Error("Stage operation does not use SST output validation");
-    default: {
-      // Exhaustive check for TypeScript
-      const _exhaustive: never = operation;
-      throw new Error(`Unsupported operation: ${_exhaustive}`);
-    }
-  }
-}
-
-function validateDeployOutput(obj: Record<string, unknown>): SSTDeployOutput {
-  const required = [
-    "app",
-    "stage",
-    "region",
-    "resources",
-    "outputs",
-    "duration",
-    "status",
-  ];
-
-  for (const field of required) {
-    if (!(field in obj)) {
-      throw new Error(`Deploy output missing required field: ${field}`);
-    }
-  }
-
-  return obj as unknown as SSTDeployOutput;
-}
-
-function validateDiffOutput(obj: Record<string, unknown>): SSTDiffOutput {
-  const required = ["app", "stage", "region", "changes", "summary", "status"];
-
-  for (const field of required) {
-    if (!(field in obj)) {
-      throw new Error(`Diff output missing required field: ${field}`);
-    }
-  }
-
-  return obj as unknown as SSTDiffOutput;
-}
-
-function validateRemoveOutput(obj: Record<string, unknown>): SSTRemoveOutput {
-  const required = [
-    "app",
-    "stage",
-    "region",
-    "removed",
-    "summary",
-    "duration",
-    "status",
-  ];
-
-  for (const field of required) {
-    if (!(field in obj)) {
-      throw new Error(`Remove output missing required field: ${field}`);
-    }
-  }
-
-  return obj as unknown as SSTRemoveOutput;
-}
-
-/**
- * Error handling utilities
- */
-export function createSSTError(
-  code: string,
-  message: string,
-  details?: string
-): SSTError {
-  const error: SSTError = {
-    code,
-    message,
-  };
-
-  if (details !== undefined) {
-    error.details = details;
-  }
-
-  return error;
-}
-
-export function isSSTError(error: unknown): error is SSTError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error &&
-    typeof (error as SSTError).code === "string" &&
-    typeof (error as SSTError).message === "string"
-  );
 }
