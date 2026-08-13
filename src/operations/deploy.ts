@@ -50,7 +50,7 @@ export class DeployOperation extends BaseOperation<DeployResult> {
       cliResult.output,
       options.stage,
       cliResult.exitCode,
-      options.maxOutputSize
+      cliResult.truncated
     );
 
     // Perform GitHub integration in parallel (non-blocking)

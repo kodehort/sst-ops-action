@@ -49,7 +49,8 @@ export class RemoveOperation extends BaseOperation<RemoveResult> {
     const result = parser.parse(
       cliResult.output,
       options.stage,
-      cliResult.exitCode
+      cliResult.exitCode,
+      cliResult.truncated
     );
 
     // Perform GitHub integration in parallel (non-blocking)

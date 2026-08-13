@@ -11,7 +11,12 @@ export class RemoveParser extends OperationParser<RemoveResult> {
   /**
    * Parse SST remove output and extract resource removal information
    */
-  parse(output: string, stage: string, exitCode: number): RemoveResult {
+  parse(
+    output: string,
+    stage: string,
+    exitCode: number,
+    truncated: boolean
+  ): RemoveResult {
     // Handle null/undefined input gracefully
     const processedOutput = this.cleanText(output || "");
     const lines = processedOutput.split("\n");
@@ -48,7 +53,7 @@ export class RemoveParser extends OperationParser<RemoveResult> {
       stage,
       // Base operation result properties
       success,
-      truncated: false,
+      truncated,
     };
 
     return result;

@@ -98,7 +98,7 @@ function parseOutput(
       throw new Error(`No parser available for operation: ${targetOperation}`);
     }
 
-    return parser.parse(rawOutput, stage, exitCode);
+    return parser.parse(rawOutput, stage, exitCode, false);
   } catch (error) {
     log(`Error parsing ${targetOperation} output: ${error}`, colors.red);
     return null;

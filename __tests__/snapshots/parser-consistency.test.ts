@@ -71,7 +71,7 @@ function testParserConsistency(operation: OperationWithParser): void {
           const exitCode = extractExitCode(rawOutput);
 
           expect(() => {
-            parsers[operation].parse(rawOutput, stage, exitCode);
+            parsers[operation].parse(rawOutput, stage, exitCode, false);
           }).not.toThrow();
         });
 
@@ -81,7 +81,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const app = extractApp(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           expect(parsed.operation).toBe(operation);
           expect(parsed.stage).toBe(stage);
@@ -94,7 +99,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           // Load expected metadata if it exists
           try {
@@ -117,7 +127,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           expect(parsed).toHaveProperty("operation");
           expect(parsed).toHaveProperty("stage");
@@ -143,7 +158,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           expect(parsed).toHaveProperty("outputs");
           expect(Array.isArray(parsed.outputs)).toBe(true);
@@ -159,7 +179,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           expect(parsed).toHaveProperty("changes");
           expect(parsed).toHaveProperty("plannedChanges");
@@ -177,7 +202,12 @@ function testParserConsistency(operation: OperationWithParser): void {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           expect(parsed).toHaveProperty("removedResources");
           expect(Array.isArray(parsed.removedResources)).toBe(true);
@@ -223,7 +253,12 @@ describe("Parser Consistency Testing", () => {
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
 
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           // Success status should match exit code
           expect(parsed.success).toBe(exitCode === 0);
@@ -255,7 +290,12 @@ describe("Parser Consistency Testing", () => {
           const rawOutput = loadInput(operation, name);
           const stage = extractStage(rawOutput);
           const exitCode = extractExitCode(rawOutput);
-          const parsed = parsers[operation].parse(rawOutput, stage, exitCode);
+          const parsed = parsers[operation].parse(
+            rawOutput,
+            stage,
+            exitCode,
+            false
+          );
 
           const permalinkMatch = rawOutput.match(
             /↗\s+Permalink\s+(https?:\/\/.+)/
@@ -283,7 +323,7 @@ describe("Parser Consistency Testing", () => {
 ✓  Complete`;
 
         expect(() => {
-          parsers[operation].parse(minimalOutput, "test", 0);
+          parsers[operation].parse(minimalOutput, "test", 0, false);
         }).not.toThrow();
       }
     });
@@ -295,7 +335,7 @@ describe("Parser Consistency Testing", () => {
         const malformedOutput = "Invalid SST output";
 
         expect(() => {
-          parsers[operation].parse(malformedOutput, "test", 1);
+          parsers[operation].parse(malformedOutput, "test", 1, false);
         }).not.toThrow();
       }
     });

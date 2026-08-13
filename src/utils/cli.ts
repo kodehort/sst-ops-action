@@ -18,11 +18,11 @@ export interface CLIResult {
   error?: string | undefined;
   /** Process exit code */
   exitCode: number;
-  /** Combined stdout and stderr output */
+  /** stdout and stderr merged in arrival order — what every parser reads */
   output: string;
-  /** Raw stderr content */
+  /** The stderr half of `output`, for diagnostics */
   stderr: string;
-  /** Raw stdout content */
+  /** The stdout half of `output`, for diagnostics */
   stdout: string;
   /** Whether the output was truncated due to size limits */
   truncated: boolean;
@@ -201,10 +201,37 @@ export class SSTCLIExecutor {
   ): Promise<CLIResult> {
     const startTime = Date.now();
 
+    // One buffer, appended by both listeners in arrival order, so the value
+    // every parser reads is what the process actually wrote. The per-stream
+    // copies are kept for diagnostics and hold exactly what `output` holds,
+    // split by origin — they are not a second, larger capture.
+    let output = "";
     let stdout = "";
     let stderr = "";
     let truncated = false;
     let exitCode = 0;
+
+    const append = (data: Buffer, stream: "stderr" | "stdout"): void => {
+      const chunk = data.toString();
+      const remaining = options.maxOutputSize - output.length;
+
+      if (remaining <= 0) {
+        truncated = true;
+        return;
+      }
+
+      const kept = chunk.length > remaining ? chunk.slice(0, remaining) : chunk;
+      if (kept.length < chunk.length) {
+        truncated = true;
+      }
+
+      output += kept;
+      if (stream === "stdout") {
+        stdout += kept;
+      } else {
+        stderr += kept;
+      }
+    };
 
     try {
       if (!command[0]) {
@@ -213,24 +240,8 @@ export class SSTCLIExecutor {
       const execPromise = exec.exec(command[0], command.slice(1), {
         ignoreReturnCode: true,
         listeners: {
-          stderr: (data: Buffer) => {
-            const chunk = data.toString();
-            if (stderr.length + chunk.length > options.maxOutputSize) {
-              stderr += chunk.slice(0, options.maxOutputSize - stderr.length);
-              truncated = true;
-            } else {
-              stderr += chunk;
-            }
-          },
-          stdout: (data: Buffer) => {
-            const chunk = data.toString();
-            if (stdout.length + chunk.length > options.maxOutputSize) {
-              stdout += chunk.slice(0, options.maxOutputSize - stdout.length);
-              truncated = true;
-            } else {
-              stdout += chunk;
-            }
-          },
+          stderr: (data: Buffer) => append(data, "stderr"),
+          stdout: (data: Buffer) => append(data, "stdout"),
         },
       });
 
@@ -264,7 +275,7 @@ export class SSTCLIExecutor {
           duration,
           error: `Command timed out after ${options.timeout}ms`,
           exitCode: 124, // Timeout exit code
-          output: `${stdout}${stderr}\nCommand timed out after ${options.timeout}ms`,
+          output: `${output}\nCommand timed out after ${options.timeout}ms`,
           stderr: `${stderr}\nCommand timed out after ${options.timeout}ms`,
           stdout,
           truncated,
@@ -277,7 +288,6 @@ export class SSTCLIExecutor {
     }
 
     const duration = Date.now() - startTime;
-    const output = stdout + stderr;
 
     return {
       command: command.join(" "),

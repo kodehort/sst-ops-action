@@ -43,7 +43,11 @@ const options: OperationOptions = {
 /**
  * Stub the CLI seam with a real captured SST run.
  */
-function withCapture(capture: string, exitCode: number): void {
+function withCapture(
+  capture: string,
+  exitCode: number,
+  truncated = false
+): void {
   vi.mocked(SSTCLIExecutor).mockImplementation(function (this: any) {
     this.executeSST = vi.fn().mockResolvedValue({
       command: "sst",
@@ -52,7 +56,7 @@ function withCapture(capture: string, exitCode: number): void {
       stderr: "",
       stdout: capture,
       success: exitCode === 0,
-      truncated: false,
+      truncated,
     });
   } as any);
 }
@@ -127,17 +131,35 @@ describe("Captured CLI output through parser, router and formatter", () => {
     expect(result.permalink).toBe("https://sst.dev/u/9d14bf2c");
   });
 
-  it("preserves truncation reported by the parser", async () => {
-    const capture = loadInput("deploy", "output-deployment");
-    withCapture(capture, 0);
+  // Truncation is a fact about capture, not about the text, so it can only come
+  // from the CLI layer. The diff and remove parsers used to hardcode it false,
+  // which meant the truncation warning could never fire for those operations,
+  // and deploy applied a second truncation layer of its own against the same
+  // budget.
+  it.each([
+    ["deploy", "output-deployment"],
+    ["diff", "complex-changes"],
+    ["remove", "complete-cleanup"],
+  ] as const)("reports truncation for %s", async (operation, fixture) => {
+    withCapture(loadInput(operation, fixture), 0, true);
 
-    const result = (await executeOperation("deploy", {
-      ...options,
-      // Force the parser's truncation path with a size limit below the capture.
-      maxOutputSize: Math.floor(capture.length / 2),
-    })) as DeployResult;
+    const result = await executeOperation(operation, options);
 
-    // The transform hardcoded this to false, so truncation was never reported.
     expect(result.truncated).toBe(true);
   });
+
+  it.each([
+    ["deploy", "output-deployment"],
+    ["diff", "complex-changes"],
+    ["remove", "complete-cleanup"],
+  ] as const)(
+    "reports no truncation for %s when the capture is whole",
+    async (operation, fixture) => {
+      withCapture(loadInput(operation, fixture), 0, false);
+
+      const result = await executeOperation(operation, options);
+
+      expect(result.truncated).toBe(false);
+    }
+  );
 });

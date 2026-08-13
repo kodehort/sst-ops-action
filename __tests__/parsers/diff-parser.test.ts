@@ -18,7 +18,7 @@ describe("DiffParser", () => {
 
   describe("parse", () => {
     it("should parse basic diff output with mixed changes", () => {
-      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, "staging", 0);
+      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("diff");
@@ -53,7 +53,12 @@ describe("DiffParser", () => {
     });
 
     it("should handle no changes scenario", () => {
-      const result = parser.parse(SST_DIFF_NO_CHANGES_OUTPUT, "staging", 0);
+      const result = parser.parse(
+        SST_DIFF_NO_CHANGES_OUTPUT,
+        "staging",
+        0,
+        false
+      );
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("diff");
@@ -65,7 +70,7 @@ describe("DiffParser", () => {
     });
 
     it("should parse real world SST output with environment variables", () => {
-      const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, "dev", 0);
+      const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, "dev", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("diff");
@@ -87,7 +92,7 @@ describe("DiffParser", () => {
     });
 
     it("should handle error scenarios gracefully", () => {
-      const result = parser.parse(SST_DIFF_ERROR_OUTPUT, "staging", 1);
+      const result = parser.parse(SST_DIFF_ERROR_OUTPUT, "staging", 1, false);
 
       expect(result.success).toBe(false);
       expect(result.operation).toBe("diff");
@@ -98,7 +103,7 @@ describe("DiffParser", () => {
     });
 
     it("should handle malformed output gracefully", () => {
-      const result = parser.parse(MALFORMED_OUTPUT, "staging", 1);
+      const result = parser.parse(MALFORMED_OUTPUT, "staging", 1, false);
 
       expect(result.success).toBe(false);
       expect(result.operation).toBe("diff");
@@ -110,7 +115,7 @@ describe("DiffParser", () => {
     });
 
     it("should handle empty output", () => {
-      const result = parser.parse(EMPTY_OUTPUT, "staging", 0);
+      const result = parser.parse(EMPTY_OUTPUT, "staging", 0, false);
 
       expect(result.success).toBe(true); // Exit code 0 = success
       expect(result.operation).toBe("diff");
@@ -121,7 +126,7 @@ describe("DiffParser", () => {
     });
 
     it("should provide consistent result structure", () => {
-      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, "staging", 0);
+      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, "staging", 0, false);
 
       // All DiffResult properties should be present
       expect(result).toHaveProperty("success");
@@ -165,7 +170,7 @@ SST 3.17.4  ready!
 -  数据库Database sst:aws:Aurora
 `;
 
-      const result = parser.parse(unicodeOutput, "test", 0);
+      const result = parser.parse(unicodeOutput, "test", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.changes).toHaveLength(3);
@@ -177,7 +182,7 @@ SST 3.17.4  ready!
     it("should handle mixed line endings", () => {
       const mixedLineEndings = SST_DIFF_SUCCESS_OUTPUT.replace(/\n/g, "\r\n"); // Convert to Windows line endings
 
-      const result = parser.parse(mixedLineEndings, "staging", 0);
+      const result = parser.parse(mixedLineEndings, "staging", 0, false);
 
       expect(result.success).toBe(true);
       expect(result.plannedChanges).toBe(3);
@@ -187,12 +192,12 @@ SST 3.17.4  ready!
     it("should be null-safe with undefined inputs", () => {
       expect(() => {
         // @ts-expect-error - testing runtime behavior
-        parser.parse(null, "staging", 0);
+        parser.parse(null, "staging", 0, false);
       }).not.toThrow();
 
       expect(() => {
         // @ts-expect-error - testing runtime behavior
-        parser.parse(undefined, "staging", 0);
+        parser.parse(undefined, "staging", 0, false);
       }).not.toThrow();
     });
   });
