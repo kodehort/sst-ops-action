@@ -16,7 +16,7 @@ on:
           - minor
           - major
       prerelease:
-        description: "Mark as prerelease"
+        description: "Build a beta (X.Y.Z-beta.N tag only; does not touch main or the v0 tag)"
         required: false
         default: false
         type: boolean
@@ -38,12 +38,20 @@ jobs:
   determine-release:
     name: Determine Release Type
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # A real release only ever comes from main. A manual prerelease may be built
+    # from any branch: it publishes a tag and nothing else, so it cannot move
+    # main or the floating major tag. That is what makes it usable for verifying
+    # a change against a downstream consumer before merging it.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.event.inputs.prerelease == 'true')
     outputs:
       should-release: ${{ steps.release-check.outputs.should-release }}
       release-type: ${{ steps.release-check.outputs.release-type }}
       new-version: ${{ steps.release-check.outputs.new-version }}
       current-version: ${{ steps.release-check.outputs.current-version }}
+      is-prerelease: ${{ steps.release-check.outputs.is-prerelease }}
 
     steps:
       - name: Checkout Repository
@@ -156,6 +164,25 @@ jobs:
               ;;
           esac
 
+          # A prerelease gets a real prerelease version, not just a label on the
+          # GitHub release. Only a manual dispatch can ask for one, so a push to
+          # main is never a prerelease.
+          IS_PRERELEASE="false"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            IS_PRERELEASE="true"
+
+            # Betas never push main, so package.json still reports the last real
+            # release and the base version repeats. Count existing beta tags for
+            # this base to pick the next suffix.
+            BETA_NUMBER=0
+            while git rev-parse -q --verify "refs/tags/v${NEW_VERSION}-beta.${BETA_NUMBER}" >/dev/null; do
+              BETA_NUMBER=$((BETA_NUMBER + 1))
+            done
+
+            NEW_VERSION="${NEW_VERSION}-beta.${BETA_NUMBER}"
+          fi
+
+          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Determined release type: $RELEASE_TYPE ($CURRENT_VERSION → $NEW_VERSION)"
 
@@ -560,15 +587,26 @@ jobs:
 
           $(cat RELEASE_NOTES.md)"
 
-          # Push everything via git first (uses checkout credentials)
-          git push --force origin main "v${NEW_VERSION}"
+          if [ "${{ needs.determine-release.outputs.is-prerelease }}" = "true" ]; then
+            # A beta publishes the tag and nothing else. main keeps the last
+            # real release, so its package.json, CHANGELOG and dist/ are
+            # untouched, and the floating major tag does not move — a consumer
+            # pinned to v0 must never be handed a beta. The version commit
+            # exists only as the tag's target.
+            git push origin "v${NEW_VERSION}"
 
-          # Update major version tag
-          MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
-          git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
-          git push -f origin "$MAJOR_VERSION"
+            echo "✅ Prerelease tag v${NEW_VERSION} pushed; main and the major tag left alone"
+          else
+            # Push everything via git first (uses checkout credentials)
+            git push --force origin main "v${NEW_VERSION}"
 
-          echo "✅ Version committed and pushed"
+            # Update major version tag
+            MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
+            git tag -f "$MAJOR_VERSION" "v${NEW_VERSION}"
+            git push -f origin "$MAJOR_VERSION"
+
+            echo "✅ Version committed and pushed"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -576,7 +614,7 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
           PRERELEASE_FLAG=""
-          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+          if [ "${{ needs.determine-release.outputs.is-prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
 
