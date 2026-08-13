@@ -180,6 +180,12 @@ jobs:
         with:
           bun-version: "1.2.19"
           cache-key-suffix: -release
+          # This workflow builds the dist/ it commits to main, and that commit
+          # is [skip ci], so nothing re-checks it. Build from the lockfile
+          # alone: a restore-keys prefix hit can supply a node_modules tree the
+          # lockfile never described, which changes the bundle and would fail
+          # the CI drift gate on the next unrelated pull request.
+          cache-node-modules: 'false'
 
       - name: Run Quality Gates
         run: |
@@ -316,6 +322,12 @@ jobs:
         with:
           bun-version: "1.2.19"
           cache-key-suffix: -release
+          # This workflow builds the dist/ it commits to main, and that commit
+          # is [skip ci], so nothing re-checks it. Build from the lockfile
+          # alone: a restore-keys prefix hit can supply a node_modules tree the
+          # lockfile never described, which changes the bundle and would fail
+          # the CI drift gate on the next unrelated pull request.
+          cache-node-modules: 'false'
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v8
