@@ -7,6 +7,17 @@
 import { z } from "zod";
 
 /**
+ * Whether a caught error is a schema failure.
+ *
+ * One definition, so a caller that needs the issues rather than the standard
+ * message does not hand-roll the check against its own import of the schema
+ * library — which is how the two ended up importing it by different paths.
+ */
+export function isZodError(error: unknown): error is z.ZodError {
+  return error instanceof z.ZodError;
+}
+
+/**
  * Rethrow a ZodError as a plain Error listing one indented line per issue.
  * Any other error is rethrown untouched.
  *
@@ -15,7 +26,7 @@ import { z } from "zod";
  * @throws {Error} Always
  */
 export function rethrowZodError(error: unknown, subject: string): never {
-  if (error instanceof z.ZodError) {
+  if (isZodError(error)) {
     const issues = error.issues.map(
       (issue: z.ZodIssue) => `  - ${issue.path.join(".")}: ${issue.message}`
     );

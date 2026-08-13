@@ -3,7 +3,7 @@
  * Provides comprehensive validation with clear error messages
  */
 
-import * as z from "zod/v4";
+import { z } from "zod";
 import type { CommentMode, SSTOperation } from "../types/index.js";
 import {
   isValidCommentMode,
@@ -12,6 +12,7 @@ import {
 } from "../types/index.js";
 import type { SSTRunner } from "./cli.js";
 import { SST_RUNNERS } from "./cli.js";
+import { isZodError } from "./zod-error.js";
 
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
@@ -234,7 +235,7 @@ export function parseOperationInputs(
     const filteredInputs = filterInputsByOperation(rawInputs);
     return OperationInputsSchema.parse(filteredInputs);
   } catch (error) {
-    if (error instanceof z.ZodError && error.issues.length > 0) {
+    if (isZodError(error) && error.issues.length > 0) {
       // Transform Zod errors into more user-friendly validation errors
       const [issue] = error.issues; // Focus on first error for clarity
       if (!issue) {
