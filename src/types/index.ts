@@ -17,6 +17,10 @@ export type {
   StageResult,
 } from "./operations.js";
 
+// The value lists behind the operation and comment-mode types, re-exported so
+// callers get the single source rather than restating it.
+export { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
+
 // SST CLI types
 export type {
   SSTDeployOutput,
@@ -34,7 +38,7 @@ import type {
   RemoveResult,
   SSTOperation,
 } from "./operations.js";
-import { SST_OPERATIONS } from "./operations.js";
+import { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
 import type {
   SSTDeployOutput,
   SSTDiffOutput,
@@ -74,7 +78,7 @@ export function isValidOperation(operation: string): operation is SSTOperation {
 }
 
 export function isValidCommentMode(mode: string): mode is CommentMode {
-  return ["always", "on-success", "on-failure", "never"].includes(mode);
+  return COMMENT_MODES.includes(mode as CommentMode);
 }
 
 export function isValidCompletionStatus(

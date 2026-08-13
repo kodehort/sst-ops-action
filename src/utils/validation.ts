@@ -6,8 +6,10 @@
 import { z } from "zod";
 import type { CommentMode, SSTOperation } from "../types/index.js";
 import {
+  COMMENT_MODES,
   isValidCommentMode,
   isValidOperation,
+  SST_OPERATIONS,
   validateMaxOutputSize,
 } from "../types/index.js";
 import type { SSTRunner } from "./cli.js";
@@ -25,8 +27,7 @@ const CommonFieldSchemas = {
     .string()
     .default("on-success")
     .refine((val) => isValidCommentMode(val), {
-      message:
-        "Invalid comment mode. Must be one of: always, on-success, on-failure, never",
+      message: `Invalid comment mode. Must be one of: ${COMMENT_MODES.join(", ")}`,
     })
     .transform((val) => val as CommentMode),
 
@@ -49,7 +50,7 @@ const CommonFieldSchemas = {
     .string()
     .min(1, "Operation is required and cannot be empty")
     .refine((val) => isValidOperation(val), {
-      message: "Invalid operation. Must be one of: deploy, diff, remove, stage",
+      message: `Invalid operation. Must be one of: ${SST_OPERATIONS.join(", ")}`,
     })
     .transform((val) => val as SSTOperation),
 
@@ -244,11 +245,10 @@ export function parseOperationInputs(
 
       const fieldName = issue.path.length > 0 ? issue.path[0] : "unknown";
       const operation = (rawInputs.operation as string) || "unknown";
-      const suggestions = generateOperationSuggestions(
-        String(fieldName),
-        issue,
-        operation
-      );
+      const suggestions = suggestionsFor({
+        field: String(fieldName),
+        operation,
+      });
 
       // biome-ignore lint/style/useErrorCause: cause is forwarded via the options param to super() in ValidationError's constructor
       throw new ValidationError(
@@ -264,163 +264,160 @@ export function parseOperationInputs(
 }
 
 /**
- * Generate operation-specific helpful suggestions based on validation errors
+ * Help text shown alongside a validation failure, keyed by field.
+ *
+ * This was four nested switch statements, and they took the Zod issue as a
+ * parameter and ignored it — so the "suggestions" could never respond to what
+ * actually went wrong, only to which field it happened on. That is a lookup,
+ * so it is written as one.
+ *
+ * Lists of valid values are joined from the constant that defines them rather
+ * than restated in prose, so adding an operation or a comment mode cannot
+ * leave the help text describing the old set.
  */
-function generateOperationSuggestions(
-  field: string,
-  _issue: z.ZodIssue,
-  operation: string
-): string[] {
-  switch (field) {
-    case "operation":
-      return [
-        "Valid operations are: deploy, diff, remove, stage",
-        'Use "deploy" for deploying infrastructure to AWS',
-        'Use "diff" to preview infrastructure changes without deploying',
-        'Use "remove" to clean up and delete deployed resources',
-        'Use "stage" to compute stage names from Git context',
-      ];
+const FIELD_SUGGESTIONS: Record<string, readonly string[]> = {
+  commentMode: [
+    `Valid comment modes are: ${COMMENT_MODES.join(", ")}`,
+    'Use "always" to comment on every run',
+    'Use "on-success" to comment only when operation succeeds',
+    'Use "on-failure" to comment only when operation fails',
+    'Use "never" to disable PR comments',
+  ],
 
-    case "stage":
-      return generateStagesuggestions(operation);
+  failOnError: [
+    "Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled",
+    'Use "true" or "yes" to fail the workflow on errors',
+    'Use "false" or "no" to continue workflow even if operation fails',
+    "Values are case-insensitive",
+  ],
 
-    case "token":
-      return generateTokenSuggestions(operation);
+  // No `maxOutputSize` entry: that input is coerced and range-checked before
+  // Zod runs, so it throws a plain Error and never reaches this lookup.
 
-    case "truncationLength":
-      return [
-        "Truncation length controls maximum stage name length (1-100 characters)",
-        "Only applies to stage operations for DNS compatibility",
-        "Default is 26 characters to fit Route53 limits",
-        "Use smaller values for shorter stage names",
-      ];
+  operation: [
+    `Valid operations are: ${SST_OPERATIONS.join(", ")}`,
+    'Use "deploy" for deploying infrastructure to AWS',
+    'Use "diff" to preview infrastructure changes without deploying',
+    'Use "remove" to clean up and delete deployed resources',
+    'Use "stage" to compute stage names from Git context',
+  ],
 
-    case "prefix":
-      return [
-        "Prefix is added to stage names that start with numbers",
-        "Only applies to stage operations",
-        "Must be lowercase letters, numbers, and hyphens only",
-        'Default "pr-" creates names like "pr-123" for PR #123',
-      ];
+  prefix: [
+    "Prefix is added to stage names that start with numbers",
+    "Only applies to stage operations",
+    "Must be lowercase letters, numbers, and hyphens only",
+    'Default "pr-" creates names like "pr-123" for PR #123',
+  ],
 
-    default:
-      return generateGeneralSuggestions(field);
-  }
-}
+  runner: [
+    `Valid runners are: ${SST_RUNNERS.join(", ")}`,
+    'Use "bun" (default) for Bun runtime',
+    'Use "npm" for npm with package scripts',
+    'Use "pnpm" for pnpm runtime',
+    'Use "yarn" for yarn runtime',
+    'Use "sst" for direct SST binary execution',
+  ],
+
+  truncationLength: [
+    "Truncation length controls maximum stage name length (1-100 characters)",
+    "Only applies to stage operations for DNS compatibility",
+    "Default is 26 characters to fit Route53 limits",
+    "Use smaller values for shorter stage names",
+  ],
+};
 
 /**
- * Generate stage-specific suggestions based on operation type
+ * Fields whose advice depends on which operation was requested.
+ *
+ * `fallback` covers an operation that is not in the map, which happens when
+ * the operation input is itself missing or unrecognised.
  */
-function generateStagesuggestions(operation: string): string[] {
-  switch (operation) {
-    case "deploy":
-      return [
+const OPERATION_SPECIFIC_SUGGESTIONS: Record<
+  string,
+  {
+    byOperation: Record<string, readonly string[]>;
+    fallback: readonly string[];
+  }
+> = {
+  stage: {
+    byOperation: {
+      deploy: [
         "Deploy operations can auto-compute stage from Git context",
         "Leave empty to use branch/PR name as stage",
         'Or provide explicit stage: "production", "staging", "dev-123"',
         "Uses alphanumeric characters, hyphens, and underscores only",
-      ];
-    case "diff":
-      return [
+      ],
+      diff: [
         "Diff operations require explicit stage name",
         "Cannot preview changes without knowing target stage",
         'Examples: "production", "staging", "dev-123", "pr-456"',
         "Must match an existing deployed stage for comparison",
-      ];
-    case "remove":
-      return [
+      ],
+      remove: [
         "Remove operations require explicit stage for safety",
         "Will not auto-compute stage to prevent accidental deletions",
         'Examples: "staging", "dev-123", "pr-456"',
         "Use caution with production stages",
-      ];
-    default:
-      return [
-        "Stage must contain only alphanumeric characters, hyphens, and underscores",
-        'Examples: "production", "staging", "dev-123", "pr-456"',
-      ];
-  }
-}
+      ],
+    },
+    fallback: [
+      "Stage must contain only alphanumeric characters, hyphens, and underscores",
+      'Examples: "production", "staging", "dev-123", "pr-456"',
+    ],
+  },
 
-/**
- * Generate token-specific suggestions based on operation type
- */
-function generateTokenSuggestions(operation: string): string[] {
-  switch (operation) {
-    case "deploy":
-      return [
+  token: {
+    byOperation: {
+      deploy: [
         "Deploy operations require GitHub token for authentication",
         `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
         "Token needed to comment on PRs and access AWS credentials",
         'Use "fake-token" only for local testing',
-      ];
-    case "diff":
-      return [
+      ],
+      diff: [
         "Diff operations require GitHub token for PR comments",
         `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` for automatic token`,
         "Token needed to post comparison results to pull requests",
         'Use "fake-token" only for local testing',
-      ];
-    case "remove":
-      return [
+      ],
+      remove: [
         "Remove operations require GitHub token for confirmation",
         `Use \`${"$"}{{ secrets.GITHUB_TOKEN }}\` or personal access token`,
         "Token needed for authentication and result reporting",
         'Use "fake-token" only for local testing',
-      ];
-    case "stage":
-      return [
+      ],
+      stage: [
         "Stage operations do not require GitHub token",
         "This operation only computes stage names from Git context",
         "No infrastructure access or API calls needed",
-      ];
-    default:
-      return [
-        `Use a valid GitHub token (e.g., \`${"$"}{{ secrets.GITHUB_TOKEN }}\`)`,
-        "Token must be provided and cannot be empty",
-        'Use "fake-token" only for testing',
-      ];
-  }
-}
+      ],
+    },
+    fallback: [
+      `Use a valid GitHub token (e.g., \`${"$"}{{ secrets.GITHUB_TOKEN }}\`)`,
+      "Token must be provided and cannot be empty",
+      'Use "fake-token" only for testing',
+    ],
+  },
+};
 
 /**
- * Generate general field suggestions
+ * Look up the help text for a failed field.
+ *
+ * @returns The suggestions, or an empty list for a field with no advice
  */
-function generateGeneralSuggestions(field: string): string[] {
-  switch (field) {
-    case "commentMode":
-      return [
-        "Valid comment modes are: always, on-success, on-failure, never",
-        'Use "always" to comment on every run',
-        'Use "on-success" to comment only when operation succeeds',
-        'Use "on-failure" to comment only when operation fails',
-        'Use "never" to disable PR comments',
-      ];
-
-    case "failOnError":
-      return [
-        "Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled",
-        'Use "true" or "yes" to fail the workflow on errors',
-        'Use "false" or "no" to continue workflow even if operation fails',
-        "Values are case-insensitive",
-      ];
-
-    // No `maxOutputSize` case: that input is coerced and range-checked before
-    // Zod runs, so it throws a plain Error and never reaches this function.
-
-    case "runner":
-      return [
-        "Valid runners are: bun, npm, pnpm, yarn, sst",
-        'Use "bun" (default) for Bun runtime',
-        'Use "npm" for npm with package scripts',
-        'Use "pnpm" for PNPM runtime',
-        'Use "yarn" for Yarn runtime',
-        'Use "sst" for direct SST binary execution',
-      ];
-
-    default:
-      return [];
+function suggestionsFor({
+  field,
+  operation,
+}: {
+  field: string;
+  operation: string;
+}): string[] {
+  const perOperation = OPERATION_SPECIFIC_SUGGESTIONS[field];
+  if (perOperation) {
+    return [...(perOperation.byOperation[operation] ?? perOperation.fallback)];
   }
+
+  return [...(FIELD_SUGGESTIONS[field] ?? [])];
 }
 
 /**

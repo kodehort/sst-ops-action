@@ -17,7 +17,20 @@ export const SST_OPERATIONS = ["deploy", "diff", "remove", "stage"] as const;
  */
 export type SSTOperation = (typeof SST_OPERATIONS)[number];
 
-export type CommentMode = "always" | "on-success" | "on-failure" | "never";
+/**
+ * When the action posts a PR comment.
+ *
+ * The single source: the type, the type guard and the help text a user sees
+ * when they get it wrong all read this list, so they cannot drift apart.
+ */
+export const COMMENT_MODES = [
+  "always",
+  "on-success",
+  "on-failure",
+  "never",
+] as const;
+
+export type CommentMode = (typeof COMMENT_MODES)[number];
 
 export type CompletionStatus = "complete" | "partial" | "failed";
 
