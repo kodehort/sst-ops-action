@@ -7,9 +7,13 @@ declare const __ACTION_VERSION__: string;
 
 /**
  * Get the current action version (injected at build time)
+ *
+ * Not exported: its only outside consumer was the error handler's metadata
+ * block, which #149 deleted along with the rest of that subsystem.
+ *
  * @returns The version string from package.json
  */
-export function getActionVersion(): string {
+function getActionVersion(): string {
   // Handle test environment where __ACTION_VERSION__ is not defined
   if (typeof __ACTION_VERSION__ === "undefined") {
     return "test-version";

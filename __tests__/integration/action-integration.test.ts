@@ -27,14 +27,13 @@ vi.mock("../../src/outputs/formatter", () => ({
     validateOutputs: vi.fn(),
   },
 }));
-vi.mock("../../src/errors/error-handler", () => ({
-  createInputValidationError: vi.fn(),
-  createOutputParsingError: vi.fn(),
-  createSubprocessError: vi.fn(),
-  fromValidationError: vi.fn(),
-  handleError: vi.fn(),
-  isParsingError: vi.fn(),
-}));
+vi.mock("../../src/errors/report-failure", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../../src/errors/report-failure")>();
+  // Calls through: these tests assert the action's exit code, which is
+  // decided by the reporter's single setFailed call.
+  return { ...original, reportFailure: vi.fn(original.reportFailure) };
+});
 vi.mock("../../src/utils/validation", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("../../src/utils/validation")>();
@@ -116,9 +115,9 @@ async function executeAction(env: Record<string, string>) {
     (out) => out as any
   );
 
-  // Mock error handler (shouldn't be called for successful operations)
-  const { handleError } = await import("../../src/errors/error-handler");
-  vi.mocked(handleError).mockReturnValue();
+  // Failure reporting shouldn't be called for successful operations
+  const { reportFailure } = await import("../../src/errors/report-failure");
+  vi.mocked(reportFailure).mockReturnValue();
 
   // Import and run the action
   const { run } = await import("../../src/main");
@@ -214,6 +213,14 @@ async function executeActionWithFailure(
   vi.mocked(OutputFormatter.validateOutputs).mockImplementation(
     (out) => out as any
   );
+
+  // vi.clearAllMocks() in setup wipes the call-through implementation the
+  // module factory installed, so it is restored per run.
+  const { reportFailure } = await import("../../src/errors/report-failure");
+  const { reportFailure: realReportFailure } = await vi.importActual<
+    typeof import("../../src/errors/report-failure")
+  >("../../src/errors/report-failure");
+  vi.mocked(reportFailure).mockImplementation(realReportFailure);
 
   // Import and run the action
   const { run } = await import("../../src/main");
@@ -377,9 +384,9 @@ async function _executeActionWithValidationError(
     }
   );
 
-  // Mock error handler for validation errors
-  const { handleError } = await import("../../src/errors/error-handler");
-  vi.mocked(handleError).mockReturnValue();
+  // Failure reporting for validation errors
+  const { reportFailure } = await import("../../src/errors/report-failure");
+  vi.mocked(reportFailure).mockReturnValue();
 
   // Import and run the action
   const { run } = await import("../../src/main");

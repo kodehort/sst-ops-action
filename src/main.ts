@@ -4,17 +4,13 @@
  */
 
 import * as core from "@actions/core";
-import {
-  isOutputFormattingError,
-  UnifiedErrorHandler,
-} from "./errors/unified-handler";
+import { OutputFormattingError, reportFailure } from "./errors/report-failure";
 import { computeStageFromGitContext } from "./inputs/compute-stage";
 import type { ResolvedInputs } from "./inputs/resolve";
 import { resolveActionInputs } from "./inputs/resolve";
 import { executeOperation } from "./operations/router";
 import { OutputFormatter } from "./outputs/formatter";
 import type { OperationResult } from "./types";
-import type { ValidationError } from "./utils/validation";
 
 /**
  * How the resolved stage reads in the log.
@@ -32,10 +28,7 @@ function stageDisplayName(inputs: ResolvedInputs): string {
  * @param error The validation error that occurred during input parsing
  */
 function handleInputValidationError(error: unknown): void {
-  UnifiedErrorHandler.handle({
-    error: error as ValidationError | Error,
-    type: "input-validation",
-  });
+  reportFailure({ error, type: "input-validation" });
 }
 
 /**
@@ -54,26 +47,14 @@ async function executeAndHandleOperation(
     // Handle success/failure based on result
     handleOperationResult(result, inputs);
   } catch (error) {
-    handleOperationError(error, inputs);
+    reportFailure({
+      error,
+      failOnError: inputs.failOnError,
+      operation: inputs.operation,
+      stage: stageDisplayName(inputs),
+      type: "operation",
+    });
   }
-}
-
-/**
- * What the error subsystem needs from the resolved inputs.
- *
- * It still takes the older options bag; giving it the whole resolved shape is
- * #149's business, not this ticket's.
- */
-function errorContext(inputs: ResolvedInputs): {
-  failOnError: boolean;
-  stage: string;
-} {
-  return {
-    failOnError: inputs.failOnError,
-    // The stage operation has no stage input; computing one is its job, and a
-    // failure may have happened before it did.
-    stage: inputs.operation === "stage" ? "" : inputs.stage,
-  };
 }
 
 /**
@@ -88,57 +69,26 @@ function handleOperationResult(
     return;
   }
 
-  const message = `SST ${inputs.operation} operation failed: ${result.error || "Unknown error"}`;
-
-  if (inputs.failOnError) {
-    core.setFailed(message);
-  } else {
-    core.warning(message);
-    core.info("🔄 Continuing workflow as fail-on-error is disabled");
-  }
+  // A non-zero SST exit is the action's most common failure and it never
+  // reached the error subsystem, because it arrives as data rather than as a
+  // throw. It goes through the same reporter as everything else now.
+  reportFailure({
+    failOnError: inputs.failOnError,
+    result,
+    type: "result",
+  });
 }
 
 /**
- * Handle errors that occur during operation execution using unified error handler
- */
-function handleOperationError(error: unknown, inputs: ResolvedInputs): void {
-  if (!(error instanceof Error)) {
-    UnifiedErrorHandler.handle({
-      error,
-      type: "unexpected",
-    });
-    return;
-  }
-
-  const options = errorContext(inputs);
-
-  // Determine error type and route to appropriate handler
-  if (isOutputFormattingError(error)) {
-    UnifiedErrorHandler.handle({
-      error,
-      operation: inputs.operation,
-      options,
-      type: "output-formatting",
-    });
-  } else {
-    UnifiedErrorHandler.handle({
-      error,
-      operation: inputs.operation,
-      options,
-      type: "operation-execution",
-    });
-  }
-}
-
-/**
- * Handle unexpected errors using unified error handler
+ * Report anything that escaped the paths above.
+ *
+ * The old handler re-read `fail-on-error` and `stage` from the Actions input
+ * API here, from deep in the call stack, bypassing validation and using a
+ * different parsing rule than the entry point — and hardcoded the operation
+ * name to "deploy" regardless of what actually ran.
  */
 function handleUnexpectedError(error: unknown): never {
-  UnifiedErrorHandler.handle({
-    error,
-    type: "unexpected",
-  });
-  // UnifiedErrorHandler.handle will throw, but TypeScript doesn't know that
+  reportFailure({ error, type: "unexpected" });
   throw error;
 }
 
@@ -187,7 +137,9 @@ function setGitHubActionsOutputs(result: OperationResult): void {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     core.error(`Failed to set outputs: ${message}`);
-    throw error;
+    // Tagged at the point the condition is known, rather than recognised later
+    // by matching phrases against a message this module does not own.
+    throw new OutputFormattingError(message, { cause: error });
   }
 }
 
