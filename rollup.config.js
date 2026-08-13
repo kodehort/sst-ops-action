@@ -145,7 +145,15 @@ export default {
       // esbuild strips types but leaves extensionless imports alone, so the
       // resolver has to try .ts before .js
       extensions: [".ts", ".mjs", ".js", ".json", ".node"],
-      preferBuiltins: true,
+      // `undici` is a real dependency (via @actions/http-client) and must be
+      // inlined, because dist/ ships without node_modules. Bun lists `undici`
+      // in `module.builtinModules`, so when rollup runs under Bun rather than
+      // Node — any environment without a real `node` on PATH, such as the
+      // oven/bun image — a plain `preferBuiltins: true` treats it as a builtin
+      // and leaves a bare `import ... from "undici"` in the bundle. That
+      // bundle still passes `node -c`, then fails at runtime. Name the
+      // exception rather than trusting the host runtime's builtin list.
+      preferBuiltins: (id) => id !== "undici",
     }),
     commonjs({
       ignoreDynamicRequires: true,
