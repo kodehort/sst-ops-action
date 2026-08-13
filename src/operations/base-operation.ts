@@ -5,7 +5,8 @@
  */
 
 import type { GitHubClient } from "../github/client";
-import type { BaseOperationResult, OperationOptions } from "../types";
+import type { InfrastructureInputs } from "../inputs/resolve";
+import type { BaseOperationResult, CommentMode } from "../types";
 import { handleGitHubIntegrationError } from "../utils/github-actions";
 
 /**
@@ -26,7 +27,7 @@ export abstract class BaseOperation<T extends BaseOperationResult> {
    * @param options Operation configuration options
    * @returns Promise resolving to operation-specific result
    */
-  abstract execute(options: OperationOptions): Promise<T>;
+  abstract execute(inputs: InfrastructureInputs): Promise<T>;
 
   /**
    * Perform GitHub integration tasks (comments and summaries)
@@ -36,17 +37,17 @@ export abstract class BaseOperation<T extends BaseOperationResult> {
    * executing PR comments and workflow summaries in parallel with proper error handling.
    *
    * @param result Parsed operation result (deploy, diff, or remove)
-   * @param options Operation options containing comment mode configuration
+   * @param commentMode When to post a PR comment, already resolved
    * @protected
    */
   protected async performGitHubIntegration(
     result: T,
-    options: OperationOptions
+    commentMode: CommentMode
   ): Promise<void> {
     const integrationPromises: Promise<void>[] = [
       // Create PR comment (if enabled based on comment mode)
       this.githubClient
-        .createOrUpdateComment(result, options.commentMode || "never")
+        .createOrUpdateComment(result, commentMode)
         .catch((error) => handleGitHubIntegrationError(error, "comment")),
 
       // Create workflow summary (always attempted)

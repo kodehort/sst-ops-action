@@ -8,154 +8,22 @@ import {
   isOutputFormattingError,
   UnifiedErrorHandler,
 } from "./errors/unified-handler";
+import { computeStageFromGitContext } from "./inputs/compute-stage";
+import type { ResolvedInputs } from "./inputs/resolve";
+import { resolveActionInputs } from "./inputs/resolve";
 import { executeOperation } from "./operations/router";
 import { OutputFormatter } from "./outputs/formatter";
-import { StageProcessor } from "./parsers/stage-processor";
-import type { OperationOptions, OperationResult } from "./types";
-import type { SSTRunner } from "./utils/cli";
-import { SST_RUNNERS } from "./utils/cli";
-import {
-  createValidationContext,
-  ValidationError,
-  validateOperationWithContext,
-} from "./utils/validation";
+import type { OperationResult } from "./types";
+import type { ValidationError } from "./utils/validation";
 
 /**
- * Validate and normalize SSTRunner input
- * @param input Raw runner input from GitHub Actions
- * @returns Valid SSTRunner type with fallback to 'bun'
- */
-function validateSSTRunner(input: string): SSTRunner {
-  const validRunners = SST_RUNNERS;
-
-  if (validRunners.includes(input as SSTRunner)) {
-    return input as SSTRunner;
-  }
-
-  // Log warning for invalid runner and fallback to bun
-  if (input && input.trim() !== "") {
-    core.warning(
-      `⚠️ Invalid runner '${input}'. Valid options: ${validRunners.join(", ")}. Falling back to 'bun'.`
-    );
-  }
-
-  return "bun";
-}
-
-/**
- * Compute stage name from GitHub context when not explicitly provided
- * @throws {Error} When stage cannot be computed from Git context - this is an unrecoverable scenario
- */
-function computeStageFromContext(
-  truncationLength = 26,
-  prefix = "pr-"
-): string {
-  const processor = new StageProcessor();
-  const result = processor.process({
-    prefix,
-    truncationLength,
-  });
-
-  if (result.success && result.computedStage) {
-    core.info(`🎯 Computed stage from Git context: "${result.computedStage}"`);
-    return result.computedStage;
-  }
-
-  // This is an unrecoverable scenario - throw and exit
-  const errorMessage = `Failed to compute stage from Git context: ${result.error || "Unknown error"}`;
-  core.error(`❌ ${errorMessage}`);
-  throw new Error(errorMessage);
-}
-
-/**
- * Collect raw inputs from GitHub Actions environment
- */
-function collectRawInputs() {
-  const operationInput = core.getInput("operation");
-  const stage = core.getInput("stage");
-  const truncationLength = Number.parseInt(
-    core.getInput("truncation-length") || "26",
-    10
-  );
-  const prefix = core.getInput("prefix") || "pr-";
-
-  return {
-    commentMode: core.getInput("comment-mode") || "on-success",
-    failOnError: core.getBooleanInput("fail-on-error") ?? true,
-    maxOutputSize: core.getInput("max-output-size") || "50000",
-    operation: operationInput,
-    prefix,
-    runner: validateSSTRunner(core.getInput("runner") || "bun"),
-    stage,
-    token: core.getInput("token"),
-    truncationLength,
-  };
-}
-
-/**
- * Get display name for stage based on operation type
- */
-function getStageDisplayName(
-  inputs: ReturnType<typeof validateOperationWithContext>
-): string {
-  if (inputs.operation === "stage") {
-    return "computed";
-  }
-  if (inputs.operation === "deploy") {
-    return inputs.stage || "auto";
-  }
-  return inputs.stage;
-}
-
-/**
- * Parse GitHub Actions inputs into a typed structure
+ * How the resolved stage reads in the log.
  *
- * Processes raw GitHub Actions input parameters and converts them into a
- * strongly-typed OperationOptions object. Uses single-pass validation that
- * validates the operation first, then discriminates to validate the rest
- * of the inputs based on the operation type.
- *
- * @returns Validated OperationOptions ready for use by operation handlers
- * @throws ValidationError if inputs don't match expected schemas
+ * The stage operation computes its own, and a deploy without one has it
+ * computed during resolution, so both are reported rather than shown blank.
  */
-function parseGitHubActionsInputs() {
-  const rawInputs = collectRawInputs();
-  const validationContext = createValidationContext();
-
-  // Single-pass validation that handles operation discrimination
-  let inputs: ReturnType<typeof validateOperationWithContext>;
-  try {
-    inputs = validateOperationWithContext(rawInputs, validationContext);
-  } catch (error) {
-    // If validation fails, try to compute stage for deploy operations and retry
-    if (
-      error instanceof ValidationError &&
-      rawInputs.operation === "deploy" &&
-      (!rawInputs.stage || rawInputs.stage.trim() === "")
-    ) {
-      const stage = computeStageFromContext(
-        rawInputs.truncationLength as number,
-        rawInputs.prefix as string
-      );
-      core.info(
-        `📋 Stage input was empty, computed from Git context: "${stage}"`
-      );
-
-      // Update raw inputs with computed stage and retry validation
-      rawInputs.stage = stage;
-      inputs = validateOperationWithContext(rawInputs, validationContext);
-    } else {
-      throw error;
-    }
-  }
-
-  // Log the final parsed operation and stage
-  const stageName = getStageDisplayName(inputs);
-  core.info(
-    `📝 Parsed inputs: ${inputs.operation} operation on stage "${stageName}"`
-  );
-
-  return inputs;
+function stageDisplayName(inputs: ResolvedInputs): string {
+  return inputs.operation === "stage" ? "computed" : inputs.stage;
 }
 
 /**
@@ -174,21 +42,38 @@ function handleInputValidationError(error: unknown): void {
  * Execute the SST operation and handle the result
  */
 async function executeAndHandleOperation(
-  operation: ReturnType<typeof validateOperationWithContext>["operation"],
-  options: OperationOptions
+  inputs: ResolvedInputs
 ): Promise<void> {
   try {
-    core.info(`🔧 Executing ${operation} operation...`);
-    const result = await executeOperation(operation, options);
+    core.info(`🔧 Executing ${inputs.operation} operation...`);
+    const result = await executeOperation(inputs);
 
     // Set GitHub Actions outputs
     setGitHubActionsOutputs(result);
 
     // Handle success/failure based on result
-    handleOperationResult(result, operation, options);
+    handleOperationResult(result, inputs);
   } catch (error) {
-    handleOperationError(error, operation, options);
+    handleOperationError(error, inputs);
   }
+}
+
+/**
+ * What the error subsystem needs from the resolved inputs.
+ *
+ * It still takes the older options bag; giving it the whole resolved shape is
+ * #149's business, not this ticket's.
+ */
+function errorContext(inputs: ResolvedInputs): {
+  failOnError: boolean;
+  stage: string;
+} {
+  return {
+    failOnError: inputs.failOnError,
+    // The stage operation has no stage input; computing one is its job, and a
+    // failure may have happened before it did.
+    stage: inputs.operation === "stage" ? "" : inputs.stage,
+  };
 }
 
 /**
@@ -196,17 +81,16 @@ async function executeAndHandleOperation(
  */
 function handleOperationResult(
   result: OperationResult,
-  operation: ReturnType<typeof validateOperationWithContext>["operation"],
-  options: OperationOptions
+  inputs: ResolvedInputs
 ): void {
   if (result.success) {
-    core.info(`✅ SST ${operation} operation completed successfully`);
+    core.info(`✅ SST ${inputs.operation} operation completed successfully`);
     return;
   }
 
-  const message = `SST ${operation} operation failed: ${result.error || "Unknown error"}`;
+  const message = `SST ${inputs.operation} operation failed: ${result.error || "Unknown error"}`;
 
-  if (options.failOnError) {
+  if (inputs.failOnError) {
     core.setFailed(message);
   } else {
     core.warning(message);
@@ -217,11 +101,7 @@ function handleOperationResult(
 /**
  * Handle errors that occur during operation execution using unified error handler
  */
-function handleOperationError(
-  error: unknown,
-  operation: ReturnType<typeof validateOperationWithContext>["operation"],
-  options: OperationOptions
-): void {
+function handleOperationError(error: unknown, inputs: ResolvedInputs): void {
   if (!(error instanceof Error)) {
     UnifiedErrorHandler.handle({
       error,
@@ -230,18 +110,20 @@ function handleOperationError(
     return;
   }
 
+  const options = errorContext(inputs);
+
   // Determine error type and route to appropriate handler
   if (isOutputFormattingError(error)) {
     UnifiedErrorHandler.handle({
       error,
-      operation,
+      operation: inputs.operation,
       options,
       type: "output-formatting",
     });
   } else {
     UnifiedErrorHandler.handle({
       error,
-      operation,
+      operation: inputs.operation,
       options,
       type: "operation-execution",
     });
@@ -258,71 +140,6 @@ function handleUnexpectedError(error: unknown): never {
   });
   // UnifiedErrorHandler.handle will throw, but TypeScript doesn't know that
   throw error;
-}
-
-/**
- * Configuration object containing operation type and options
- */
-interface OperationConfiguration {
-  operation: ReturnType<typeof validateOperationWithContext>["operation"];
-  options: OperationOptions;
-}
-
-/**
- * Convert parsed inputs to operation options
- */
-function createOperationOptions(
-  inputs: ReturnType<typeof validateOperationWithContext>
-): OperationConfiguration {
-  // Handle operation-specific properties using discriminated union
-  switch (inputs.operation) {
-    case "deploy":
-      return {
-        operation: inputs.operation,
-        options: {
-          commentMode: inputs.commentMode || "on-success",
-          failOnError: inputs.failOnError !== false,
-          maxOutputSize: inputs.maxOutputSize || 50_000,
-          runner: inputs.runner || "bun",
-          stage: inputs.stage || "",
-          token: inputs.token,
-        },
-      };
-
-    case "diff":
-    case "remove":
-      return {
-        operation: inputs.operation,
-        options: {
-          commentMode: inputs.commentMode || "on-success",
-          failOnError: inputs.failOnError !== false,
-          maxOutputSize: inputs.maxOutputSize || 50_000,
-          runner: inputs.runner || "bun",
-          stage: inputs.stage,
-          token: inputs.token,
-        },
-      };
-
-    case "stage":
-      return {
-        operation: inputs.operation,
-        options: {
-          commentMode: "never",
-          failOnError: true,
-          maxOutputSize: 50_000,
-          prefix: inputs.prefix || "pr-",
-          runner: "bun",
-          stage: "",
-          token: "",
-          truncationLength: inputs.truncationLength || 26,
-        },
-      };
-
-    default: {
-      const _exhaustive: never = inputs;
-      throw new Error("Unsupported operation type");
-    }
-  }
 }
 
 /**
@@ -391,31 +208,26 @@ export async function run(): Promise<void> {
   try {
     core.info("🚀 Starting SST Operations Action");
 
-    // 1. Parse and validate GitHub Actions inputs
-    let inputs: ReturnType<typeof validateOperationWithContext>;
+    // 1. Resolve the action's inputs
+    let inputs: ResolvedInputs;
     try {
-      inputs = parseGitHubActionsInputs();
-      let stage: string;
-      if (inputs.operation === "stage") {
-        stage = "computed";
-      } else if (inputs.operation === "deploy") {
-        stage = inputs.stage || "auto";
-      } else {
-        ({ stage } = inputs);
-      }
-      core.info(
-        `📝 Parsed inputs: ${inputs.operation} operation on stage "${stage}"`
-      );
+      inputs = resolveActionInputs({
+        computeStage: computeStageFromGitContext,
+      });
     } catch (error) {
       handleInputValidationError(error);
       return; // Early return after handling validation error
     }
 
-    // 2. Create operation options
-    const { operation, options } = createOperationOptions(inputs);
+    // One log line. There used to be two, one here and one inside input
+    // parsing, each with its own copy of the display-name logic — so every
+    // run printed "📝 Parsed inputs" twice.
+    core.info(
+      `📝 Parsed inputs: ${inputs.operation} operation on stage "${stageDisplayName(inputs)}"`
+    );
 
-    // 3. Execute the SST operation and handle results
-    await executeAndHandleOperation(operation, options);
+    // 2. Execute the SST operation and handle results
+    await executeAndHandleOperation(inputs);
   } catch (error) {
     handleUnexpectedError(error);
   }

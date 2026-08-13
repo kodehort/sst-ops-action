@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubClient } from "../../src/github/client";
+import type { ResolvedInputs } from "../../src/inputs/resolve";
 import { OperationFactory } from "../../src/operations/factory";
-import type { SSTOperation } from "../../src/types";
 import { SST_OPERATIONS } from "../../src/types/operations";
 import type { SSTCLIExecutor } from "../../src/utils/cli";
+import { infrastructureInputs, stageInputs } from "../utils/resolved-inputs";
 
 const mockSSTExecutor = {
   executeSST: vi.fn(),
@@ -17,56 +18,54 @@ const mockGitHubClient = {
 
 describe("Operation Factory - Operation Creation", () => {
   let factory: OperationFactory;
+  let createClient: () => GitHubClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    factory = new OperationFactory(mockSSTExecutor, mockGitHubClient);
+    createClient = vi
+      .fn()
+      .mockReturnValue(mockGitHubClient) as unknown as () => GitHubClient;
+    factory = new OperationFactory(mockSSTExecutor, createClient);
   });
 
   describe("Operation Creation", () => {
     it("should create DeployOperation for deploy operation type", () => {
-      const operation = factory.createOperation("deploy");
+      const operation = factory.createOperation(infrastructureInputs("deploy"));
 
-      expect(operation).toBeDefined();
-      expect(operation).toHaveProperty("execute");
-      expect(typeof operation.execute).toBe("function");
+      expect(typeof operation).toBe("function");
     });
 
     it("should create DiffOperation for diff operation type", () => {
-      const operation = factory.createOperation("diff");
+      const operation = factory.createOperation(infrastructureInputs("diff"));
 
-      expect(operation).toBeDefined();
-      expect(operation).toHaveProperty("execute");
-      expect(typeof operation.execute).toBe("function");
+      expect(typeof operation).toBe("function");
     });
 
     it("should create RemoveOperation for remove operation type", () => {
-      const operation = factory.createOperation("remove");
+      const operation = factory.createOperation(infrastructureInputs("remove"));
 
-      expect(operation).toBeDefined();
-      expect(operation).toHaveProperty("execute");
-      expect(typeof operation.execute).toBe("function");
+      expect(typeof operation).toBe("function");
     });
 
     it("should create StageOperation for stage operation type", () => {
-      const operation = factory.createOperation("stage");
+      const operation = factory.createOperation(stageInputs());
 
-      expect(operation).toBeDefined();
-      expect(operation).toHaveProperty("execute");
-      expect(typeof operation.execute).toBe("function");
+      expect(typeof operation).toBe("function");
     });
 
     it("should throw error for unknown operation type", () => {
       expect(() => {
-        factory.createOperation("unknown" as SSTOperation);
+        factory.createOperation({
+          operation: "unknown",
+        } as unknown as ResolvedInputs);
       }).toThrow("Unknown operation type: unknown");
     });
 
     it("should create different instances for each operation type", () => {
-      const deploy = factory.createOperation("deploy");
-      const diff = factory.createOperation("diff");
-      const remove = factory.createOperation("remove");
-      const stage = factory.createOperation("stage");
+      const deploy = factory.createOperation(infrastructureInputs("deploy"));
+      const diff = factory.createOperation(infrastructureInputs("diff"));
+      const remove = factory.createOperation(infrastructureInputs("remove"));
+      const stage = factory.createOperation(stageInputs());
 
       expect(deploy).not.toBe(diff);
       expect(diff).not.toBe(remove);
@@ -74,6 +73,23 @@ describe("Operation Factory - Operation Creation", () => {
       expect(stage).not.toBe(deploy);
       expect(stage).not.toBe(diff);
       expect(stage).not.toBe(remove);
+    });
+  });
+
+  describe("GitHub client", () => {
+    it("is not created for the stage operation", () => {
+      // The stage operation has no GitHub integration. Creating a client for
+      // it eagerly is what required the sentinel token "fake-token" to get
+      // past the constructor's credential check.
+      factory.createOperation(stageInputs());
+
+      expect(createClient).not.toHaveBeenCalled();
+    });
+
+    it("is created for an operation that comments", () => {
+      factory.createOperation(infrastructureInputs("deploy"));
+
+      expect(createClient).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -122,9 +138,9 @@ describe("Operation Factory - Operation Creation", () => {
 
   describe("Instance Management", () => {
     it("should maintain separate instances for different operation types", () => {
-      const deploy1 = factory.createOperation("deploy");
-      const deploy2 = factory.createOperation("deploy");
-      const diff1 = factory.createOperation("diff");
+      const deploy1 = factory.createOperation(infrastructureInputs("deploy"));
+      const deploy2 = factory.createOperation(infrastructureInputs("deploy"));
+      const diff1 = factory.createOperation(infrastructureInputs("diff"));
 
       // Each call should create a new instance
       expect(deploy1).not.toBe(deploy2);
@@ -134,55 +150,50 @@ describe("Operation Factory - Operation Creation", () => {
 
   describe("Constructor Integration", () => {
     it("should create operations with the provided dependencies", () => {
-      const deployOp = factory.createOperation("deploy");
-      const diffOp = factory.createOperation("diff");
-      const removeOp = factory.createOperation("remove");
-      const stageOp = factory.createOperation("stage");
+      const deployOp = factory.createOperation(infrastructureInputs("deploy"));
+      const diffOp = factory.createOperation(infrastructureInputs("diff"));
+      const removeOp = factory.createOperation(infrastructureInputs("remove"));
+      const stageOp = factory.createOperation(stageInputs());
 
       // Verify all operations have required methods
-      expect(deployOp).toHaveProperty("execute");
-      expect(diffOp).toHaveProperty("execute");
-      expect(removeOp).toHaveProperty("execute");
-      expect(stageOp).toHaveProperty("execute");
+      expect(typeof deployOp).toBe("function");
+      expect(typeof diffOp).toBe("function");
+      expect(typeof removeOp).toBe("function");
+      expect(typeof stageOp).toBe("function");
     });
 
-    it("should create operations that can handle options", () => {
-      const operation = factory.createOperation("deploy");
+    it("binds the inputs rather than taking them later", () => {
+      // The factory closes over the resolved inputs, so the caller cannot hand
+      // a stage operation an infrastructure bag by mistake.
+      const operation = factory.createOperation(infrastructureInputs("deploy"));
 
-      // The operation should have an execute method that takes options
-      expect(operation.execute).toBeDefined();
-      expect(operation.execute.length).toBe(1); // Should take one parameter (options)
+      expect(typeof operation).toBe("function");
+      expect(operation.length).toBe(0);
     });
   });
 
   describe("Type Safety Validation", () => {
     it("should enforce correct operation types at compile time", () => {
       // These should compile without errors
-      factory.createOperation("deploy");
-      factory.createOperation("diff");
-      factory.createOperation("remove");
-      factory.createOperation("stage");
+      factory.createOperation(infrastructureInputs("deploy"));
+      factory.createOperation(infrastructureInputs("diff"));
+      factory.createOperation(infrastructureInputs("remove"));
+      factory.createOperation(stageInputs());
 
       // This would cause TypeScript compile error if uncommented:
       // factory.createOperation('invalid');
     });
 
     it("should return operations with correct interfaces", () => {
-      const deployOp = factory.createOperation("deploy");
-      const diffOp = factory.createOperation("diff");
-      const removeOp = factory.createOperation("remove");
-      const stageOp = factory.createOperation("stage");
+      const deployOp = factory.createOperation(infrastructureInputs("deploy"));
+      const diffOp = factory.createOperation(infrastructureInputs("diff"));
+      const removeOp = factory.createOperation(infrastructureInputs("remove"));
+      const stageOp = factory.createOperation(stageInputs());
 
-      // All operations should have execute method
-      expect(deployOp).toHaveProperty("execute");
-      expect(diffOp).toHaveProperty("execute");
-      expect(removeOp).toHaveProperty("execute");
-      expect(stageOp).toHaveProperty("execute");
-
-      expect(typeof deployOp.execute).toBe("function");
-      expect(typeof diffOp.execute).toBe("function");
-      expect(typeof removeOp.execute).toBe("function");
-      expect(typeof stageOp.execute).toBe("function");
+      expect(typeof deployOp).toBe("function");
+      expect(typeof diffOp).toBe("function");
+      expect(typeof removeOp).toBe("function");
+      expect(typeof stageOp).toBe("function");
     });
   });
 });

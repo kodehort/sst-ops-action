@@ -5,7 +5,12 @@
  */
 
 import type { GitHubClient } from "../github/client";
-import type { OperationOptions, OperationResult, SSTOperation } from "../types";
+import type {
+  InfrastructureInputs,
+  ResolvedInputs,
+  StageInputs,
+} from "../inputs/resolve";
+import type { OperationResult, SSTOperation } from "../types";
 import { SST_OPERATIONS } from "../types/operations";
 import type { SSTCLIExecutor } from "../utils/cli";
 import { DeployOperation } from "./deploy";
@@ -14,11 +19,13 @@ import { RemoveOperation } from "./remove";
 import { StageOperation } from "./stage";
 
 /**
- * Base operation interface that all operations must implement
+ * An operation bound to the inputs it accepts.
+ *
+ * The stage operation takes a different shape from the three that run the SST
+ * CLI, so the factory returns a closure over the resolved inputs rather than
+ * something that takes a bag every caller has to re-check.
  */
-export interface BaseOperation {
-  execute: (options: OperationOptions) => Promise<OperationResult>;
-}
+export type BoundOperation = () => Promise<OperationResult>;
 
 /**
  * Factory for creating SST operation instances
@@ -26,32 +33,60 @@ export interface BaseOperation {
  */
 export class OperationFactory {
   private readonly cliExecutor: SSTCLIExecutor;
-  private readonly githubClient: GitHubClient;
+  private readonly createGitHubClient: () => GitHubClient;
 
-  constructor(cliExecutor: SSTCLIExecutor, githubClient: GitHubClient) {
+  /**
+   * @param createGitHubClient Called only by the operations that need it. The
+   *   stage operation has no GitHub client, which is why this is a function
+   *   rather than an instance: constructing one eagerly is what required a
+   *   sentinel token to get past its credential check.
+   */
+  constructor(
+    cliExecutor: SSTCLIExecutor,
+    createGitHubClient: () => GitHubClient
+  ) {
     this.cliExecutor = cliExecutor;
-    this.githubClient = githubClient;
+    this.createGitHubClient = createGitHubClient;
   }
 
   /**
-   * Create an operation instance based on the operation type
-   * @param operationType The type of SST operation to create
-   * @returns The appropriate operation instance
+   * Bind an operation to the inputs it was resolved with
+   * @param inputs Resolved action inputs, tagged by operation
+   * @returns A thunk that runs the operation
    * @throws Error if operation type is unknown
    */
-  createOperation(operationType: SSTOperation): BaseOperation {
-    switch (operationType) {
-      case "deploy":
-        return new DeployOperation(this.cliExecutor, this.githubClient);
-      case "diff":
-        return new DiffOperation(this.cliExecutor, this.githubClient);
-      case "remove":
-        return new RemoveOperation(this.cliExecutor, this.githubClient);
-      case "stage":
-        return new StageOperation();
+  createOperation(inputs: ResolvedInputs): BoundOperation {
+    switch (inputs.operation) {
+      case "deploy": {
+        const operation = new DeployOperation(
+          this.cliExecutor,
+          this.createGitHubClient()
+        );
+        return () => operation.execute(inputs satisfies InfrastructureInputs);
+      }
+      case "diff": {
+        const operation = new DiffOperation(
+          this.cliExecutor,
+          this.createGitHubClient()
+        );
+        return () => operation.execute(inputs satisfies InfrastructureInputs);
+      }
+      case "remove": {
+        const operation = new RemoveOperation(
+          this.cliExecutor,
+          this.createGitHubClient()
+        );
+        return () => operation.execute(inputs satisfies InfrastructureInputs);
+      }
+      case "stage": {
+        const operation = new StageOperation();
+        return () => operation.execute(inputs satisfies StageInputs);
+      }
       default: {
-        const _exhaustive: never = operationType;
-        throw new Error(`Unknown operation type: ${_exhaustive}`);
+        const _exhaustive: never = inputs;
+        throw new Error(
+          `Unknown operation type: ${(_exhaustive as { operation: string }).operation}`
+        );
       }
     }
   }

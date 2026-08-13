@@ -5,26 +5,21 @@
 
 import * as github from "@actions/github";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { StageInputs } from "../../src/inputs/resolve";
 import { StageOperation } from "../../src/operations/stage";
-import type { OperationOptions } from "../../src/types";
+import { stageInputs } from "../utils/resolved-inputs";
 
 describe("Stage Operation - Stage Computation Integration", () => {
   let stageOperation: StageOperation;
-  let mockOptions: OperationOptions;
+  let mockInputs: StageInputs;
 
   beforeEach(() => {
     // Create stage operation instance
     stageOperation = new StageOperation();
 
-    // Default options
-    mockOptions = {
-      commentMode: "never",
-      failOnError: true,
-      maxOutputSize: 1000,
-      runner: "bun",
-      stage: "fallback-stage",
-      token: "test-token",
-    };
+    // The stage operation's whole input surface. It has no token, runner,
+    // output budget or stage — computing a stage is its job.
+    mockInputs = stageInputs();
 
     // Reset mocks
     vi.clearAllMocks();
@@ -52,7 +47,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.operation).toBe("stage");
@@ -77,7 +72,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("main");
@@ -93,9 +88,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         payload: {},
       });
 
-      mockOptions.stage = "production"; // This is ignored by stage operation
-
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain(
@@ -116,7 +109,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("pr-123-hotfix");
@@ -130,7 +123,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage.length).toBeLessThanOrEqual(26);
@@ -145,9 +138,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      mockOptions.maxOutputSize = 20; // This parameter is now ignored for stage operations
-
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.truncated).toBe(false); // Never truncated since no real CLI output
@@ -160,9 +151,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         payload: {},
       });
 
-      mockOptions.stage = ""; // Empty fallback
-
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe(
@@ -186,7 +175,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("my-branch-special-chars");
@@ -200,7 +189,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("feature-branch-name");
@@ -214,7 +203,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("branch-name");
@@ -230,33 +219,11 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      // Use empty stage to test inference
-      mockOptions.stage = "";
-
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("feature-auto-stage");
       expect(result.stage).toBe("feature-auto-stage");
-    });
-
-    it("should prefer explicit stage over inference when provided", async () => {
-      Object.assign(github.context, {
-        eventName: "push",
-        payload: {
-          ref: "refs/heads/feature-branch",
-        },
-      });
-
-      // Explicit stage should be used as fallback, but computed stage is from Git context
-      mockOptions.stage = "explicit-stage";
-
-      const result = await stageOperation.execute(mockOptions);
-
-      expect(result.success).toBe(true);
-      // Stage operation always computes from Git context, uses fallback only when computation fails
-      expect(result.computedStage).toBe("feature-branch");
-      expect(result.stage).toBe("feature-branch");
     });
 
     it("should fail when Git context provides no usable ref (no fallback)", async () => {
@@ -266,10 +233,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
         ref: undefined,
       });
 
-      // Stage operation should fail when no Git context is available
-      mockOptions.stage = "fallback-stage"; // This is ignored
-
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain(
@@ -288,9 +252,9 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      mockOptions.truncationLength = 15;
+      mockInputs.truncationLength = 15;
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("very-long-branc"); // Truncated to 15 chars
@@ -305,9 +269,9 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      mockOptions.prefix = "fix-";
+      mockInputs.prefix = "fix-";
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("fix-123-hotfix");
@@ -322,10 +286,10 @@ describe("Stage Operation - Stage Computation Integration", () => {
         },
       });
 
-      mockOptions.truncationLength = 20;
-      mockOptions.prefix = "issue-";
+      mockInputs.truncationLength = 20;
+      mockInputs.prefix = "issue-";
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("issue-123-very-long"); // Truncated to 19 chars due to trailing hyphen cleanup
@@ -343,7 +307,7 @@ describe("Stage Operation - Stage Computation Integration", () => {
 
       // Don't set custom parameters - should use defaults
 
-      const result = await stageOperation.execute(mockOptions);
+      const result = await stageOperation.execute(mockInputs);
 
       expect(result.success).toBe(true);
       expect(result.computedStage).toBe("pr-123-branch-name"); // Default prefix 'pr-'

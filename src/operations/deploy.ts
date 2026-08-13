@@ -5,8 +5,9 @@
 
 import * as core from "@actions/core";
 import type { GitHubClient } from "../github/client";
+import type { InfrastructureInputs } from "../inputs/resolve";
 import { DeployParser } from "../parsers/deploy-parser";
-import type { DeployResult, OperationOptions } from "../types";
+import type { DeployResult } from "../types";
 import type { SSTCLIExecutor } from "../utils/cli";
 import { logActionVersion } from "../utils/version";
 import { BaseOperation } from "./base-operation";
@@ -26,20 +27,20 @@ export class DeployOperation extends BaseOperation<DeployResult> {
 
   /**
    * Execute SST deploy operation with full workflow
-   * @param options Operation configuration options
+   * @param inputs Resolved inputs for this operation
    * @returns Parsed deployment result with resource changes and extracted outputs
    */
-  async execute(options: OperationOptions): Promise<DeployResult> {
+  async execute(inputs: InfrastructureInputs): Promise<DeployResult> {
     // Log action version at the start
     logActionVersion(core.info);
 
     // Execute SST CLI command
     const cliResult = await this.sstExecutor.executeSST(
       "deploy",
-      options.stage,
+      inputs.stage,
       {
-        maxOutputSize: options.maxOutputSize,
-        runner: options.runner,
+        maxOutputSize: inputs.maxOutputSize,
+        runner: inputs.runner,
         timeout: this.defaultTimeout,
       }
     );
@@ -48,13 +49,13 @@ export class DeployOperation extends BaseOperation<DeployResult> {
     const parser = new DeployParser();
     const result = parser.parse(
       cliResult.output,
-      options.stage,
+      inputs.stage,
       cliResult.exitCode,
       cliResult.truncated
     );
 
     // Perform GitHub integration in parallel (non-blocking)
-    await this.performGitHubIntegration(result, options);
+    await this.performGitHubIntegration(result, inputs.commentMode);
 
     return result;
   }

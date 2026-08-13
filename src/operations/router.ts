@@ -5,7 +5,8 @@
  */
 
 import { GitHubClient } from "../github/client";
-import type { OperationOptions, OperationResult, SSTOperation } from "../types";
+import type { ResolvedInputs } from "../inputs/resolve";
+import type { OperationResult, SSTOperation } from "../types";
 import { SSTCLIExecutor } from "../utils/cli";
 import { OperationFactory } from "./factory";
 
@@ -16,36 +17,31 @@ import { OperationFactory } from "./factory";
  * @returns Promise resolving to operation result
  */
 export async function executeOperation(
-  operationType: SSTOperation,
-  options: OperationOptions
+  inputs: ResolvedInputs
 ): Promise<OperationResult> {
   try {
     // Validate operation type
-    if (!OperationFactory.isValidOperationType(operationType)) {
+    if (!OperationFactory.isValidOperationType(inputs.operation)) {
       throw new Error(
-        `Invalid operation type: ${operationType}. ` +
+        `Invalid operation type: ${inputs.operation}. ` +
           `Supported operations: ${OperationFactory.getSupportedOperations().join(", ")}`
       );
     }
 
-    // Create dependencies
-    const cliExecutor = new SSTCLIExecutor();
-    // Stage operations don't require a GitHub token, use empty string as fallback
-    const token = operationType === "stage" ? "fake-token" : options.token;
-    const githubClient = new GitHubClient(token);
-
-    // Create operation factory
-    const factory = new OperationFactory(cliExecutor, githubClient);
-
-    // Create operation instance
-    const operation = factory.createOperation(operationType);
+    // The client is created lazily, so the stage operation never needs a
+    // token. It previously got the sentinel string "fake-token" purely to
+    // satisfy a credential check for a client it does not use.
+    const factory = new OperationFactory(
+      new SSTCLIExecutor(),
+      () => new GitHubClient(inputs.operation === "stage" ? "" : inputs.token)
+    );
 
     // Execute operation. The operation returns the parser's result, which is
     // already in the unified shape, so the router passes it straight through.
-    return await operation.execute(options);
+    return await factory.createOperation(inputs)();
   } catch (error) {
     // Return a failed result with error details
-    return createFailureResult(operationType, error as Error, options);
+    return createFailureResult(inputs, error as Error);
   }
 }
 
@@ -56,25 +52,19 @@ export async function executeOperation(
  * This ensures consistent error reporting across all operation types while
  * maintaining the expected result structure for downstream processing.
  *
- * @param operationType The operation that failed ('deploy' | 'diff' | 'remove' | 'stage')
+ * @param inputs The resolved inputs the failed operation was running with
  * @param error The error that occurred during execution
- * @param options The original operation options that were being processed
  * @returns Failure result in unified format with operation-specific default values
- *
- * @example
- * ```typescript
- * try {
- *   return await operation.execute(options);
- * } catch (error) {
- *   return createFailureResult('deploy', error as Error, options);
- * }
- * ```
  */
 function createFailureResult(
-  operationType: SSTOperation,
-  error: Error,
-  options: OperationOptions
+  inputs: ResolvedInputs,
+  error: Error
 ): OperationResult {
+  const operationType: SSTOperation = inputs.operation;
+  // The stage operation has no stage input — computing one is its job — so a
+  // failure before it ran has nothing to report here.
+  const stage = inputs.operation === "stage" ? "" : inputs.stage;
+
   const baseResult = {
     app: "",
     completionStatus: "failed" as const,
@@ -82,7 +72,7 @@ function createFailureResult(
     exitCode: 1,
     operation: operationType,
     rawOutput: error.stack || error.message,
-    stage: options.stage,
+    stage,
     success: false,
     truncated: false,
   };
@@ -115,7 +105,7 @@ function createFailureResult(
     case "stage":
       return {
         ...baseResult,
-        computedStage: options.stage,
+        computedStage: stage,
         eventName: "unknown",
         isPullRequest: false,
         operation: "stage" as const,

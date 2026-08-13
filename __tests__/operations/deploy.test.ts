@@ -6,18 +6,21 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubClient } from "../../src/github/client";
+import type { InfrastructureInputs } from "../../src/inputs/resolve";
 import { DeployOperation } from "../../src/operations/deploy";
 import { DeployParser } from "../../src/parsers/deploy-parser";
-import type { DeployResult, OperationOptions } from "../../src/types";
+import type { DeployResult } from "../../src/types";
 import type { SSTCLIExecutor, SSTCommandResult } from "../../src/utils/cli";
 import { SST_DEPLOY_FAILURE_OUTPUT } from "../fixtures/sst-outputs";
+import { infrastructureInputs } from "../utils/resolved-inputs";
 
 describe("Deploy Operation - SST Deployment Workflows", () => {
   let deployOperation: DeployOperation;
   let mockSSTExecutor: SSTCLIExecutor;
   let mockGitHubClient: GitHubClient;
 
-  const mockOperationOptions: OperationOptions = {
+  const mockOperationOptions: InfrastructureInputs = {
+    ...infrastructureInputs("deploy"),
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
@@ -106,7 +109,9 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
         "staging",
         {
           maxOutputSize: 50_000,
-          runner: undefined,
+          // No longer optional: the resolver applies the default, so the CLI
+          // always gets a runner.
+          runner: "bun",
           timeout: 900_000,
         }
       );
@@ -299,7 +304,8 @@ describe("Deploy Operation - SST Deployment Workflows", () => {
       );
 
       // Execute with minimal options (as composite actions might)
-      const minimalOptions: OperationOptions = {
+      const minimalOptions: InfrastructureInputs = {
+        ...infrastructureInputs("deploy"),
         stage: "staging",
       };
 

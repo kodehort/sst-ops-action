@@ -12,8 +12,9 @@ import {
   vi,
 } from "vitest";
 import type { GitHubClient } from "../../src/github/client";
+import type { InfrastructureInputs } from "../../src/inputs/resolve";
 import { RemoveOperation } from "../../src/operations/remove";
-import type { OperationOptions, RemoveResult } from "../../src/types";
+import type { RemoveResult } from "../../src/types";
 import type { SSTCLIExecutor, SSTCommandResult } from "../../src/utils/cli";
 import {
   SST_REMOVE_ERROR_OUTPUT,
@@ -23,13 +24,15 @@ import {
   SST_REMOVE_SUCCESS_OUTPUT,
   SST_REMOVE_SUCCESS_WITH_DETAILS_OUTPUT,
 } from "../fixtures/sst-outputs";
+import { infrastructureInputs } from "../utils/resolved-inputs";
 
 describe("RemoveOperation", () => {
   let removeOperation: RemoveOperation;
   let mockSSTExecutor: SSTCLIExecutor;
   let mockGitHubClient: GitHubClient;
 
-  const defaultOptions: OperationOptions = {
+  const defaultOptions: InfrastructureInputs = {
+    ...infrastructureInputs("remove"),
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
