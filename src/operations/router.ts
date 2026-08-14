@@ -4,42 +4,74 @@
  * Provides unified interface and consistent error handling
  */
 
+import * as core from "@actions/core";
 import { GitHubClient } from "../github/client";
 import type { ResolvedInputs } from "../inputs/resolve";
+import { DeployParser } from "../parsers/deploy-parser";
+import { DiffParser } from "../parsers/diff-parser";
+import { RemoveParser } from "../parsers/remove-parser";
+import { StageProcessor } from "../parsers/stage-processor";
 import type { OperationResult, SSTOperation } from "../types";
 import { SSTCLIExecutor } from "../utils/cli";
-import { OperationFactory } from "./factory";
+import { logActionVersion } from "../utils/version";
+import { runInfrastructureOperation } from "./run";
 
 /**
  * Execute an SST operation with full error handling and routing
- * @param operationType The type of operation to execute
- * @param options Configuration options for the operation
+ * @param inputs Resolved action inputs, tagged by operation
  * @returns Promise resolving to operation result
  */
 export async function executeOperation(
   inputs: ResolvedInputs
 ): Promise<OperationResult> {
   try {
-    // Validate operation type
-    if (!OperationFactory.isValidOperationType(inputs.operation)) {
-      throw new Error(
-        `Invalid operation type: ${inputs.operation}. ` +
-          `Supported operations: ${OperationFactory.getSupportedOperations().join(", ")}`
-      );
+    logActionVersion(core.info);
+
+    // The stage operation runs no command and needs no GitHub client. It used
+    // to be a class wrapping this processor with the same arguments, reached
+    // through a factory branch, purely to look like the other three.
+    if (inputs.operation === "stage") {
+      return new StageProcessor().process({
+        prefix: inputs.prefix,
+        truncationLength: inputs.truncationLength,
+      });
     }
 
-    // The client is created lazily and only by the branches that hold a token,
-    // so the stage operation never needs one. It previously got the sentinel
-    // "fake-token", then "", purely to satisfy a credential check for a client
-    // it does not use.
-    const factory = new OperationFactory(
-      new SSTCLIExecutor(),
-      (token) => new GitHubClient(token)
-    );
+    // The factory's switch, inlined into the caller it had. It is written out
+    // rather than looked up in a map so the parser's result type stays
+    // correlated with the narrowed inputs — a map erases that link and the
+    // three results collapse to a union the run path cannot return.
+    const deps = {
+      createGitHubClient: (token: string) => new GitHubClient(token),
+      executor: new SSTCLIExecutor(),
+    };
 
-    // Execute operation. The operation returns the parser's result, which is
-    // already in the unified shape, so the router passes it straight through.
-    return await factory.createOperation(inputs)();
+    switch (inputs.operation) {
+      case "deploy":
+        return await runInfrastructureOperation({
+          ...deps,
+          inputs,
+          parser: new DeployParser(),
+        });
+      case "diff":
+        return await runInfrastructureOperation({
+          ...deps,
+          inputs,
+          parser: new DiffParser(),
+        });
+      case "remove":
+        return await runInfrastructureOperation({
+          ...deps,
+          inputs,
+          parser: new RemoveParser(),
+        });
+      default: {
+        const _exhaustive: never = inputs;
+        throw new Error(
+          `Unknown operation type: ${(_exhaustive as { operation: string }).operation}`
+        );
+      }
+    }
   } catch (error) {
     // Return a failed result with error details
     return createFailureResult(inputs, error as Error);

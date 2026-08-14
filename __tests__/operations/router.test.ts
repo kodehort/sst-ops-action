@@ -1,281 +1,203 @@
+/**
+ * The router is the whole operations layer now.
+ *
+ * These tests used to stub `OperationFactory.prototype.createOperation`, so
+ * the thing under test was a stub returning a fixture and no real code ran
+ * between the inputs and the result. The mocks were not even the right shape:
+ * the CLI executor was given an `execute` method and the GitHub client
+ * `commentOnPR`/`updateWorkflowSummary`, none of which exist. Nothing noticed,
+ * because the factory was stubbed too.
+ *
+ * The seams are now the two the router genuinely has — the CLI and the GitHub
+ * API — and both are mocked at their real interfaces. Real parsers run against
+ * real captured CLI output, so a change to either shows up here.
+ */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the classes needed for the router
 vi.mock("@/github/client");
 vi.mock("@/utils/cli");
 
 import { GitHubClient } from "@/github/client";
-import { OperationFactory } from "@/operations/factory";
 import { executeOperation } from "@/operations/router";
 import type { DeployResult, DiffResult, RemoveResult } from "@/types";
 import { SSTCLIExecutor } from "@/utils/cli";
+import {
+  SST_DEPLOY_SUCCESS_OUTPUT,
+  SST_DIFF_OUTPUT,
+  SST_REMOVE_SUCCESS_OUTPUT,
+} from "../fixtures/sst-outputs";
 import { infrastructureInputs, stageInputs } from "../utils/resolved-inputs";
 
-/**
- * These fixtures are the shape a parser actually produces.
- *
- * They used to be metadata-envelope shaped — `{ metadata: { app, cliExitCode,
- * rawOutput, truncated }, ... }` — which no parser has ever emitted. The router
- * validated against that shape with every field optional, so validation passed
- * with the envelope undefined and the transform rebuilt the result from
- * nothing: `app` became the literal "unknown", `truncated` was always false,
- * the real exit code was discarded, and `permalink` and `completionStatus` were
- * dropped. These tests encoded that as correct.
- */
-describe("OperationRouter", () => {
-  let mockOperation: {
-    execute: ReturnType<typeof vi.fn>;
-  };
+const executeSST = vi.fn();
+const createOrUpdateComment = vi.fn();
+const createWorkflowSummary = vi.fn();
 
-  const deployResult: DeployResult = {
-    app: "kodehort-scratch",
-    completionStatus: "complete",
+/** What the CLI seam returns for a run that produced `output`. */
+function cliResult(output: string, overrides: Record<string, unknown> = {}) {
+  return {
+    command: "bun sst deploy --stage staging",
+    duration: 1000,
     exitCode: 0,
-    operation: "deploy",
-    outputs: [
-      { key: "api", value: "https://api.example.com" },
-      { key: "web", value: "https://web.example.com" },
-    ],
-    permalink: "https://sst.dev/u/75c084c6",
-    rawOutput: "Deploy successful",
-    resourceChanges: 3,
-    resources: [
-      { name: "handler", status: "created", timing: "2s", type: "function" },
-    ],
-    stage: "test-stage",
+    output,
+    stderr: "",
+    stdout: output,
     success: true,
-    truncated: true,
+    truncated: false,
+    ...overrides,
   };
+}
 
-  const diffResult: DiffResult = {
-    app: "kodehort-scratch",
-    changeSummary: "3 changes planned",
-    changes: [{ action: "create", name: "handler", type: "function" }],
-    completionStatus: "complete",
-    diffSection: "",
-    exitCode: 0,
-    operation: "diff",
-    permalink: "https://sst.dev/u/abc123",
-    plannedChanges: 3,
-    rawOutput: "Diff generated",
-    stage: "test-stage",
-    success: true,
-    truncated: true,
-  };
-
-  const removeResult: RemoveResult = {
-    app: "kodehort-scratch",
-    completionStatus: "partial",
-    exitCode: 0,
-    operation: "remove",
-    permalink: "https://sst.dev/u/9d14bf2c",
-    rawOutput: "Removed",
-    removedResources: [
-      { name: "handler", status: "removed", type: "function" },
-    ],
-    resourcesRemoved: 1,
-    stage: "test-stage",
-    success: true,
-    truncated: true,
-  };
-
+describe("executeOperation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup mock operation
-    mockOperation = {
-      execute: vi.fn(),
-    };
+    executeSST.mockResolvedValue(cliResult(""));
+    createOrUpdateComment.mockResolvedValue(undefined);
+    createWorkflowSummary.mockResolvedValue(undefined);
 
-    // Mock OperationFactory methods. createOperation returns a thunk bound to
-    // the resolved inputs, so the stub is a function rather than an object.
-    vi.spyOn(OperationFactory.prototype, "createOperation").mockReturnValue(
-      (() => (mockOperation.execute as () => unknown)()) as any
-    );
-    vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(true);
-    vi.spyOn(OperationFactory, "getSupportedOperations").mockReturnValue([
-      "deploy",
-      "diff",
-      "remove",
-      "stage",
-    ]);
-
-    // Mock GitHubClient and SSTCLIExecutor constructors
-    // Vitest v4 requires function/class for constructor mocks (not arrow functions)
-    vi.mocked(GitHubClient).mockImplementation(function (this: any) {
-      this.commentOnPR = vi.fn();
-      this.updateWorkflowSummary = vi.fn();
+    // Mocked at the real interface. Vitest v4 needs a function, not an arrow,
+    // for a constructor mock.
+    vi.mocked(SSTCLIExecutor).mockImplementation(function (this: any) {
+      this.executeSST = executeSST;
     } as any);
 
-    vi.mocked(SSTCLIExecutor).mockImplementation(function (this: any) {
-      this.execute = vi.fn();
+    vi.mocked(GitHubClient).mockImplementation(function (this: any) {
+      this.createOrUpdateComment = createOrUpdateComment;
+      this.createWorkflowSummary = createWorkflowSummary;
     } as any);
   });
 
-  describe("executeOperation", () => {
-    it("should reject an unsupported operation type", async () => {
-      // The real guard, not the always-true stub the other cases use.
-      vi.spyOn(OperationFactory, "isValidOperationType").mockReturnValue(false);
+  describe("running a command", () => {
+    it("parses a deploy through the real parser and reports it", async () => {
+      executeSST.mockResolvedValue(cliResult(SST_DEPLOY_SUCCESS_OUTPUT));
 
+      const result = (await executeOperation(
+        infrastructureInputs("deploy", { stage: "production" })
+      )) as DeployResult;
+
+      expect(result.operation).toBe("deploy");
+      expect(result.success).toBe(true);
+      expect(result.app).toBe("www-kodehort-com");
+      expect(result.stage).toBe("production");
+      expect(result.resources.length).toBeGreaterThan(0);
+
+      expect(createOrUpdateComment).toHaveBeenCalledWith(result, "on-success");
+      expect(createWorkflowSummary).toHaveBeenCalledWith(result);
+    });
+
+    it("parses a diff through the real parser and reports it", async () => {
+      executeSST.mockResolvedValue(cliResult(SST_DIFF_OUTPUT));
+
+      const result = (await executeOperation(
+        infrastructureInputs("diff")
+      )) as DiffResult;
+
+      expect(result.operation).toBe("diff");
+      expect(result.success).toBe(true);
+      expect(createOrUpdateComment).toHaveBeenCalled();
+    });
+
+    it("parses a remove through the real parser and reports it", async () => {
+      executeSST.mockResolvedValue(cliResult(SST_REMOVE_SUCCESS_OUTPUT));
+
+      const result = (await executeOperation(
+        infrastructureInputs("remove")
+      )) as RemoveResult;
+
+      expect(result.operation).toBe("remove");
+      expect(result.success).toBe(true);
+      expect(createOrUpdateComment).toHaveBeenCalled();
+    });
+
+    it("asks the CLI for the operation and stage, and leaves the timeout to it", async () => {
+      await executeOperation(
+        infrastructureInputs("diff", { maxOutputSize: 1234, stage: "pr-9" })
+      );
+
+      // No `timeout` key: it is a property of the command, so the seam owns
+      // it. Every caller used to pass one, which left the seam's own default
+      // unreachable.
+      expect(executeSST).toHaveBeenCalledWith("diff", "pr-9", {
+        maxOutputSize: 1234,
+        runner: "bun",
+      });
+    });
+
+    it("passes the resolved token to the GitHub client", async () => {
+      await executeOperation(
+        infrastructureInputs("deploy", { token: "ghp_router_token" })
+      );
+
+      expect(GitHubClient).toHaveBeenCalledWith("ghp_router_token");
+    });
+  });
+
+  describe("the stage operation", () => {
+    it("computes a stage without touching the CLI or the GitHub API", async () => {
+      const result = await executeOperation(stageInputs());
+
+      // The stage-specific fields prove the processor produced this, rather
+      // than it being a failure result the router built. Whether the computed
+      // stage succeeds depends on the ambient Git context, which is
+      // stage-processor.test.ts's subject, not the router's.
+      expect(result.operation).toBe("stage");
+      expect(result).toHaveProperty("computedStage");
+      expect(result).toHaveProperty("ref");
+
+      // It used to be a class wrapping the processor, reached through a
+      // factory branch that first built a GitHub client with a sentinel token.
+      expect(executeSST).not.toHaveBeenCalled();
+      expect(GitHubClient).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("failures", () => {
+    it("reports a thrown CLI error as a failed result rather than throwing", async () => {
+      executeSST.mockRejectedValue(new Error("spawn sst ENOENT"));
+
+      const result = await executeOperation(infrastructureInputs("deploy"));
+
+      expect(result.success).toBe(false);
+      expect(result.completionStatus).toBe("failed");
+      expect(result.error).toBe("spawn sst ENOENT");
+      expect(result.operation).toBe("deploy");
+    });
+
+    it("still parses and reports a failed command, for every operation", async () => {
+      // Diff used to bail out here with a synthetic result, posting no comment
+      // at all, while deploy and remove parsed the failure and commented on
+      // it. One policy now: run, parse, report.
+      executeSST.mockResolvedValue(
+        cliResult("", {
+          exitCode: 1,
+          stderr: "Authentication failed: Invalid SST token",
+          success: false,
+        })
+      );
+
+      const result = (await executeOperation(
+        infrastructureInputs("diff", { commentMode: "always" })
+      )) as DiffResult;
+
+      expect(result.success).toBe(false);
+      expect(result.completionStatus).toBe("failed");
+      // The CLI's account of the failure survives; only the deploy parser
+      // extracts an error from the text.
+      expect(result.error).toBe("Authentication failed: Invalid SST token");
+      // Never "0 changes planned", which reads as "nothing to do".
+      expect(result.changeSummary).toBe(
+        "Diff failed - unable to determine changes"
+      );
+      expect(createOrUpdateComment).toHaveBeenCalled();
+    });
+
+    it("rejects an operation type it cannot build a result for", async () => {
       await expect(
         executeOperation({ operation: "invalid" } as any)
       ).rejects.toThrow(
         "Cannot create error result for unknown operation: invalid"
       );
-    });
-
-    it("should return the deploy result unchanged", async () => {
-      mockOperation.execute.mockResolvedValue(deployResult);
-
-      const result = await executeOperation(
-        infrastructureInputs("deploy", { stage: "test-stage" })
-      );
-
-      expect(result).toEqual(deployResult);
-    });
-
-    it("should report the real app name, exit code and truncation for deploy", async () => {
-      mockOperation.execute.mockResolvedValue(deployResult);
-
-      const result = (await executeOperation(
-        infrastructureInputs("deploy", { stage: "test-stage" })
-      )) as DeployResult;
-
-      // Each of these was destroyed by the transform: app became "unknown",
-      // truncated was forced false, and permalink was dropped entirely.
-      expect(result.app).toBe("kodehort-scratch");
-      expect(result.truncated).toBe(true);
-      expect(result.permalink).toBe("https://sst.dev/u/75c084c6");
-      expect(result.resourceChanges).toBe(3);
-      expect(result.outputs).toHaveLength(2);
-    });
-
-    it("should return the diff result unchanged", async () => {
-      mockOperation.execute.mockResolvedValue(diffResult);
-
-      const result = await executeOperation(
-        infrastructureInputs("diff", { stage: "test-stage" })
-      );
-
-      expect(result).toEqual(diffResult);
-    });
-
-    it("should report the real planned changes and summary for diff", async () => {
-      mockOperation.execute.mockResolvedValue(diffResult);
-
-      const result = (await executeOperation(
-        infrastructureInputs("diff", { stage: "test-stage" })
-      )) as DiffResult;
-
-      // The transform read these from differently-named schema fields, so the
-      // output said "No changes detected" and 0 regardless of what was mapped.
-      expect(result.plannedChanges).toBe(3);
-      expect(result.changeSummary).toBe("3 changes planned");
-      expect(result.app).toBe("kodehort-scratch");
-    });
-
-    it("should return the remove result unchanged", async () => {
-      mockOperation.execute.mockResolvedValue(removeResult);
-
-      const result = await executeOperation(
-        infrastructureInputs("remove", { stage: "test-stage" })
-      );
-
-      expect(result).toEqual(removeResult);
-    });
-
-    it("should preserve the parser's completion status for remove", async () => {
-      mockOperation.execute.mockResolvedValue(removeResult);
-
-      const result = (await executeOperation(
-        infrastructureInputs("remove", { stage: "test-stage" })
-      )) as RemoveResult;
-
-      // "partial" survives; the transform defaulted a missing value to "failed".
-      expect(result.completionStatus).toBe("partial");
-      expect(result.resourcesRemoved).toBe(1);
-    });
-
-    it("should handle stage operation successfully", async () => {
-      const mockStageResult = {
-        app: "test-app",
-        completionStatus: "complete" as const,
-        computedStage: "pr-123",
-        eventName: "pull_request",
-        exitCode: 0,
-        isPullRequest: true,
-        operation: "stage" as const,
-        rawOutput: "",
-        ref: "refs/heads/feature-branch",
-        stage: "test-stage",
-        success: true,
-        truncated: false,
-      };
-
-      mockOperation.execute.mockResolvedValue(mockStageResult);
-
-      const result = await executeOperation(stageInputs());
-
-      expect(result.success).toBe(true);
-      expect(result.operation).toBe("stage");
-      expect(result).toEqual(mockStageResult);
-    });
-
-    it("should handle operation execution errors", async () => {
-      const mockError = new Error("Operation failed");
-      mockOperation.execute.mockRejectedValue(mockError);
-
-      const result = await executeOperation(
-        infrastructureInputs("deploy", { stage: "test-stage" })
-      );
-
-      // The router still owns failure-result construction — that is result
-      // shaping, not error reporting.
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Operation failed");
-      expect(result.operation).toBe("deploy");
-      expect(result.stage).toBe("test-stage");
-    });
-
-    it("should build an operation-specific failure result on throw", async () => {
-      mockOperation.execute.mockRejectedValue(new Error("boom"));
-
-      const diff = (await executeOperation(
-        infrastructureInputs("diff", { stage: "test-stage" })
-      )) as DiffResult;
-      expect(diff.changeSummary).toBe("Operation failed");
-      expect(diff.plannedChanges).toBe(0);
-      expect(diff.changes).toEqual([]);
-
-      const remove = (await executeOperation(
-        infrastructureInputs("remove", { stage: "test-stage" })
-      )) as RemoveResult;
-      expect(remove.removedResources).toEqual([]);
-      expect(remove.resourcesRemoved).toBe(0);
-    });
-
-    it("should use fake token for stage operations", async () => {
-      mockOperation.execute.mockResolvedValue({
-        app: "",
-        completionStatus: "complete" as const,
-        computedStage: "test-stage",
-        eventName: "push",
-        exitCode: 0,
-        isPullRequest: false,
-        operation: "stage" as const,
-        rawOutput: "",
-        ref: "",
-        stage: "test-stage",
-        success: true,
-        truncated: false,
-      });
-
-      await executeOperation(stageInputs());
-
-      // The stage operation used to be handed the sentinel token
-      // "fake-token" so a GitHub client could be constructed for it and then
-      // never used. It has no token now, and no client is built.
-      expect(GitHubClient).not.toHaveBeenCalled();
     });
   });
 });

@@ -44,7 +44,10 @@ export class DiffParser extends OperationParser<DiffResult> {
     return {
       ...this.buildBaseResult({
         commonInfo,
-        completionStatus: commonInfo.completionStatus || "complete",
+        // Defaulting to "complete" regardless of success would label a failed
+        // diff complete whenever the capture carried no status banner.
+        completionStatus:
+          commonInfo.completionStatus || (success ? "complete" : "failed"),
         exitCode,
         operation: "diff",
         output: processedOutput,
@@ -257,9 +260,14 @@ export class DiffParser extends OperationParser<DiffResult> {
       return "No changes";
     }
 
-    // Check for error scenarios - only return error message for actual failures with non-zero exit code
-    if (exitCode !== 0 && SSTPatterns.diff.failed.test(output)) {
-      return "Diff parsing failed - unable to determine changes";
+    // A non-zero exit means the count is not trustworthy, whether or not the
+    // text carries a failure banner. This used to require both, so a diff that
+    // exited non-zero with no recognisable banner — an auth failure, an empty
+    // capture — was summarised as "0 changes planned", which reads as "your
+    // infrastructure is up to date". Only reachable since the diff operation
+    // stopped substituting a synthetic result for its own failures (#152).
+    if (exitCode !== 0) {
+      return "Diff failed - unable to determine changes";
     }
 
     // Always use "X changes planned" format for consistency

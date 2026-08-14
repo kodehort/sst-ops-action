@@ -61,6 +61,19 @@ export interface SSTCommandResult extends CLIResult {
 }
 
 /**
+ * How long each SST command is given before it is killed.
+ *
+ * These lived on the operation classes, so every caller had to pass one and
+ * the seam's own default was unreachable. A timeout is a property of the
+ * command, not of whoever is calling it.
+ */
+const COMMAND_TIMEOUTS: Record<"deploy" | "diff" | "remove", number> = {
+  deploy: 900_000, // 15 minutes
+  diff: 300_000, // 5 minutes
+  remove: 900_000, // 15 minutes
+};
+
+/**
  * SST CLI executor with comprehensive error handling and timeout management
  */
 export class SSTCLIExecutor {
@@ -76,7 +89,12 @@ export class SSTCLIExecutor {
     options: CLIOptions = {}
   ): Promise<SSTCommandResult> {
     const startTime = Date.now();
-    const timeout = options.timeout || this.defaultTimeout;
+    // The stage operation never reaches here — it runs no command — so the
+    // map covers exactly the three that do.
+    const timeout =
+      options.timeout ||
+      COMMAND_TIMEOUTS[operation as "deploy" | "diff" | "remove"] ||
+      this.defaultTimeout;
     const maxOutputSize = options.maxOutputSize || this.defaultMaxOutputSize;
 
     // Build the command

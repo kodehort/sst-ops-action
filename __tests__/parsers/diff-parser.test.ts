@@ -110,8 +110,16 @@ describe("DiffParser", () => {
       expect(result.stage).toBe("staging");
       expect(result.plannedChanges).toBe(0);
       expect(result.changes).toHaveLength(0);
-      // Malformed output with exit code 1 still shows planned changes count
-      expect(result.changeSummary).toBe("0 changes planned");
+
+      // Was "0 changes planned", which reads as "your infrastructure is up to
+      // date" for a run that failed. The count is not trustworthy after a
+      // non-zero exit, so the summary says so. Only reachable by a consumer
+      // since #152 stopped the diff operation substituting a synthetic result
+      // for its own failures; until then this string never left the parser.
+      expect(result.changeSummary).toBe(
+        "Diff failed - unable to determine changes"
+      );
+      expect(result.completionStatus).toBe("failed");
     });
 
     it("should handle empty output", () => {
