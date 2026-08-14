@@ -161,11 +161,18 @@ describe("Deploy Parser - SST Output Processing", () => {
       // The parser used to take a size limit and slice the output itself,
       // applying the same budget the CLI had already enforced. It now reports
       // what it is told and leaves the text alone.
-      const largeOutput = SST_DEPLOY_SUCCESS_OUTPUT.repeat(1000);
+      const repeats = 1000;
+      const largeOutput = SST_DEPLOY_SUCCESS_OUTPUT.repeat(repeats);
       const result = parser.parse(largeOutput, "staging", 0, true);
 
       expect(result.truncated).toBe(true);
-      expect(result.rawOutput).toBe(largeOutput);
+
+      // Not byte-identity: since #151 the deploy parser normalises its capture
+      // like the other two, which rewrites line endings and trailing blank
+      // runs. The claim being made is that no content was dropped, so count
+      // the marker rather than comparing the whole string.
+      const appBanner = "➜  App:        www-kodehort-com";
+      expect(result.rawOutput.split(appBanner).length - 1).toBe(repeats);
     });
 
     it("reports no truncation when the CLI captured the whole run", () => {

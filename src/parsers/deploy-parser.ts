@@ -10,6 +10,9 @@ import { OperationParser } from "./operation-parser";
 import { SSTPatterns } from "./patterns";
 
 export class DeployParser extends OperationParser<DeployResult> {
+  /** A deploy that exits zero but reports a failure banner did not deploy. */
+  protected readonly failurePatterns = [SSTPatterns.status.failed];
+
   /**
    * Parse SST deploy output into structured result
    */
@@ -21,11 +24,7 @@ export class DeployParser extends OperationParser<DeployResult> {
   ): DeployResult {
     // The CLI layer already enforced the size budget against a single buffer.
     // A second layer here would apply the same limit twice.
-    const processedOutput = output;
-
-    // Parse common information using base parser
-    const lines = processedOutput.split("\n");
-    const commonInfo = this.parseCommonInfo(lines);
+    const { commonInfo, output: processedOutput } = this.parseCommon(output);
 
     // Parse deploy-specific information
     const resources = this.parseResourceChanges(processedOutput);
@@ -35,24 +34,24 @@ export class DeployParser extends OperationParser<DeployResult> {
     // Determine success based on exit code (primary) and patterns (secondary)
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
 
-    const result: DeployResult = {
-      app: commonInfo.app || "",
-      exitCode,
+    return {
+      ...this.buildBaseResult({
+        commonInfo,
+        completionStatus:
+          commonInfo.completionStatus || (success ? "complete" : "failed"),
+        error,
+        exitCode,
+        operation: "deploy",
+        output: processedOutput,
+        stage,
+        success,
+        truncated,
+      }),
       operation: "deploy",
-      rawOutput: processedOutput,
-      stage,
-      success,
-      truncated,
-      ...(error && { error }),
-      completionStatus:
-        commonInfo.completionStatus || (success ? "complete" : "failed"),
-      ...(commonInfo.permalink && { permalink: commonInfo.permalink }),
       outputs,
       resourceChanges: resources.length,
       resources,
     };
-
-    return result;
   }
 
   /**

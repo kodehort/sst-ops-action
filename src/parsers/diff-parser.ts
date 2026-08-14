@@ -8,6 +8,12 @@ import { SSTPatterns } from "./patterns";
  * Extracts planned infrastructure changes without deploying
  */
 export class DiffParser extends OperationParser<DiffResult> {
+  /** "No changes" is a successful diff; a diff error is not. */
+  protected readonly failurePatterns = [
+    SSTPatterns.diff.failed,
+    SSTPatterns.errors.message,
+  ];
+
   /**
    * Parse SST diff output and extract planned changes
    */
@@ -17,12 +23,7 @@ export class DiffParser extends OperationParser<DiffResult> {
     exitCode: number,
     truncated: boolean
   ): DiffResult {
-    // Handle null/undefined input gracefully
-    const processedOutput = this.cleanText(output || "");
-    const lines = processedOutput.split("\n");
-
-    // Parse common information from base parser (uses full output for header info)
-    const commonInfo = this.parseCommonInfo(lines);
+    const { commonInfo, output: processedOutput } = this.parseCommon(output);
 
     // Extracted once, here, and carried on the result. The formatter used to
     // scan the raw output for it a second time with its own copy of this.
@@ -40,27 +41,23 @@ export class DiffParser extends OperationParser<DiffResult> {
       exitCode
     );
 
-    // Build result with all required properties
-    const result: DiffResult = {
-      app: commonInfo.app || "",
+    return {
+      ...this.buildBaseResult({
+        commonInfo,
+        completionStatus: commonInfo.completionStatus || "complete",
+        exitCode,
+        operation: "diff",
+        output: processedOutput,
+        stage,
+        success,
+        truncated,
+      }),
       changeSummary,
       changes,
-      completionStatus: commonInfo.completionStatus || "complete",
       diffSection,
-      exitCode,
       operation: "diff",
-      permalink: commonInfo.permalink || "",
-
-      // Diff-specific properties
       plannedChanges,
-      rawOutput: processedOutput,
-      stage,
-      // Base operation result properties
-      success,
-      truncated,
     };
-
-    return result;
   }
 
   /**
@@ -270,25 +267,47 @@ export class DiffParser extends OperationParser<DiffResult> {
   }
 
   /**
-   * Override base success determination for diff-specific logic
+   * Extract the diff section from the full SST output
+   *
+   * Isolates the actual diff content by skipping build and preparation phases.
+   * Looks for the "✓ Generated" marker that indicates the start of diff output.
+   *
+   * Lived on the base parser, where the diff parser was its only caller.
+   *
+   * There were two implementations of this, one there and one inside the
+   * comment formatter, and they disagreed on the no-match case: that one
+   * returned the entire original output, the formatter's returned an empty
+   * string. The formatter's behaviour is the one that survives — the other
+   * fallback would render a whole raw CLI capture into a pull request comment
+   * where nothing renders today. That disagreement is also why this method's
+   * result could be computed and thrown away in the diff parser without
+   * anyone noticing.
+   *
+   * @returns Diff section content, or an empty string if the marker is absent
    */
-  protected isSuccessfulOperation(output: string, exitCode: number): boolean {
-    // Primary indicator: exit code
-    if (exitCode !== 0) {
-      return false;
+  private extractDiffSection(output: string): string {
+    const lines = output.split("\n");
+    let diffStartIndex = -1;
+
+    // Find the "✓ Generated" marker
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (line && SSTPatterns.sections.generated.test(line)) {
+        diffStartIndex = i + 1; // Start after the marker line
+        break;
+      }
     }
 
-    // Check for diff-specific error patterns
-    if (SSTPatterns.diff.failed.test(output)) {
-      return false;
+    if (diffStartIndex === -1 || diffStartIndex >= lines.length) {
+      return "";
     }
 
-    // Check for general error patterns from base parser
-    if (SSTPatterns.errors.message.test(output)) {
-      return false;
+    const diffLines = lines.slice(diffStartIndex);
+
+    while (diffLines.length > 0 && diffLines.at(-1)?.trim() === "") {
+      diffLines.pop();
     }
 
-    // Diff operations with "No changes" are still successful
-    return true;
+    return diffLines.join("\n").trim();
   }
 }
