@@ -33,17 +33,18 @@ export type BoundOperation = () => Promise<OperationResult>;
  */
 export class OperationFactory {
   private readonly cliExecutor: SSTCLIExecutor;
-  private readonly createGitHubClient: () => GitHubClient;
+  private readonly createGitHubClient: (token: string) => GitHubClient;
 
   /**
-   * @param createGitHubClient Called only by the operations that need it. The
-   *   stage operation has no GitHub client, which is why this is a function
-   *   rather than an instance: constructing one eagerly is what required a
-   *   sentinel token to get past its credential check.
+   * @param createGitHubClient Called only by the operations that need it, and
+   *   given the token from the branch that calls it. The stage operation has
+   *   no GitHub client and no token, which is why this takes the token here
+   *   rather than closing over one: the router previously had to pass the
+   *   sentinel `""` on the stage branch to satisfy the parameter.
    */
   constructor(
     cliExecutor: SSTCLIExecutor,
-    createGitHubClient: () => GitHubClient
+    createGitHubClient: (token: string) => GitHubClient
   ) {
     this.cliExecutor = cliExecutor;
     this.createGitHubClient = createGitHubClient;
@@ -60,21 +61,21 @@ export class OperationFactory {
       case "deploy": {
         const operation = new DeployOperation(
           this.cliExecutor,
-          this.createGitHubClient()
+          this.createGitHubClient(inputs.token)
         );
         return () => operation.execute(inputs satisfies InfrastructureInputs);
       }
       case "diff": {
         const operation = new DiffOperation(
           this.cliExecutor,
-          this.createGitHubClient()
+          this.createGitHubClient(inputs.token)
         );
         return () => operation.execute(inputs satisfies InfrastructureInputs);
       }
       case "remove": {
         const operation = new RemoveOperation(
           this.cliExecutor,
-          this.createGitHubClient()
+          this.createGitHubClient(inputs.token)
         );
         return () => operation.execute(inputs satisfies InfrastructureInputs);
       }
