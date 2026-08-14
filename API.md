@@ -155,12 +155,10 @@ permissions:
   contents: read          # Read repository contents
   issues: write          # Create/update issue comments  
   pull-requests: write   # Create/update PR comments
-  actions: write         # Upload artifacts
 ```
 
 **Token Capabilities:**
 - Create and update PR/issue comments
-- Upload workflow artifacts
 - Set workflow status
 - Access repository metadata
 
@@ -1076,7 +1074,6 @@ Detailed behavior for each operation type.
 2. Parse deployment output for resources and generic outputs
 3. Extract URLs and other outputs from generic parsing
 4. Create PR comments with deployment results
-5. Upload artifacts with deployment logs
 
 **Typical Duration:** 30 seconds to 15 minutes (default timeout)
 

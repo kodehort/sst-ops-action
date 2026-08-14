@@ -38,7 +38,6 @@ on:
 permissions:
   contents: read           # Read repository contents
   pull-requests: write    # Create/update PR comments
-  actions: write          # Upload workflow artifacts
   deployments: write      # Create deployment status
 
 # Global environment variables
