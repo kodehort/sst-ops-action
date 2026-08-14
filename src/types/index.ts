@@ -22,6 +22,20 @@ export { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
 import type { CommentMode, SSTOperation } from "./operations.js";
 import { COMMENT_MODES, SST_OPERATIONS } from "./operations.js";
 
+/**
+ * The capture budget applied when `max-output-size` is absent.
+ *
+ * Stated once, here, beside the validator that enforces the range. It used to
+ * be three values: `action.yml` and the input schema said 50000 while the CLI
+ * seam used `50 * 1024`. That 51200 was only reachable through the
+ * `max-output-size: 0` bug, so setting `0` produced a budget documented
+ * nowhere.
+ */
+export const DEFAULT_MAX_OUTPUT_SIZE = 50_000;
+
+/** The largest budget the input accepts. `0` means no budget at all. */
+export const MAX_OUTPUT_SIZE_LIMIT = 1024 * 1024;
+
 export function isValidOperation(operation: string): operation is SSTOperation {
   return SST_OPERATIONS.includes(operation as SSTOperation);
 }
@@ -47,8 +61,10 @@ export function validateMaxOutputSize(size: unknown): number {
     );
   }
 
-  if (parsed > 1024 * 1024) {
-    throw new Error("Max output size cannot exceed 1MB (1048576 bytes)");
+  if (parsed > MAX_OUTPUT_SIZE_LIMIT) {
+    throw new Error(
+      `Max output size cannot exceed 1MB (${MAX_OUTPUT_SIZE_LIMIT} bytes)`
+    );
   }
 
   return parsed;

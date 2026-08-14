@@ -4,7 +4,7 @@
  */
 
 import * as exec from "@actions/exec";
-import type { SSTOperation } from "../types/index.js";
+import { DEFAULT_MAX_OUTPUT_SIZE, type SSTOperation } from "../types/index.js";
 
 /**
  * Result of executing a CLI command
@@ -78,7 +78,7 @@ const COMMAND_TIMEOUTS: Record<"deploy" | "diff" | "remove", number> = {
  */
 export class SSTCLIExecutor {
   private readonly defaultTimeout = 15 * 60 * 1000; // 15 minutes
-  private readonly defaultMaxOutputSize = 50 * 1024; // 50KB
+  private readonly defaultMaxOutputSize = DEFAULT_MAX_OUTPUT_SIZE;
 
   /**
    * Execute an SST command with proper error handling and output capture
@@ -95,7 +95,10 @@ export class SSTCLIExecutor {
       options.timeout ||
       COMMAND_TIMEOUTS[operation as "deploy" | "diff" | "remove"] ||
       this.defaultTimeout;
-    const maxOutputSize = options.maxOutputSize || this.defaultMaxOutputSize;
+    // `??`, not `||`. Absent and zero are different answers: absent takes the
+    // default, zero means no cap. `||` conflated them, so `max-output-size: 0`
+    // — documented as unlimited — produced the tightest realistic budget.
+    const maxOutputSize = options.maxOutputSize ?? this.defaultMaxOutputSize;
 
     // Build the command
     const command = this.buildCommand(operation, stage, options);
@@ -229,16 +232,22 @@ export class SSTCLIExecutor {
     let truncated = false;
     let exitCode = 0;
 
+    // 0 means no cap, which is a documented value rather than a sentinel the
+    // arithmetic below should ever see: `remaining` would be negative on the
+    // first chunk and every byte would be dropped as "over budget".
+    const unlimited = options.maxOutputSize === 0;
+
     const append = (data: Buffer, stream: "stderr" | "stdout"): void => {
       const chunk = data.toString();
-      const remaining = options.maxOutputSize - output.length;
+      const kept = unlimited
+        ? chunk
+        : capped(chunk, options.maxOutputSize - output.length);
 
-      if (remaining <= 0) {
+      if (kept === null) {
         truncated = true;
         return;
       }
 
-      const kept = chunk.length > remaining ? chunk.slice(0, remaining) : chunk;
       if (kept.length < chunk.length) {
         truncated = true;
       }
@@ -321,4 +330,17 @@ export class SSTCLIExecutor {
       truncated,
     };
   }
+}
+
+/**
+ * Trim a chunk to the remaining budget.
+ *
+ * @returns The part that fits, or null when the budget is already spent
+ */
+function capped(chunk: string, remaining: number): string | null {
+  if (remaining <= 0) {
+    return null;
+  }
+
+  return chunk.length > remaining ? chunk.slice(0, remaining) : chunk;
 }

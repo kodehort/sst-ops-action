@@ -56,7 +56,7 @@ export class OperationFormatter {
    * limit by taking a different route.
    */
   formatOperationComment(result: BaseOperationResult): string {
-    return withinCommentLimit(this.buildComment(result));
+    return withinLimit(this.buildComment(result), COMMENT_LIMIT, "comment");
   }
 
   private buildComment(result: BaseOperationResult): string {
@@ -80,6 +80,10 @@ export class OperationFormatter {
    * Format operation-specific summary content
    */
   formatOperationSummary(result: BaseOperationResult): string {
+    return withinLimit(this.buildSummary(result), SUMMARY_LIMIT, "summary");
+  }
+
+  private buildSummary(result: BaseOperationResult): string {
     switch (result.operation) {
       case "deploy":
         return this.formatDeploySummary(result as DeployResult);
@@ -604,33 +608,50 @@ No infrastructure changes detected for this operation.`;
  */
 const COMMENT_LIMIT = 65_536;
 
-/** Shown in place of what was cut. The summary has a 1MB budget. */
-const TRUNCATION_NOTICE =
-  "> **Comment truncated** to fit GitHub's 65,536 character limit. " +
-  "See the workflow summary for the full output.";
+/**
+ * GitHub caps a job summary at 1MB.
+ *
+ * Unreachable while capture was capped at 1MB — that yields roughly a 730KB
+ * summary — but `max-output-size: 0` means genuinely unlimited capture since
+ * #160, and `createWorkflowSummary` swallows a failed write into a warning
+ * exactly as the comment path did. Left unbounded, the fallback the comment's
+ * truncation notice points at would be the thing that silently disappeared.
+ */
+const SUMMARY_LIMIT = 1024 * 1024;
+
+/** Shown in place of what was cut. */
+function truncationNotice(surface: "comment" | "summary"): string {
+  return surface === "comment"
+    ? "> **Comment truncated** to fit GitHub's 65,536 character limit. " +
+        "See the workflow summary for the full output."
+    : "> **Summary truncated** to fit GitHub's 1MB limit.";
+}
 
 /**
- * Bound a rendered comment, repairing any block the cut lands inside.
+ * Bound a rendered body, repairing any block the cut lands inside.
  *
  * The diff is wrapped in `<details>` around a fenced block, so cutting at a
  * byte offset can leave both open — which breaks rendering for everything
  * after it, not just the truncated part. Whatever is still open at the cut is
  * closed before the notice is appended.
  */
-function withinCommentLimit(body: string): string {
-  if (body.length <= COMMENT_LIMIT) {
+function withinLimit(
+  body: string,
+  limit: number,
+  surface: "comment" | "summary"
+): string {
+  if (body.length <= limit) {
     return body;
   }
 
+  const notice = truncationNotice(surface);
   // Reserve room for the notice and for the closers, which are not known
   // until the cut point is chosen. Four fences and four details is far more
   // nesting than the formatter builds, so this cannot under-reserve.
-  const reserve = TRUNCATION_NOTICE.length + "\n\n```\n</details>\n".length * 4;
-  const kept = keepWholeLines(body, COMMENT_LIMIT - reserve);
+  const reserve = notice.length + "\n\n```\n</details>\n".length * 4;
+  const kept = keepWholeLines(body, limit - reserve);
 
-  return [kept, closersFor(kept), `\n\n${TRUNCATION_NOTICE}`]
-    .filter(Boolean)
-    .join("");
+  return [kept, closersFor(kept), `\n\n${notice}`].filter(Boolean).join("");
 }
 
 /**
