@@ -46,19 +46,6 @@ vi.mock("@actions/exec", () => ({
   exec: vi.fn(),
 }));
 
-vi.mock("@actions/artifact", () => ({
-  DefaultArtifactClient: vi.fn().mockImplementation(() => ({
-    uploadArtifact: vi.fn().mockResolvedValue({
-      artifactName: "test-artifact",
-      size: 1024,
-    }),
-  })),
-}));
-
-vi.mock("@actions/io", () => ({
-  mkdirP: vi.fn(),
-}));
-
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {

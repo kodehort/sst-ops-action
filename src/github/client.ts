@@ -1,15 +1,13 @@
 /**
- * GitHub API client for PR comments, workflow summaries, and artifact management
- * Handles operation-specific formatting and proper error recovery
+ * GitHub API client for PR comments and workflow summaries
+ *
+ * It decides two things: whether a result warrants a comment, and whether that
+ * comment is a new one or an edit of the one it left last time. Everything the
+ * comment says comes from OperationFormatter.
  */
 
-import { writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import * as io from "@actions/io";
 import type { BaseOperationResult, CommentMode } from "../types/index.js";
 import { OperationFormatter } from "./formatters.js";
 
@@ -23,15 +21,6 @@ interface CommentOptions {
 }
 
 /**
- * Artifact upload options
- */
-interface ArtifactOptions {
-  compressionLevel?: number;
-  name: string;
-  retentionDays?: number;
-}
-
-/**
  * GitHub client for SST operations integration
  */
 export class GitHubClient {
@@ -39,15 +28,16 @@ export class GitHubClient {
   private readonly context: typeof github.context;
   private readonly formatter: OperationFormatter;
 
-  constructor(token?: string) {
-    const githubToken =
-      token || core.getInput("github-token") || process.env.GITHUB_TOKEN;
-    if (!githubToken) {
-      throw new Error(
-        "GitHub token is required. Provide via parameter, github-token input, or GITHUB_TOKEN environment variable."
-      );
-    }
-    this.octokit = github.getOctokit(githubToken);
+  /**
+   * @param token Required. Input resolution owns the credential: `token` is a
+   *   required action input that the schema rejects when empty, so by the time
+   *   a client is constructed there is a token. This used to fall back to a
+   *   `github-token` input and then to `process.env.GITHUB_TOKEN` — the first
+   *   names an input the action does not declare, and the second could only be
+   *   reached on a path validation had already rejected.
+   */
+  constructor(token: string) {
+    this.octokit = github.getOctokit(token);
     this.context = github.context;
     this.formatter = new OperationFormatter();
   }
@@ -75,7 +65,7 @@ export class GitHubClient {
     };
 
     try {
-      const commentBody = this.formatComment(result);
+      const commentBody = this.formatter.formatOperationComment(result);
 
       if (commentOptions.updateExisting && this.context.payload.pull_request) {
         if (!commentOptions.identifier) {
@@ -119,81 +109,6 @@ export class GitHubClient {
   }
 
   /**
-   * Upload artifacts for debugging purposes
-   *
-   * No production caller: the dead-code analysis now reports this rather than
-   * seeing its own test suite as a consumer. Deleting it is #153's job,
-   * because it orphans the @actions/artifact dependency and the stub helper
-   * it calls, which have to go in the same change.
-   */
-  // fallow-ignore-next-line unused-class-member
-  async uploadArtifacts(
-    result: BaseOperationResult,
-    options: Partial<ArtifactOptions> = {}
-  ): Promise<void> {
-    const artifactOptions: ArtifactOptions = {
-      compressionLevel: 6,
-      name: `sst-${result.operation}-${result.stage}-${Date.now()}`,
-      retentionDays: 30,
-      ...options,
-    };
-
-    try {
-      const tempDir = join(tmpdir(), "sst-artifacts");
-      await io.mkdirP(tempDir);
-
-      // Create result file
-      const resultFile = join(tempDir, "result.json");
-      await writeFile(resultFile, JSON.stringify(result, null, 2));
-
-      // Create raw output file
-      const outputFile = join(tempDir, "output.txt");
-      await writeFile(outputFile, result.rawOutput);
-
-      // Create metadata file
-      const metadataFile = join(tempDir, "metadata.json");
-      await writeFile(
-        metadataFile,
-        JSON.stringify(
-          {
-            app: result.app,
-            duration: this.calculateDuration(result),
-            exitCode: result.exitCode,
-            operation: result.operation,
-            stage: result.stage,
-            success: result.success,
-            timestamp: new Date().toISOString(),
-            truncated: result.truncated,
-          },
-          null,
-          2
-        )
-      );
-
-      // Upload artifacts
-      const artifactClient = new DefaultArtifactClient();
-      const uploadResponse = await artifactClient.uploadArtifact(
-        artifactOptions.name,
-        [resultFile, outputFile, metadataFile],
-        tempDir,
-        artifactOptions.retentionDays === undefined
-          ? {}
-          : {
-              retentionDays: artifactOptions.retentionDays,
-            }
-      );
-
-      core.info(
-        `Uploaded artifact: ${artifactOptions.name} (${uploadResponse.size} bytes)`
-      );
-    } catch (error) {
-      core.warning(
-        `Failed to upload artifacts: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  /**
    * Determine if a comment should be posted based on result and mode
    */
   private shouldComment(
@@ -217,16 +132,6 @@ export class GitHubClient {
         return result.success;
       }
     }
-  }
-
-  /**
-   * Format comment based on operation type and result
-   */
-  private formatComment(result: BaseOperationResult): string {
-    // Use OperationFormatter for the main content
-    const mainContent = this.formatter.formatOperationComment(result);
-
-    return mainContent;
   }
 
   /**
@@ -285,14 +190,5 @@ export class GitHubClient {
         issue_number: this.context.payload.pull_request?.number || 0,
       });
     }
-  }
-
-  /**
-   * Calculate operation duration (stub - would need start time in result)
-   */
-  private calculateDuration(_result: BaseOperationResult): number {
-    // This would ideally come from the result object
-    // For now, return 0 as placeholder
-    return 0;
   }
 }

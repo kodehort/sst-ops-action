@@ -28,12 +28,13 @@ export async function executeOperation(
       );
     }
 
-    // The client is created lazily, so the stage operation never needs a
-    // token. It previously got the sentinel string "fake-token" purely to
-    // satisfy a credential check for a client it does not use.
+    // The client is created lazily and only by the branches that hold a token,
+    // so the stage operation never needs one. It previously got the sentinel
+    // "fake-token", then "", purely to satisfy a credential check for a client
+    // it does not use.
     const factory = new OperationFactory(
       new SSTCLIExecutor(),
-      () => new GitHubClient(inputs.operation === "stage" ? "" : inputs.token)
+      (token) => new GitHubClient(token)
     );
 
     // Execute operation. The operation returns the parser's result, which is
