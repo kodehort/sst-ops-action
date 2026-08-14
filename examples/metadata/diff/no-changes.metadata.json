@@ -1,15 +1,15 @@
 {
+  "app": "my-sst-app",
+  "description": "Generated from no-changes.txt",
+  "files": {
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.comment.md",
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/no-changes.txt",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/no-changes.metadata.json",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.summary.md"
+  },
+  "generatedAt": "2026-08-14T12:14:07.122Z",
   "name": "no-changes",
   "operation": "diff",
-  "app": "my-sst-app",
   "stage": "staging",
-  "success": true,
-  "description": "Generated from no-changes.txt",
-  "generatedAt": "2025-08-16T18:55:14.035Z",
-  "files": {
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/no-changes.txt",
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.comment.md",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/no-changes.summary.md",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/no-changes.metadata.json"
-  }
+  "success": true
 }

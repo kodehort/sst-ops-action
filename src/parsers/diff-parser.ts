@@ -316,6 +316,113 @@ export class DiffParser extends OperationParser<DiffResult> {
       diffLines.pop();
     }
 
-    return diffLines.join("\n").trim();
+    return withoutEnvironmentBlock(diffLines).join("\n").trim();
   }
+}
+
+/**
+ * A diff line for an `environment` property, in any shape SST emits.
+ *
+ * The subscript form is easy to miss and was: alongside `environment.NAME`,
+ * SST also writes `environment["INPUT_COMMENT-MODE"] = on-success` for names
+ * that are not bare identifiers. A pattern anchored on the dot leaks those,
+ * and a test that greps for `environment.` leaks them too, because there is
+ * no dot in them.
+ */
+const ENVIRONMENT_LINE = /^(\s*)[+\-*]\s+environment(?:[.[]|\s|$)/;
+
+/** `... = {` opens a brace block whose body runs to a closing `}` line. */
+const OPENS_BLOCK = /[=]\s*\{\s*$/;
+
+/** The closing brace of such a block, alone on its line. */
+const CLOSES_BLOCK = /^\s*\}[,;]?\s*$/;
+
+/**
+ * Replace every `environment` entry with a line saying how many there were.
+ *
+ * SST renders a changed resource's whole environment into the diff. On a
+ * runner that is the runner's own environment, which is both the highest-risk
+ * content in the capture and almost never what a reviewer wants — in one real
+ * capture it was 61 lines, 78% of the rendered comment, for a single planned
+ * change.
+ *
+ * The count is kept because deleting the lines silently would tell a reviewer
+ * that nothing about the environment changed, which is a different and equally
+ * wrong claim.
+ *
+ * Three shapes have to be handled — a line per variable, a subscripted name,
+ * and one that opens a brace block continuing over several lines. See
+ * `__tests__/integration/environment-block.test.ts` for a worked example of
+ * each. Matching lines individually would strand the block's closing brace
+ * inside a fenced diff.
+ */
+function withoutEnvironmentBlock(lines: string[]): string[] {
+  const kept: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index] as string;
+    const match = line.match(ENVIRONMENT_LINE);
+
+    if (match) {
+      const run = consumeEnvironmentRun(lines, index);
+      const noun = run.removed === 1 ? "variable" : "variables";
+      kept.push(
+        `${match[1] ?? ""}* environment (${run.removed} ${noun} changed, values hidden)`
+      );
+      index = run.next;
+      continue;
+    }
+
+    kept.push(line);
+    index += 1;
+  }
+
+  return kept;
+}
+
+/**
+ * Consume a contiguous run of environment entries from `start`.
+ *
+ * A run rather than a line at a time, so one placeholder stands for all of it.
+ *
+ * @returns How many entries were consumed, and the index to resume from
+ */
+function consumeEnvironmentRun(
+  lines: string[],
+  start: number
+): { next: number; removed: number } {
+  let index = start;
+  let removed = 0;
+
+  while (index < lines.length) {
+    const current = lines[index] as string;
+    if (!ENVIRONMENT_LINE.test(current)) {
+      break;
+    }
+
+    index += 1;
+    removed += 1;
+
+    if (OPENS_BLOCK.test(current)) {
+      index = skipBlockBody(lines, index);
+    }
+  }
+
+  return { next: index, removed };
+}
+
+/** Skip to just past the line closing a brace block. */
+function skipBlockBody(lines: string[], start: number): number {
+  let index = start;
+
+  while (index < lines.length) {
+    const body = lines[index] as string;
+    index += 1;
+    if (CLOSES_BLOCK.test(body)) {
+      break;
+    }
+  }
+
+  return index;
 }
