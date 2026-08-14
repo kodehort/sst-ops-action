@@ -8,6 +8,12 @@ import { SSTPatterns } from "./patterns";
  * Extracts resource removal information and tracks success/failure status
  */
 export class RemoveParser extends OperationParser<RemoveResult> {
+  /** "No resources to remove" is a successful remove; a failure banner is not. */
+  protected readonly failurePatterns = [
+    SSTPatterns.remove.removeFailed,
+    SSTPatterns.errors.message,
+  ];
+
   /**
    * Parse SST remove output and extract resource removal information
    */
@@ -17,12 +23,7 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     exitCode: number,
     truncated: boolean
   ): RemoveResult {
-    // Handle null/undefined input gracefully
-    const processedOutput = this.cleanText(output || "");
-    const lines = processedOutput.split("\n");
-
-    // Parse common information from base parser
-    const commonInfo = this.parseCommonInfo(lines);
+    const { commonInfo, output: processedOutput } = this.parseCommon(output);
 
     // Determine success based on exit code and error patterns
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
@@ -38,25 +39,21 @@ export class RemoveParser extends OperationParser<RemoveResult> {
       removedResources
     );
 
-    // Build result with all required properties
-    const result: RemoveResult = {
-      app: commonInfo.app || "",
-      completionStatus,
-      exitCode,
+    return {
+      ...this.buildBaseResult({
+        commonInfo,
+        completionStatus,
+        exitCode,
+        operation: "remove",
+        output: processedOutput,
+        stage,
+        success,
+        truncated,
+      }),
       operation: "remove",
-      permalink: commonInfo.permalink || "",
-      rawOutput: processedOutput,
       removedResources,
-
-      // Remove-specific properties
       resourcesRemoved,
-      stage,
-      // Base operation result properties
-      success,
-      truncated,
     };
-
-    return result;
   }
 
   /**
@@ -162,28 +159,5 @@ export class RemoveParser extends OperationParser<RemoveResult> {
     }
 
     return "complete"; // Default to complete for successful operations
-  }
-
-  /**
-   * Override base success determination for remove-specific logic
-   */
-  protected isSuccessfulOperation(output: string, exitCode: number): boolean {
-    // Primary indicator: exit code
-    if (exitCode !== 0) {
-      return false;
-    }
-
-    // Check for remove-specific error patterns
-    if (SSTPatterns.remove.removeFailed.test(output)) {
-      return false;
-    }
-
-    // Check for general error patterns from base parser
-    if (SSTPatterns.errors.message.test(output)) {
-      return false;
-    }
-
-    // Remove operations with "No resources to remove" are still successful
-    return true;
   }
 }
