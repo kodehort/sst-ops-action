@@ -49,8 +49,17 @@ export class OperationFormatter {
 
   /**
    * Format operation-specific comment content
+   *
+   * The length guard sits here, at the single entry point, rather than in the
+   * diff path that happens to produce the largest body today. Anything that
+   * renders a comment goes through this method, so nothing can grow past the
+   * limit by taking a different route.
    */
   formatOperationComment(result: BaseOperationResult): string {
+    return withinCommentLimit(this.buildComment(result));
+  }
+
+  private buildComment(result: BaseOperationResult): string {
     switch (result.operation) {
       case "deploy":
         return this.formatDeployComment(result as DeployResult);
@@ -584,4 +593,73 @@ No infrastructure changes detected for this operation.`;
         return `${action}`;
     }
   }
+}
+
+/**
+ * GitHub rejects an issue or pull request comment body longer than this.
+ *
+ * The API answers 422, and `GitHubClient` turns that into a warning and
+ * resolves — so before this guard a comment over the limit simply never
+ * appeared and the run stayed green.
+ */
+const COMMENT_LIMIT = 65_536;
+
+/** Shown in place of what was cut. The summary has a 1MB budget. */
+const TRUNCATION_NOTICE =
+  "> **Comment truncated** to fit GitHub's 65,536 character limit. " +
+  "See the workflow summary for the full output.";
+
+/**
+ * Bound a rendered comment, repairing any block the cut lands inside.
+ *
+ * The diff is wrapped in `<details>` around a fenced block, so cutting at a
+ * byte offset can leave both open — which breaks rendering for everything
+ * after it, not just the truncated part. Whatever is still open at the cut is
+ * closed before the notice is appended.
+ */
+function withinCommentLimit(body: string): string {
+  if (body.length <= COMMENT_LIMIT) {
+    return body;
+  }
+
+  // Reserve room for the notice and for the closers, which are not known
+  // until the cut point is chosen. Four fences and four details is far more
+  // nesting than the formatter builds, so this cannot under-reserve.
+  const reserve = TRUNCATION_NOTICE.length + "\n\n```\n</details>\n".length * 4;
+  const kept = keepWholeLines(body, COMMENT_LIMIT - reserve);
+
+  return [kept, closersFor(kept), `\n\n${TRUNCATION_NOTICE}`]
+    .filter(Boolean)
+    .join("");
+}
+
+/**
+ * Take as many whole lines as fit in `budget`.
+ *
+ * A half-line inside a fenced diff reads as corrupted output rather than as
+ * a truncation, so the cut lands on a newline.
+ */
+function keepWholeLines(body: string, budget: number): string {
+  if (budget <= 0) {
+    return "";
+  }
+
+  const cut = body.lastIndexOf("\n", budget);
+
+  return cut === -1 ? body.slice(0, budget) : body.slice(0, cut);
+}
+
+/** Close any fence or `<details>` left open by the cut. */
+function closersFor(kept: string): string {
+  let closers = "";
+
+  if ((kept.match(/```/g) || []).length % 2 !== 0) {
+    closers += "\n```";
+  }
+
+  const opened = (kept.match(/<details>/g) || []).length;
+  const closed = (kept.match(/<\/details>/g) || []).length;
+  closers += "\n</details>".repeat(Math.max(0, opened - closed));
+
+  return closers;
 }
