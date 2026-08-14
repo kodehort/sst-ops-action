@@ -99,7 +99,7 @@ Features:
 - Deploys all stack resources and extracts deployment outputs
 - Tracks resource changes (created, updated, unchanged)
 - Posts PR comments with deployment status
-- Generates workflow summaries and uploads artifacts
+- Generates workflow summaries
 
 ### Diff
 

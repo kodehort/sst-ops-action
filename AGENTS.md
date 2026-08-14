@@ -15,7 +15,8 @@ this file records only things that cost a wasted run to discover.
   Nothing is lost; the working copy is untouched.
 - `jj commit` takes `--message`, not `-F`. Pass a file with
   `--message "$(cat <file>)"`.
-- `jj git push --bookmark <name>` needs no `--allow-new`; that flag does not exist.
+- `jj git push --bookmark <name>` pushes a new bookmark as-is. This jj version
+  rejects `--allow-new`; newer ones accept it, so check before assuming either.
 
 ## gh
 

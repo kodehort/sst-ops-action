@@ -30,7 +30,6 @@ on:
 permissions:
   contents: read           # Read repository contents
   pull-requests: write    # Create/update PR comments (if applicable)
-  actions: write          # Upload workflow artifacts
 
 # Environment variables required for SST deployment
 env:

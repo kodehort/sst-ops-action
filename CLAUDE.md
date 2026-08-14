@@ -56,7 +56,7 @@ bun run prepare
 1. Input parsing and validation via operation-specific parsers
 2. SST command execution through CLI utilities
 3. Output parsing and formatting
-4. GitHub integration for PR comments and artifact uploads
+4. GitHub integration for PR comments and workflow summaries
 5. Result reporting via GitHub Action outputs
 
 ### Input Validation and Error Handling

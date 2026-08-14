@@ -57,7 +57,6 @@ on:
 # Required permissions for cleanup operations
 permissions:
   contents: read           # Read repository contents
-  actions: write          # Access workflow artifacts
   issues: write           # Comment on issues (for notifications)
   pull-requests: write    # Comment on PRs
 

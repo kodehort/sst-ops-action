@@ -29,7 +29,6 @@ permissions:
   contents: read           # Read repository contents
   pull-requests: write    # Create/update PR comments
   issues: write           # Comment on issues
-  actions: write          # Upload workflow artifacts
 
 # Environment variables for SST deployment
 env:
