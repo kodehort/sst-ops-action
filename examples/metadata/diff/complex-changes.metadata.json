@@ -1,15 +1,15 @@
 {
+  "app": "my-complex-app",
+  "description": "Generated from complex-changes.txt",
+  "files": {
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.comment.md",
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/complex-changes.txt",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/complex-changes.metadata.json",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.summary.md"
+  },
+  "generatedAt": "2026-08-14T12:14:07.121Z",
   "name": "complex-changes",
   "operation": "diff",
-  "app": "my-complex-app",
   "stage": "production",
-  "success": true,
-  "description": "Generated from complex-changes.txt",
-  "generatedAt": "2025-08-16T18:55:14.035Z",
-  "files": {
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/complex-changes.txt",
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.comment.md",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.summary.md",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/complex-changes.metadata.json"
-  }
+  "success": true
 }

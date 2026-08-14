@@ -1,15 +1,15 @@
 {
+  "app": "kodehort-scratch",
+  "description": "Generated from environment-variables.txt",
+  "files": {
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.comment.md",
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/environment-variables.txt",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/environment-variables.metadata.json",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.summary.md"
+  },
+  "generatedAt": "2026-08-14T12:14:07.123Z",
   "name": "environment-variables",
   "operation": "diff",
-  "app": "kodehort-scratch",
   "stage": "dev",
-  "success": true,
-  "description": "Generated from environment-variables.txt",
-  "generatedAt": "2025-08-16T18:55:14.036Z",
-  "files": {
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/environment-variables.txt",
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.comment.md",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.summary.md",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/environment-variables.metadata.json"
-  }
+  "success": true
 }

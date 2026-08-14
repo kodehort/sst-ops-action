@@ -1,15 +1,15 @@
 {
+  "app": "www-kodehort-com",
+  "description": "Generated from output-deployment.txt",
+  "files": {
+    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/output-deployment.comment.md",
+    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/output-deployment.txt",
+    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/deploy/output-deployment.metadata.json",
+    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/output-deployment.summary.md"
+  },
+  "generatedAt": "2026-08-14T12:14:07.124Z",
   "name": "output-deployment",
   "operation": "deploy",
-  "app": "www-kodehort-com",
   "stage": "production",
-  "success": true,
-  "description": "Generated from output-deployment.txt",
-  "generatedAt": "2025-08-16T18:55:14.037Z",
-  "files": {
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/output-deployment.txt",
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/output-deployment.comment.md",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/output-deployment.summary.md",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/deploy/output-deployment.metadata.json"
-  }
+  "success": true
 }

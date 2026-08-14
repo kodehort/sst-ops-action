@@ -175,16 +175,22 @@ $ bunx --bun astro build
 
       expect(comment).toContain("🔍 DIFF SUCCESS");
       expect(comment).toContain("1 changes planned");
-      // Should contain the actual diff block with environment variables
       expect(comment).toContain("```diff");
       expect(comment).toContain(
         "+  Web sst:aws:Astro → WebBuilder command:local:Command"
       );
+
+      // This test used to require the opposite — that each of these lines
+      // appeared in the comment, `- environment.GITHUB_TOKEN` included. That
+      // is the leak #155 reports, written down as a requirement. The resource
+      // header above still has to survive, which is what the assertion before
+      // this one pins.
+      expect(comment).not.toContain("environment.ACTIONS_CACHE_SERVICE_V2");
+      expect(comment).not.toContain("environment.GITHUB_ACTION");
+      expect(comment).not.toContain("environment.GITHUB_TOKEN");
       expect(comment).toContain(
-        "+ environment.ACTIONS_CACHE_SERVICE_V2 = True"
+        "environment (6 variables changed, values hidden)"
       );
-      expect(comment).toContain("* environment.GITHUB_ACTION = diff");
-      expect(comment).toContain("- environment.GITHUB_TOKEN");
     });
 
     it("should format remove comment correctly", () => {
