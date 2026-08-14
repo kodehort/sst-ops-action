@@ -138,3 +138,55 @@ describe("The comment length guard", () => {
     expect(comment.length).toBeLessThanOrEqual(COMMENT_LIMIT);
   });
 });
+
+/**
+ * The summary has its own limit, and the same silent failure.
+ *
+ * `createWorkflowSummary` catches a failed write into a warning and resolves,
+ * exactly as the comment path did. GitHub caps a job summary at 1MB. That was
+ * unreachable while capture was capped at 1MB (a 1MB capture yields roughly a
+ * 730KB summary), but `max-output-size: 0` now means genuinely unlimited
+ * capture (#160), so the summary is the next unbounded surface.
+ */
+describe("The summary length guard", () => {
+  const SUMMARY_LIMIT = 1024 * 1024;
+
+  function hugeDiff(bytes: number): DiffResult {
+    const line = "   * some.property = a/reasonably/long/value/goes/here";
+    return diffWith(
+      Array.from(
+        { length: Math.ceil(bytes / line.length) },
+        (_, i) => `${line}-${i}`
+      ).join("\n")
+    );
+  }
+
+  it("keeps an oversized summary under GitHub's 1MB limit", () => {
+    const summary = formatter.formatOperationSummary(
+      hugeDiff(2 * SUMMARY_LIMIT)
+    );
+
+    expect(summary.length).toBeLessThanOrEqual(SUMMARY_LIMIT);
+    expect(summary).toMatch(/truncated/i);
+  });
+
+  it("still allows a summary far larger than a comment", () => {
+    // The summary is the comment's fallback, so it must not collapse to the
+    // comment's much tighter bound.
+    const summary = formatter.formatOperationSummary(hugeDiff(200_000));
+
+    expect(summary.length).toBeGreaterThan(COMMENT_LIMIT);
+    expect(summary).not.toMatch(/truncated/i);
+  });
+
+  it("closes the blocks it cut into", () => {
+    const summary = formatter.formatOperationSummary(
+      hugeDiff(2 * SUMMARY_LIMIT)
+    );
+
+    expect((summary.match(/```/g) || []).length % 2).toBe(0);
+    expect((summary.match(/<details>/g) || []).length).toBe(
+      (summary.match(/<\/details>/g) || []).length
+    );
+  });
+});

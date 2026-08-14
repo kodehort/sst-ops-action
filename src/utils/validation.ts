@@ -4,12 +4,14 @@
  */
 
 import { z } from "zod";
-import type { CommentMode, SSTOperation } from "../types/index.js";
 import {
   COMMENT_MODES,
+  type CommentMode,
+  DEFAULT_MAX_OUTPUT_SIZE,
   isValidCommentMode,
   isValidOperation,
   SST_OPERATIONS,
+  type SSTOperation,
   validateMaxOutputSize,
 } from "../types/index.js";
 import type { SSTRunner } from "./cli.js";
@@ -26,7 +28,7 @@ import { isZodError } from "./zod-error.js";
  */
 export const INPUT_DEFAULTS = {
   commentMode: "on-success",
-  maxOutputSize: 50_000,
+  maxOutputSize: DEFAULT_MAX_OUTPUT_SIZE,
   prefix: "pr-",
   runner: "bun",
   truncationLength: 26,

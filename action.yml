@@ -54,11 +54,13 @@ inputs:
     default: "true"
   max-output-size:
     description: |
-      Maximum output size before truncation (in bytes):
+      Maximum size of captured SST output before truncation (in bytes):
       • Default: 50000 (50KB) - suitable for most deployments
-      • Range: 1000-1000000 (1KB-1MB)
+      • Range: 0, or 1000-1048576 (1KB-1MB)
       • Use 0 for unlimited (not recommended for large outputs)
-      • Helps prevent GitHub Actions log size limits
+      • Bounds what the action holds in memory, not what it posts: a PR
+        comment is capped separately at GitHub's 65,536 character limit,
+        with the full output in the workflow summary
     required: false
     default: "50000"
   runner:
