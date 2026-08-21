@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a unified GitHub Action for SST (Serverless Stack) operations that handles deploy, diff, and remove commands. The action is built with TypeScript and runs on Node.js 20+, using Bun as the runtime and package manager.
+This is a unified GitHub Action for SST (Serverless Stack) operations that handles deploy, diff, and remove commands. The action is built with TypeScript and runs on Node.js 24, using Bun as the build runtime and package manager.
 
 ## Development Commands
 
@@ -105,34 +105,32 @@ The action implements strict input validation with fail-fast behavior for critic
 
 - Defined in `action.yml` with inputs for operation, stage, token, comment-mode, etc.
 - Outputs include success status, resource changes, URLs, completion status
-- Runs on Node.js 20 with main entry at `dist/main.js`
+- Runs on Node.js 24 with main entry at `dist/index.js`
 
 ### Build Process
 
-- Rollup configuration bundles TypeScript for distribution
-- Output to `dist/` directory with source maps and declarations (committed for GitHub Actions)
-- Uses Rollup bundler with terser for efficient, minified packaging
+- Bun's native bundler compiles and bundles TypeScript for distribution
+- Output to `dist/` directory with a linked source map (committed for GitHub Actions)
+- `scripts/build.ts` injects the package version, minifies the bundle, and writes the release build manifest
 - Distribution files are built during development and CI/CD, committed to repository for GitHub Actions compatibility
 
 **The committed bundle is gated.** CI fails when `dist/index.js` or
 `dist/index.js.map` differ from a fresh build, so rebuild and commit `dist/`
 with any source change. Check locally with
 `git diff -- dist/index.js dist/index.js.map`. `dist/build-manifest.json` is
-excluded from the gate — it records build timestamp, platform, arch and Node
-version, so it never matches.
+excluded from the gate — it records build timestamp, platform, architecture
+and Bun version, so it never matches.
 
-The build is byte-reproducible across platforms, but only from a clean
+The build is expected to be byte-reproducible across platforms, but only from a clean
 `bun install --frozen-lockfile`. An incrementally-updated `node_modules` can
 hold a tree the lockfile never described (nested duplicate copies rather than
 hoisted ones), which changes the bundle. If a rebuild drifts unexpectedly,
 `/bin/rm -rf node_modules && bun install --frozen-lockfile` first.
 
-Rollup must run under real Node, not Bun. Bun lists `undici` in
-`module.builtinModules`, so under Bun the resolver would treat a real
-dependency as a builtin and leave a bare import in a bundle that ships without
-`node_modules` — it passes `node -c`, then fails at runtime. `rollup.config.js`
-names the exception explicitly, so a Bun-only environment now builds correctly,
-but prefer an environment with `node` on `PATH`.
+The build requires Bun 1.4.0. It targets Node, bundles all package dependencies
+(including `undici`), rejects unresolved imports, and emits one linked ESM
+source map. GitHub Actions executes the committed result with Node 24; Bun is
+not required in repositories that consume the action.
 
 ### Distribution Strategy
 

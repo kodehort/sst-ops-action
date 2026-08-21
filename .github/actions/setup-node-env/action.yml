@@ -2,10 +2,14 @@ name: 'Setup Node Environment'
 description: 'Sets up Bun, installs dependencies, and configures caching'
 
 inputs:
+  node-version:
+    description: 'Node.js version used to validate the bundled action'
+    required: false
+    default: '24'
   bun-version:
     description: 'Bun version to install'
     required: false
-    default: 'latest'
+    default: '1.4.0'
   cache-key-suffix:
     description: 'Additional suffix for cache key'
     required: false
@@ -27,6 +31,11 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup Node.js Runtime
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+
     - name: Setup Bun Runtime
       uses: oven-sh/setup-bun@v2
       with:

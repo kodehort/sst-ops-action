@@ -2,7 +2,7 @@
  * Version utility for accessing action version information
  */
 
-// Version is injected at build time by rollup @rollup/plugin-replace
+// Version is injected at build time by Bun.build().
 declare const __ACTION_VERSION__: string;
 
 /**
