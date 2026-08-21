@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a unified GitHub Action for SST (Serverless Stack) operations that handles deploy, diff, and remove commands. The action is built with TypeScript and runs on Node.js 24, using Bun as the build runtime and package manager.
+This is a unified GitHub Action for SST (Serverless Stack) operations that handles deploy, diff, remove, and stage commands. The action is built with TypeScript and runs on Node.js 24, using Bun as the build runtime and package manager.
 
 ## Development Commands
 
