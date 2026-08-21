@@ -121,7 +121,7 @@ steps:
   - name: Setup Node.js
     uses: actions/setup-node@v4
     with:
-      node-version: '20'
+      node-version: '24'
       cache: 'npm'
 
   - name: Install Dependencies
@@ -894,7 +894,7 @@ Use this checklist when encountering issues:
 
 ### Advanced Checks
 - [ ] SST CLI is installed or available
-- [ ] Node.js version is 20 or higher
+- [ ] Node.js version is 24 or higher
 - [ ] No conflicting environment variables
 - [ ] AWS service limits not exceeded
 - [ ] Stage name follows naming conventions
