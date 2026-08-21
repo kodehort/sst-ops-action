@@ -143,7 +143,8 @@ jobs:
           
           # Get bundle size and hash
           BUNDLE_SIZE=$(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js)
-          BUNDLE_SIZE_MB=$((BUNDLE_SIZE / 1024 / 1024))
+          BUNDLE_SIZE_MB=$(awk -v bytes="$BUNDLE_SIZE" 'BEGIN { printf "%.2f", bytes / 1024 / 1024 }')
+          BUNDLE_SIZE_LIMIT_BYTES=$((10 * 1024 * 1024))
           BUNDLE_HASH=$(sha256sum dist/index.js | cut -d' ' -f1)
           
           echo "size=${BUNDLE_SIZE_MB}MB" >> $GITHUB_OUTPUT
@@ -153,7 +154,7 @@ jobs:
           echo "🔒 Bundle hash: ${BUNDLE_HASH:0:16}..."
           
           # Verify bundle size limit
-          if [ $BUNDLE_SIZE_MB -gt 10 ]; then
+          if [ "$BUNDLE_SIZE" -gt "$BUNDLE_SIZE_LIMIT_BYTES" ]; then
             echo "❌ Bundle size exceeds 10MB limit!"
             exit 1
           fi
