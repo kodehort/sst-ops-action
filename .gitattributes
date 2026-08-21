@@ -1,0 +1,4 @@
+# Bun preserves whitespace inside bundled template literals. Treat dist as
+# generated output so Git does not report that semantic content as whitespace
+# errors during diff validation.
+dist/** -whitespace

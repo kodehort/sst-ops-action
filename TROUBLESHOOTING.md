@@ -37,7 +37,7 @@ Before troubleshooting, verify these prerequisites:
 - ✅ SST project with valid configuration
 - ✅ AWS credentials configured
 - ✅ GitHub token with appropriate permissions
-- ✅ Node.js 20+ environment (handled automatically)
+- ✅ Node.js 24 environment (handled automatically)
 
 ### Quick Diagnostic
 

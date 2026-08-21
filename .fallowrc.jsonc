@@ -3,11 +3,11 @@
   "$schema": "./node_modules/fallow/schema.json",
   "entry": [
     "src/index.{ts,tsx,js,jsx}",
-    // action.yml points at dist/main.js, bundled from this by rollup
+    // action.yml points at dist/index.js, bundled from this by Bun
     "src/main.{ts,tsx,js,jsx}"
   ],
   "ignorePatterns": [
-    // Committed rollup bundle. GitHub Actions require dist/ in the repository
+    // Committed Bun bundle. GitHub Actions require dist/ in the repository
     // (see CLAUDE.md), so it cannot be gitignored; minified output would
     // otherwise dominate the duplication and complexity findings.
     "dist/**"

@@ -196,16 +196,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      # Build under the same major the action declares in action.yml.
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          bun-version: "1.2.19"
+          node-version: "24"
+          bun-version: "1.4.0"
           cache-key-suffix: -release
           # This workflow builds the dist/ it commits to main, and that commit
           # is [skip ci], so nothing re-checks it. Build from the lockfile
@@ -338,16 +333,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # The release bundle is rebuilt in this job, so pin Node here too.
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          bun-version: "1.2.19"
+          node-version: "24"
+          bun-version: "1.4.0"
           cache-key-suffix: -release
           # This workflow builds the dist/ it commits to main, and that commit
           # is [skip ci], so nothing re-checks it. Build from the lockfile

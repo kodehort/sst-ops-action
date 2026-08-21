@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '20'
-  BUN_VERSION: '1.2.19'
+  NODE_VERSION: '24'
+  BUN_VERSION: '1.4.0'
 
 jobs:
   quality-gates:
@@ -34,6 +34,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
+          node-version: ${{ env.NODE_VERSION }}
           bun-version: ${{ env.BUN_VERSION }}
           cache-key-suffix: -quality
 
@@ -84,6 +85,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
+          node-version: ${{ env.NODE_VERSION }}
           bun-version: ${{ env.BUN_VERSION }}
           cache-key-suffix: -build
           # The drift check below compares bytes, so node_modules must come
@@ -92,6 +94,23 @@ jobs:
 
       - name: Build Distribution
         run: bun run build
+
+      - name: Test Built Action
+        id: bundle-smoke
+        uses: ./
+        with:
+          operation: stage
+          token: fake-token
+
+      - name: Verify Built Action Outputs
+        env:
+          COMPUTED_STAGE: ${{ steps.bundle-smoke.outputs.computed_stage }}
+          OPERATION: ${{ steps.bundle-smoke.outputs.operation }}
+          SUCCESS: ${{ steps.bundle-smoke.outputs.success }}
+        run: |
+          test "$SUCCESS" = "true"
+          test "$OPERATION" = "stage"
+          test -n "$COMPUTED_STAGE"
 
       # The action runs from the committed dist/, so a rebuild has to reproduce
       # it byte for byte. Without this, a PR that forgets to rebuild goes green
