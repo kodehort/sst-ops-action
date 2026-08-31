@@ -282,6 +282,10 @@ Some resources could not be removed. Check the logs for details.`;
       summary += `\n\n### ✅ Complete Cleanup
 
 All resources have been successfully removed.`;
+    } else if (result.completionStatus === "skipped") {
+      summary += `\n\n### ⏭️ Nothing to Remove
+
+Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
     }
 
     return summary;
@@ -526,6 +530,11 @@ No infrastructure changes detected for this operation.`;
 - Operation encountered errors
 - Resources may still exist
 - Manual cleanup may be required`;
+        break;
+      case "skipped":
+        section += `\n\n⏭️ **Nothing to remove**
+- Stage is not deployed in the state backend
+- No removal was attempted`;
         break;
       default:
         section += `\n\n**Status:** ${result.completionStatus}

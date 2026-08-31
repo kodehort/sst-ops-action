@@ -18,7 +18,7 @@ import { rethrowZodError } from "../utils/zod-error";
 const GitHubActionsOutputSchema = z.object({
   // Common optional outputs
   app: z.string().default(""),
-  completion_status: z.enum(["complete", "partial", "failed"]),
+  completion_status: z.enum(["complete", "partial", "failed", "skipped"]),
 
   // Operation-specific outputs for stage
   computed_stage: z.string().default(""),

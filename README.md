@@ -70,7 +70,7 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `resources_removed` | Number of resources removed | remove |
 | `removed_resources` | JSON array of removed resources (`name`/`type`/`status`) | remove |
 | `error` | Error message when the operation fails; empty on success | All |
-| `completion_status` | `complete`, `partial`, or `failed` | All |
+| `completion_status` | `complete`, `partial`, `failed`, or `skipped` (remove only: stage not deployed) | All |
 | `permalink` | SST Console permalink | deploy, diff, remove |
 | `truncated` | Whether output was truncated | All |
 | `computed_stage` | Computed stage name | stage |

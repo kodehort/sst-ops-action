@@ -114,7 +114,7 @@ outputs:
   app:
     description: "The SST app name"
   completion_status:
-    description: "Operation completion status (complete, partial, failed)"
+    description: "Operation completion status (complete, partial, failed; remove also reports skipped when the stage is not deployed)"
   permalink:
     description: "SST Console permalink for operation details"
   truncated:

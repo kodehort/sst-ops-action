@@ -947,11 +947,10 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 **Format:** Status keyword  
 
 **Values:**
-- `"success"` - Operation completed successfully
-- `"failed"` - Operation failed completely
+- `"complete"` - Operation completed successfully
 - `"partial"` - Operation partially completed (some resources succeeded)
-- `"timeout"` - Operation timed out
-- `"cancelled"` - Operation was cancelled
+- `"failed"` - Operation failed completely
+- `"skipped"` - Remove only: the stage is not deployed, so nothing was removed
 
 **Usage:**
 ```yaml
@@ -959,22 +958,25 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
   run: |
     STATUS="${{ steps.sst.outputs.completion_status }}"
     case "$STATUS" in
-      "success")
+      "complete")
         echo "✅ Full success"
         ;;
-      "partial") 
+      "skipped")
+        echo "⏭️ Stage not deployed - nothing to do"
+        ;;
+      "partial")
         echo "⚠️ Partial completion - review required"
         ;;
-      "failed"|"timeout"|"cancelled")
-        echo "❌ Operation failed: $STATUS"
+      "failed")
+        echo "❌ Operation failed"
         exit 1
         ;;
     esac
 ```
 
 **Relationship to `success`:**
-- `success: "true"` when `completion_status: "success"`
-- `success: "false"` for all other completion statuses
+- `success: "true"` when `completion_status` is `"complete"` or `"skipped"`
+- `success: "false"` for `"failed"`; `"partial"` depends on the exit code
 - Provides more granular information than boolean success
 
 ---
@@ -1154,11 +1156,12 @@ Detailed behavior for each operation type.
 **Purpose:** Remove all resources for specified stage
 
 **Process:**
-1. Execute `sst remove --stage {stage}`
-2. Parse removal output for deleted resources
-3. Track cleanup status and any remaining resources
-4. Create PR comments with cleanup results
-5. Handle partial cleanup scenarios
+1. Check the state backend with `sst state list`; when the stage is not deployed, succeed as a no-op with `completion_status: "skipped"` (the check fails open — if it errors, removal proceeds)
+2. Execute `sst remove --stage {stage}`
+3. Parse removal output for deleted resources
+4. Track cleanup status and any remaining resources
+5. Create PR comments with cleanup results
+6. Handle partial cleanup scenarios
 
 **Typical Duration:** 1-10 minutes
 
@@ -1169,7 +1172,7 @@ Detailed behavior for each operation type.
 **Outputs Populated:**
 - All standard outputs (no URLs or diff summaries for remove operations)
 - `resource_changes` - Number of resources removed
-- `completion_status` - May be "partial" for incomplete removal
+- `completion_status` - May be "partial" for incomplete removal, or "skipped" when the stage was never deployed
 
 **Example:**
 ```yaml

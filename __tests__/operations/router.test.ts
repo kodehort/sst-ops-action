@@ -26,10 +26,12 @@ import {
   SST_DEPLOY_SUCCESS_OUTPUT,
   SST_DIFF_OUTPUT,
   SST_REMOVE_SUCCESS_OUTPUT,
+  SST_STATE_LIST_OUTPUT,
 } from "../fixtures/sst-outputs";
 import { infrastructureInputs, stageInputs } from "../utils/resolved-inputs";
 
 const executeSST = vi.fn();
+const listStages = vi.fn();
 const createOrUpdateComment = vi.fn();
 const createWorkflowSummary = vi.fn();
 
@@ -53,6 +55,9 @@ describe("executeOperation", () => {
     vi.clearAllMocks();
 
     executeSST.mockResolvedValue(cliResult(""));
+    // The fixture lists "staging" — the builders' default stage — so remove
+    // tests exercise the deployed path unless they say otherwise.
+    listStages.mockResolvedValue(cliResult(SST_STATE_LIST_OUTPUT));
     createOrUpdateComment.mockResolvedValue(undefined);
     createWorkflowSummary.mockResolvedValue(undefined);
 
@@ -60,6 +65,7 @@ describe("executeOperation", () => {
     // for a constructor mock.
     vi.mocked(SSTCLIExecutor).mockImplementation(function (this: any) {
       this.executeSST = executeSST;
+      this.listStages = listStages;
     } as any);
 
     vi.mocked(GitHubClient).mockImplementation(function (this: any) {
@@ -130,6 +136,79 @@ describe("executeOperation", () => {
       );
 
       expect(GitHubClient).toHaveBeenCalledWith("ghp_router_token");
+    });
+  });
+
+  describe("the remove preflight", () => {
+    it("skips the removal when the stage is not deployed", async () => {
+      const result = (await executeOperation(
+        infrastructureInputs("remove", { stage: "never-deployed" })
+      )) as RemoveResult;
+
+      expect(result.success).toBe(true);
+      expect(result.completionStatus).toBe("skipped");
+      expect(result.resourcesRemoved).toBe(0);
+      expect(result.app).toBe("my-sst-app");
+      // No removal ran, but the skip is still reported.
+      expect(executeSST).not.toHaveBeenCalled();
+      expect(createWorkflowSummary).toHaveBeenCalledWith(result);
+    });
+
+    it("removes as normal when the state backend knows the stage", async () => {
+      executeSST.mockResolvedValue(cliResult(SST_REMOVE_SUCCESS_OUTPUT));
+
+      const result = (await executeOperation(
+        infrastructureInputs("remove", { stage: "staging" })
+      )) as RemoveResult;
+
+      expect(result.completionStatus).toBe("complete");
+      expect(executeSST).toHaveBeenCalledWith("remove", "staging", {
+        maxOutputSize: 50_000,
+        runner: "bun",
+      });
+    });
+
+    it("fails open when the stage listing cannot run", async () => {
+      listStages.mockRejectedValue(new Error("spawn sst ENOENT"));
+      executeSST.mockResolvedValue(cliResult(SST_REMOVE_SUCCESS_OUTPUT));
+
+      const result = (await executeOperation(
+        infrastructureInputs("remove", { stage: "never-deployed" })
+      )) as RemoveResult;
+
+      expect(executeSST).toHaveBeenCalled();
+      expect(result.completionStatus).toBe("complete");
+    });
+
+    it("fails open when the stage listing exits non-zero", async () => {
+      listStages.mockResolvedValue(
+        cliResult("✕  AWS credentials are not configured", { exitCode: 1 })
+      );
+      executeSST.mockResolvedValue(cliResult(SST_REMOVE_SUCCESS_OUTPUT));
+
+      await executeOperation(
+        infrastructureInputs("remove", { stage: "never-deployed" })
+      );
+
+      expect(executeSST).toHaveBeenCalled();
+    });
+
+    it("fails open when the stage listing is unrecognisable", async () => {
+      listStages.mockResolvedValue(cliResult("something entirely different"));
+      executeSST.mockResolvedValue(cliResult(SST_REMOVE_SUCCESS_OUTPUT));
+
+      await executeOperation(
+        infrastructureInputs("remove", { stage: "never-deployed" })
+      );
+
+      expect(executeSST).toHaveBeenCalled();
+    });
+
+    it("leaves deploy and diff untouched by the preflight", async () => {
+      await executeOperation(infrastructureInputs("deploy"));
+      await executeOperation(infrastructureInputs("diff"));
+
+      expect(listStages).not.toHaveBeenCalled();
     });
   });
 

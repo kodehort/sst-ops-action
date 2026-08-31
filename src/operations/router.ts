@@ -14,7 +14,7 @@ import { StageProcessor } from "../parsers/stage-processor";
 import type { OperationResult, SSTOperation } from "../types";
 import { SSTCLIExecutor } from "../utils/cli";
 import { logActionVersion } from "../utils/version";
-import { runInfrastructureOperation } from "./run";
+import { runInfrastructureOperation, runRemoveOperation } from "./run";
 
 /**
  * Execute an SST operation with full error handling and routing
@@ -60,7 +60,10 @@ export async function executeOperation(
           parser: new DiffParser(),
         });
       case "remove":
-        return await runInfrastructureOperation({
+        // Remove checks the state backend first and no-ops on a stage that
+        // was never deployed, so cleanup workflows stay green for PRs that
+        // never deployed anything.
+        return await runRemoveOperation({
           ...deps,
           inputs,
           parser: new RemoveParser(),

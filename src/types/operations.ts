@@ -30,7 +30,7 @@ export const COMMENT_MODES = [
 
 export type CommentMode = (typeof COMMENT_MODES)[number];
 
-export type CompletionStatus = "complete" | "partial" | "failed";
+export type CompletionStatus = "complete" | "partial" | "failed" | "skipped";
 
 export interface BaseOperationResult {
   app: string;
