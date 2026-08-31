@@ -71,6 +71,7 @@ const GitHubActionsOutputSchema = z.object({
     })
     .default("0"),
   stage: z.string().min(1, "stage cannot be empty"),
+  stages: z.string().default(""), // JSON string of {ref, stage} pairs (stage only)
   // Required outputs - always present
   success: z.string().regex(/^(true|false)$/, {
     message: 'success must be "true" or "false"',
@@ -94,7 +95,12 @@ export type ValidatedOutputs = z.infer<typeof GitHubActionsOutputSchema>;
  * Ensures that JSON string fields contain valid JSON
  */
 function validateJSONFields(outputs: ValidatedOutputs): void {
-  const jsonFields = ["outputs", "resources", "removed_resources"] as const;
+  const jsonFields = [
+    "outputs",
+    "resources",
+    "removed_resources",
+    "stages",
+  ] as const;
 
   for (const field of jsonFields) {
     const value = outputs[field];

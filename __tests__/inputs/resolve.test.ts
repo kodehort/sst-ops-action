@@ -71,6 +71,7 @@ describe("Resolving action inputs", () => {
         failOnError: true,
         operation: "stage",
         prefix: "pr-",
+        refs: [],
         truncationLength: 26,
       });
     });
@@ -114,6 +115,7 @@ describe("Resolving action inputs", () => {
         "failOnError",
         "operation",
         "prefix",
+        "refs",
         "truncationLength",
       ]);
     });

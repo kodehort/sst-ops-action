@@ -77,6 +77,7 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `ref` | Git ref used for computation | stage |
 | `event_name` | GitHub event type | stage |
 | `is_pull_request` | Whether event is a PR | stage |
+| `stages` | JSON array of `{ref, stage}` pairs for the `refs` input | stage |
 
 ## Operations
 

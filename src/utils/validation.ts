@@ -36,6 +36,7 @@ export const INPUT_DEFAULTS = {
 
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
+const REFS_SEPARATOR_PATTERN = /[\n,]/;
 
 /**
  * Common field schemas used across operations
@@ -93,6 +94,16 @@ const CommonFieldSchemas = {
         "Prefix must contain only lowercase letters, numbers, and hyphens",
     })
     .default(INPUT_DEFAULTS.prefix),
+
+  refs: z
+    .string()
+    .optional()
+    .transform((val) =>
+      (val ?? "")
+        .split(REFS_SEPARATOR_PATTERN)
+        .map((ref) => ref.trim())
+        .filter(Boolean)
+    ),
 
   runner: z
     .string()
@@ -174,6 +185,7 @@ const StageInputsSchema = z
     failOnError: CommonFieldSchemas.failOnError,
     operation: z.literal("stage"),
     prefix: CommonFieldSchemas.prefix,
+    refs: CommonFieldSchemas.refs,
     truncationLength: CommonFieldSchemas.truncationLength,
   })
   .strict();
@@ -231,6 +243,7 @@ function filterInputsByOperation(
       failOnError: rawInputs.failOnError,
       operation: rawInputs.operation,
       prefix: rawInputs.prefix,
+      refs: rawInputs.refs,
       truncationLength: rawInputs.truncationLength,
     };
   }

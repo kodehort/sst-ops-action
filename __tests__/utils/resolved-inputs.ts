@@ -35,6 +35,7 @@ export function stageInputs(overrides: Partial<StageInputs> = {}): StageInputs {
     failOnError: true,
     operation: "stage",
     prefix: "pr-",
+    refs: [],
     truncationLength: 26,
     ...overrides,
   };

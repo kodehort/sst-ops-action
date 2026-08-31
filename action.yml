@@ -92,6 +92,14 @@ inputs:
       • Only applies to stage operations - ignored by other operations
     required: false
     default: "pr-"
+  refs:
+    description: |
+      Git refs to compute stage names for (stage operation only):
+      • Newline- or comma-separated list of refs (e.g. open PR head branches)
+      • Each ref is slugified with the same rules as the context-derived stage
+      • Results are emitted in the `stages` output, in input order
+      • Only applies to stage operations - ignored by other operations
+    required: false
 
 outputs:
   success:
@@ -137,6 +145,8 @@ outputs:
     description: "The GitHub event name (stage only)"
   is_pull_request:
     description: "Whether the event is a pull request (stage only)"
+  stages:
+    description: "JSON array of {ref, stage} pairs for the refs input, in input order (stage only; empty for other operations)"
 
 runs:
   using: "node24"

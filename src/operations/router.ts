@@ -33,6 +33,7 @@ export async function executeOperation(
     if (inputs.operation === "stage") {
       return new StageProcessor().process({
         prefix: inputs.prefix,
+        refs: inputs.refs,
         truncationLength: inputs.truncationLength,
       });
     }
@@ -147,6 +148,7 @@ function createFailureResult(
         isPullRequest: false,
         operation: "stage" as const,
         ref: "",
+        stages: [],
       };
     default: {
       // Exhaustive check for TypeScript

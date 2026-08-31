@@ -48,6 +48,8 @@ export interface StageInputs {
   failOnError: boolean;
   operation: "stage";
   prefix: string;
+  /** Refs to slugify in addition to the context-derived stage; often empty. */
+  refs: string[];
   truncationLength: number;
 }
 
@@ -91,6 +93,7 @@ function readRawInputs(): Record<string, unknown> {
     maxOutputSize: optionalInput("max-output-size"),
     operation: core.getInput("operation"),
     prefix: optionalInput("prefix"),
+    refs: optionalInput("refs"),
     runner: optionalInput("runner"),
     stage: optionalInput("stage"),
     token: core.getInput("token"),
@@ -128,6 +131,7 @@ export function resolveActionInputs({
       failOnError: inputs.failOnError,
       operation: "stage",
       prefix: inputs.prefix,
+      refs: inputs.refs,
       truncationLength: inputs.truncationLength,
     };
   }

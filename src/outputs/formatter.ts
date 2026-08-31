@@ -31,6 +31,7 @@ interface BaseInfrastructureOutputs {
   operation: string;
   permalink: string;
   stage: string;
+  stages: string;
   success: string;
   truncated: string;
 }
@@ -120,6 +121,7 @@ interface StageOutputs {
   resources: string;
   resources_removed: string;
   stage: string; // The computed stage name
+  stages: string; // JSON array of {ref, stage} pairs for the refs input
   success: string;
   truncated: string;
   // Index signature for Record<string, string> compatibility
@@ -193,6 +195,7 @@ function formatDeployOperation(result: DeployResult): DeployOutputs {
     resources: safeStringify(result.resources || []),
     resources_removed: "",
     stage: result.stage,
+    stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
   };
@@ -221,6 +224,7 @@ function formatDiffOperation(result: DiffResult): DiffOutputs {
     resources: "",
     resources_removed: "",
     stage: result.stage,
+    stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
   };
@@ -249,6 +253,7 @@ function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
     resources: "",
     resources_removed: String(result.resourcesRemoved || 0),
     stage: result.stage,
+    stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
   };
@@ -277,6 +282,7 @@ function formatStageOperation(result: StageResult): StageOutputs {
     resources: "",
     resources_removed: "",
     stage: result.stage,
+    stages: safeStringify(result.stages || []),
     success: String(result.success),
     truncated: "false",
   };

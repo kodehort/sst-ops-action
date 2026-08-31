@@ -64,6 +64,7 @@ describe("Main Entry Point - Action Execution", () => {
       resourceChanges: 3,
       resources: [],
       stage: "staging",
+      stages: "",
       success: true,
       truncated: false,
       urls: [],
@@ -91,6 +92,7 @@ describe("Main Entry Point - Action Execution", () => {
       resources: "[]",
       resources_removed: "",
       stage: "staging",
+      stages: "",
       success: "true",
       truncated: "false",
     });
@@ -134,6 +136,7 @@ describe("Main Entry Point - Action Execution", () => {
           { name: "MyFunction", status: "created" as const, type: "Function" },
         ],
         stage: "staging",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -175,7 +178,7 @@ describe("Main Entry Point - Action Execution", () => {
       expect(
         OutputFormatter.formatOperationForGitHubActions
       ).toHaveBeenCalledWith(mockResult);
-      expect(core.setOutput).toHaveBeenCalledTimes(19); // All outputs
+      expect(core.setOutput).toHaveBeenCalledTimes(20); // All outputs
       expect(core.info).toHaveBeenCalledWith(
         "✅ SST deploy operation completed successfully"
       );
@@ -201,6 +204,7 @@ describe("Main Entry Point - Action Execution", () => {
         plannedChanges: 5,
         rawOutput: "Diff analysis completed",
         stage: "production",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -253,6 +257,7 @@ describe("Main Entry Point - Action Execution", () => {
         ],
         resourcesRemoved: 7,
         stage: "staging",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -294,6 +299,7 @@ describe("Main Entry Point - Action Execution", () => {
         resourceChanges: 0,
         resources: [],
         stage: "staging",
+        stages: "",
         success: false,
         truncated: false,
       };
@@ -331,6 +337,7 @@ describe("Main Entry Point - Action Execution", () => {
         resourceChanges: 0,
         resources: [],
         stage: "staging",
+        stages: "",
         success: false,
         truncated: false,
       };
@@ -458,6 +465,7 @@ describe("Main Entry Point - Action Execution", () => {
         resourceChanges: 2,
         resources: [],
         stage: "staging",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -487,6 +495,7 @@ describe("Main Entry Point - Action Execution", () => {
         resourceChanges: 1,
         resources: [],
         stage: "staging",
+        stages: "",
         success: true,
         truncated: true,
       };
@@ -513,6 +522,7 @@ describe("Main Entry Point - Action Execution", () => {
         resourceChanges: 1,
         resources: [],
         stage: "staging",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -596,6 +606,7 @@ describe("Main Entry Point - Action Execution", () => {
           { name: "MainDB", status: "updated" as const, type: "Database" },
         ],
         stage: "production",
+        stages: "",
         success: true,
         truncated: false,
       };
@@ -623,6 +634,7 @@ describe("Main Entry Point - Action Execution", () => {
         resources: JSON.stringify(deployResult.resources),
         resources_removed: "",
         stage: "production",
+        stages: "",
         success: "true",
         truncated: "false",
       });
@@ -687,6 +699,7 @@ describe("Main Entry Point - Action Execution", () => {
         ],
         resourcesRemoved: 5,
         stage: "staging",
+        stages: "",
         success: true,
         truncated: false,
       };
