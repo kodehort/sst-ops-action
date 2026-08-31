@@ -9,8 +9,12 @@
  *   Stages:     alistairstead
  *               production
  *               staging
+ *               runner (not deployed)
  *
- * The first stage shares the `Stages:` line; the rest follow indented.
+ * The first stage shares the `Stages:` line; the rest follow indented. A
+ * stage can carry a parenthesised annotation — the CLI appends the current OS
+ * user's personal stage marked "(not deployed)" when the backend has no state
+ * for it (on a CI machine that phantom is literally named `runner`).
  */
 
 import { PatternHelpers } from "./patterns";
@@ -23,11 +27,17 @@ export interface StageListing {
 }
 
 const APP_LINE = /^App:\s+(\S+)/m;
-const STAGES_LINE = /^Stages:\s*(\S*)/;
-const INDENTED_STAGE = /^\s+(\S+)\s*$/;
+const STAGES_LINE = /^Stages:\s*(.*)$/;
+const INDENTED_STAGE = /^\s+(\S+)(\s+\(([^)]+)\))?\s*$/;
+const STAGE_ENTRY = /^(\S+)(\s+\(([^)]+)\))?$/;
+const NOT_DEPLOYED = "not deployed";
 
 /**
  * Extract the deployed stages from `sst state list` output.
+ *
+ * A stage annotated "(not deployed)" is excluded — it exists only as the
+ * CLI's suggestion, and there is nothing behind it to remove. Any other
+ * annotation keeps the stage in the list, erring toward attempting a removal.
  *
  * @returns The listing, or null when the output carries no `Stages:` header —
  *   which means the format was not recognised, not that no stages exist.
@@ -43,17 +53,26 @@ export function parseStageList(output: string): StageListing | null {
   }
 
   const stages: string[] = [];
-  const firstStage = lines[headerIndex]?.match(STAGES_LINE)?.[1];
-  if (firstStage) {
-    stages.push(firstStage);
-  }
+  const push = (entry: string | undefined): void => {
+    if (!entry) {
+      return;
+    }
+    const match = entry.match(STAGE_ENTRY);
+    if (match?.[1] && match[3] !== NOT_DEPLOYED) {
+      stages.push(match[1]);
+    }
+  };
+
+  push(lines[headerIndex]?.match(STAGES_LINE)?.[1]?.trim());
 
   for (const line of lines.slice(headerIndex + 1)) {
-    const stage = line.match(INDENTED_STAGE)?.[1];
-    if (!stage) {
+    const match = line.match(INDENTED_STAGE);
+    if (!match?.[1]) {
       break;
     }
-    stages.push(stage);
+    if (match[3] !== NOT_DEPLOYED) {
+      stages.push(match[1]);
+    }
   }
 
   return {

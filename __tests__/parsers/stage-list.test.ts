@@ -40,6 +40,32 @@ describe("parseStageList", () => {
     expect(listing?.stages).toEqual(["staging", "pr-1"]);
   });
 
+  it("excludes a stage annotated (not deployed) without stopping the parse", () => {
+    // The CLI appends the current OS user's personal stage marked
+    // "(not deployed)" when the backend has no state for it — on CI that
+    // phantom is literally named `runner`. It must neither count as deployed
+    // nor hide stages listed after it.
+    const listing = parseStageList(
+      "Stages:     staging\n            runner (not deployed)\n            production\n"
+    );
+
+    expect(listing?.stages).toEqual(["staging", "production"]);
+  });
+
+  it("excludes a (not deployed) stage carried on the Stages line itself", () => {
+    const listing = parseStageList("Stages:     runner (not deployed)\n");
+
+    expect(listing?.stages).toEqual([]);
+  });
+
+  it("keeps a stage with an unrecognised annotation", () => {
+    const listing = parseStageList(
+      "Stages:     staging\n            pr-7 (locked)\n"
+    );
+
+    expect(listing?.stages).toEqual(["staging", "pr-7"]);
+  });
+
   it("returns null for output with no Stages header, not an empty list", () => {
     expect(parseStageList("✕  AWS credentials are not configured")).toBeNull();
     expect(parseStageList("")).toBeNull();
