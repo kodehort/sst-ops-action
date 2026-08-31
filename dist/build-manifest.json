@@ -1,15 +1,15 @@
 {
-  "arch": "arm64",
-  "buildTimestamp": "2026-08-31T20:41:31.785Z",
-  "bundleSize": 865070,
+  "arch": "x64",
+  "buildTimestamp": "2026-08-31T20:44:32.027Z",
+  "bundleSize": 865069,
   "bundleSizeMB": "0.82",
   "bunVersion": "1.4.0",
   "format": "es",
-  "integrity": "8dddade4ae59348c199eec99809f639b34c708e34c19711550468fecfcbf08f6",
+  "integrity": "271b3412589bd9431f5ac3b77bdc60982dafda50daa3336e79cc18612c9e9a03",
   "minified": true,
-  "platform": "darwin",
+  "platform": "linux",
   "sourcemap": true,
   "target": "node24",
   "treeshaken": true,
-  "version": "0.7.64"
+  "version": "0.8.0"
 }
