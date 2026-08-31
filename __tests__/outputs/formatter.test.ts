@@ -56,6 +56,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           resources: JSON.stringify(deployResult.resources),
           resources_removed: "",
           stage: "staging",
+          stages: "",
           success: "true",
           truncated: "false",
         });
@@ -143,6 +144,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           resources: "",
           resources_removed: "",
           stage: "staging",
+          stages: "",
           success: "true",
           truncated: "false",
         });
@@ -214,6 +216,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           resources: "",
           resources_removed: "2",
           stage: "staging",
+          stages: "",
           success: "true",
           truncated: "false",
         });
@@ -263,6 +266,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
             "Stage computation successful\nEvent: pull_request\nRef: feature/branch\nComputed Stage: feature-branch",
           ref: "feature/branch",
           stage: "feature-branch",
+          stages: [],
           success: true,
           truncated: false,
         };
@@ -288,6 +292,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           resources: "",
           resources_removed: "",
           stage: "feature-branch",
+          stages: "[]",
           success: "true",
           truncated: "false",
         });
@@ -305,6 +310,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           rawOutput: "Stage computation successful",
           ref: "refs/heads/main",
           stage: "main",
+          stages: [],
           success: true,
           truncated: false,
         };
@@ -331,6 +337,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           rawOutput: "Stage computation failed",
           ref: "",
           stage: "fallback",
+          stages: [],
           success: false,
           truncated: false,
         };

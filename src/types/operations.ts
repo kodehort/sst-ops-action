@@ -96,6 +96,12 @@ export interface StageResult extends BaseOperationResult {
   isPullRequest: boolean;
   operation: "stage";
   ref: string;
+  /**
+   * Stage names for the refs the caller passed in, in input order. Empty when
+   * the `refs` input was not used — the context-derived `computedStage` is the
+   * whole answer then.
+   */
+  stages: Array<{ ref: string; stage: string }>;
 }
 
 export type OperationResult =

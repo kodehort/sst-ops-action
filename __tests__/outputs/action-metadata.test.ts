@@ -143,6 +143,7 @@ const stage: StageResult = {
   rawOutput: "",
   ref: "refs/pull/123/merge",
   stage: "pr-123",
+  stages: [],
   success: true,
   truncated: false,
 };

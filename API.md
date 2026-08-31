@@ -940,6 +940,36 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 ---
 
+### `stages` (Stage Only)
+
+**Description:** Stage names for the refs passed via the `refs` input  
+**Type:** String  
+**Format:** JSON array of `{ref, stage}` pairs, in input order  
+
+**Usage:**
+```yaml
+- name: Compute stages for open PR branches
+  id: stages
+  uses: kodehort/sst-ops-action@v0
+  with:
+    operation: stage
+    token: ${{ github.token }}
+    refs: |
+      feature/my-branch
+      123-fix
+
+- name: Use mapped stages
+  run: |
+    STAGES='${{ steps.stages.outputs.stages }}'
+    echo "$STAGES" | jq -r '.[].stage'
+```
+
+**Notes:**
+- Only populated for `stage` operations when `refs` is set; `""` otherwise
+- Each ref goes through the same slug rules as the context-derived stage
+
+---
+
 ### `completion_status`
 
 **Description:** Final operation status with additional detail  

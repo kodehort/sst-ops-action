@@ -131,6 +131,70 @@ describe("Stage Processor - GitHub Context Processing", () => {
     });
   });
 
+  describe("Explicit refs", () => {
+    it("maps each ref through the same slug rules, in input order", () => {
+      Object.assign(github.context, {
+        eventName: "push",
+        payload: { ref: "refs/heads/main" },
+      });
+
+      const result = processor.process({
+        refs: ["feature/my-branch", "123-fix", "refs/heads/Fix_Thing"],
+      });
+
+      expect(result.success).toBe(true);
+      // The context-derived stage is untouched by refs.
+      expect(result.computedStage).toBe("main");
+      expect(result.stages).toEqual([
+        { ref: "feature/my-branch", stage: "my-branch" },
+        { ref: "123-fix", stage: "pr-123-fix" },
+        { ref: "refs/heads/Fix_Thing", stage: "fix-thing" },
+      ]);
+    });
+
+    it("applies prefix and truncation options to every ref", () => {
+      Object.assign(github.context, {
+        eventName: "push",
+        payload: { ref: "refs/heads/main" },
+      });
+
+      const result = processor.process({
+        prefix: "x-",
+        refs: ["9-a-very-long-branch-name-here"],
+        truncationLength: 10,
+      });
+
+      expect(result.stages).toEqual([
+        { ref: "9-a-very-long-branch-name-here", stage: "x-9-a-very" },
+      ]);
+    });
+
+    it("falls back to the first ref's slug when the context yields no stage", () => {
+      Object.assign(github.context, {
+        eventName: "push",
+        payload: {},
+        ref: undefined,
+      });
+
+      const result = processor.process({ refs: ["feat/thing"] });
+
+      expect(result.success).toBe(true);
+      expect(result.stage).toBe("thing");
+      expect(result.stages).toEqual([{ ref: "feat/thing", stage: "thing" }]);
+    });
+
+    it("reports empty stages when no refs are given", () => {
+      Object.assign(github.context, {
+        eventName: "push",
+        payload: { ref: "refs/heads/main" },
+      });
+
+      const result = processor.process({});
+
+      expect(result.stages).toEqual([]);
+    });
+  });
+
   describe("Output Content", () => {
     it("should include debug information in raw output", () => {
       Object.assign(github.context, {

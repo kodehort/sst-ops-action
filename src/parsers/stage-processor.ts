@@ -19,6 +19,12 @@ const STARTS_WITH_DIGIT_PATTERN = /^(\d)/;
 export interface StageProcessingOptions {
   /** Prefix to add when stage name starts with a number */
   prefix?: string;
+  /**
+   * Refs to slugify in addition to the context-derived stage. Lets one
+   * invocation map many branches — a sweeper matching deployed stages against
+   * open PR head refs — through the exact rules deploys use.
+   */
+  refs?: string[];
   /** Maximum length for computed stage names */
   truncationLength?: number;
 }
@@ -37,9 +43,13 @@ export class StageProcessor {
     const { context } = github;
     const truncationLength = options.truncationLength ?? 26;
     const prefix = options.prefix ?? "pr-";
+    const stages = (options.refs ?? []).map((ref) => ({
+      ref,
+      stage: this.computeStageFromRef(ref, truncationLength, prefix),
+    }));
 
     try {
-      return this.processSuccess(context, truncationLength, prefix);
+      return this.processSuccess(context, truncationLength, prefix, stages);
     } catch (error) {
       return this.processError(context, error);
     }
@@ -51,7 +61,8 @@ export class StageProcessor {
   private processSuccess(
     context: typeof github.context,
     truncationLength = 26,
-    prefix = "pr-"
+    prefix = "pr-",
+    stages: Array<{ ref: string; stage: string }> = []
   ): StageResult {
     const ref = this.extractRef(context);
 
@@ -66,11 +77,15 @@ export class StageProcessor {
       prefix
     );
 
-    if (!computedStage) {
+    // With explicit refs the caller's answer is the stages list, so a context
+    // that yields no stage of its own (a schedule event on an odd ref) is not
+    // an error — the first ref's slug stands in for the singular outputs.
+    const finalStage =
+      computedStage || stages.find((entry) => entry.stage)?.stage || "";
+
+    if (!finalStage) {
       throw new Error("Failed to generate a valid stage name from Git context");
     }
-
-    const finalStage = computedStage;
 
     core.debug(`Generated stage: ${finalStage}`);
     this.logDebugInfo(context, finalStage);
@@ -88,6 +103,7 @@ export class StageProcessor {
       rawOutput,
       ref: ref || "",
       stage: finalStage,
+      stages,
       success: true,
       truncated: false,
     };
@@ -115,6 +131,7 @@ export class StageProcessor {
       rawOutput,
       ref: "",
       stage: "",
+      stages: [],
       success: false,
       truncated: false,
     };
