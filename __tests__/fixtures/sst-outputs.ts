@@ -554,3 +554,17 @@ Stage: staging
 
 - Function        incomplete-app-staging-handler
 `;
+
+/**
+ * `sst state list` output. The first stage shares the `Stages:` line; the
+ * rest follow indented, matching the CLI's aligned header block.
+ */
+export const SST_STATE_LIST_OUTPUT = `
+App:        my-sst-app
+Provider:   AWS
+Region:     eu-west-2
+Account:    123456789012
+Stages:     staging
+            production
+            pr-42
+`.trim();

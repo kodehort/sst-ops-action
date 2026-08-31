@@ -221,6 +221,48 @@ describe("SST CLI Utilities - Command Execution", () => {
         expect(result.stderr).toBe("second\n");
       });
     });
+
+    describe("listStages", () => {
+      it("runs `sst state list` through the default runner", async () => {
+        mockExec.exec.mockImplementation(
+          (_command: string, _args: string[], options: any) => {
+            options?.listeners?.stdout(
+              Buffer.from("App:  my-app\nStages:  staging\n")
+            );
+            return 0;
+          }
+        );
+
+        const result = await executor.listStages();
+
+        expect(mockExec.exec).toHaveBeenCalledWith(
+          "bun",
+          ["sst", "state", "list"],
+          expect.any(Object)
+        );
+        expect(result.exitCode).toBe(0);
+        expect(result.output).toContain("Stages:  staging");
+      });
+
+      it("respects the configured runner", async () => {
+        await executor.listStages({ runner: "npm" });
+
+        expect(mockExec.exec).toHaveBeenCalledWith(
+          "npm",
+          ["run", "sst", "--", "state", "list"],
+          expect.any(Object)
+        );
+      });
+
+      it("returns the exit code rather than throwing on failure", async () => {
+        mockExec.exec.mockResolvedValue(1);
+
+        const result = await executor.listStages();
+
+        expect(result.exitCode).toBe(1);
+        expect(result.error).toContain("exit code 1");
+      });
+    });
   });
 
   describe("Edge Cases", () => {

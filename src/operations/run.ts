@@ -20,7 +20,8 @@ import * as core from "@actions/core";
 import type { GitHubClient } from "../github/client";
 import type { InfrastructureInputs } from "../inputs/resolve";
 import type { OperationParser } from "../parsers/operation-parser";
-import type { BaseOperationResult, CommentMode } from "../types";
+import { parseStageList } from "../parsers/stage-list";
+import type { BaseOperationResult, CommentMode, RemoveResult } from "../types";
 import type { SSTCLIExecutor } from "../utils/cli";
 
 export async function runInfrastructureOperation<
@@ -58,6 +59,110 @@ export async function runInfrastructureOperation<
   });
 
   return reported;
+}
+
+/**
+ * Remove, but only when the stage is actually deployed.
+ *
+ * `sst remove` against a stage that was never deployed fails, which turned
+ * every PR-close cleanup for an undeployed PR into a red run. The state
+ * backend is asked first (`sst state list` — backend-agnostic), and a stage it
+ * does not know about produces a successful no-op result instead of a doomed
+ * removal.
+ *
+ * Fails open on every uncertainty — the check errored, timed out, or printed
+ * something unrecognisable — because skipping a real removal is worse than
+ * attempting one that fails.
+ */
+export async function runRemoveOperation({
+  createGitHubClient,
+  executor,
+  inputs,
+  parser,
+}: {
+  createGitHubClient: (token: string) => GitHubClient;
+  executor: SSTCLIExecutor;
+  inputs: InfrastructureInputs;
+  parser: OperationParser<RemoveResult>;
+}): Promise<RemoveResult> {
+  const skipped = await checkStageNotDeployed(executor, inputs);
+
+  if (skipped) {
+    await reportToGitHub({
+      client: createGitHubClient(inputs.token),
+      commentMode: inputs.commentMode,
+      result: skipped,
+    });
+    return skipped;
+  }
+
+  return await runInfrastructureOperation({
+    createGitHubClient,
+    executor,
+    inputs,
+    parser,
+  });
+}
+
+/**
+ * @returns A skipped result when the state backend positively confirms the
+ *   stage is not deployed, null in every other case (deployed, or unknown).
+ */
+async function checkStageNotDeployed(
+  executor: SSTCLIExecutor,
+  inputs: InfrastructureInputs
+): Promise<RemoveResult | null> {
+  const proceed = (reason: string): null => {
+    core.warning(`${reason}; attempting removal anyway`);
+    return null;
+  };
+
+  // Everything up to the decision sits in one try: any surprise — the command
+  // cannot run, times out, or answers in a shape this code does not expect —
+  // must land on "attempt the removal", never on an unhandled throw that the
+  // router would report as a failed remove.
+  try {
+    const listResult = await executor.listStages({
+      maxOutputSize: inputs.maxOutputSize,
+      runner: inputs.runner,
+    });
+
+    if (listResult.exitCode !== 0) {
+      return proceed(
+        `\`sst state list\` exited with code ${listResult.exitCode}`
+      );
+    }
+
+    const listing = parseStageList(listResult.output);
+    if (listing === null) {
+      return proceed("Could not parse `sst state list` output");
+    }
+
+    if (listing.stages.includes(inputs.stage)) {
+      return null;
+    }
+
+    core.info(
+      `Stage '${inputs.stage}' is not deployed (deployed stages: ${listing.stages.join(", ") || "none"}). Nothing to remove.`
+    );
+
+    return {
+      app: listing.app ?? "",
+      completionStatus: "skipped",
+      exitCode: 0,
+      operation: "remove",
+      rawOutput: listResult.output,
+      removedResources: [],
+      resourcesRemoved: 0,
+      stage: inputs.stage,
+      success: true,
+      truncated: listResult.truncated,
+    };
+  } catch (error) {
+    return proceed(
+      `Could not check deployed stages: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 /**

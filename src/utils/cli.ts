@@ -74,6 +74,13 @@ const COMMAND_TIMEOUTS: Record<"deploy" | "diff" | "remove", number> = {
 };
 
 /**
+ * `sst state list` runs no infrastructure work, but it does initialise every
+ * provider in the app config before reading the state backend, which takes
+ * tens of seconds on a cold runner.
+ */
+const STATE_LIST_TIMEOUT = 120_000; // 2 minutes
+
+/**
  * SST CLI executor with comprehensive error handling and timeout management
  */
 export class SSTCLIExecutor {
@@ -143,6 +150,29 @@ export class SSTCLIExecutor {
   }
 
   /**
+   * List the stages deployed in the app's state backend.
+   *
+   * Backend-agnostic on purpose: `sst state list` answers from whichever home
+   * the app config declares (AWS, Cloudflare, …), so callers need no knowledge
+   * of where state lives. Returns the raw CLI result; parsing is the caller's
+   * concern.
+   *
+   * @throws {Error} When the command cannot be executed at all — callers that
+   *   use this as a preflight check should treat a throw as "unknown", not as
+   *   "no stages".
+   */
+  async listStages(options: CLIOptions = {}): Promise<CLIResult> {
+    const runner = options.runner || "bun";
+    const command = [...this.buildRunnerCommand(runner, "state"), "list"];
+
+    return await this.executeCommand(command, {
+      ...options,
+      maxOutputSize: options.maxOutputSize ?? this.defaultMaxOutputSize,
+      timeout: options.timeout ?? STATE_LIST_TIMEOUT,
+    });
+  }
+
+  /**
    * Build the SST command array based on operation and options
    */
   private buildCommand(
@@ -192,7 +222,7 @@ export class SSTCLIExecutor {
    */
   private buildRunnerCommand(
     runner: SSTRunner,
-    operation: SSTOperation
+    operation: SSTOperation | "state"
   ): string[] {
     switch (runner) {
       case "sst":
