@@ -119,6 +119,8 @@ outputs:
     description: "JSON array of the resources SST reported, each with name, type and status (deploy only; empty for other operations)"
   outputs:
     description: "JSON array of generic outputs from the deployment, each with key and value (deploy only; empty for other operations)"
+  urls:
+    description: "JSON array of the http(s) URLs SST reported, each with key and value (deploy and diff; empty array for other operations)"
   app:
     description: "The SST app name"
   completion_status:

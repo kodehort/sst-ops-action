@@ -54,12 +54,12 @@ describe("OperationFormatter", () => {
       expect(comment).toContain("| Resource Changes | 5 |");
       expect(comment).toContain("📊 Resource Changes");
       expect(comment).toContain("**Total Changes:** 5");
-      expect(comment).toContain("📋 Deploy Outputs");
+      expect(comment).toContain("🔗 URLs");
       expect(comment).toContain(
-        "| app | [https://my-app.com](https://my-app.com) |"
+        "- **app**: [https://my-app.com](https://my-app.com)"
       );
       expect(comment).toContain(
-        "| api | [https://api.my-app.com](https://api.my-app.com) |"
+        "- **api**: [https://api.my-app.com](https://api.my-app.com)"
       );
       expect(comment).toContain("🖥️ SST Console");
       expect(comment).toContain("https://console.sst.dev/my-app/production");
@@ -96,6 +96,7 @@ describe("OperationFormatter", () => {
           { action: "update", name: "Bucket1", type: "S3" },
           { action: "delete", name: "Table1", type: "DynamoDB" },
         ],
+        outputs: [],
         plannedChanges: 6,
         rawOutput: "Diff completed",
         stage: "staging",
@@ -117,6 +118,7 @@ describe("OperationFormatter", () => {
         diffSection: "",
         exitCode: 0,
         operation: "diff",
+        outputs: [],
         plannedChanges: 0,
         rawOutput: "No changes",
         stage: "staging",
@@ -281,13 +283,17 @@ $ bunx --bun astro build
 
       expect(summary).toContain("📦 Deployment Summary");
       expect(summary).toContain("Resources Changed | 7");
-      expect(summary).toContain("Outputs | 2");
-      expect(summary).toContain("📋 Deploy Outputs");
+      // Both outputs are URLs, so they list under URLs and the outputs
+      // table is not rendered at all.
+      expect(summary).toContain("URLs | 2");
+      expect(summary).toContain("Outputs | 0");
+      expect(summary).toContain("🔗 URLs");
+      expect(summary).not.toContain("📋 Outputs");
       expect(summary).toContain(
-        "| app | [https://my-app.com](https://my-app.com) |"
+        "- **app**: [https://my-app.com](https://my-app.com)"
       );
       expect(summary).toContain(
-        "| api | [https://api.my-app.com](https://api.my-app.com) |"
+        "- **api**: [https://api.my-app.com](https://api.my-app.com)"
       );
     });
 
@@ -313,8 +319,8 @@ $ bunx --bun astro build
 
       const summary = formatter.formatOperationSummary(deployResult);
 
-      expect(summary).toContain("Outputs | 15");
-      expect(summary).toContain("... and 5 more outputs");
+      expect(summary).toContain("URLs | 15");
+      expect(summary).toContain("... and 5 more URLs");
     });
 
     it("should format diff summary correctly", () => {
@@ -330,6 +336,7 @@ $ bunx --bun astro build
         diffSection: "",
         exitCode: 0,
         operation: "diff",
+        outputs: [],
         plannedChanges: 6,
         rawOutput: "Diff completed",
         stage: "staging",
@@ -357,6 +364,7 @@ $ bunx --bun astro build
         diffSection: "",
         exitCode: 0,
         operation: "diff",
+        outputs: [],
         plannedChanges: 0,
         rawOutput: "No changes",
         stage: "staging",
@@ -537,7 +545,7 @@ $ bunx --bun astro build
 
       const comment = customFormatter.formatOperationComment(deployResult);
 
-      expect(comment).toContain("... and 4 more outputs");
+      expect(comment).toContain("... and 4 more URLs");
     });
 
     it("should respect custom maxResourcesToShow configuration", () => {
@@ -727,6 +735,85 @@ $ bunx --bun astro build
           "[https://api.test.com](https://api.test.com)"
         );
       });
+    });
+  });
+
+  describe("URL and outputs sections", () => {
+    const mixed: DeployResult = {
+      app: "my-app",
+      completionStatus: "complete",
+      exitCode: 0,
+      operation: "deploy",
+      outputs: [
+        { key: "Astro", value: "https://kodehort.com" },
+        { key: "github_role_arn", value: "arn:aws:iam::1:role/x" },
+        { key: "www", value: "https://kodehort.com" },
+      ],
+      rawOutput: "",
+      resourceChanges: 0,
+      resources: [],
+      stage: "production",
+      success: true,
+      truncated: false,
+    };
+
+    it("splits URLs from the other outputs, in both renderings", () => {
+      for (const rendered of [
+        formatter.formatOperationComment(mixed),
+        formatter.formatOperationSummary(mixed),
+      ]) {
+        expect(rendered).toContain("### 🔗 URLs");
+        expect(rendered).toContain(
+          "- **Astro**: [https://kodehort.com](https://kodehort.com)"
+        );
+        expect(rendered).toContain(
+          "- **www**: [https://kodehort.com](https://kodehort.com)"
+        );
+
+        expect(rendered).toContain("### 📋 Outputs");
+        expect(rendered).toContain(
+          "| github_role_arn | `arn:aws:iam::1:role/x` |"
+        );
+
+        // An ARN is not a link, and a URL is not a table row.
+        expect(rendered).not.toContain("- **github_role_arn**");
+        expect(rendered).not.toContain("| Astro |");
+      }
+    });
+
+    it("omits each section when it would be empty", () => {
+      const noOutputs = { ...mixed, outputs: [] };
+      const comment = formatter.formatOperationComment(noOutputs);
+
+      expect(comment).not.toContain("🔗 URLs");
+      expect(comment).not.toContain("📋 Outputs");
+    });
+
+    it("lists URLs SST reported on a diff", () => {
+      const diffResult: DiffResult = {
+        app: "my-app",
+        changeSummary: "1 change planned",
+        changes: [{ action: "create", name: "Web", type: "Astro" }],
+        completionStatus: "complete",
+        diffSection: "+  Web sst:aws:Astro",
+        exitCode: 0,
+        operation: "diff",
+        outputs: [{ key: "Router", value: "https://dev.example.com" }],
+        plannedChanges: 1,
+        rawOutput: "",
+        stage: "dev",
+        success: true,
+        truncated: false,
+      };
+
+      for (const rendered of [
+        formatter.formatOperationComment(diffResult),
+        formatter.formatOperationSummary(diffResult),
+      ]) {
+        expect(rendered).toContain(
+          "- **Router**: [https://dev.example.com](https://dev.example.com)"
+        );
+      }
     });
   });
 });

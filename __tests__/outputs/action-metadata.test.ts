@@ -110,6 +110,7 @@ const diff: DiffResult = {
   diffSection: "",
   exitCode: 0,
   operation: "diff",
+  outputs: [],
   plannedChanges: 1,
   rawOutput: "",
   stage: "staging",

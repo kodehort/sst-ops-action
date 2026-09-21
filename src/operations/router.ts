@@ -131,6 +131,7 @@ function createFailureResult(
         changes: [],
         diffSection: "",
         operation: "diff" as const,
+        outputs: [],
         plannedChanges: 0,
       };
     case "remove":

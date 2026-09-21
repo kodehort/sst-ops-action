@@ -11,6 +11,7 @@ import type {
   RemoveResult,
   StageResult,
 } from "../types";
+import { selectUrls } from "../utils/urls";
 import {
   type ValidatedOutputs,
   validateOutputs as validateWithSchema,
@@ -34,6 +35,7 @@ interface BaseInfrastructureOutputs {
   stages: string;
   success: string;
   truncated: string;
+  urls: string; // JSON array of the http(s) outputs
 }
 
 /**
@@ -124,6 +126,7 @@ interface StageOutputs {
   stages: string; // JSON array of {ref, stage} pairs for the refs input
   success: string;
   truncated: string;
+  urls: string;
   // Index signature for Record<string, string> compatibility
   [key: string]: string;
 }
@@ -198,6 +201,7 @@ function formatDeployOperation(result: DeployResult): DeployOutputs {
     stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
+    urls: safeStringify(selectUrls(result.outputs)),
   };
 }
 
@@ -227,6 +231,7 @@ function formatDiffOperation(result: DiffResult): DiffOutputs {
     stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
+    urls: safeStringify(selectUrls(result.outputs)),
   };
 }
 
@@ -256,6 +261,7 @@ function formatRemoveOperation(result: RemoveResult): RemoveOutputs {
     stages: "",
     success: String(result.success),
     truncated: String(result.truncated),
+    urls: "[]",
   };
 }
 
@@ -285,6 +291,7 @@ function formatStageOperation(result: StageResult): StageOutputs {
     stages: safeStringify(result.stages || []),
     success: String(result.success),
     truncated: "false",
+    urls: "[]",
   };
 }
 

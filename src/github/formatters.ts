@@ -9,6 +9,12 @@ import type {
   DiffResult,
   RemoveResult,
 } from "../types/index.js";
+import {
+  isHttpUrl,
+  type SSTOutput,
+  selectNonUrlOutputs,
+  selectUrls,
+} from "../utils/urls.js";
 
 /**
  * Format configuration for comments and summaries
@@ -37,11 +43,6 @@ const DEFAULT_CONFIG: FormatConfig = {
  */
 export class OperationFormatter {
   private readonly config: FormatConfig;
-
-  /**
-   * URL protocols for optimized protocol checking
-   */
-  private static readonly URL_PROTOCOLS = new Set(["http://", "https://"]);
 
   constructor(config: FormatConfig = DEFAULT_CONFIG) {
     this.config = config;
@@ -114,10 +115,8 @@ export class OperationFormatter {
       sections.push(this.formatResourceChangesSection(result));
     }
 
-    // Outputs section
-    if (result.outputs && result.outputs.length > 0) {
-      sections.push(this.formatOutputsSection(result.outputs));
-    }
+    // URL and outputs sections
+    sections.push(...this.formatOutputSections(result.outputs));
 
     // Console link section
     if (result.permalink) {
@@ -135,6 +134,10 @@ export class OperationFormatter {
 
     // Status section
     sections.push(this.formatStatusSection(result));
+
+    // URL and outputs sections, ahead of the diff itself: a reviewer wants
+    // the addresses more often than the resource-by-resource plan.
+    sections.push(...this.formatOutputSections(result.outputs));
 
     // Changes summary section
     sections.push(this.formatDiffChangesSection(result));
@@ -178,6 +181,8 @@ export class OperationFormatter {
    * Format deploy operation summary
    */
   private formatDeploySummary(result: DeployResult): string {
+    const { outputs } = result;
+
     let summary = `### 📦 Deployment Summary
 
 | Property | Value |
@@ -185,7 +190,8 @@ export class OperationFormatter {
 | App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
-| Outputs | ${result.outputs?.length || 0} |
+| URLs | ${selectUrls(outputs).length} |
+| Outputs | ${selectNonUrlOutputs(outputs).length} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
     // Add console link if available
@@ -193,19 +199,10 @@ export class OperationFormatter {
       summary += `\n| Console Link | [View Deployment](${result.permalink}) |`;
     }
 
-    if (result.outputs && result.outputs.length > 0) {
-      summary += "\n\n### 📋 Deploy Outputs\n\n";
-      const outputsToShow = result.outputs.slice(0, this.config.maxUrlsToShow);
-
-      summary += "| Key | Value |\n|-----|-------|\n";
-      for (const output of outputsToShow) {
-        const formattedValue = this.formatOutputValue(output.value);
-        summary += `| ${output.key} | ${formattedValue} |\n`;
-      }
-
-      if (result.outputs.length > this.config.maxUrlsToShow) {
-        summary += `\n*... and ${result.outputs.length - this.config.maxUrlsToShow} more outputs*`;
-      }
+    // Each row counts what the section below it shows, so the two cannot
+    // disagree about how many there were.
+    for (const section of this.formatOutputSections(outputs)) {
+      summary += `\n\n${section}`;
     }
 
     return summary;
@@ -241,6 +238,12 @@ export class OperationFormatter {
     // Add permalink if available
     if (result.permalink) {
       summary += `\n| Console Link | [View Diff](${result.permalink}) |`;
+    }
+
+    // SST resolves the app's URLs on a diff too, so they are reported the
+    // same way here as after a deploy.
+    for (const section of this.formatOutputSections(result.outputs)) {
+      summary += `\n\n${section}`;
     }
 
     // Add the actual diff in a collapsible code block
@@ -333,7 +336,8 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
 | App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resource Changes | ${result.resourceChanges || 0} |
-| Outputs | ${result.outputs?.length || 0} |
+| URLs | ${selectUrls(result.outputs).length} |
+| Outputs | ${selectNonUrlOutputs(result.outputs).length} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
     // Add console link if available
@@ -374,12 +378,36 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
   }
 
   /**
-   * Format outputs section
+   * Format the list of URLs SST reported.
+   *
+   * A list rather than a table, and labelled with SST's own output key: the
+   * key is the app's name for the thing, which no classifier can improve on.
+   * An earlier version of this section guessed `api`/`web`/`function`/`other`
+   * from the key and threw the key away.
    */
-  private formatOutputsSection(
-    outputs: Array<{ key: string; value: string }>
-  ): string {
-    let section = "### 📋 Deploy Outputs\n\n";
+  private formatUrlsSection(urls: SSTOutput[]): string {
+    let section = "### 🔗 URLs\n";
+
+    for (const url of urls.slice(0, this.config.maxUrlsToShow)) {
+      section += `\n- **${url.key}**: [${url.value}](${url.value})`;
+    }
+
+    if (urls.length > this.config.maxUrlsToShow) {
+      section += `\n\n*... and ${urls.length - this.config.maxUrlsToShow} more URLs*`;
+    }
+
+    return section;
+  }
+
+  /**
+   * Format the outputs that are not URLs, as a key/value table.
+   *
+   * URLs are rendered by `formatUrlsSection` instead, so the two partition
+   * the outputs between them and nothing is listed twice.
+   */
+  private formatOutputsSection(outputs: SSTOutput[]): string {
+    // Not "Deploy Outputs": diff reports this block too.
+    let section = "### 📋 Outputs\n\n";
 
     const outputsToShow = outputs.slice(0, this.config.maxUrlsToShow);
 
@@ -393,51 +421,43 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
       section += `\n*... and ${outputs.length - this.config.maxUrlsToShow} more outputs*`;
     }
 
-    return section;
+    // Each row ends in a newline, so without this the section joins to the
+    // next one across a blank line the other sections do not have.
+    return section.trimEnd();
   }
 
   /**
-   * Format output value - make URLs clickable, escape other values
-   * Uses optimized Set-based protocol checking with URL structure validation
+   * The URL and non-URL sections for an operation's outputs, in render order.
+   *
+   * Shared so a comment and a summary cannot disagree about them. They did:
+   * the summary carried its own copy of the outputs table, and the two had
+   * already drifted apart.
+   */
+  private formatOutputSections(outputs: SSTOutput[]): string[] {
+    const sections: string[] = [];
+    const urls = selectUrls(outputs);
+    const rest = selectNonUrlOutputs(outputs);
+
+    if (urls.length > 0) {
+      sections.push(this.formatUrlsSection(urls));
+    }
+
+    if (rest.length > 0) {
+      sections.push(this.formatOutputsSection(rest));
+    }
+
+    return sections;
+  }
+
+  /**
+   * Render an output value: a link when it is one, a code span otherwise.
+   *
+   * The URL values now have a section of their own, so what reaches here is
+   * the remainder — but a value can be a URL under a protocol the links
+   * section does not carry, and a code span is the honest rendering for it.
    */
   private formatOutputValue(value: string): string {
-    // Early exit for strings too short to be URLs
-    if (value.length < 7) {
-      return `\`${value}\``;
-    }
-
-    // Single slice operation with early exit for non-http protocols
-    const prefix = value.slice(0, 8);
-    if (!prefix.startsWith("http")) {
-      return `\`${value}\``;
-    }
-
-    // Check for valid protocols with single slice result
-    const hasUrlProtocol =
-      OperationFormatter.URL_PROTOCOLS.has(prefix) ||
-      OperationFormatter.URL_PROTOCOLS.has(prefix.slice(0, 7));
-
-    // Validate URL structure before creating markdown link to prevent broken links
-    if (hasUrlProtocol && this.isValidUrl(value)) {
-      return `[${value}](${value})`;
-    }
-
-    // For non-URL values or invalid URLs, return as code block
-    return `\`${value}\``;
-  }
-
-  /**
-   * Validate URL structure using browser-standard URL constructor
-   * Prevents broken markdown links from malformed URLs
-   * Only allows http: and https: protocols for security
-   */
-  private isValidUrl(value: string): boolean {
-    try {
-      const url = new URL(value);
-      return ["http:", "https:"].includes(url.protocol);
-    } catch {
-      return false;
-    }
+    return isHttpUrl(value) ? `[${value}](${value})` : `\`${value}\``;
   }
 
   /**

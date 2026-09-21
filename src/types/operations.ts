@@ -77,6 +77,16 @@ export interface DiffResult extends BaseOperationResult {
    */
   diffSection: string;
   operation: "diff";
+  /**
+   * The key/value block SST prints after `✓ Generated`, the same shape deploy
+   * reports. A diff run still resolves the app's URLs, and they were
+   * previously swallowed into `diffSection` and rendered inside its code
+   * fence, where nothing could link them.
+   */
+  outputs: Array<{
+    key: string;
+    value: string;
+  }>;
   plannedChanges: number;
 }
 
