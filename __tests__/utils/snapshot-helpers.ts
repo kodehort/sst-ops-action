@@ -41,17 +41,60 @@ export interface SnapshotData {
 const formatter = new OperationFormatter();
 
 /**
+ * Example paths are recorded in committed metadata, so they must not vary by
+ * checkout location or platform. Building them from `join(process.cwd(), ...)`
+ * baked the generating machine's home directory into every committed file, and
+ * would emit backslashes on Windows. The repo-relative POSIX form is the source
+ * of truth; the absolute paths used for filesystem access derive from it, so
+ * the two cannot drift apart.
+ */
+const EXAMPLES_DIR = "examples";
+
+function toRepoPath(...segments: string[]): string {
+  return [EXAMPLES_DIR, ...segments].join("/");
+}
+
+function toAbsolutePath(repoPath: string): string {
+  return join(process.cwd(), repoPath);
+}
+
+/**
  * Get the root directory for examples
  */
 export function getExamplesRoot(): string {
-  return join(process.cwd(), "examples");
+  return toAbsolutePath(EXAMPLES_DIR);
+}
+
+/**
+ * Get the repo-relative path to an input file
+ */
+function getInputRepoPath(operation: SSTOperation, name: string): string {
+  return toRepoPath("inputs", operation, `${name}.txt`);
+}
+
+/**
+ * Get the repo-relative path to a snapshot file
+ */
+function getSnapshotRepoPath(
+  operation: SSTOperation,
+  name: string,
+  type: "comment" | "summary"
+): string {
+  return toRepoPath("snapshots", operation, `${name}.${type}.md`);
+}
+
+/**
+ * Get the repo-relative path to a metadata file
+ */
+function getMetadataRepoPath(operation: SSTOperation, name: string): string {
+  return toRepoPath("metadata", operation, `${name}.metadata.json`);
 }
 
 /**
  * Get the path to an input file
  */
 function getInputPath(operation: SSTOperation, name: string): string {
-  return join(getExamplesRoot(), "inputs", operation, `${name}.txt`);
+  return toAbsolutePath(getInputRepoPath(operation, name));
 }
 
 /**
@@ -62,19 +105,14 @@ function getSnapshotPath(
   name: string,
   type: "comment" | "summary"
 ): string {
-  return join(getExamplesRoot(), "snapshots", operation, `${name}.${type}.md`);
+  return toAbsolutePath(getSnapshotRepoPath(operation, name, type));
 }
 
 /**
  * Get the path to a metadata file
  */
 function getMetadataPath(operation: SSTOperation, name: string): string {
-  return join(
-    getExamplesRoot(),
-    "metadata",
-    operation,
-    `${name}.metadata.json`
-  );
+  return toAbsolutePath(getMetadataRepoPath(operation, name));
 }
 
 /**
@@ -159,6 +197,16 @@ function saveSnapshot(
 }
 
 /**
+ * Serialize metadata exactly as it is committed.
+ *
+ * The trailing newline is load-bearing: the committed files carry one, so a
+ * file written without it comes back as a diff on every regeneration.
+ */
+function serializeMetadata(metadata: SnapshotMetadata): string {
+  return `${JSON.stringify(metadata, null, 2)}\n`;
+}
+
+/**
  * Save snapshot metadata
  */
 function saveMetadata(
@@ -173,7 +221,99 @@ function saveMetadata(
     mkdirSync(dir, { recursive: true });
   }
 
-  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+  writeFileSync(metadataPath, serializeMetadata(metadata));
+}
+
+/**
+ * Read the committed metadata file, when it exists and carries a stamp.
+ *
+ * A truncated or hand-mangled file is treated as absent: the snapshot is
+ * rewritten from scratch with a fresh stamp rather than throwing.
+ */
+function readExistingMetadata(
+  operation: SSTOperation,
+  name: string
+): { content: string; generatedAt: string } | null {
+  const metadataPath = getMetadataPath(operation, name);
+
+  if (!existsSync(metadataPath)) {
+    return null;
+  }
+
+  try {
+    const content = readFileSync(metadataPath, "utf8");
+    const { generatedAt } = JSON.parse(content) as Partial<SnapshotMetadata>;
+
+    return typeof generatedAt === "string" ? { content, generatedAt } : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildMetadata(
+  operation: SSTOperation,
+  name: string,
+  parsed: OperationResult,
+  description: string,
+  generatedAt: string
+): SnapshotMetadata {
+  return {
+    app: parsed.app,
+    description,
+    files: {
+      comment: getSnapshotRepoPath(operation, name, "comment"),
+      input: getInputRepoPath(operation, name),
+      metadata: getMetadataRepoPath(operation, name),
+      summary: getSnapshotRepoPath(operation, name, "summary"),
+    },
+    generatedAt,
+    name,
+    operation,
+    stage: parsed.stage,
+    success: parsed.success,
+  };
+}
+
+/**
+ * Keep the committed `generatedAt` when re-stamping would be the only change.
+ *
+ * A fresh timestamp on every run made `snapshots:generate:force` dirty all the
+ * committed metadata files even when the generated content was identical, so
+ * the command could not be used to check for drift. The stamp now moves only
+ * when the content it describes does. The comparison is against the file's
+ * actual bytes rather than a deep compare of parsed objects, so it is immune
+ * to key ordering: a hand-reordered file earns one fresh stamp and is then
+ * rewritten canonically.
+ */
+function resolveMetadata(
+  operation: SSTOperation,
+  name: string,
+  parsed: OperationResult,
+  description: string
+): SnapshotMetadata {
+  const existing = readExistingMetadata(operation, name);
+
+  if (existing) {
+    const reused = buildMetadata(
+      operation,
+      name,
+      parsed,
+      description,
+      existing.generatedAt
+    );
+
+    if (serializeMetadata(reused) === existing.content) {
+      return reused;
+    }
+  }
+
+  return buildMetadata(
+    operation,
+    name,
+    parsed,
+    description,
+    new Date().toISOString()
+  );
 }
 
 /**
@@ -193,24 +333,11 @@ export function generateSnapshots(
   saveSnapshot(operation, name, "comment", comment);
   saveSnapshot(operation, name, "summary", summary);
 
-  // Create metadata
-  const metadata: SnapshotMetadata = {
-    app: parsed.app,
-    description: description || "",
-    files: {
-      comment: getSnapshotPath(operation, name, "comment"),
-      input: getInputPath(operation, name),
-      metadata: getMetadataPath(operation, name),
-      summary: getSnapshotPath(operation, name, "summary"),
-    },
-    generatedAt: new Date().toISOString(),
-    name,
+  saveMetadata(
     operation,
-    stage: parsed.stage,
-    success: parsed.success,
-  };
-
-  saveMetadata(operation, name, metadata);
+    name,
+    resolveMetadata(operation, name, parsed, description || "")
+  );
 }
 
 /**

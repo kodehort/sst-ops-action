@@ -2,12 +2,12 @@
   "app": "my-app",
   "description": "Generated from complete-cleanup.txt",
   "files": {
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/remove/complete-cleanup.comment.md",
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/remove/complete-cleanup.txt",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/remove/complete-cleanup.metadata.json",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/remove/complete-cleanup.summary.md"
+    "comment": "examples/snapshots/remove/complete-cleanup.comment.md",
+    "input": "examples/inputs/remove/complete-cleanup.txt",
+    "metadata": "examples/metadata/remove/complete-cleanup.metadata.json",
+    "summary": "examples/snapshots/remove/complete-cleanup.summary.md"
   },
-  "generatedAt": "2026-08-14T12:14:07.125Z",
+  "generatedAt": "2026-09-21T15:54:53.889Z",
   "name": "complete-cleanup",
   "operation": "remove",
   "stage": "localstage",

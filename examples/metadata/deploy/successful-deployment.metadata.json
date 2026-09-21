@@ -2,12 +2,12 @@
   "app": "www-kodehort-com",
   "description": "Generated from successful-deployment.txt",
   "files": {
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/successful-deployment.comment.md",
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/successful-deployment.txt",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/deploy/successful-deployment.metadata.json",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/successful-deployment.summary.md"
+    "comment": "examples/snapshots/deploy/successful-deployment.comment.md",
+    "input": "examples/inputs/deploy/successful-deployment.txt",
+    "metadata": "examples/metadata/deploy/successful-deployment.metadata.json",
+    "summary": "examples/snapshots/deploy/successful-deployment.summary.md"
   },
-  "generatedAt": "2026-08-14T12:14:07.124Z",
+  "generatedAt": "2026-09-21T15:54:53.885Z",
   "name": "successful-deployment",
   "operation": "deploy",
   "stage": "production",
