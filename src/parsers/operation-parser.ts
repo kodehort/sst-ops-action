@@ -21,6 +21,71 @@ import { PatternHelpers, SSTPatterns } from "./patterns";
 const RESOURCE_GLYPH = /^[+\-*~|\u00d7\u2197]\s/;
 
 /**
+ * Index of the first line at or after `from` that is not blank.
+ *
+ * The block may start on the line after the marker or after a blank line —
+ * `output-deployment.txt` and `successful-deployment.txt` differ on exactly
+ * this. Consuming the blanks here is what lets the scan below treat a blank
+ * line as the unambiguous end of the block.
+ */
+function firstContentLine(lines: string[], from: number): number {
+  let index = from;
+
+  for (const raw of lines.slice(from)) {
+    if (raw.trim() !== "") {
+      break;
+    }
+
+    index += 1;
+  }
+
+  return index;
+}
+
+/**
+ * Read pairs from `from` until the block ends.
+ *
+ * A blank line ends it, and so does a line opening with a resource glyph:
+ * a diff with no outputs at all puts its body where the block would be, and
+ * without that guard `+  my-app-production pulumi:pulumi:Stack` parses as a
+ * pair and the diff loses its first line.
+ *
+ * Within those bounds a line that is not a pair is skipped rather than
+ * treated as the end — the `---` separator sits mid-block, and a deploy
+ * capture can carry a malformed line between two good ones. Only lines that
+ * look like they meant to be pairs are counted as malformed: a diff puts
+ * prose such as "No changes" here, and reporting that would be noise on
+ * every unchanged stage.
+ */
+function collectBlockPairs(
+  lines: string[],
+  from: number
+): { outputs: SSTOutput[]; endIndex: number; malformed: number } {
+  const outputs: SSTOutput[] = [];
+  let malformed = 0;
+  let index = from;
+
+  for (const raw of lines.slice(from)) {
+    const line = raw.trim();
+
+    if (line === "" || RESOURCE_GLYPH.test(line)) {
+      break;
+    }
+
+    const pair = parseOutputPair(line);
+    if (pair) {
+      outputs.push(pair);
+    } else if (line.includes(":")) {
+      malformed += 1;
+    }
+
+    index += 1;
+  }
+
+  return { endIndex: index, malformed, outputs };
+}
+
+/**
  * Split a block line into its key and value on the first colon.
  *
  * The first colon rather than the only one: an output value is frequently an
@@ -201,19 +266,6 @@ export abstract class OperationParser<T extends BaseOperationResult> {
    * the diff body as much as it needs the pairs, so the end index is returned
    * alongside them rather than being re-derived by the caller.
    *
-   * Three shapes appear in real captures and each one pins part of the rule:
-   * the block may start on the line after the marker or after a blank line
-   * (`successful-deployment.txt`), and a diff with no outputs at all puts its
-   * body where the block would be (`complex-changes.txt`). So leading blanks
-   * are skipped, a blank line ends the block only once it has begun, and a
-   * line opening with a resource glyph ends it outright — without that last
-   * guard `+  my-app-production pulumi:pulumi:Stack` parses as a pair and the
-   * diff loses its first line.
-   *
-   * Within those bounds a line that is not a pair is skipped rather than
-   * treated as the end: the `---` separator sits mid-block, and a deploy
-   * capture can carry a malformed line between two good ones.
-   *
    * @param lines Cleaned capture, split on newlines
    * @param marker Pattern matching the completion line the block follows
    * @returns The pairs, and the index of the first line after the block
@@ -227,47 +279,10 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       return { endIndex: lines.length, outputs: [] };
     }
 
-    const outputs: SSTOutput[] = [];
-
-    // Only lines that look like they meant to be pairs are worth reporting:
-    // a diff with no outputs at all puts prose such as "No changes" here, and
-    // warning about that would be noise on every unchanged stage.
-    let malformed = 0;
-
-    let index = markerIndex + 1;
-    let started = false;
-
-    for (const raw of lines.slice(markerIndex + 1)) {
-      const line = raw.trim();
-
-      if (line === "") {
-        // A blank line belongs to the marker until the block has begun, and
-        // ends the block once it has.
-        if (started) {
-          break;
-        }
-
-        index += 1;
-        continue;
-      }
-
-      if (RESOURCE_GLYPH.test(line)) {
-        break;
-      }
-
-      started = true;
-
-      const pair = parseOutputPair(line);
-      if (pair) {
-        outputs.push(pair);
-      } else if (line.includes(":")) {
-        // A separator, or a line SST wrote that is not a pair. Neither ends
-        // the block: deploy captures carry both mid-block.
-        malformed += 1;
-      }
-
-      index += 1;
-    }
+    const { outputs, endIndex, malformed } = collectBlockPairs(
+      lines,
+      firstContentLine(lines, markerIndex + 1)
+    );
 
     if (outputs.length === 0 && malformed > 0) {
       core.debug(
@@ -275,7 +290,7 @@ export abstract class OperationParser<T extends BaseOperationResult> {
       );
     }
 
-    return { endIndex: index, outputs };
+    return { endIndex, outputs };
   }
 
   /**
