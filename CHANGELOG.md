@@ -1,3 +1,48 @@
+# Release v0.8.5
+
+**Release Date:** 2026-09-21
+**Previous Version:** v0.8.4
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency @biomejs/biome to v2.5.14 (`fd4f391`)
+- chore(deps): update vitest monorepo to v5 (`15786a9`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 0.83MB (865216 bytes)
+- **Integrity Hash:** `b12db9f3de457c9b...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.8.5
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.8.4...v0.8.5)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.8.5/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.8.4...v0.8.5
+
+---
+
 # Release v0.8.4
 
 **Release Date:** 2026-09-15
