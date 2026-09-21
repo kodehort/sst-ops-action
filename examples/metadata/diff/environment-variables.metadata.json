@@ -2,12 +2,12 @@
   "app": "kodehort-scratch",
   "description": "Generated from environment-variables.txt",
   "files": {
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.comment.md",
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/environment-variables.txt",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/environment-variables.metadata.json",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/environment-variables.summary.md"
+    "comment": "examples/snapshots/diff/environment-variables.comment.md",
+    "input": "examples/inputs/diff/environment-variables.txt",
+    "metadata": "examples/metadata/diff/environment-variables.metadata.json",
+    "summary": "examples/snapshots/diff/environment-variables.summary.md"
   },
-  "generatedAt": "2026-08-14T12:14:07.123Z",
+  "generatedAt": "2026-09-21T15:54:53.881Z",
   "name": "environment-variables",
   "operation": "diff",
   "stage": "dev",
