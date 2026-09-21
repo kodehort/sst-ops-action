@@ -1,3 +1,48 @@
+# Release v0.8.6
+
+**Release Date:** 2026-09-21
+**Previous Version:** v0.8.5
+
+## 🚀 What's New
+
+
+### 🔧 Improvements & Maintenance
+
+- chore(deps): update dependency ultracite to v7.12.0 (`1b14192`)
+- chore(deps): update dependency fallow to v3.27.0 (`870798e`)
+
+## 📦 Bundle Information
+
+- **Bundle Size:** 0.83MB (865216 bytes)
+- **Integrity Hash:** `9db48bdb6815d75d...`
+- **Format:** ES Modules for GitHub Actions
+- **Target:** Node.js 20+
+- **Source Maps:** Included for debugging
+- **Distribution:** Files included in repository at tagged version
+
+## 🚀 Usage
+
+```yaml
+- name: SST Operations
+  uses: kodehort/sst-ops-action@v0.8.6
+  with:
+    operation: deploy  # deploy, diff, or remove
+    stage: production
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 🔗 Links
+
+- [Full Changelog](https://github.com/kodehort/sst-ops-action/compare/v0.8.5...v0.8.6)
+- [Documentation](https://github.com/kodehort/sst-ops-action/blob/v0.8.6/README.md)
+- [Action Marketplace](https://github.com/marketplace/actions/sst-operations)
+
+---
+
+**Full Changelog**: https://github.com/kodehort/sst-ops-action/compare/v0.8.5...v0.8.6
+
+---
+
 # Release v0.8.5
 
 **Release Date:** 2026-09-21
