@@ -561,6 +561,12 @@ jobs:
         run: |
           NEW_VERSION="${{ needs.determine-release.outputs.new-version }}"
 
+          # main as this job checked it out. The push below leases against this
+          # sha, so a commit that lands while the release is being built fails
+          # the push instead of being silently discarded.
+          BASE_SHA="$(git rev-parse HEAD)"
+          echo "main was at $BASE_SHA when this release started"
+
           # Add all changed files including dist/ for release (force add dist/ since it's gitignored)
           git add package.json CHANGELOG.md
           git add dist/
@@ -587,8 +593,23 @@ jobs:
 
             echo "✅ Prerelease tag v${NEW_VERSION} pushed; main and the major tag left alone"
           else
-            # Push everything via git first (uses checkout credentials)
-            git push --force origin main "v${NEW_VERSION}"
+            # main is pushed under a lease, never a bare --force. A bare force
+            # replaces main with this run's history, so any commit that landed
+            # after BASE_SHA is dropped with no error and no notification --
+            # that is how the v0.7.61 run orphaned 202287b and stranded two
+            # Renovate PRs for five weeks (#198). Failing here is recoverable:
+            # nothing has been pushed, and the next push to main starts a fresh
+            # release run that picks up both the new commit and this version.
+            if ! git push --force-with-lease="main:${BASE_SHA}" origin main; then
+              echo "::error::main moved since this run checked out ${BASE_SHA}; refusing to force-push over it. Nothing was pushed -- re-run the release once the new commits have landed."
+              exit 1
+            fi
+
+            # Tags stay forced on purpose: re-running a release for the same
+            # version has to be able to move its tag, and the floating major
+            # tag moves by design. Neither can discard a commit the way a
+            # forced branch push can.
+            git push --force origin "v${NEW_VERSION}"
 
             # Update major version tag
             MAJOR_VERSION="v$(echo $NEW_VERSION | cut -d. -f1)"
