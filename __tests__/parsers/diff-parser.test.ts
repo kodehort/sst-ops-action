@@ -209,4 +209,58 @@ SST 3.17.4  ready!
       }).not.toThrow();
     });
   });
+
+  describe("outputs block", () => {
+    it("lifts the outputs SST prints after the marker out of the diff", () => {
+      const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, "dev", 0, false);
+
+      expect(result.outputs).toEqual([
+        { key: "Router", value: "https://dev.kodeapps.co.uk" },
+        { key: "Web", value: "https://dev.kodeapps.co.uk" },
+        { key: "Api", value: "https://api.dev.kodeapps.co.uk" },
+        {
+          key: "github_role_arn",
+          value: "arn:aws:iam::194218796960:role/dev-GithubActionRole",
+        },
+        { key: "github_role_name", value: "dev-GithubActionRole" },
+      ]);
+
+      // The whole point: these lines used to open the rendered ```diff fence,
+      // where no markdown could link them.
+      expect(result.diffSection).not.toContain("Router:");
+      expect(result.diffSection).not.toContain("github_role_arn:");
+      expect(result.diffSection.split("\n")[0]).toBe(
+        "+  Web sst:aws:Astro → WebBuilder command:local:Command"
+      );
+    });
+
+    it("leaves the diff body alone when there is no outputs block", () => {
+      // The marker is followed straight by the diff here. Consuming a block
+      // that is not there would eat the first planned change — and its first
+      // line, `+  ... pulumi:pulumi:Stack`, does parse as a key/value pair.
+      const result = parser.parse(SST_DIFF_SUCCESS_OUTPUT, "staging", 0, false);
+
+      expect(result.outputs).toEqual([]);
+      expect(result.diffSection).toContain("pulumi:pulumi:Stack");
+      expect(result.plannedChanges).toBe(3);
+    });
+
+    it("reports no outputs when SST printed prose instead", () => {
+      const result = parser.parse(
+        SST_DIFF_NO_CHANGES_OUTPUT,
+        "staging",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([]);
+      expect(result.diffSection).toContain("No changes");
+    });
+
+    it("counts planned changes independently of the outputs block", () => {
+      const result = parser.parse(SST_DIFF_REAL_WORLD_OUTPUT, "dev", 0, false);
+
+      expect(result.plannedChanges).toBe(1);
+    });
+  });
 });

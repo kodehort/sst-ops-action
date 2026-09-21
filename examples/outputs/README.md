@@ -7,10 +7,15 @@ This directory contains example outputs for the SST Operations Action, organized
 ```
 outputs/
 ├── diff/                 # Diff operation examples
-├── deploy/               # Deploy operation examples (future)
-├── remove/               # Remove operation examples (future)
 └── README.md             # This file
 ```
+
+> The rendered output the action produces today lives in `examples/snapshots/`,
+> which `__tests__/snapshots/formatters.test.ts` compares byte for byte. The
+> `.md` files here are illustrative only and nothing regenerates them — a
+> `deploy/` directory used to sit alongside `diff/` and still showed a
+> `🔗 Deployed URLs` section that was removed in August 2025, so it was
+> deleted rather than left to rot further.
 
 ## File Types
 

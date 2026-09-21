@@ -59,6 +59,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           stages: "",
           success: "true",
           truncated: "false",
+          urls: JSON.stringify(deployResult.outputs),
         });
       });
 
@@ -116,6 +117,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           diffSection: "",
           exitCode: 0,
           operation: "diff",
+          outputs: [],
           plannedChanges: 2,
           rawOutput: "Diff completed",
           stage: "staging",
@@ -147,6 +149,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           stages: "",
           success: "true",
           truncated: "false",
+          urls: "[]",
         });
       });
 
@@ -159,6 +162,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           diffSection: "",
           exitCode: 0,
           operation: "diff",
+          outputs: [],
           plannedChanges: 0,
           rawOutput: "No changes detected",
           stage: "production",
@@ -219,6 +223,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           stages: "",
           success: "true",
           truncated: "false",
+          urls: "[]",
         });
       });
 
@@ -295,6 +300,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           stages: "[]",
           success: "true",
           truncated: "false",
+          urls: "[]",
         });
       });
 
@@ -413,6 +419,7 @@ describe("Output Formatter - GitHub Actions Output Processing", () => {
           diffSection: "",
           exitCode: 0,
           operation: "diff",
+          outputs: [],
           plannedChanges: 5,
           rawOutput: "Diff completed",
           stage: "staging",

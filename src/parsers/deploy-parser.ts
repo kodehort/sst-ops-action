@@ -3,8 +3,8 @@
  * Parses SST deploy command output to extract resource changes and generic outputs
  */
 
-import * as core from "@actions/core";
 import type { DeployResult } from "../types/operations";
+import type { SSTOutput } from "../utils/urls";
 import { normalizeResourceStatus } from "./normalization";
 import { OperationParser } from "./operation-parser";
 import { SSTPatterns } from "./patterns";
@@ -124,142 +124,17 @@ export class DeployParser extends OperationParser<DeployResult> {
   }
 
   /**
-   * Parse outputs from deployment output
-   * SST outputs appear in final output section after completion as key: value pairs
+   * Read the outputs SST printed after its completion marker.
+   *
+   * `✓ Complete` is deliberately narrower than `status.success`, which also
+   * matches `Generated` and `Removed`: here it marks where the block begins,
+   * not merely that the run finished.
    */
-  private parseOutputs(output: string): Array<{
-    key: string;
-    value: string;
-  }> {
-    const lines = output.split("\n");
-    const outputs: Array<{
-      key: string;
-      value: string;
-    }> = [];
-
-    // Look for outputs after completion marker
-    let inOutputSection = false;
-    let outputSectionLines = 0;
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Check if we're in the completion/output section
-      if (SSTPatterns.deploy.completionSuccess.test(trimmedLine)) {
-        inOutputSection = true;
-        continue;
-      }
-
-      if (inOutputSection) {
-        outputSectionLines += 1;
-        this.processOutputLine(trimmedLine, outputs);
-      }
-    }
-
-    // Log diagnostic information for empty output sections if debug is enabled
-    if (
-      inOutputSection &&
-      outputs.length === 0 &&
-      outputSectionLines > 0 &&
-      (process.env.ACTIONS_STEP_DEBUG === "1" ||
-        process.env.RUNNER_DEBUG === "1")
-    ) {
-      core.debug(
-        `Output section found but no valid outputs parsed (${outputSectionLines} lines processed)`
-      );
-    }
-
-    return outputs;
-  }
-
-  /**
-   * Process a single output line and add to outputs array if valid
-   * Also handles debug logging for invalid lines that might be outputs
-   */
-  private processOutputLine(
-    trimmedLine: string,
-    outputs: Array<{ key: string; value: string }>
-  ): void {
-    const outputPair = this.parseOutputFromLine(trimmedLine);
-    if (outputPair) {
-      outputs.push(outputPair);
-    } else if (
-      trimmedLine?.includes(":") &&
-      (process.env.ACTIONS_STEP_DEBUG === "1" ||
-        process.env.RUNNER_DEBUG === "1")
-    ) {
-      // Cache truncated line to avoid repeated slice operations
-      const logLine =
-        trimmedLine.length > 100
-          ? `${trimmedLine.slice(0, 100)}...`
-          : trimmedLine;
-      core.debug(
-        `Skipped potential output line: "${logLine}" (parsing failed)`
-      );
-    }
-  }
-
-  /**
-   * Parse a single output from a deploy line
-   *
-   * Extracts key-value pairs from SST deployment output lines. The method expects
-   * lines in the format "key: value" and handles various edge cases and formatting.
-   *
-   * **Supported Formats:**
-   * - Standard: `ApiUrl: https://api.example.com`
-   * - With spaces: `Web URL : https://web.example.com`
-   * - Mixed case: `webUrl: https://web.example.com`
-   * - Numeric values: `Port: 3000`
-   * - Boolean values: `Enabled: true`
-   *
-   * **Ignored Formats:**
-   * - Separator lines: `--- Deployment Complete ---`
-   * - Empty lines or whitespace-only lines
-   * - Lines without colons: `Invalid format line`
-   * - Lines with colon at start/end: `: value` or `key:`
-   * - Lines with empty keys or values after trimming
-   *
-   * **Error Conditions:**
-   * - Returns `null` for any line that doesn't match expected format
-   * - Handles malformed input gracefully without throwing
-   * - Ignores lines that contain '---' (deployment separators)
-   *
-   * @param line Raw output line from SST deployment
-   * @returns Parsed key-value pair or null if line doesn't match expected format
-   *
-   * @example
-   * ```typescript
-   * parseOutputFromLine("ApiUrl: https://api.example.com")
-   * // Returns: { key: "ApiUrl", value: "https://api.example.com" }
-   *
-   * parseOutputFromLine("--- Deployment Complete ---")
-   * // Returns: null (separator line ignored)
-   *
-   * parseOutputFromLine("InvalidLine")
-   * // Returns: null (no colon found)
-   * ```
-   */
-  private parseOutputFromLine(line: string): {
-    key: string;
-    value: string;
-  } | null {
-    // Ignore separator lines
-    if (line.includes("---")) {
-      return null;
-    }
-
-    // Parse key: value format
-    const colonIndex = line.indexOf(":");
-    if (colonIndex > 0 && colonIndex < line.length - 1) {
-      const key = line.slice(0, colonIndex).trim();
-      const value = line.slice(colonIndex + 1).trim();
-
-      if (key && value) {
-        return { key, value };
-      }
-    }
-
-    return null;
+  private parseOutputs(output: string): SSTOutput[] {
+    return this.parseOutputsBlock(
+      output.split("\n"),
+      SSTPatterns.deploy.completionSuccess
+    ).outputs;
   }
 
   /**

@@ -650,6 +650,51 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
 
 ---
 
+### `urls` (Deploy and Diff)
+
+**Description:** The http(s) URLs SST reported, taken from the same block as `outputs`
+**Type:** String (JSON Array)
+**Format:** JSON-encoded array of `{ "key": ..., "value": ... }` objects
+
+**Example Values:**
+```json
+[{"key":"Router","value":"https://example.com"},{"key":"Api","value":"https://api.example.com"}]
+[]
+```
+
+**Usage:**
+```yaml
+- name: Diff
+  id: diff
+  uses: kodehort/sst-ops-action@v1
+  with:
+    operation: diff
+    stage: pr-123
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+- name: Smoke test every URL
+  run: |
+    echo '${{ steps.diff.outputs.urls }}' \
+      | jq -r '.[] | "\(.key) \(.value)"' \
+      | while read -r key url; do
+          curl -fsS "$url" > /dev/null && echo "$key ok" || echo "$key FAILED"
+        done
+```
+
+**Notes:**
+- Populated for `deploy` and `diff`; `[]` for `remove` and `stage`
+- A subset of `outputs` for deploy: the entries whose value parses as an `http:`
+  or `https:` URL. Non-URL outputs such as ARNs stay in `outputs` only
+- Diff populates `urls` but not `outputs` — SST resolves the app's addresses
+  while planning, so a diff can report where a change will land
+- Scoped to the block SST prints after its completion marker, so URLs that
+  merely appear in a diff body (such as the runner's own environment
+  variables) are never included
+- Keys are SST's own output names, so the same URL can appear under more
+  than one key
+
+---
+
 ### `resources` (Deploy Only)
 
 **Description:** The resources SST reported during the deployment

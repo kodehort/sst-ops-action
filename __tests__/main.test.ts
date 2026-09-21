@@ -67,7 +67,6 @@ describe("Main Entry Point - Action Execution", () => {
       stages: "",
       success: true,
       truncated: false,
-      urls: [],
     } as any);
 
     // Spy on and mock the output formatter
@@ -95,6 +94,7 @@ describe("Main Entry Point - Action Execution", () => {
       stages: "",
       success: "true",
       truncated: "false",
+      urls: "[]",
     });
 
     // Spy on the error handler (but let it run to test actual error logging)
@@ -178,7 +178,7 @@ describe("Main Entry Point - Action Execution", () => {
       expect(
         OutputFormatter.formatOperationForGitHubActions
       ).toHaveBeenCalledWith(mockResult);
-      expect(core.setOutput).toHaveBeenCalledTimes(20); // All outputs
+      expect(core.setOutput).toHaveBeenCalledTimes(21); // All outputs
       expect(core.info).toHaveBeenCalledWith(
         "✅ SST deploy operation completed successfully"
       );
@@ -201,6 +201,7 @@ describe("Main Entry Point - Action Execution", () => {
         diffSection: "",
         exitCode: 0,
         operation: "diff" as const,
+        outputs: [],
         plannedChanges: 5,
         rawOutput: "Diff analysis completed",
         stage: "production",
@@ -637,6 +638,7 @@ describe("Main Entry Point - Action Execution", () => {
         stages: "",
         success: "true",
         truncated: "false",
+        urls: "[]",
       });
 
       vi.spyOn(operationRouter, "executeOperation").mockResolvedValueOnce(
