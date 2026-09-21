@@ -199,8 +199,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          node-version: "24"
-          bun-version: "1.4.0"
+          # Bun and Node versions come from mise.toml via the composite action.
           cache-key-suffix: -release
           # This workflow builds the dist/ it commits to main, and that commit
           # is [skip ci], so nothing re-checks it. Build from the lockfile
@@ -336,8 +335,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          node-version: "24"
-          bun-version: "1.4.0"
+          # Bun and Node versions come from mise.toml via the composite action.
           cache-key-suffix: -release
           # This workflow builds the dist/ it commits to main, and that commit
           # is [skip ci], so nothing re-checks it. Build from the lockfile

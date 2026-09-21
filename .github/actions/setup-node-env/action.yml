@@ -3,13 +3,17 @@ description: 'Sets up Bun, installs dependencies, and configures caching'
 
 inputs:
   node-version:
-    description: 'Node.js version used to validate the bundled action'
+    description: >-
+      Node.js version used to validate the bundled action. Defaults to the
+      `node` pin in mise.toml.
     required: false
-    default: '24'
+    default: ''
   bun-version:
-    description: 'Bun version to install'
+    description: >-
+      Bun version to install. Defaults to the `bun` pin in mise.toml, which is
+      the single source of truth for this repository's toolchain.
     required: false
-    default: '1.4.0'
+    default: ''
   cache-key-suffix:
     description: 'Additional suffix for cache key'
     required: false
@@ -31,15 +35,63 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # mise.toml is the single source of truth for the toolchain, so a
+    # contributor who sets up with mise gets exactly what CI uses. This matters
+    # because dist/ is committed and gated on a byte-exact rebuild, and the
+    # bundle is NOT stable across Bun versions: 1.4.0 and 1.4.2 bundle the same
+    # source to different bytes. Hardcoding the version here would let Renovate
+    # bump the mise pin on its own and leave contributors building bundles that
+    # CI rejects, with an error message blaming a stale commit.
+    - name: Resolve Toolchain Versions
+      id: toolchain
+      shell: bash
+      env:
+        NODE_VERSION_INPUT: ${{ inputs.node-version }}
+        BUN_VERSION_INPUT: ${{ inputs.bun-version }}
+        MISE_FILE: ${{ github.workspace }}/mise.toml
+      run: |
+        set -euo pipefail
+
+        if [ ! -f "$MISE_FILE" ]; then
+          echo "::error::mise.toml not found at $MISE_FILE, so the toolchain pins cannot be resolved."
+          exit 1
+        fi
+
+        # Reads `<tool> = "<version>"` from the [tools] table. Scoped to that
+        # table so a same-named key in another section cannot shadow the pin.
+        pin() {
+          sed -n '/^\[tools\]/,/^\[/p' "$MISE_FILE" \
+            | sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*[\"']\([^\"']*\)[\"'].*/\1/p" \
+            | head -n 1
+        }
+
+        # An unreadable pin fails loudly: falling through to the tool's default
+        # would silently install a version nobody chose.
+        BUN_VERSION="${BUN_VERSION_INPUT:-$(pin bun)}"
+        if [ -z "$BUN_VERSION" ]; then
+          echo "::error::No 'bun' pin found under [tools] in mise.toml."
+          exit 1
+        fi
+
+        NODE_VERSION="${NODE_VERSION_INPUT:-$(pin node)}"
+        if [ -z "$NODE_VERSION" ]; then
+          echo "::error::No 'node' pin found under [tools] in mise.toml."
+          exit 1
+        fi
+
+        echo "bun-version=$BUN_VERSION" >> "$GITHUB_OUTPUT"
+        echo "node-version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Toolchain from mise.toml: bun $BUN_VERSION, node $NODE_VERSION"
+
     - name: Setup Node.js Runtime
       uses: actions/setup-node@v7
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version: ${{ steps.toolchain.outputs.node-version }}
 
     - name: Setup Bun Runtime
       uses: oven-sh/setup-bun@v2
       with:
-        bun-version: ${{ inputs.bun-version }}
+        bun-version: ${{ steps.toolchain.outputs.bun-version }}
 
     - name: Cache Dependencies
       if: inputs.cache-node-modules == 'true'

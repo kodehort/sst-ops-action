@@ -13,10 +13,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_VERSION: '24'
-  BUN_VERSION: '1.4.0'
-
 jobs:
   quality-gates:
     name: Quality Gates
@@ -34,8 +30,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          bun-version: ${{ env.BUN_VERSION }}
+          # Bun and Node versions come from mise.toml via the composite action.
           cache-key-suffix: -quality
 
       - name: Type Check
@@ -85,8 +80,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-node-env
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          bun-version: ${{ env.BUN_VERSION }}
+          # Bun and Node versions come from mise.toml via the composite action.
           cache-key-suffix: -build
           # The drift check below compares bytes, so node_modules must come
           # from bun.lock alone and never from a restore-keys prefix hit.
@@ -120,16 +114,41 @@ jobs:
       # timestamp, platform, arch and Node version, so it can never match.
       - name: Verify Committed Bundle Is In Sync
         run: |
-          if ! git diff --exit-code --quiet -- dist/index.js dist/index.js.map; then
-            echo "dist/index.js committed: $(git show HEAD:dist/index.js | sha256sum | cut -d' ' -f1)"
-            echo "dist/index.js rebuilt:   $(sha256sum dist/index.js | cut -d' ' -f1)"
-            echo ""
-            echo "Release commits are tagged [skip ci], so a stale bundle"
-            echo "committed by a release first surfaces here, on the next PR."
-            echo "::error::Committed bundle is stale. Run 'bun run build' and commit dist/."
+          if git diff --exit-code --quiet -- dist/index.js dist/index.js.map; then
+            echo "✅ Committed bundle matches a fresh build"
+            exit 0
+          fi
+
+          # build-manifest.json records the Bun that produced the committed
+          # bytes. Comparing it to the Bun doing this rebuild separates the two
+          # causes of a mismatch, which need opposite fixes: a genuinely stale
+          # commit (rebuild and commit) versus a toolchain mismatch (rebuilding
+          # is what produced the mismatch, so it cannot be the fix).
+          REBUILD_BUN="$(bun --version)"
+          COMMITTED_BUN="$(git show HEAD:dist/build-manifest.json 2>/dev/null \
+            | sed -n 's/.*"bunVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+            | head -n 1 || true)"
+
+          echo "dist/index.js committed:  $(git show HEAD:dist/index.js | sha256sum | cut -d' ' -f1)"
+          echo "dist/index.js rebuilt:    $(sha256sum dist/index.js | cut -d' ' -f1)"
+          echo "built by Bun (committed): ${COMMITTED_BUN:-unknown}"
+          echo "built by Bun (rebuild):   ${REBUILD_BUN}"
+          echo ""
+
+          if [ -n "$COMMITTED_BUN" ] && [ "$COMMITTED_BUN" != "$REBUILD_BUN" ]; then
+            echo "These are different Bun versions, and the bundle is not"
+            echo "byte-stable across them. Rebuilding alone will not fix this."
+            echo "CI installs the Bun pinned in mise.toml; build with that same"
+            echo "version, then commit dist/. If the pin itself just moved (a"
+            echo "Renovate bump), the rebuild belongs in that bump's commit."
+            echo "::error::Committed bundle was built with Bun ${COMMITTED_BUN}, but CI rebuilt with Bun ${REBUILD_BUN}. Rebuild using the mise.toml pin and commit dist/."
             exit 1
           fi
-          echo "✅ Committed bundle matches a fresh build"
+
+          echo "Release commits are tagged [skip ci], so a stale bundle"
+          echo "committed by a release first surfaces here, on the next PR."
+          echo "::error::Committed bundle is stale. Run 'bun run build' and commit dist/."
+          exit 1
 
 
       - name: Extract Bundle Information

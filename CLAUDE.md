@@ -122,15 +122,41 @@ excluded from the gate — it records build timestamp, platform, architecture
 and Bun version, so it never matches.
 
 The build is expected to be byte-reproducible across platforms, but only from a clean
-`bun install --frozen-lockfile`. An incrementally-updated `node_modules` can
-hold a tree the lockfile never described (nested duplicate copies rather than
-hoisted ones), which changes the bundle. If a rebuild drifts unexpectedly,
+`bun install --frozen-lockfile` **and the pinned Bun version**. An
+incrementally-updated `node_modules` can hold a tree the lockfile never
+described (nested duplicate copies rather than hoisted ones), which changes the
+bundle. If a rebuild drifts unexpectedly,
 `/bin/rm -rf node_modules && bun install --frozen-lockfile` first.
 
-The build requires Bun 1.4.0. It targets Node, bundles all package dependencies
-(including `undici`), rejects unresolved imports, and emits one linked ESM
-source map. GitHub Actions executes the committed result with Node 24; Bun is
-not required in repositories that consume the action.
+**`mise.toml` is the single source of truth for the Bun version.** Do not
+hardcode it anywhere else — not in workflows, not in this file.
+`.github/actions/setup-node-env` reads the `[tools]` pins out of `mise.toml` and
+feeds them to `setup-bun`/`setup-node`, so `mise install` locally gives you
+exactly what CI runs. Both its `bun-version` and `node-version` inputs exist
+only as deliberate per-job overrides and default to the `mise.toml` pins; a
+missing or unreadable pin fails the job rather than silently installing
+whatever is newest.
+
+This matters because **the bundle is not byte-stable across Bun versions**, and
+`dist/` is committed and gated on a byte-exact rebuild. Measured on this source:
+Bun 1.4.0 produces `f9340e4c…` (865,216 bytes) and Bun 1.4.2 produces
+`5804e444…` (663,502 bytes). When the two pins disagreed, a contributor
+following `mise.toml` built a bundle CI rejected, and the gate's message
+("Committed bundle is stale. Run 'bun run build' and commit dist/.") pointed at
+the wrong cause — rebuilding was what produced the mismatch. The gate now
+compares the Bun version in the committed `dist/build-manifest.json` against the
+one doing the rebuild and names a version mismatch explicitly when it finds one.
+
+A consequence worth knowing: when Renovate bumps the Bun pin in `mise.toml`,
+that bump changes the expected bundle bytes, so Build & Verify will fail on the
+Renovate PR until `dist/` is rebuilt with the new version and committed into it.
+That failure is correct and is the intended signal — previously such a bump went
+green and left the trap for whoever pushed next.
+
+The build targets Node, bundles all package dependencies (including `undici`),
+rejects unresolved imports, and emits one linked ESM source map. GitHub Actions
+executes the committed result with Node 24; Bun is not required in repositories
+that consume the action.
 
 ### Distribution Strategy
 
