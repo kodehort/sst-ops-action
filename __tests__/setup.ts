@@ -46,6 +46,15 @@ vi.mock("@actions/exec", () => ({
   exec: vi.fn(),
 }));
 
+// The cache service only exists on a real runner. `isFeatureAvailable` defaults
+// to false so a test that has not opted in cannot reach the rest of the module.
+vi.mock("@actions/cache", () => ({
+  isFeatureAvailable: vi.fn(() => false),
+  ReserveCacheError: class ReserveCacheError extends Error {},
+  restoreCache: vi.fn(),
+  saveCache: vi.fn(),
+}));
+
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {

@@ -40,6 +40,8 @@ export type SSTRunner = (typeof SST_RUNNERS)[number];
 export interface CLIOptions {
   /** Arguments to pass to the SST command */
   args?: string[] | undefined;
+  /** Directory to run the command in (default: the runner's workspace root) */
+  cwd?: string | undefined;
   /** Maximum output size in bytes (default: 50KB) */
   maxOutputSize?: number | undefined;
   /** Package manager/runner to use for SST commands (default: 'bun') */
@@ -79,6 +81,14 @@ const COMMAND_TIMEOUTS: Record<"deploy" | "diff" | "remove", number> = {
  * tens of seconds on a cold runner.
  */
 const STATE_LIST_TIMEOUT = 120_000; // 2 minutes
+
+/**
+ * `sst install` downloads the vendored binaries and every provider plugin the
+ * app config declares. On a cold runner that is the slowest thing the action
+ * waits on which is not infrastructure work, and it scales with the number of
+ * providers rather than with the size of the app.
+ */
+const INSTALL_TIMEOUT = 300_000; // 5 minutes
 
 /**
  * SST CLI executor with comprehensive error handling and timeout management
@@ -173,6 +183,27 @@ export class SSTCLIExecutor {
   }
 
   /**
+   * Install the app's providers and generate `.sst/platform`.
+   *
+   * Every other SST command does this implicitly when the environment is cold.
+   * Running it explicitly is what lets the provider cache be populated and
+   * saved at a known point, rather than as a side effect of a deploy.
+   *
+   * Returns the raw CLI result; deciding what a non-zero exit means is the
+   * caller's business.
+   */
+  async installProviders(options: CLIOptions = {}): Promise<CLIResult> {
+    const runner = options.runner || "bun";
+    const command = this.buildRunnerCommand(runner, "install");
+
+    return await this.executeCommand(command, {
+      ...options,
+      maxOutputSize: options.maxOutputSize ?? this.defaultMaxOutputSize,
+      timeout: options.timeout ?? INSTALL_TIMEOUT,
+    });
+  }
+
+  /**
    * Build the SST command array based on operation and options
    */
   private buildCommand(
@@ -222,7 +253,7 @@ export class SSTCLIExecutor {
    */
   private buildRunnerCommand(
     runner: SSTRunner,
-    operation: SSTOperation | "state"
+    operation: SSTOperation | "state" | "install"
   ): string[] {
     switch (runner) {
       case "sst":
@@ -295,6 +326,10 @@ export class SSTCLIExecutor {
         throw new Error("Command array is empty");
       }
       const execPromise = exec.exec(command[0], command.slice(1), {
+        // Spread rather than assigned: under exactOptionalPropertyTypes an
+        // explicit `cwd: undefined` is not the same as an absent one, and
+        // @actions/exec declares `cwd` as a plain string.
+        ...(options.cwd ? { cwd: options.cwd } : {}),
         ignoreReturnCode: true,
         listeners: {
           stderr: (data: Buffer) => append(data, "stderr"),

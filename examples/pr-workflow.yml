@@ -74,6 +74,12 @@ jobs:
           stage: staging
           token: ${{ secrets.GITHUB_TOKEN }}
           
+          # Dependencies were installed with npm, so run SST through npm too
+          runner: npm
+          
+          # Reuse the downloaded providers between runs
+          cache-providers: true
+          
           # Always comment with diff results for visibility
           comment-mode: always
           
@@ -159,6 +165,12 @@ jobs:
           operation: deploy
           stage: pr-${{ github.event.number }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Dependencies were installed with npm, so run SST through npm too
+          runner: npm
+          
+          # Reuse the downloaded providers between runs
+          cache-providers: true
           
           # Always comment with preview environment details
           comment-mode: on-success
@@ -328,6 +340,12 @@ jobs:
           operation: remove
           stage: pr-${{ github.event.number }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Dependencies were installed with npm, so run SST through npm too
+          runner: npm
+          
+          # Reuse the downloaded providers between runs
+          cache-providers: true
           
           # Comment on successful cleanup
           comment-mode: on-success

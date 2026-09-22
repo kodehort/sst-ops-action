@@ -125,6 +125,7 @@ describe("executeOperation", () => {
       // it. Every caller used to pass one, which left the seam's own default
       // unreachable.
       expect(executeSST).toHaveBeenCalledWith("diff", "pr-9", {
+        cwd: ".",
         maxOutputSize: 1234,
         runner: "bun",
       });
@@ -163,6 +164,7 @@ describe("executeOperation", () => {
 
       expect(result.completionStatus).toBe("complete");
       expect(executeSST).toHaveBeenCalledWith("remove", "staging", {
+        cwd: ".",
         maxOutputSize: 50_000,
         runner: "bun",
       });

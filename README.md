@@ -51,6 +51,8 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `comment-mode` | PR comment behavior: `always`, `on-success`, `on-failure`, `never` | No | `on-success` |
 | `fail-on-error` | Fail workflow on SST errors | No | `true` |
 | `max-output-size` | Max output bytes before truncation (1000-1000000) | No | `50000` |
+| `working-directory` | Directory containing `sst.config.ts` | No | `.` |
+| `cache-providers` | Cache SST providers between runs ([see below](#caching-sst-providers)) | No | `false` |
 | `truncation-length` | Max stage name length (stage op only) | No | `26` |
 | `prefix` | Prefix for numeric stage names (stage op only) | No | `pr-` |
 
@@ -184,6 +186,61 @@ The same computation runs automatically when `deploy` is called without a `stage
 | `pnpm` | `pnpm sst <op>` | SST as dependency |
 | `yarn` | `yarn sst <op>` | SST as dependency |
 | `sst` | `sst <op>` | SST CLI globally installed |
+
+### Caching SST Providers
+
+On a clean runner, the first SST command has to bootstrap the app before it can
+do any work: generate `.sst/platform`, fetch the vendored `pulumi` and `bun`
+binaries, and download every provider plugin declared in `sst.config.ts`. That
+happens on every run, and on a multi-provider app it can dominate a short
+deploy.
+
+Set `cache-providers: true` and the action restores that work from the GitHub
+Actions cache, runs `sst install` when there is nothing to restore, and saves
+the result:
+
+```yaml
+- uses: kodehort/sst-ops-action@v1
+  with:
+    operation: deploy
+    token: ${{ secrets.GITHUB_TOKEN }}
+    cache-providers: true
+```
+
+What gets cached:
+
+| Path | Contents |
+|------|----------|
+| `<working-directory>/.sst/platform` | Generated platform sources and typings |
+| `~/.config/sst/plugins` | Provider plugins — the bulk of it |
+| `~/.config/sst/bin` | The vendored `pulumi` and `bun` binaries |
+
+The cache key is the runner's OS and architecture, the working directory, the
+installed SST version (read from `node_modules/sst`), and a hash of
+`sst.config.ts`. Providers are declared in that file, so adding one produces a
+new key and a fresh install; the previous entry is still reused as a starting
+point, since the plugin downloads are pinned by the SST version.
+
+Install dependencies before this step — the SST version comes from
+`node_modules`. Everything about the cache fails open: an unavailable cache
+service, an unreadable config, or a failed `sst install` produces a warning and
+the operation runs as it would have anyway.
+
+For a monorepo, point `working-directory` at the app. Each app gets its own
+cache entry:
+
+```yaml
+- uses: kodehort/sst-ops-action@v1
+  with:
+    operation: deploy
+    token: ${{ secrets.GITHUB_TOKEN }}
+    working-directory: packages/infra
+    cache-providers: true
+```
+
+Provider plugins are large, and GitHub gives each repository 10 GB of cache
+with least-recently-used eviction — worth knowing if the repository caches
+other things it cares about.
 
 ### Error Handling
 

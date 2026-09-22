@@ -74,6 +74,27 @@ inputs:
       • Note: stage operations don't require a runner
     required: false
     default: "bun"
+  working-directory:
+    description: |
+      Directory containing sst.config.ts (infrastructure operations only):
+      • Default: "." (the workspace root)
+      • Set this for monorepos where the SST app lives in a subdirectory
+      • Every SST command the action runs is executed from here
+      • Note: stage operations run no commands and ignore this input
+    required: false
+    default: "."
+  cache-providers:
+    description: |
+      Cache SST providers between runs (infrastructure operations only):
+      • false (default): no caching, SST bootstraps on every run
+      • true: restore the provider cache before running, run `sst install`
+        on a miss, then save the result
+      • Caches .sst/platform plus ~/.config/sst/plugins and ~/.config/sst/bin
+      • Keyed on runner OS/arch, the installed SST version, and a hash of
+        sst.config.ts
+      • Requires the GitHub Actions cache service; skipped where unavailable
+    required: false
+    default: "false"
   truncation-length:
     description: |
       Maximum length for computed stage names (stage operation only):

@@ -26,6 +26,8 @@ import {
  * Inputs for an operation that runs the SST CLI.
  */
 export interface InfrastructureInputs {
+  /** Restore, warm and save the SST provider cache around the operation. */
+  cacheProviders: boolean;
   commentMode: CommentMode;
   failOnError: boolean;
   maxOutputSize: number;
@@ -33,6 +35,8 @@ export interface InfrastructureInputs {
   runner: SSTRunner;
   stage: string;
   token: string;
+  /** Directory holding sst.config.ts; every SST command runs from here. */
+  workingDirectory: string;
 }
 
 /**
@@ -84,10 +88,28 @@ function optionalInput(name: string): string | undefined {
 }
 
 /**
+ * The same, for a boolean input.
+ *
+ * `core.getBooleanInput` throws on anything that is not a YAML boolean, and a
+ * blank string is one of those. An input wired to an expression that evaluates
+ * to nothing — `cache-providers: ${{ inputs.cache }}` on a workflow that did
+ * not set `cache` — would otherwise fail the whole run over an optional
+ * speed-up. Blank means absent here, as everywhere else in this module, and
+ * the schema supplies the default; a value that is present but not a boolean
+ * still throws, because that is a typo worth reporting.
+ */
+function optionalBooleanInput(name: string): boolean | undefined {
+  return core.getInput(name).trim() === ""
+    ? undefined
+    : core.getBooleanInput(name);
+}
+
+/**
  * Read every Actions input, with blanks normalised to absent.
  */
 function readRawInputs(): Record<string, unknown> {
   return {
+    cacheProviders: optionalBooleanInput("cache-providers"),
     commentMode: optionalInput("comment-mode"),
     failOnError: core.getBooleanInput("fail-on-error"),
     maxOutputSize: optionalInput("max-output-size"),
@@ -98,6 +120,7 @@ function readRawInputs(): Record<string, unknown> {
     stage: optionalInput("stage"),
     token: core.getInput("token"),
     truncationLength: optionalInput("truncation-length"),
+    workingDirectory: optionalInput("working-directory"),
   };
 }
 
@@ -137,6 +160,7 @@ export function resolveActionInputs({
   }
 
   return {
+    cacheProviders: inputs.cacheProviders,
     commentMode: inputs.commentMode,
     failOnError: inputs.failOnError,
     maxOutputSize: inputs.maxOutputSize,
@@ -144,6 +168,7 @@ export function resolveActionInputs({
     runner: inputs.runner,
     stage: resolveStage({ computeStage, inputs, stageOptions }),
     token: inputs.token,
+    workingDirectory: inputs.workingDirectory,
   };
 }
 

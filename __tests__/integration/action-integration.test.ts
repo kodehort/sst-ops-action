@@ -44,6 +44,38 @@ vi.mock("../../src/utils/validation", async (importOriginal) => {
 });
 
 /**
+ * Stub input validation so the action sees the resolved inputs these env vars
+ * describe.
+ *
+ * One function rather than a copy inside each `executeAction*` helper below.
+ * Every input with a default contributes a branch, so while this was inlined
+ * four times, adding one input pushed all four helpers over the complexity
+ * gate at once.
+ */
+async function stubValidation(
+  env: Record<string, string>,
+  operation: string,
+  stage: string
+): Promise<void> {
+  const validationModule = await import("../../src/utils/validation");
+
+  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
+    {} as any
+  );
+  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
+    cacheProviders: env["INPUT_CACHE-PROVIDERS"] === "true",
+    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
+    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
+    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    operation: operation as any,
+    runner: "bun" as const,
+    stage,
+    token: env.INPUT_TOKEN || "fake-token",
+    workingDirectory: env["INPUT_WORKING-DIRECTORY"] || ".",
+  });
+}
+
+/**
  * Executes the action with given environment variables
  */
 async function executeAction(env: Record<string, string>) {
@@ -86,20 +118,7 @@ async function executeAction(env: Record<string, string>) {
   const operation = env.INPUT_OPERATION || "deploy";
   const stage = env.INPUT_STAGE || "test";
 
-  // Mock validation functions to return proper inputs
-  const validationModule = await import("../../src/utils/validation");
-  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
-    {} as any
-  );
-  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
-    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
-    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
-    operation: operation as any,
-    runner: "bun" as const,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
-  });
+  await stubValidation(env, operation, stage);
 
   // Mock operation execution based on the operation type
   const mockResult = createMockOperationResult(operation, stage);
@@ -177,20 +196,7 @@ async function executeActionWithFailure(
   const operation = env.INPUT_OPERATION || "deploy";
   const stage = env.INPUT_STAGE || "test";
 
-  // Mock validation functions to return proper inputs
-  const validationModule = await import("../../src/utils/validation");
-  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
-    {} as any
-  );
-  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
-    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
-    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
-    operation: operation as any,
-    runner: "bun" as const,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
-  });
+  await stubValidation(env, operation, stage);
 
   // Mock failed operation execution
   const mockResult = createMockOperationResult(operation, stage);
@@ -276,20 +282,7 @@ async function executeActionWithFailureAndContinue(
   const operation = env.INPUT_OPERATION || "deploy";
   const stage = env.INPUT_STAGE || "test";
 
-  // Mock validation functions to return proper inputs
-  const validationModule = await import("../../src/utils/validation");
-  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
-    {} as any
-  );
-  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
-    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
-    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
-    operation: operation as any,
-    runner: "bun" as const,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
-  });
+  await stubValidation(env, operation, stage);
 
   // Mock failed operation execution
   const mockResult = createMockOperationResult(operation, stage);
@@ -431,20 +424,7 @@ async function executeActionWithTruncation(env: Record<string, string>) {
   const operation = env.INPUT_OPERATION || "deploy";
   const stage = env.INPUT_STAGE || "test";
 
-  // Mock validation functions to return proper inputs
-  const validationModule = await import("../../src/utils/validation");
-  vi.spyOn(validationModule, "createValidationContext").mockReturnValue(
-    {} as any
-  );
-  vi.spyOn(validationModule, "validateOperationWithContext").mockReturnValue({
-    commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
-    failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
-    maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
-    operation: operation as any,
-    runner: "bun" as const,
-    stage,
-    token: env.INPUT_TOKEN || "fake-token",
-  });
+  await stubValidation(env, operation, stage);
 
   // Mock operation execution with truncated result
   const mockResult = createMockOperationResult(operation, stage);

@@ -18,6 +18,7 @@ export function infrastructureInputs(
   overrides: Partial<InfrastructureInputs> = {}
 ): InfrastructureInputs {
   return {
+    cacheProviders: false,
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
@@ -25,6 +26,7 @@ export function infrastructureInputs(
     runner: "bun",
     stage: "staging",
     token: "test-token",
+    workingDirectory: ".",
     ...overrides,
   };
 }
