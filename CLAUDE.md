@@ -160,7 +160,7 @@ rejects unresolved imports, and emits one linked ESM source map. GitHub Actions
 executes the committed result with Node 24; Bun is not required in repositories
 that consume the action.
 
-The bundle grew from 663,806 to 1,423,767 bytes when `@actions/cache` was added
+The bundle grew from 663,806 to 1,423,822 bytes when `@actions/cache` was added
 for provider caching. It pulls in `@azure/storage-blob` and
 `@azure/core-rest-pipeline`, and `packages: "bundle"` inlines them whether or
 not `cache-providers` is ever set — `splitting: false` means a dynamic
