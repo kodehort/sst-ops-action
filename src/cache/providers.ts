@@ -17,8 +17,14 @@
  *   the vendored `pulumi` and `bun` binaries into `~/.config/sst/bin`.
  * - the operation — `deploy`, `diff`, `remove`, and the `sst state list`
  *   preflight — downloads the Pulumi *provider plugin binaries* into
- *   `~/.config/sst/plugins`. Those are the `Downloaded provider ...` lines, and
- *   they are the expensive part on the critical path.
+ *   `~/.config/sst/plugins`. Those are the `Downloaded provider ...` lines.
+ *
+ * How much that second half is worth is an open question, not an assumption.
+ * Measured on one real app (12 providers, Blacksmith runner): the phase costs
+ * ~7.3s, while restoring the 202MB the v1 entry did hold costs ~4.3s at
+ * ~47MB/s. Adding the plugins to every restore therefore only pays for itself
+ * while they compress to roughly 350MB or less. The timings this module logs
+ * exist so that stays a measurement rather than a belief.
  *
  * v1 of this module saved immediately after `sst install`, when
  * `~/.config/sst/plugins` did not yet exist. `saveCache` skips a missing path
@@ -182,7 +188,9 @@ export async function saveProviderCache(
       return;
     }
 
+    const saveStarted = Date.now();
     await save(pending.paths, pending.key);
+    core.info(`⏱️ Provider cache save took ${secondsSince(saveStarted)}`);
   } catch (error) {
     core.warning(`Provider cache not saved: ${describe(error)}`);
   }
@@ -218,20 +226,24 @@ async function restoreAndWarm({
     paths,
     pluginsPath: pluginsPath(),
   };
+  const restoreStarted = Date.now();
   const matched = await restore(paths, key);
+  const restoreTook = secondsSince(restoreStarted);
 
   if (matched === key.primary) {
     // A v2 entry is only ever written after a successful operation, so an
     // exact hit already carries the plugins. Nothing to install, nothing to
     // save.
-    core.info(`✅ SST providers restored from cache (${matched})`);
+    core.info(
+      `✅ SST providers restored from cache in ${restoreTook} (${matched})`
+    );
     return null;
   }
 
   core.info(
     matched
-      ? `♻️ Partial cache hit (${matched}); reconciling providers with \`sst install\``
-      : "❄️ No provider cache for this key; running `sst install`"
+      ? `♻️ Partial cache hit in ${restoreTook} (${matched}); reconciling providers with \`sst install\``
+      : `❄️ No provider cache for this key (looked for ${restoreTook}); running \`sst install\``
   );
 
   const installed = await install(executor, inputs);
@@ -245,8 +257,8 @@ async function restoreAndWarm({
 /**
  * The three places SST puts the things worth keeping between runs.
  *
- * The plugins directory is the bulk of it; the binaries are native, which is
- * why the key carries the runner's OS and architecture.
+ * The binaries are native, which is why the key carries the runner's OS and
+ * architecture.
  */
 function cachePaths(workingDirectory: string): string[] {
   const sstHome = join(homedir(), ".config", "sst");
@@ -403,6 +415,12 @@ async function install(
     runner: inputs.runner,
   });
 
+  if (result.exitCode === 0) {
+    core.info(
+      `📦 \`sst install\` completed in ${(result.duration / 1000).toFixed(1)}s`
+    );
+  }
+
   if (result.exitCode !== 0) {
     // A half-installed provider set is worse than none: cached, it would be
     // restored on every later run and keep them all broken.
@@ -428,6 +446,18 @@ async function save(paths: string[], key: string): Promise<void> {
     }
     core.warning(`Could not save the SST provider cache: ${describe(error)}`);
   }
+}
+
+/**
+ * Seconds elapsed since `started`, to one decimal place.
+ *
+ * Every cache message carries its own cost, because whether this feature is
+ * worth enabling is an empirical question and the logs are the only place it
+ * can be answered: a restore that takes longer than the work it skips is a
+ * pessimisation, and without the numbers nobody can tell which they have.
+ */
+function secondsSince(started: number): string {
+  return `${((Date.now() - started) / 1000).toFixed(1)}s`;
 }
 
 /** Hex digest of `value`, truncated to `length` characters. */

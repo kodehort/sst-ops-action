@@ -441,6 +441,47 @@ describe("warming the SST provider cache", () => {
     });
   });
 
+  describe("reporting what it cost", () => {
+    // Whether this feature is worth enabling is an empirical question: a
+    // restore slower than the work it skips is a pessimisation. The logs are
+    // the only place that can be answered, so the timings are behaviour.
+    it("reports how long an exact-hit restore took", async () => {
+      const { executor } = executorWith();
+      mockedCache.restoreCache.mockImplementation((_paths, key) =>
+        Promise.resolve(key)
+      );
+
+      await warmAndSave({ executor, inputs: inputs(), readFile: normalApp() });
+
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringMatching(/restored from cache in \d+\.\d+s/)
+      );
+    });
+
+    it("reports how long a miss spent looking, and what the install cost", async () => {
+      const { executor } = executorWith();
+
+      await warmAndSave({ executor, inputs: inputs(), readFile: normalApp() });
+
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringMatching(/looked for \d+\.\d+s/)
+      );
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringMatching(/`sst install` completed in \d+\.\d+s/)
+      );
+    });
+
+    it("reports how long the save took", async () => {
+      const { executor } = executorWith();
+
+      await warmAndSave({ executor, inputs: inputs(), readFile: normalApp() });
+
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringMatching(/save took \d+\.\d+s/)
+      );
+    });
+  });
+
   describe("failing open", () => {
     it("skips quietly where the cache service is unavailable", async () => {
       const { executor, installProviders } = executorWith();

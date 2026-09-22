@@ -375,7 +375,7 @@ executes `sst install` when there is nothing to restore, and saves the result.
 
 **Cached paths:**
 - `<working-directory>/.sst/platform` — generated platform sources and typings
-- `~/.config/sst/plugins` — provider plugins, the bulk of the cache
+- `~/.config/sst/plugins` — provider plugins, downloaded by the operation
 - `~/.config/sst/bin` — the vendored `pulumi` and `bun` binaries
 
 **Cache key:** the runner's OS and architecture, the working directory, the

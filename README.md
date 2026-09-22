@@ -212,7 +212,7 @@ What gets cached:
 | Path | Contents |
 |------|----------|
 | `<working-directory>/.sst/platform` | Generated platform sources and typings |
-| `~/.config/sst/plugins` | Provider plugins — the bulk of it |
+| `~/.config/sst/plugins` | Provider plugins, downloaded by the operation |
 | `~/.config/sst/bin` | The vendored `pulumi` and `bun` binaries |
 
 The cache key is the runner's OS and architecture, the working directory, the
@@ -223,9 +223,15 @@ point, since the plugin downloads are pinned by the SST version.
 
 The restore runs before the SST operation and the save after it. That ordering
 matters: `sst install` produces `.sst/platform` and the vendored binaries, but
-the provider plugins — the `Downloaded provider ...` lines, and the bulk of the
-time — are fetched by the operation itself. Saving in between would cache
-everything except the part worth caching.
+the provider plugins — the `Downloaded provider ...` lines — are fetched by the
+operation itself. Saving in between caches everything except those.
+
+**Measure before you rely on it.** The action logs how long the restore, the
+`sst install` and the save each took, because the answer is workload-specific.
+On one real app (12 providers) the cache saved ~7s of setup per run, against a
+deploy whose infrastructure work dominated at 60–240s. A large provider set
+makes the restore slower too, so the numbers in your own log are the ones that
+decide whether this is worth enabling.
 
 Install dependencies before this step — the SST version comes from
 `node_modules`. Everything about the cache fails open: an unavailable cache
