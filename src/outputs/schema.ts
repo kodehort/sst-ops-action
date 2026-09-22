@@ -82,6 +82,7 @@ const GitHubActionsOutputSchema = z.object({
       message: 'truncated must be "true", "false", or empty',
     })
     .default("false"),
+  urls: z.string().default("[]"), // JSON string
 });
 
 /**
@@ -100,6 +101,7 @@ function validateJSONFields(outputs: ValidatedOutputs): void {
     "resources",
     "removed_resources",
     "stages",
+    "urls",
   ] as const;
 
   for (const field of jsonFields) {

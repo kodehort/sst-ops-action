@@ -2,12 +2,12 @@
   "app": "my-complex-app",
   "description": "Generated from complex-changes.txt",
   "files": {
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.comment.md",
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/diff/complex-changes.txt",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/diff/complex-changes.metadata.json",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/diff/complex-changes.summary.md"
+    "comment": "examples/snapshots/diff/complex-changes.comment.md",
+    "input": "examples/inputs/diff/complex-changes.txt",
+    "metadata": "examples/metadata/diff/complex-changes.metadata.json",
+    "summary": "examples/snapshots/diff/complex-changes.summary.md"
   },
-  "generatedAt": "2026-08-14T12:14:07.121Z",
+  "generatedAt": "2026-09-21T15:54:53.882Z",
   "name": "complex-changes",
   "operation": "diff",
   "stage": "production",

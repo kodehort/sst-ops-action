@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { OperationFormatter } from "@/github/formatters";
 import { DeployParser } from "@/parsers/deploy-parser";
@@ -160,16 +162,25 @@ function testOperationSnapshots(operation: OperationWithParser): void {
             expect(snapshotData.metadata.operation).toBe(operation);
             expect(snapshotData.metadata.name).toBe(name);
             expect(snapshotData.metadata.generatedAt).toBeDefined();
-            expect(snapshotData.metadata.files.input).toContain(`${name}.txt`);
-            expect(snapshotData.metadata.files.comment).toContain(
-              `${name}.comment.md`
-            );
-            expect(snapshotData.metadata.files.summary).toContain(
-              `${name}.summary.md`
-            );
-            expect(snapshotData.metadata.files.metadata).toContain(
-              `${name}.metadata.json`
-            );
+
+            // Exact equality, not `toContain(basename)`. The committed values
+            // used to be absolute paths into the original author's home
+            // directory, and a basename substring check could not see that.
+            // These are committed fixtures, so the paths have to be
+            // repo-relative and POSIX-separated on every machine.
+            expect(snapshotData.metadata.files).toEqual({
+              comment: `examples/snapshots/${operation}/${name}.comment.md`,
+              input: `examples/inputs/${operation}/${name}.txt`,
+              metadata: `examples/metadata/${operation}/${name}.metadata.json`,
+              summary: `examples/snapshots/${operation}/${name}.summary.md`,
+            });
+
+            for (const filePath of Object.values(snapshotData.metadata.files)) {
+              expect(
+                existsSync(join(process.cwd(), filePath)),
+                `${filePath} does not resolve to a file`
+              ).toBe(true);
+            }
           } catch (error) {
             throw new Error(
               `Failed to validate metadata for ${operation}/${name}: ${error}`,

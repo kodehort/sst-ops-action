@@ -64,6 +64,7 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `app` | SST app name | deploy, diff, remove |
 | `resource_changes` | Number of resource changes; mirrors `planned_changes` for diff and `resources_removed` for remove | deploy, diff, remove |
 | `outputs` | JSON array of deployment outputs (`key`/`value` pairs) | deploy |
+| `urls` | JSON array of the http(s) URLs SST reported (`key`/`value` pairs) | deploy, diff |
 | `resources` | JSON array of reported resources (`name`/`type`/`status`) | deploy |
 | `diff_summary` | Summary of planned changes | diff |
 | `planned_changes` | Number of changes SST plans to make | diff |
@@ -216,7 +217,15 @@ The same computation runs automatically when `deploy` is called without a `stage
   run: |
     OUTPUTS='${{ steps.deploy.outputs.outputs }}'
     echo "Deployment outputs: $OUTPUTS"
-    echo "API_URL=$(echo '$OUTPUTS' | jq -r '.[0].value')" >> $GITHUB_ENV
+    echo "API_URL=$(echo "$OUTPUTS" | jq -r '.[] | select(.key == "Api") | .value')" >> $GITHUB_ENV
+
+- name: Smoke Test Every Deployed URL
+  run: |
+    echo '${{ steps.deploy.outputs.urls }}' \
+      | jq -r '.[] | "\(.key) \(.value)"' \
+      | while read -r key url; do
+          curl -fsS "$url" > /dev/null && echo "$key ok" || echo "$key FAILED"
+        done
 ```
 
 ## Security

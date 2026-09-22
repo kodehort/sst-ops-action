@@ -34,6 +34,7 @@ function diffWith(diffSection: string): DiffResult {
     diffSection,
     exitCode: 0,
     operation: "diff",
+    outputs: [],
     permalink: "https://sst.dev/u/abc123",
     plannedChanges: 3,
     rawOutput: "",

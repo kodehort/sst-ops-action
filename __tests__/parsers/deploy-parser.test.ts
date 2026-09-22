@@ -475,4 +475,83 @@ describe("Malformed output lines", () => {
     expect(result.success).toBe(true);
     expect(result.outputs).toHaveLength(0);
   });
+
+  describe("outputs block shapes", () => {
+    it("reads a block that starts on the line after the marker", () => {
+      const result = parser.parse(
+        ["✓  Complete", "   Router: https://kodehort.com"].join("\n"),
+        "production",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([
+        { key: "Router", value: "https://kodehort.com" },
+      ]);
+    });
+
+    it("reads a block separated from the marker by a blank line", () => {
+      // Both shapes occur in real captures, so neither may be assumed.
+      const result = parser.parse(
+        ["✓  Complete", "", "   Router: https://kodehort.com"].join("\n"),
+        "production",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([
+        { key: "Router", value: "https://kodehort.com" },
+      ]);
+    });
+
+    it("keeps reading across the --- separator", () => {
+      // SST puts resource URLs above it and declared outputs below, so
+      // treating it as the end of the block loses half of them.
+      const result = parser.parse(
+        [
+          "✓  Complete",
+          "   Astro: https://kodehort.com",
+          "   ---",
+          "   github_role_name: production-GithubActionRole",
+        ].join("\n"),
+        "production",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([
+        { key: "Astro", value: "https://kodehort.com" },
+        { key: "github_role_name", value: "production-GithubActionRole" },
+      ]);
+    });
+
+    it("stops at a resource line rather than parsing it as a pair", () => {
+      // `-  Old sst:aws:Function` splits on its colon like any other line.
+      const result = parser.parse(
+        [
+          "✓  Complete",
+          "   Router: https://kodehort.com",
+          "-  Old sst:aws:Function",
+        ].join("\n"),
+        "production",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([
+        { key: "Router", value: "https://kodehort.com" },
+      ]);
+    });
+
+    it("reports no outputs when the marker never appears", () => {
+      const result = parser.parse(
+        "|  Created  Astro sst:aws:Astro",
+        "production",
+        0,
+        false
+      );
+
+      expect(result.outputs).toEqual([]);
+    });
+  });
 });

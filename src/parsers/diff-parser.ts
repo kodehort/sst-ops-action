@@ -25,9 +25,20 @@ export class DiffParser extends OperationParser<DiffResult> {
   ): DiffResult {
     const { commonInfo, output: processedOutput } = this.parseCommon(output);
 
+    // SST prints the app's outputs between the `✓ Generated` marker and the
+    // diff body, so both are read from one pass over the same boundary.
+    const lines = processedOutput.split("\n");
+    const { outputs, endIndex } = this.parseOutputsBlock(
+      lines,
+      SSTPatterns.sections.generated
+    );
+
     // Extracted once, here, and carried on the result. The formatter used to
     // scan the raw output for it a second time with its own copy of this.
-    const diffSection = this.extractDiffSection(processedOutput);
+    const diffSection = this.extractDiffSection(
+      lines,
+      outputs.length > 0 ? endIndex : undefined
+    );
 
     // Determine success based on exit code and error patterns
     const success = this.isSuccessfulOperation(processedOutput, exitCode);
@@ -59,6 +70,7 @@ export class DiffParser extends OperationParser<DiffResult> {
       changes,
       diffSection,
       operation: "diff",
+      outputs,
       plannedChanges,
     };
   }
@@ -291,17 +303,21 @@ export class DiffParser extends OperationParser<DiffResult> {
    * result could be computed and thrown away in the diff parser without
    * anyone noticing.
    *
+   * @param lines Cleaned capture, split on newlines
+   * @param afterOutputs Index the outputs block ended at, when there was one.
+   *   Absent means the marker is followed directly by the diff body, which is
+   *   what a capture with no outputs looks like — starting after the block
+   *   there would eat the first line of the diff.
    * @returns Diff section content, or an empty string if the marker is absent
    */
-  private extractDiffSection(output: string): string {
-    const lines = output.split("\n");
+  private extractDiffSection(lines: string[], afterOutputs?: number): string {
     let diffStartIndex = -1;
 
     // Find the "✓ Generated" marker
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line && SSTPatterns.sections.generated.test(line)) {
-        diffStartIndex = i + 1; // Start after the marker line
+        diffStartIndex = afterOutputs ?? i + 1; // Start after the marker line
         break;
       }
     }

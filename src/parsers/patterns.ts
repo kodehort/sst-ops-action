@@ -88,17 +88,6 @@ const ResourcePatterns = {
 } as const;
 
 /**
- * Output and URL patterns
- */
-const OutputPatterns = {
-  /**
-   * Matches URL outputs from various SST resource types
-   * Example: "Router: https://example.com"
-   */
-  url: /^\s*(Router|Api|Web|Website|StaticSite|NextjsSite|RemixSite|SvelteKitSite|SolidStartSite|AstroSite):\s+(https?:\/\/.+)$/m,
-} as const;
-
-/**
  * Section and structure patterns
  */
 const SectionPatterns = {
@@ -245,7 +234,6 @@ export const SSTPatterns = {
   diff: DiffPatterns,
   errors: ErrorPatterns,
   metadata: MetadataPatterns,
-  outputs: OutputPatterns,
   remove: RemovePatterns,
   resources: ResourcePatterns,
   sections: SectionPatterns,

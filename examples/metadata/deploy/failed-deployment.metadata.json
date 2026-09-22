@@ -2,12 +2,12 @@
   "app": "kodehort-scratch",
   "description": "Generated from failed-deployment.txt",
   "files": {
-    "comment": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/failed-deployment.comment.md",
-    "input": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/inputs/deploy/failed-deployment.txt",
-    "metadata": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/metadata/deploy/failed-deployment.metadata.json",
-    "summary": "/Users/alistairstead/dev/kodehort/sst-operations-action/examples/snapshots/deploy/failed-deployment.summary.md"
+    "comment": "examples/snapshots/deploy/failed-deployment.comment.md",
+    "input": "examples/inputs/deploy/failed-deployment.txt",
+    "metadata": "examples/metadata/deploy/failed-deployment.metadata.json",
+    "summary": "examples/snapshots/deploy/failed-deployment.summary.md"
   },
-  "generatedAt": "2026-08-14T12:14:07.123Z",
+  "generatedAt": "2026-09-21T15:54:53.887Z",
   "name": "failed-deployment",
   "operation": "deploy",
   "stage": "sst-ops-actions",

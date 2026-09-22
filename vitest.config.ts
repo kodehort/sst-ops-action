@@ -36,11 +36,16 @@ export default defineConfig({
       // Statements, branches and lines count in the thousands and move smoothly,
       // so they keep tight thresholds. At 95 the metric still fails if ~5
       // untested functions are added, while tolerating ~100 tested deletions.
+      //
+      // Raised under #201 after `__tests__/utils/snapshot-helpers.ts` gained
+      // direct tests: 89.13 -> 93.06 statements, 82.74 -> 85.76 branches,
+      // 89.06 -> 93.02 lines. `functions` moved 95.16 -> 97.22, which does not
+      // change the #136 reasoning above, so it stays at 95.
       thresholds: {
-        branches: 79,
+        branches: 85,
         functions: 95,
-        lines: 89,
-        statements: 89,
+        lines: 93,
+        statements: 93,
       },
     },
     environment: "node",
