@@ -29,7 +29,7 @@ This is a single-context repo:
 
 When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
 
-Until `CONTEXT.md` exists, the working vocabulary comes from `action.yml`: **operation** (deploy / diff / remove / stage), **stage**, **runner**, **comment mode**, **resource change**, **planned change**, **completion status**, **permalink**, **truncation**.
+Until `CONTEXT.md` exists, the working vocabulary comes from `action.yml`: **operation** (deploy / diff / remove / stage), **stage**, **runner**, **working directory** (where `sst.config.ts` lives; every SST command runs from here), **provider cache** (the restored-and-saved `.sst/platform` and `~/.config/sst` contents, keyed on SST version and config hash), **comment mode**, **resource change**, **planned change**, **completion status**, **permalink**, **truncation**.
 
 If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/grill-with-docs`).
 

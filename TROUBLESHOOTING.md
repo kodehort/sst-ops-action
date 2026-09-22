@@ -133,16 +133,30 @@ steps:
       operation: deploy
       stage: staging
       token: ${{ secrets.GITHUB_TOKEN }}
+      runner: npm  # must match the package manager used above
 ```
 
 **Option B: Global SST CLI installation**
 ```yaml
 - name: Install SST CLI
-  run: npm install -g @serverless-stack/cli
+  run: npm install -g sst
 
 - name: Verify Installation
   run: sst --version
+
+# Then tell the action to call the binary directly
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: staging
+    token: ${{ secrets.GITHUB_TOKEN }}
+    runner: sst
 ```
+
+With a global install there is no `node_modules/sst` to read a version from,
+so `cache-providers` falls back to hashing the lockfile for its cache key.
+That still works; it just invalidates on any dependency change rather than
+only on an SST upgrade.
 
 **Option C: Use npx (recommended for consistency)**
 ```yaml
