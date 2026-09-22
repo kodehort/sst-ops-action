@@ -667,9 +667,18 @@ declared in `sst.config.ts`. Nothing carries over between runs by default.
 | `✅ SST providers restored from cache` | Working — an exact hit, no install needed |
 | `♻️ Partial cache hit` | `sst.config.ts` changed; plugins reused, `sst install` reconciles |
 | `❄️ No provider cache for this key` | First run for this key, or the entry was evicted |
+| `💾 SST providers and plugins cached` | Saved after the operation, plugins included |
 | `ℹ️ The Actions cache service is unavailable here` | No cache service — common on self-hosted runners and under `act` |
 | `No sst.config.ts in "..."` | Wrong directory — set `working-directory` |
 | `Could not determine the installed SST version` | Install dependencies before this step |
+| `No provider plugins in ...` | Nothing to cache — the operation downloaded no plugins, so no entry is written |
+
+**The restore happens before the operation and the save after it,** because the
+two halves fill different directories. `sst install` builds `.sst/platform` and
+the vendored binaries in `~/.config/sst/bin`; the operation itself downloads the
+Pulumi provider plugins into `~/.config/sst/plugins` — those are the
+`Downloaded provider ...` lines, and they are the expensive part. A cache saved
+between the two would contain everything except the part worth having.
 
 **Every run reports a miss:**
 
@@ -682,10 +691,18 @@ declared in `sst.config.ts`. Nothing carries over between runs by default.
 - The key also includes the runner OS and architecture. A matrix spanning both
   keeps separate entries, which is correct — the cached binaries are native.
 
+**`Downloaded provider ...` on every deploy, even on a cache hit:** the entry
+was written without the plugins. Action versions up to and including v0.10.0
+saved before the operation ran, so `~/.config/sst/plugins` did not exist yet and
+every entry they wrote was missing it. Upgrade — the fix bumps the key scheme,
+so the stale entries are abandoned rather than restored. Actions cache entries
+are immutable, which is why a new scheme rather than a rewrite is the only way
+out.
+
 **Stale or broken providers after restore:** change `sst.config.ts` to move to a
-fresh key, or delete the entry under the repository's *Actions → Caches*. A
-failed `sst install` is never saved, so a broken set cannot come from the cache
-itself.
+fresh key, or delete the entry under the repository's *Actions → Caches*.
+Neither a failed `sst install` nor a failed operation is ever saved, so a broken
+set cannot come from the cache itself.
 
 ### 3. Slow SST Operations
 

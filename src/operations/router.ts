@@ -5,9 +5,9 @@
  */
 
 import * as core from "@actions/core";
-import { warmProviderCache } from "../cache/providers";
+import { restoreProviderCache, saveProviderCache } from "../cache/providers";
 import { GitHubClient } from "../github/client";
-import type { ResolvedInputs } from "../inputs/resolve";
+import type { InfrastructureInputs, ResolvedInputs } from "../inputs/resolve";
 import { DeployParser } from "../parsers/deploy-parser";
 import { DiffParser } from "../parsers/diff-parser";
 import { RemoveParser } from "../parsers/remove-parser";
@@ -39,10 +39,6 @@ export async function executeOperation(
       });
     }
 
-    // The factory's switch, inlined into the caller it had. It is written out
-    // rather than looked up in a map so the parser's result type stays
-    // correlated with the narrowed inputs — a map erases that link and the
-    // three results collapse to a union the run path cannot return.
     const deps = {
       createGitHubClient: (token: string) => new GitHubClient(token),
       executor: new SSTCLIExecutor(),
@@ -52,40 +48,71 @@ export async function executeOperation(
     // backend first, and `sst state list` initialises every provider too, so
     // warming any later would leave the preflight paying the cold-start cost.
     // Opt-in, and a no-op for the stage operation, which returned above.
-    await warmProviderCache({ executor: deps.executor, inputs });
+    const pendingCache = await restoreProviderCache({
+      executor: deps.executor,
+      inputs,
+    });
 
-    switch (inputs.operation) {
-      case "deploy":
-        return await runInfrastructureOperation({
-          ...deps,
-          inputs,
-          parser: new DeployParser(),
-        });
-      case "diff":
-        return await runInfrastructureOperation({
-          ...deps,
-          inputs,
-          parser: new DiffParser(),
-        });
-      case "remove":
-        // Remove checks the state backend first and no-ops on a stage that
-        // was never deployed, so cleanup workflows stay green for PRs that
-        // never deployed anything.
-        return await runRemoveOperation({
-          ...deps,
-          inputs,
-          parser: new RemoveParser(),
-        });
-      default: {
-        const _exhaustive: never = inputs;
-        throw new Error(
-          `Unknown operation type: ${(_exhaustive as { operation: string }).operation}`
-        );
-      }
+    const result = await runOperation(inputs, deps);
+
+    // After the operation, because the provider plugins it downloads are the
+    // point of the cache and do not exist until it has run. Only on success:
+    // the plugin set a failed operation leaves behind may be incomplete, and
+    // cached it would be restored into every later run.
+    if (result.success) {
+      await saveProviderCache(pendingCache);
     }
+
+    return result;
   } catch (error) {
     // Return a failed result with error details
     return createFailureResult(inputs, error as Error);
+  }
+}
+
+/**
+ * Dispatch to the handler for an operation that runs the SST CLI.
+ *
+ * Written out rather than looked up in a map so the parser's result type stays
+ * correlated with the narrowed inputs — a map erases that link and the three
+ * results collapse to a union the run path cannot return.
+ */
+async function runOperation(
+  inputs: InfrastructureInputs,
+  deps: {
+    createGitHubClient: (token: string) => GitHubClient;
+    executor: SSTCLIExecutor;
+  }
+): Promise<OperationResult> {
+  switch (inputs.operation) {
+    case "deploy":
+      return await runInfrastructureOperation({
+        ...deps,
+        inputs,
+        parser: new DeployParser(),
+      });
+    case "diff":
+      return await runInfrastructureOperation({
+        ...deps,
+        inputs,
+        parser: new DiffParser(),
+      });
+    case "remove":
+      // Remove checks the state backend first and no-ops on a stage that was
+      // never deployed, so cleanup workflows stay green for PRs that never
+      // deployed anything.
+      return await runRemoveOperation({
+        ...deps,
+        inputs,
+        parser: new RemoveParser(),
+      });
+    default: {
+      // On the operation rather than on `inputs`: `InfrastructureInputs` is one
+      // interface with a union-typed field, not a union of types, so it is the
+      // field that narrows to never once all three are handled.
+      const _exhaustive: never = inputs.operation;
+      throw new Error(`Unknown operation type: ${String(_exhaustive)}`);
+    }
   }
 }
 

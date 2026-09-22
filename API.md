@@ -383,6 +383,11 @@ installed SST version (read from `node_modules/sst/package.json`), and a hash
 of `sst.config.ts`. A changed config falls back to the previous entry for the
 same SST version, so the plugin downloads are still reused.
 
+**When each half runs:** the restore (and `sst install` on a miss) happens
+before the operation; the save happens after it, and only if it succeeded. The
+provider plugins in `~/.config/sst/plugins` are downloaded by the operation
+itself, not by `sst install`, so an entry saved any earlier would omit them.
+
 **Examples:**
 ```yaml
 # Cache providers between runs

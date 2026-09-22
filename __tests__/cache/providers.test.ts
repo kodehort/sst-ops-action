@@ -14,13 +14,38 @@
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type ReadFile, warmProviderCache } from "@/cache/providers";
+import {
+  type DirHasEntries,
+  type ReadFile,
+  restoreProviderCache,
+  saveProviderCache,
+} from "@/cache/providers";
 import type { InfrastructureInputs } from "@/inputs/resolve";
 import type { CLIResult, SSTCLIExecutor } from "@/utils/cli";
 import { infrastructureInputs } from "../utils/resolved-inputs";
 
 const mockedCache = vi.mocked(cache);
 const mockedCore = vi.mocked(core);
+
+/** Plugins present, as they are once an operation has actually run. */
+const pluginsDownloaded: DirHasEntries = () => true;
+
+/** Plugins absent, as they are straight after `sst install`. */
+const noPlugins: DirHasEntries = () => false;
+
+/**
+ * Restore, then save as the router does once the operation has succeeded.
+ *
+ * The two halves exist because the plugins worth caching only appear while the
+ * operation runs; `dirHasEntries` stands in for that having happened.
+ */
+async function warmAndSave(
+  args: Parameters<typeof restoreProviderCache>[0],
+  dirHasEntries: DirHasEntries = pluginsDownloaded
+): Promise<void> {
+  const pending = await restoreProviderCache(args);
+  await saveProviderCache(pending, dirHasEntries);
+}
 
 const SST_CONFIG = 'export default { app: () => ({ name: "my-app" }) };';
 
@@ -101,7 +126,7 @@ describe("warming the SST provider cache", () => {
     it("does nothing at all, which is the default", async () => {
       const { executor, installProviders } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: infrastructureInputs("deploy"),
         readFile: normalApp(),
@@ -117,21 +142,21 @@ describe("warming the SST provider cache", () => {
     it("carries the runner platform, the SST version and the config hash", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp("3.17.10"),
       });
 
       expect(restoredKey()).toMatch(
-        /^sst-providers-v1-Linux-X64-[0-9a-f]{8}-3\.17\.10-[0-9a-f]{16}$/
+        /^sst-providers-v2-Linux-X64-[0-9a-f]{8}-3\.17\.10-[0-9a-f]{16}$/
       );
     });
 
     it("changes when sst.config.ts changes", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -141,7 +166,7 @@ describe("warming the SST provider cache", () => {
       vi.clearAllMocks();
       mockedCache.isFeatureAvailable.mockReturnValue(true);
       mockedCache.restoreCache.mockResolvedValue(undefined);
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: directory({
@@ -158,7 +183,7 @@ describe("warming the SST provider cache", () => {
     it("changes when the SST version changes", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp("3.17.10"),
@@ -168,7 +193,7 @@ describe("warming the SST provider cache", () => {
       vi.clearAllMocks();
       mockedCache.isFeatureAvailable.mockReturnValue(true);
       mockedCache.restoreCache.mockResolvedValue(undefined);
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp("3.18.0"),
@@ -186,7 +211,7 @@ describe("warming the SST provider cache", () => {
         "packages/web/sst.config.ts": SST_CONFIG,
       };
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs({ workingDirectory: "packages/api" }),
         readFile: directory(shared),
@@ -196,7 +221,7 @@ describe("warming the SST provider cache", () => {
       vi.clearAllMocks();
       mockedCache.isFeatureAvailable.mockReturnValue(true);
       mockedCache.restoreCache.mockResolvedValue(undefined);
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs({ workingDirectory: "packages/web" }),
         readFile: directory(shared),
@@ -208,7 +233,7 @@ describe("warming the SST provider cache", () => {
     it("falls back to a lockfile hash when SST is not a local dependency", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs({ runner: "sst" }),
         readFile: directory({
@@ -225,7 +250,7 @@ describe("warming the SST provider cache", () => {
     it("caches the platform directory and both SST home directories", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs({ workingDirectory: "packages/infra" }),
         readFile: directory({
@@ -247,7 +272,7 @@ describe("warming the SST provider cache", () => {
         Promise.resolve(key)
       );
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -260,10 +285,10 @@ describe("warming the SST provider cache", () => {
     it("reconciles and re-saves under the exact key on a partial hit", async () => {
       const { executor, installProviders } = executorWith();
       mockedCache.restoreCache.mockResolvedValue(
-        "sst-providers-v1-Linux-X64-deadbeef-3.17.10-anolderconfighash"
+        "sst-providers-v2-Linux-X64-deadbeef-3.17.10-anolderconfighash"
       );
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -279,7 +304,7 @@ describe("warming the SST provider cache", () => {
     it("installs and saves on a complete miss", async () => {
       const { executor, installProviders } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs({ runner: "pnpm", workingDirectory: "apps/infra" }),
         readFile: directory({
@@ -297,12 +322,131 @@ describe("warming the SST provider cache", () => {
     });
   });
 
+  describe("saving only what is worth restoring", () => {
+    it("saves after the operation, once the plugins it downloads exist", async () => {
+      const { executor } = executorWith();
+
+      const pending = await restoreProviderCache({
+        executor,
+        inputs: inputs(),
+        readFile: normalApp(),
+      });
+
+      // Nothing is written by the restore half: `sst install` leaves
+      // ~/.config/sst/plugins empty, and the operation has not run yet.
+      expect(mockedCache.saveCache).not.toHaveBeenCalled();
+      expect(pending).not.toBeNull();
+
+      await saveProviderCache(pending, pluginsDownloaded);
+
+      expect(mockedCache.saveCache).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses to cache an entry with no provider plugins", async () => {
+      const { executor } = executorWith();
+
+      // The v1 bug exactly: saved straight after `sst install`, when the one
+      // directory worth caching does not exist yet. Such an entry would be
+      // restored as an exact hit forever and save nothing.
+      await warmAndSave(
+        { executor, inputs: inputs(), readFile: normalApp() },
+        noPlugins
+      );
+
+      expect(mockedCache.saveCache).not.toHaveBeenCalled();
+      expect(mockedCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining("No provider plugins in")
+      );
+    });
+
+    it("includes the plugins directory in the paths it caches", async () => {
+      const { executor } = executorWith();
+
+      await warmAndSave({ executor, inputs: inputs(), readFile: normalApp() });
+
+      const paths = mockedCache.saveCache.mock.calls[0]?.[0] as string[];
+      expect(paths.some((path) => path.endsWith("/.config/sst/plugins"))).toBe(
+        true
+      );
+    });
+
+    it("probes the same plugins directory it caches", async () => {
+      const { executor } = executorWith();
+      const probed: string[] = [];
+
+      await warmAndSave(
+        { executor, inputs: inputs(), readFile: normalApp() },
+        (path) => {
+          probed.push(path);
+          return true;
+        }
+      );
+
+      const paths = mockedCache.saveCache.mock.calls[0]?.[0] as string[];
+      expect(paths).toContain(probed[0]);
+    });
+
+    it("probes the real filesystem when no directory reader is injected", async () => {
+      const { executor } = executorWith();
+
+      const pending = await restoreProviderCache({
+        executor,
+        inputs: inputs(),
+        readFile: normalApp(),
+      });
+
+      // No `dirHasEntries`: the production adapter runs, and a plugins
+      // directory that does not exist on this machine must read as "nothing to
+      // cache" rather than throw.
+      await expect(saveProviderCache(pending)).resolves.toBeUndefined();
+
+      expect(mockedCache.saveCache).not.toHaveBeenCalled();
+      expect(mockedCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining("No provider plugins in")
+      );
+    });
+
+    it("warns rather than throwing when the save itself fails", async () => {
+      const { executor } = executorWith();
+      mockedCache.saveCache.mockRejectedValue(new Error("disk full"));
+
+      await expect(
+        warmAndSave({ executor, inputs: inputs(), readFile: normalApp() })
+      ).resolves.toBeUndefined();
+
+      expect(mockedCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining("Could not save")
+      );
+    });
+
+    it("saves nothing at all on an exact hit", async () => {
+      const { executor, installProviders } = executorWith();
+      mockedCache.restoreCache.mockImplementation((_paths, key) =>
+        Promise.resolve(key)
+      );
+
+      const pending = await restoreProviderCache({
+        executor,
+        inputs: inputs(),
+        readFile: normalApp(),
+      });
+
+      // A v2 entry is only ever written post-operation, so an exact hit
+      // already carries the plugins.
+      expect(pending).toBeNull();
+      expect(installProviders).not.toHaveBeenCalled();
+
+      await saveProviderCache(pending, pluginsDownloaded);
+      expect(mockedCache.saveCache).not.toHaveBeenCalled();
+    });
+  });
+
   describe("failing open", () => {
     it("skips quietly where the cache service is unavailable", async () => {
       const { executor, installProviders } = executorWith();
       mockedCache.isFeatureAvailable.mockReturnValue(false);
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -317,7 +461,7 @@ describe("warming the SST provider cache", () => {
     it("warns and skips when there is no sst.config.ts", async () => {
       const { executor, installProviders } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: directory({}),
@@ -333,7 +477,7 @@ describe("warming the SST provider cache", () => {
     it("warns and skips when the SST version cannot be determined", async () => {
       const { executor, installProviders } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: directory({ "sst.config.ts": SST_CONFIG }),
@@ -348,7 +492,7 @@ describe("warming the SST provider cache", () => {
     it("falls through to the lockfile when the SST manifest is corrupt", async () => {
       const { executor } = executorWith();
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: directory({
@@ -365,7 +509,7 @@ describe("warming the SST provider cache", () => {
       const { executor, installProviders } = executorWith();
       mockedCache.restoreCache.mockRejectedValue(new Error("503 from cache"));
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -380,7 +524,7 @@ describe("warming the SST provider cache", () => {
     it("does not cache a half-installed provider set", async () => {
       const { executor, installProviders } = executorWith(1);
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -399,7 +543,7 @@ describe("warming the SST provider cache", () => {
         new cache.ReserveCacheError("already reserved")
       );
 
-      await warmProviderCache({
+      await warmAndSave({
         executor,
         inputs: inputs(),
         readFile: normalApp(),
@@ -416,7 +560,7 @@ describe("warming the SST provider cache", () => {
       mockedCache.saveCache.mockRejectedValue(new Error("disk full"));
 
       await expect(
-        warmProviderCache({
+        warmAndSave({
           executor,
           inputs: inputs(),
           readFile: normalApp(),
@@ -435,7 +579,7 @@ describe("warming the SST provider cache", () => {
       });
 
       await expect(
-        warmProviderCache({
+        warmAndSave({
           executor,
           inputs: inputs(),
           readFile: normalApp(),
@@ -453,7 +597,7 @@ describe("warming the SST provider cache", () => {
       // No `readFile`: this exercises the production adapter, whose whole job
       // is to answer "no" for an unreadable file instead of throwing.
       await expect(
-        warmProviderCache({
+        warmAndSave({
           executor,
           inputs: inputs({ workingDirectory: "no/such/directory" }),
         })
@@ -472,7 +616,7 @@ describe("warming the SST provider cache", () => {
       const executor = { installProviders } as unknown as SSTCLIExecutor;
 
       await expect(
-        warmProviderCache({
+        warmAndSave({
           executor,
           inputs: inputs(),
           readFile: normalApp(),

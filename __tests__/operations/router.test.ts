@@ -17,7 +17,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/github/client");
 vi.mock("@/utils/cli");
+// The third seam: the Actions cache service exists only on a real runner.
+vi.mock("@/cache/providers");
 
+import * as providers from "@/cache/providers";
 import { GitHubClient } from "@/github/client";
 import { executeOperation } from "@/operations/router";
 import type { DeployResult, DiffResult, RemoveResult } from "@/types";
@@ -55,6 +58,9 @@ describe("executeOperation", () => {
     vi.clearAllMocks();
 
     executeSST.mockResolvedValue(cliResult(""));
+    // Default: caching off, so the cache plays no part unless a test says so.
+    vi.mocked(providers.restoreProviderCache).mockResolvedValue(null);
+    vi.mocked(providers.saveProviderCache).mockResolvedValue(undefined);
     // The fixture lists "staging" — the builders' default stage — so remove
     // tests exercise the deployed path unless they say otherwise.
     listStages.mockResolvedValue(cliResult(SST_STATE_LIST_OUTPUT));
@@ -137,6 +143,63 @@ describe("executeOperation", () => {
       );
 
       expect(GitHubClient).toHaveBeenCalledWith("ghp_router_token");
+    });
+  });
+
+  describe("the provider cache", () => {
+    it("restores before the operation and saves after it", async () => {
+      const order: string[] = [];
+      vi.mocked(providers.restoreProviderCache).mockImplementation(() => {
+        order.push("restore");
+        return Promise.resolve({
+          key: "k",
+          paths: ["p"],
+          pluginsPath: "plugins",
+        });
+      });
+      vi.mocked(providers.saveProviderCache).mockImplementation(() => {
+        order.push("save");
+        return Promise.resolve();
+      });
+      executeSST.mockImplementation(() => {
+        order.push("operation");
+        return Promise.resolve(cliResult(SST_DEPLOY_SUCCESS_OUTPUT));
+      });
+
+      await executeOperation(
+        infrastructureInputs("deploy", { cacheProviders: true })
+      );
+
+      // The whole point of the split: the provider plugins the operation
+      // downloads do not exist until it has run.
+      expect(order).toEqual(["restore", "operation", "save"]);
+    });
+
+    it("does not save when the operation failed", async () => {
+      vi.mocked(providers.restoreProviderCache).mockResolvedValue({
+        key: "k",
+        paths: ["p"],
+        pluginsPath: "plugins",
+      });
+      executeSST.mockResolvedValue(
+        cliResult("Error: something broke", { exitCode: 1, success: false })
+      );
+
+      const result = await executeOperation(
+        infrastructureInputs("deploy", { cacheProviders: true })
+      );
+
+      expect(result.success).toBe(false);
+      // A partial plugin set from a failed run would be restored into every
+      // later run.
+      expect(providers.saveProviderCache).not.toHaveBeenCalled();
+    });
+
+    it("never touches the cache for the stage operation", async () => {
+      await executeOperation(stageInputs());
+
+      expect(providers.restoreProviderCache).not.toHaveBeenCalled();
+      expect(providers.saveProviderCache).not.toHaveBeenCalled();
     });
   });
 

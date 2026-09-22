@@ -221,6 +221,12 @@ installed SST version (read from `node_modules/sst`), and a hash of
 new key and a fresh install; the previous entry is still reused as a starting
 point, since the plugin downloads are pinned by the SST version.
 
+The restore runs before the SST operation and the save after it. That ordering
+matters: `sst install` produces `.sst/platform` and the vendored binaries, but
+the provider plugins — the `Downloaded provider ...` lines, and the bulk of the
+time — are fetched by the operation itself. Saving in between would cache
+everything except the part worth caching.
+
 Install dependencies before this step — the SST version comes from
 `node_modules`. Everything about the cache fails open: an unavailable cache
 service, an unreadable config, or a failed `sst install` produces a warning and
