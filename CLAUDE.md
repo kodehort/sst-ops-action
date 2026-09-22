@@ -138,10 +138,12 @@ missing or unreadable pin fails the job rather than silently installing
 whatever is newest.
 
 This matters because **the bundle is not byte-stable across Bun versions**, and
-`dist/` is committed and gated on a byte-exact rebuild. Measured on this source:
-Bun 1.4.0 produces `f9340e4c…` (865,216 bytes) and Bun 1.4.2 produces
-`5804e444…` (663,502 bytes). When the two pins disagreed, a contributor
-following `mise.toml` built a bundle CI rejected, and the gate's message
+`dist/` is committed and gated on a byte-exact rebuild. The difference is not
+subtle: measured at v0.8.7, the same source bundled to 865,216 bytes under Bun
+1.4.0 and 663,502 bytes under 1.4.2. Each version is reproducible on its own —
+repeated clean builds agree — so a hash mismatch between them is a version
+difference, not flakiness. When the two pins disagreed, a contributor following
+`mise.toml` built a bundle CI rejected, and the gate's message
 ("Committed bundle is stale. Run 'bun run build' and commit dist/.") pointed at
 the wrong cause — rebuilding was what produced the mismatch. The gate now
 compares the Bun version in the committed `dist/build-manifest.json` against the
