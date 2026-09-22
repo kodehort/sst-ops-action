@@ -166,19 +166,19 @@ rejects unresolved imports, and emits one linked ESM source map. GitHub Actions
 executes the committed result with Node 24; Bun is not required in repositories
 that consume the action.
 
-The bundle grew by roughly 760 KB when `@actions/cache` was added for provider
-caching — 663,806 bytes before, a little over 1.42 MB after. Do not expect an
-exact figure to stay put: `scripts/build.ts` injects the package version into
-the bundle, so a release that changes the version's length changes the byte
-count too (v0.9.1 built 1,423,822; v0.10.0 built 1,423,823 from the same
-source). `dist/build-manifest.json` records the real number for whatever is
-committed — read it rather than trusting a figure quoted here. It pulls in
-`@azure/storage-blob` and
-`@azure/core-rest-pipeline`, and `packages: "bundle"` inlines them whether or
-not `cache-providers` is ever set — `splitting: false` means a dynamic
-`import()` would not defer it either. Most of those SDKs tree-shake away, which
-is why the cost is ~760 KB rather than the several MB the dependency list
-suggests.
+Adding `@actions/cache` for provider caching grew the bundle by roughly 760 KB:
+663,806 bytes before, a little over 1.42 MB after. The dependency pulls in
+`@azure/storage-blob` and `@azure/core-rest-pipeline`, and `packages: "bundle"`
+inlines them whether or not `cache-providers` is ever set — `splitting: false`
+means a dynamic `import()` would not defer it either. Most of those SDKs
+tree-shake away, which is why the cost is ~760 KB rather than the several MB
+the dependency list suggests.
+
+Do not expect an exact byte count to stay put. `scripts/build.ts` injects the
+package version into the bundle, so a release that changes the version's length
+changes the size: identical source built 1,423,822 bytes at v0.9.1 and
+1,423,823 at v0.10.0. `dist/build-manifest.json` records the real number for
+whatever is committed — read it rather than trusting a figure quoted here.
 
 **The unresolved-import gate reads the emitted bundle, not the module graph.**
 The graph over-reports badly: a barrel file such as
