@@ -144,6 +144,11 @@ jobs:
           operation: diff
           stage: staging
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Dependencies are installed with npm, so run SST through npm too
+          runner: npm
+          # Reuse the downloaded providers between runs instead of
+          # re-bootstrapping SST on every cold runner
+          cache-providers: true
           comment-mode: never  # Internal pipeline, no PR comments
           fail-on-error: false
 
@@ -155,6 +160,8 @@ jobs:
           operation: deploy
           stage: staging
           token: ${{ secrets.GITHUB_TOKEN }}
+          runner: npm
+          cache-providers: true
           comment-mode: never
           fail-on-error: true
           max-output-size: 100000
@@ -295,6 +302,8 @@ jobs:
           operation: diff
           stage: production
           token: ${{ secrets.GITHUB_TOKEN }}
+          runner: npm
+          cache-providers: true
           comment-mode: never
           fail-on-error: false
 
@@ -319,6 +328,8 @@ jobs:
           operation: deploy
           stage: production
           token: ${{ secrets.GITHUB_TOKEN }}
+          runner: npm
+          cache-providers: true
           comment-mode: never
           fail-on-error: true
           max-output-size: 150000

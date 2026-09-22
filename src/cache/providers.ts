@@ -8,9 +8,30 @@
  * too — and it repeats on every run.
  *
  * What gets installed is decided by exactly two things: the SST version, and
- * the providers declared in `sst.config.ts`. So those two are the cache key,
- * and `sst install` is the command that materialises the result at a point
- * where it can be saved, rather than as a side effect of a deploy.
+ * the providers declared in `sst.config.ts`. So those two are the cache key.
+ *
+ * **Restoring and saving happen either side of the operation, and they must.**
+ * `sst install` and the operation populate different directories:
+ *
+ * - `sst install` builds `.sst/platform` (the `@pulumi/*` npm SDKs) and fetches
+ *   the vendored `pulumi` and `bun` binaries into `~/.config/sst/bin`.
+ * - the operation — `deploy`, `diff`, `remove`, and the `sst state list`
+ *   preflight — downloads the Pulumi *provider plugin binaries* into
+ *   `~/.config/sst/plugins`. Those are the `Downloaded provider ...` lines.
+ *
+ * How much that second half is worth is an open question, not an assumption.
+ * Measured on one real app (12 providers, Blacksmith runner): the phase costs
+ * ~7.3s, while restoring the 202MB the v1 entry did hold costs ~4.3s at
+ * ~47MB/s. Adding the plugins to every restore therefore only pays for itself
+ * while they compress to roughly 350MB or less. The timings this module logs
+ * exist so that stays a measurement rather than a belief.
+ *
+ * v1 of this module saved immediately after `sst install`, when
+ * `~/.config/sst/plugins` did not yet exist. `saveCache` skips a missing path
+ * with a warning rather than failing, so every entry it wrote was missing the
+ * one artifact worth caching, and every deploy re-downloaded all of them. The
+ * save now runs after the operation, and `pluginsPopulated` refuses to write an
+ * entry that would repeat the mistake.
  *
  * Every path through this module fails open. A cache that cannot be restored,
  * a version that cannot be resolved, an install that exits non-zero — none of
@@ -19,7 +40,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import * as cache from "@actions/cache";
@@ -33,8 +54,16 @@ import type { SSTCLIExecutor } from "../utils/cli";
  * Needed when what we store changes shape — a new path, or a different layout
  * — since the key would otherwise still match an entry restored into the wrong
  * places.
+ *
+ * v1 -> v2 is exactly that case, and the bump is load-bearing rather than
+ * tidiness. Actions cache entries are immutable: an existing key cannot be
+ * overwritten. Every v1 key names an entry saved before the operation ran, so
+ * it has no `~/.config/sst/plugins`. Left on v1, the corrected code would
+ * restore such an entry, see an exact hit, return early and never save a
+ * complete one — the bug would outlive its own fix, for every key already in
+ * use.
  */
-const CACHE_SCHEME = "sst-providers-v1";
+const CACHE_SCHEME = "sst-providers-v2";
 
 /** Lockfiles, in the order they are tried when SST is not in `node_modules`. */
 const LOCKFILES = [
@@ -65,11 +94,46 @@ const readFileOrNull: ReadFile = (path) => {
 };
 
 /**
- * Restore the provider cache, warm it on a miss, and save the result.
+ * Whether a directory exists and holds at least one entry.
  *
- * @returns Nothing. Never throws — see the module docblock.
+ * Injected for the same reason as {@link ReadFile}.
  */
-export async function warmProviderCache({
+export type DirHasEntries = (path: string) => boolean;
+
+const dirHasEntriesOrFalse: DirHasEntries = (path) => {
+  try {
+    return readdirSync(path).length > 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * What a completed restore leaves for the save to act on.
+ *
+ * Only produced when there is something worth writing: an exact hit needs no
+ * save, and every giving-up path yields null instead.
+ */
+export interface ProviderCachePending {
+  /** The exact key this run should save under. */
+  key: string;
+  /** The directories to write, in the order {@link cachePaths} returns them. */
+  paths: string[];
+  /** Where the plugins the operation downloads must appear before saving. */
+  pluginsPath: string;
+}
+
+/**
+ * Restore the provider cache and warm it on a miss.
+ *
+ * Call before the operation. The result goes to {@link saveProviderCache}
+ * afterwards — the plugins worth caching do not exist until the operation has
+ * run.
+ *
+ * @returns What to save once the operation succeeds, or null when there is
+ *   nothing to save. Never throws — see the module docblock.
+ */
+export async function restoreProviderCache({
   executor,
   inputs,
   readFile = readFileOrNull,
@@ -77,22 +141,62 @@ export async function warmProviderCache({
   executor: SSTCLIExecutor;
   inputs: InfrastructureInputs;
   readFile?: ReadFile;
-}): Promise<void> {
+}): Promise<ProviderCachePending | null> {
   if (!inputs.cacheProviders) {
-    return;
+    return null;
   }
 
   try {
-    await warm({ executor, inputs, readFile });
+    return await restoreAndWarm({ executor, inputs, readFile });
   } catch (error) {
     // The belt to the braces below. Each step already handles its own
     // failures; this catches anything unforeseen so a caching problem can
     // never reach the router and be reported as a failed deployment.
     core.warning(`Provider cache skipped: ${describe(error)}`);
+    return null;
   }
 }
 
-async function warm({
+/**
+ * Save what the operation downloaded.
+ *
+ * Call only after the operation succeeded: a half-downloaded provider set from
+ * a failed deploy, cached, would be restored on every later run and keep them
+ * all broken — the same reasoning that stops {@link install} caching a failed
+ * install, with more force.
+ *
+ * @returns Nothing. Never throws — see the module docblock.
+ */
+export async function saveProviderCache(
+  pending: ProviderCachePending | null,
+  dirHasEntries: DirHasEntries = dirHasEntriesOrFalse
+): Promise<void> {
+  if (!pending) {
+    return;
+  }
+
+  try {
+    // The invariant v1 violated, now checked rather than assumed. `saveCache`
+    // treats a missing path as a warning and writes the rest, so without this
+    // an ordering regression would quietly resume shipping entries whose one
+    // valuable directory is absent — and the exact-hit early return would make
+    // each one permanent.
+    if (!dirHasEntries(pending.pluginsPath)) {
+      core.warning(
+        `No provider plugins in ${pending.pluginsPath}; not caching, because an entry without them would be restored on every later run and save nothing.`
+      );
+      return;
+    }
+
+    const saveStarted = Date.now();
+    await save(pending.paths, pending.key);
+    core.info(`⏱️ Provider cache save took ${secondsSince(saveStarted)}`);
+  } catch (error) {
+    core.warning(`Provider cache not saved: ${describe(error)}`);
+  }
+}
+
+async function restoreAndWarm({
   executor,
   inputs,
   readFile,
@@ -100,7 +204,7 @@ async function warm({
   executor: SSTCLIExecutor;
   inputs: InfrastructureInputs;
   readFile: ReadFile;
-}): Promise<void> {
+}): Promise<ProviderCachePending | null> {
   // False on self-hosted runners without the cache service and under local
   // runners like `act`, where the credentials simply are not there. That is an
   // ordinary environment rather than a fault, so it is not a warning.
@@ -108,50 +212,75 @@ async function warm({
     core.info(
       "ℹ️ The Actions cache service is unavailable here; skipping the SST provider cache"
     );
-    return;
+    return null;
   }
 
   const key = buildCacheKey({ inputs, readFile });
   if (!key) {
-    return;
+    return null;
   }
 
   const paths = cachePaths(inputs.workingDirectory);
+  const pending: ProviderCachePending = {
+    key: key.primary,
+    paths,
+    pluginsPath: pluginsPath(),
+  };
+  const restoreStarted = Date.now();
   const matched = await restore(paths, key);
+  const restoreTook = secondsSince(restoreStarted);
 
   if (matched === key.primary) {
-    core.info(`✅ SST providers restored from cache (${matched})`);
-    return;
+    // A v2 entry is only ever written after a successful operation, so an
+    // exact hit already carries the plugins. Nothing to install, nothing to
+    // save.
+    core.info(
+      `✅ SST providers restored from cache in ${restoreTook} (${matched})`
+    );
+    return null;
   }
 
   core.info(
     matched
-      ? `♻️ Partial cache hit (${matched}); reconciling providers with \`sst install\``
-      : "❄️ No provider cache for this key; running `sst install`"
+      ? `♻️ Partial cache hit in ${restoreTook} (${matched}); reconciling providers with \`sst install\``
+      : `❄️ No provider cache for this key (looked for ${restoreTook}); running \`sst install\``
   );
 
   const installed = await install(executor, inputs);
   if (!installed) {
-    return;
+    return null;
   }
 
-  await save(paths, key.primary);
+  return pending;
 }
 
 /**
  * The three places SST puts the things worth keeping between runs.
  *
- * The plugins directory is the bulk of it; the binaries are native, which is
- * why the key carries the runner's OS and architecture.
+ * The binaries are native, which is why the key carries the runner's OS and
+ * architecture.
  */
 function cachePaths(workingDirectory: string): string[] {
   const sstHome = join(homedir(), ".config", "sst");
 
   return [
     join(workingDirectory, ".sst", "platform"),
-    join(sstHome, "plugins"),
+    pluginsPath(),
     join(sstHome, "bin"),
   ];
+}
+
+/**
+ * Where Pulumi puts the provider plugin binaries.
+ *
+ * `~/.config/sst/bin` follows Pulumi's `$PULUMI_HOME/bin` convention and the
+ * `sst` binary carries a `PULUMI_HOME=` assignment, so `$PULUMI_HOME` is
+ * `~/.config/sst` and plugins land beside that `bin`. One function rather than
+ * a repeated `join`, so the path the guard probes cannot drift from the path
+ * the cache writes.
+ */
+function pluginsPath(): string {
+  return join(homedir(), ".config", "sst", "plugins");
 }
 
 interface CacheKey {
@@ -286,6 +415,12 @@ async function install(
     runner: inputs.runner,
   });
 
+  if (result.exitCode === 0) {
+    core.info(
+      `📦 \`sst install\` completed in ${(result.duration / 1000).toFixed(1)}s`
+    );
+  }
+
   if (result.exitCode !== 0) {
     // A half-installed provider set is worse than none: cached, it would be
     // restored on every later run and keep them all broken.
@@ -301,7 +436,7 @@ async function install(
 async function save(paths: string[], key: string): Promise<void> {
   try {
     await cache.saveCache(paths, key);
-    core.info(`💾 SST providers cached (${key})`);
+    core.info(`💾 SST providers and plugins cached (${key})`);
   } catch (error) {
     // A concurrent job reserving the same key first is the cache working, not
     // failing: its entry is the one everyone wants.
@@ -311,6 +446,18 @@ async function save(paths: string[], key: string): Promise<void> {
     }
     core.warning(`Could not save the SST provider cache: ${describe(error)}`);
   }
+}
+
+/**
+ * Seconds elapsed since `started`, to one decimal place.
+ *
+ * Every cache message carries its own cost, because whether this feature is
+ * worth enabling is an empirical question and the logs are the only place it
+ * can be answered: a restore that takes longer than the work it skips is a
+ * pessimisation, and without the numbers nobody can tell which they have.
+ */
+function secondsSince(started: number): string {
+  return `${((Date.now() - started) / 1000).toFixed(1)}s`;
 }
 
 /** Hex digest of `value`, truncated to `length` characters. */

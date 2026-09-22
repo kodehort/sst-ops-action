@@ -44,12 +44,16 @@ bun run prepare
 
 ### Core Structure
 
-- **Entry Point**: `src/main.ts` - GitHub Action entry point with basic input validation
-- **Operations**: `src/operations/` - Deploy, diff, and remove operation implementations
-- **Parsers**: `src/parsers/` - Input validation and parsing for each operation
+- **Entry Point**: `src/main.ts` - GitHub Action entry point; `src/index.ts` is the bundle entry and only calls `run()`
+- **Inputs**: `src/inputs/` - Reads the Actions inputs and resolves them into a validated, fully-defaulted shape; also stage computation from Git context
+- **Operations**: `src/operations/` - `router.ts` dispatches by operation, `run.ts` is the single run/parse/report path
+- **Parsers**: `src/parsers/` - Parsing of SST CLI **output** into structured results (not input validation — that lives in `src/inputs/` and `src/utils/validation.ts`)
+- **Cache**: `src/cache/` - SST provider cache warm-up around infrastructure operations
 - **GitHub Integration**: `src/github/` - GitHub API client and unified formatting system
+- **Outputs**: `src/outputs/` - Formats results into GitHub Action outputs
+- **Errors**: `src/errors/` - Typed errors used across the action
 - **Types**: `src/types/` - TypeScript definitions for operations, outputs, and SST structures
-- **Utilities**: `src/utils/` - CLI execution, error handling, validation helpers
+- **Utilities**: `src/utils/` - CLI execution, input validation schemas, error handling helpers
 
 ### Operation Flow
 
@@ -79,7 +83,9 @@ The action implements strict input validation with fail-fast behavior for critic
 ### Testing Strategy
 
 - Comprehensive test suite with enforced coverage thresholds, set as a ratchet
-  just under current coverage (89% statements/lines, 79% branches, 95% functions).
+  just under current coverage. `vitest.config.ts` is the source of truth; at
+  the time of writing it is 93% statements, 93% lines, 85% branches, 95%
+  functions.
   Keep the `thresholds` object in `vitest.config.ts` flat — Vitest reads an
   unrecognised key such as the former `global` as a glob pattern, which silently
   enforces nothing.
@@ -160,13 +166,19 @@ rejects unresolved imports, and emits one linked ESM source map. GitHub Actions
 executes the committed result with Node 24; Bun is not required in repositories
 that consume the action.
 
-The bundle grew from 663,806 to 1,423,767 bytes when `@actions/cache` was added
-for provider caching. It pulls in `@azure/storage-blob` and
-`@azure/core-rest-pipeline`, and `packages: "bundle"` inlines them whether or
-not `cache-providers` is ever set — `splitting: false` means a dynamic
-`import()` would not defer it either. Most of those SDKs tree-shake away, which
-is why the cost is ~760 KB rather than the several MB the dependency list
-suggests.
+Adding `@actions/cache` for provider caching grew the bundle by roughly 760 KB:
+663,806 bytes before, a little over 1.42 MB after. The dependency pulls in
+`@azure/storage-blob` and `@azure/core-rest-pipeline`, and `packages: "bundle"`
+inlines them whether or not `cache-providers` is ever set — `splitting: false`
+means a dynamic `import()` would not defer it either. Most of those SDKs
+tree-shake away, which is why the cost is ~760 KB rather than the several MB
+the dependency list suggests.
+
+Do not expect an exact byte count to stay put. `scripts/build.ts` injects the
+package version into the bundle, so a release that changes the version's length
+changes the size: identical source built 1,423,822 bytes at v0.9.1 and
+1,423,823 at v0.10.0. `dist/build-manifest.json` records the real number for
+whatever is committed — read it rather than trusting a figure quoted here.
 
 **The unresolved-import gate reads the emitted bundle, not the module graph.**
 The graph over-reports badly: a barrel file such as

@@ -224,6 +224,11 @@ jobs:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Dependencies are installed with npm, so run SST through npm too
+          runner: npm
+          # Reuse the downloaded providers between runs instead of
+          # re-bootstrapping SST on every cold runner
+          cache-providers: true
           comment-mode: never  # Handle comments manually
           fail-on-error: false  # We'll handle errors ourselves
           max-output-size: 100000
@@ -289,6 +294,8 @@ jobs:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          runner: npm
+          cache-providers: true
           comment-mode: never
           fail-on-error: false
           # Increase output size for better error diagnosis
@@ -307,6 +314,8 @@ jobs:
           operation: deploy
           stage: ${{ steps.params.outputs.stage }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          runner: npm
+          cache-providers: true
           comment-mode: never
           fail-on-error: false
           max-output-size: 500000

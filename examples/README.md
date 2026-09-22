@@ -137,6 +137,43 @@ on:
 stage: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 ```
 
+**Package Manager**
+
+Every example installs with `npm ci`, so each action step passes
+`runner: npm`. If you install with something else, change both together — the
+runner decides how SST is invoked, and a mismatch means the action shells out
+to a package manager the workflow never installed with.
+
+```yaml
+- run: bun install
+# ...
+  with:
+    runner: bun      # bun (the action's default) | npm | pnpm | yarn | sst
+```
+
+**Provider Caching**
+
+Every example sets `cache-providers: true`. On a cold runner SST otherwise
+regenerates `.sst/platform` and re-downloads every provider plugin before it
+can start work. Drop it if you would rather not use the repository's Actions
+cache budget:
+
+```yaml
+  with:
+    cache-providers: false  # the default
+```
+
+**Working Directory**
+
+The examples assume `sst.config.ts` is at the repository root. For a monorepo,
+point the action at the app — each directory gets its own cache entry, so two
+apps in one repository never collide:
+
+```yaml
+  with:
+    working-directory: packages/infra
+```
+
 ## 🎯 Integration Patterns
 
 ### Combining Examples
@@ -192,10 +229,14 @@ Each example provides integration points for:
 ### Common Issues
 
 #### "sst command not found"
-**Solution**: Ensure SST is installed in your project
+**Solution**: Ensure SST is installed in your project, and that `runner`
+matches the package manager you installed with.
 ```yaml
-- name: Install SST CLI  
-  run: npm install @serverless-stack/cli
+- name: Install dependencies
+  run: npm ci        # SST v3 ships as the `sst` package
+# ...
+  with:
+    runner: npm      # not the default `bun`, which is not installed here
 ```
 
 #### AWS credential errors

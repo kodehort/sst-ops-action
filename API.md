@@ -375,13 +375,18 @@ executes `sst install` when there is nothing to restore, and saves the result.
 
 **Cached paths:**
 - `<working-directory>/.sst/platform` — generated platform sources and typings
-- `~/.config/sst/plugins` — provider plugins, the bulk of the cache
+- `~/.config/sst/plugins` — provider plugins, downloaded by the operation
 - `~/.config/sst/bin` — the vendored `pulumi` and `bun` binaries
 
 **Cache key:** the runner's OS and architecture, the working directory, the
 installed SST version (read from `node_modules/sst/package.json`), and a hash
 of `sst.config.ts`. A changed config falls back to the previous entry for the
 same SST version, so the plugin downloads are still reused.
+
+**When each half runs:** the restore (and `sst install` on a miss) happens
+before the operation; the save happens after it, and only if it succeeded. The
+provider plugins in `~/.config/sst/plugins` are downloaded by the operation
+itself, not by `sst install`, so an entry saved any earlier would omit them.
 
 **Examples:**
 ```yaml
