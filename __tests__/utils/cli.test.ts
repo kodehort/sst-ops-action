@@ -263,6 +263,91 @@ describe("SST CLI Utilities - Command Execution", () => {
         expect(result.error).toContain("exit code 1");
       });
     });
+
+    describe("installProviders", () => {
+      it("runs `sst install` through the default runner", async () => {
+        mockExec.exec.mockImplementation(
+          (_command: string, _args: string[], options: any) => {
+            options?.listeners?.stdout(Buffer.from("Installing providers\n"));
+            return 0;
+          }
+        );
+
+        const result = await executor.installProviders();
+
+        expect(mockExec.exec).toHaveBeenCalledWith(
+          "bun",
+          ["sst", "install"],
+          expect.any(Object)
+        );
+        expect(result.exitCode).toBe(0);
+        expect(result.output).toContain("Installing providers");
+      });
+
+      it.each([
+        ["npm", "npm", ["run", "sst", "--", "install"]],
+        ["pnpm", "pnpm", ["sst", "install"]],
+        ["yarn", "yarn", ["sst", "install"]],
+        ["sst", "sst", ["install"]],
+      ] as const)(
+        "builds the install command for the %s runner",
+        async (runner, expectedCommand, expectedArgs) => {
+          await executor.installProviders({ runner });
+
+          expect(mockExec.exec).toHaveBeenCalledWith(
+            expectedCommand,
+            expectedArgs,
+            expect.any(Object)
+          );
+        }
+      );
+
+      it("returns the exit code rather than throwing on failure", async () => {
+        mockExec.exec.mockResolvedValue(1);
+
+        const result = await executor.installProviders();
+
+        expect(result.exitCode).toBe(1);
+        expect(result.error).toContain("exit code 1");
+      });
+    });
+
+    describe("working directory", () => {
+      it("runs the SST command in the configured directory", async () => {
+        await executor.executeSST("deploy", "staging", {
+          cwd: "packages/infra",
+        });
+
+        expect(mockExec.exec).toHaveBeenCalledWith(
+          "bun",
+          ["sst", "deploy", "--stage", "staging"],
+          expect.objectContaining({ cwd: "packages/infra" })
+        );
+      });
+
+      it.each([
+        ["listStages", () => executor.listStages({ cwd: "apps/api" })],
+        [
+          "installProviders",
+          () => executor.installProviders({ cwd: "apps/api" }),
+        ],
+      ])("forwards the directory to %s", async (_name, call) => {
+        await call();
+
+        expect(mockExec.exec).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.any(Array),
+          expect.objectContaining({ cwd: "apps/api" })
+        );
+      });
+
+      it("omits cwd entirely when none is configured, rather than passing undefined", async () => {
+        await executor.executeSST("diff", "staging");
+
+        const [[, , options]] = mockExec.exec.mock.calls;
+        expect(options).not.toHaveProperty("cwd");
+      });
+    });
   });
 
   describe("Edge Cases", () => {

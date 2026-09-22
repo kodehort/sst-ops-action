@@ -25,23 +25,25 @@ import type { InfrastructureInputs } from "@/inputs/resolve";
 import { executeOperation } from "@/operations/router";
 import type { DeployResult, DiffResult, RemoveResult } from "@/types";
 import { SSTCLIExecutor } from "@/utils/cli";
+import { infrastructureInputs } from "../utils/resolved-inputs";
 import { loadInput } from "../utils/snapshot-helpers";
 
-/** Resolved inputs for one of the three operations that run the SST CLI. */
+/**
+ * Resolved inputs for one of the three operations that run the SST CLI.
+ *
+ * Defers to the shared builder for the shape, so a field added to
+ * `InfrastructureInputs` lands here too instead of failing this file alone.
+ */
 function inputsFor(
   operation: InfrastructureInputs["operation"],
   overrides: Partial<InfrastructureInputs> = {}
 ): InfrastructureInputs {
-  return {
+  return infrastructureInputs(operation, {
     commentMode: "never",
-    failOnError: true,
     maxOutputSize: 500_000,
-    operation,
-    runner: "bun",
     stage: "sst-ops-actions",
-    token: "test-token",
     ...overrides,
-  };
+  });
 }
 
 /**

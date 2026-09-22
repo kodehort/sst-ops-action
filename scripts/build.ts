@@ -50,20 +50,55 @@ if (!result.metafile) {
   throw new Error("Bun did not return build metadata");
 }
 
-const unexpectedExternalImports = Object.values(result.metafile.inputs)
-  .flatMap((input) => input.imports)
-  .filter(
-    (imported) =>
-      imported.external &&
-      !imported.path.startsWith("node:") &&
-      !builtinModules.includes(imported.path)
-  );
+const bundleText = await bundle.text();
 
-if (unexpectedExternalImports.length > 0) {
-  throw new Error(
-    `Bundle contains unresolved imports: ${unexpectedExternalImports
+/**
+ * Whether the emitted bundle actually reaches for a module it does not carry.
+ *
+ * Matches the specifier in import, dynamic-import or require position, which
+ * is what distinguishes a live dependency from the same name appearing as an
+ * ordinary string — `@actions/cache` ships its own name as a user-agent field.
+ */
+function isReferenced(specifier: string): boolean {
+  const escaped = specifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `(?:from|import|require)\\s*\\(?\\s*["']${escaped}["']`
+  ).test(bundleText);
+}
+
+/**
+ * Modules the dependency graph left unresolved, narrowed to the ones the
+ * output still refers to.
+ *
+ * The graph alone over-reports. A barrel file like
+ * `@azure/core-rest-pipeline/index.js` re-exports thirty siblings; when none
+ * of the re-exported symbols are used, Bun drops the edge without resolving
+ * it and the metafile marks it external — though nothing about it survives
+ * into the bundle. The same goes for a `require` of a genuinely optional
+ * dependency: `debug` asks for `supports-color` inside a try/catch precisely
+ * because it may be absent, and Bun compiles it to a throwing stub that the
+ * catch swallows.
+ *
+ * Neither can fail on a consumer's runner, because neither is in the file. A
+ * dependency that failed to bundle is, and it appears here as a real import.
+ */
+const unresolvedReferences = [
+  ...new Set(
+    Object.values(result.metafile.inputs)
+      .flatMap((input) => input.imports)
+      .filter(
+        (imported) =>
+          imported.external &&
+          !imported.path.startsWith("node:") &&
+          !builtinModules.includes(imported.path)
+      )
       .map((imported) => imported.path)
-      .join(", ")}`
+  ),
+].filter(isReferenced);
+
+if (unresolvedReferences.length > 0) {
+  throw new Error(
+    `Bundle contains unresolved imports: ${unresolvedReferences.join(", ")}`
   );
 }
 

@@ -5,6 +5,7 @@
  */
 
 import * as core from "@actions/core";
+import { warmProviderCache } from "../cache/providers";
 import { GitHubClient } from "../github/client";
 import type { ResolvedInputs } from "../inputs/resolve";
 import { DeployParser } from "../parsers/deploy-parser";
@@ -46,6 +47,12 @@ export async function executeOperation(
       createGitHubClient: (token: string) => new GitHubClient(token),
       executor: new SSTCLIExecutor(),
     };
+
+    // Before the switch, not inside the run path: remove consults the state
+    // backend first, and `sst state list` initialises every provider too, so
+    // warming any later would leave the preflight paying the cold-start cost.
+    // Opt-in, and a no-op for the stage operation, which returned above.
+    await warmProviderCache({ executor: deps.executor, inputs });
 
     switch (inputs.operation) {
       case "deploy":

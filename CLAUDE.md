@@ -160,6 +160,29 @@ rejects unresolved imports, and emits one linked ESM source map. GitHub Actions
 executes the committed result with Node 24; Bun is not required in repositories
 that consume the action.
 
+The bundle grew from 663,806 to 1,423,767 bytes when `@actions/cache` was added
+for provider caching. It pulls in `@azure/storage-blob` and
+`@azure/core-rest-pipeline`, and `packages: "bundle"` inlines them whether or
+not `cache-providers` is ever set — `splitting: false` means a dynamic
+`import()` would not defer it either. Most of those SDKs tree-shake away, which
+is why the cost is ~760 KB rather than the several MB the dependency list
+suggests.
+
+**The unresolved-import gate reads the emitted bundle, not the module graph.**
+The graph over-reports badly: a barrel file such as
+`@azure/core-rest-pipeline/index.js` re-exports thirty siblings, and when none
+of those symbols are used Bun drops the edge without resolving it and the
+metafile marks it `external` — although nothing about it reaches the output.
+`debug`'s `require("supports-color")` is the same story: an explicitly optional
+dependency inside a try/catch, which Bun compiles to a throwing stub the catch
+swallows. Neither can fail on a consumer's runner, because neither is in the
+file. So `scripts/build.ts` takes the graph's externals as *candidates* and
+keeps only those the emitted text actually references in import, dynamic-import
+or require position. Matching on the bare name would not do: `@actions/cache`
+ships its own name as a user-agent string. Do not use `metafile.outputs[].imports`
+for this — measured at Bun 1.4.2 it is `[]` even when real dependencies are
+marked external, so it catches nothing.
+
 ### Distribution Strategy
 
 - **Development**: `dist/` folder is built locally for testing and committed for GitHub Actions compatibility

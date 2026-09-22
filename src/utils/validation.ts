@@ -27,11 +27,13 @@ import { isZodError } from "./zod-error.js";
  * operation, and that was the second place they used to be defaulted.
  */
 export const INPUT_DEFAULTS = {
+  cacheProviders: false,
   commentMode: "on-success",
   maxOutputSize: DEFAULT_MAX_OUTPUT_SIZE,
   prefix: "pr-",
   runner: "bun",
   truncationLength: 26,
+  workingDirectory: ".",
 } as const;
 
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
@@ -42,6 +44,8 @@ const REFS_SEPARATOR_PATTERN = /[\n,]/;
  * Common field schemas used across operations
  */
 const CommonFieldSchemas = {
+  cacheProviders: z.boolean().default(INPUT_DEFAULTS.cacheProviders),
+
   commentMode: z
     .string()
     .default(INPUT_DEFAULTS.commentMode)
@@ -140,17 +144,30 @@ const CommonFieldSchemas = {
       message: "Truncation length must be between 1 and 100 characters",
     })
     .default(INPUT_DEFAULTS.truncationLength),
+
+  // Trimmed before the emptiness check, so a whitespace-only input is rejected
+  // rather than silently becoming a `cwd` of "" — which `exec` reads as "use
+  // the parent's directory", the very ambiguity this input exists to remove.
+  workingDirectory: z
+    .string()
+    .transform((val) => val.trim())
+    .refine((val) => val.length > 0, {
+      message: "Working directory cannot be empty",
+    })
+    .default(INPUT_DEFAULTS.workingDirectory),
 };
 
 /**
  * Base schema for SST infrastructure operations
  */
 const BaseInfrastructureSchema = z.object({
+  cacheProviders: CommonFieldSchemas.cacheProviders,
   commentMode: CommonFieldSchemas.commentMode,
   failOnError: CommonFieldSchemas.failOnError,
   maxOutputSize: CommonFieldSchemas.maxOutputSize,
   runner: CommonFieldSchemas.runner,
   token: CommonFieldSchemas.token,
+  workingDirectory: CommonFieldSchemas.workingDirectory,
 });
 
 /**
@@ -249,6 +266,7 @@ function filterInputsByOperation(
   }
   // Infrastructure operations (deploy, diff, remove) need these fields
   return {
+    cacheProviders: rawInputs.cacheProviders,
     commentMode: rawInputs.commentMode,
     failOnError: rawInputs.failOnError,
     maxOutputSize: rawInputs.maxOutputSize,
@@ -256,6 +274,7 @@ function filterInputsByOperation(
     runner: rawInputs.runner,
     stage: rawInputs.stage,
     token: rawInputs.token,
+    workingDirectory: rawInputs.workingDirectory,
   };
 }
 
@@ -310,6 +329,13 @@ export function parseOperationInputs(
  * leave the help text describing the old set.
  */
 const FIELD_SUGGESTIONS: Record<string, readonly string[]> = {
+  cacheProviders: [
+    "Supported values: true, false, yes, no, 1, 0, on, off, enabled, disabled",
+    'Use "true" to cache SST providers between workflow runs',
+    'Use "false" (default) to let SST bootstrap on every run',
+    "Values are case-insensitive",
+  ],
+
   commentMode: [
     `Valid comment modes are: ${COMMENT_MODES.join(", ")}`,
     'Use "always" to comment on every run',
@@ -357,6 +383,13 @@ const FIELD_SUGGESTIONS: Record<string, readonly string[]> = {
     "Only applies to stage operations for DNS compatibility",
     "Default is 26 characters to fit Route53 limits",
     "Use smaller values for shorter stage names",
+  ],
+
+  workingDirectory: [
+    "Working directory must be the folder containing sst.config.ts",
+    'Default "." is the workspace root',
+    'Use a relative path for monorepos, e.g. "packages/infra"',
+    "Only applies to deploy, diff and remove operations",
   ],
 };
 

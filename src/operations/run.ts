@@ -39,6 +39,7 @@ export async function runInfrastructureOperation<
 }): Promise<T> {
   // The timeout is the command's business, so it is not passed here.
   const cliResult = await executor.executeSST(inputs.operation, inputs.stage, {
+    cwd: inputs.workingDirectory,
     maxOutputSize: inputs.maxOutputSize,
     runner: inputs.runner,
   });
@@ -123,6 +124,7 @@ async function checkStageNotDeployed(
   // router would report as a failed remove.
   try {
     const listResult = await executor.listStages({
+      cwd: inputs.workingDirectory,
       maxOutputSize: inputs.maxOutputSize,
       runner: inputs.runner,
     });

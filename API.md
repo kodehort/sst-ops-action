@@ -324,6 +324,92 @@ permissions:
 
 ---
 
+### `working-directory`
+
+**Description:** Directory containing `sst.config.ts` (infrastructure operations only)  
+**Required:** No  
+**Default:** `"."` (the workspace root)  
+**Type:** String  
+
+Every SST command the action runs is executed from here. Set it when the SST
+app does not live at the repository root.
+
+**Examples:**
+```yaml
+# Repository root (default)
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: staging
+    token: ${{ secrets.GITHUB_TOKEN }}
+
+# Monorepo: the SST app lives in a package
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: staging
+    token: ${{ secrets.GITHUB_TOKEN }}
+    working-directory: packages/infra
+```
+
+**Validation:**
+- Trimmed; a blank or whitespace-only value is rejected
+- Relative paths resolve against the workspace root
+
+**Notes:**
+- Ignored by the `stage` operation, which runs no commands
+- Also scopes `cache-providers`, so two apps in one repository never share a
+  cache entry
+
+---
+
+### `cache-providers`
+
+**Description:** Cache SST providers between workflow runs (infrastructure operations only)  
+**Required:** No  
+**Default:** `false`  
+**Type:** Boolean  
+
+When enabled, the action restores the SST provider cache before running,
+executes `sst install` when there is nothing to restore, and saves the result.
+
+**Cached paths:**
+- `<working-directory>/.sst/platform` — generated platform sources and typings
+- `~/.config/sst/plugins` — provider plugins, the bulk of the cache
+- `~/.config/sst/bin` — the vendored `pulumi` and `bun` binaries
+
+**Cache key:** the runner's OS and architecture, the working directory, the
+installed SST version (read from `node_modules/sst/package.json`), and a hash
+of `sst.config.ts`. A changed config falls back to the previous entry for the
+same SST version, so the plugin downloads are still reused.
+
+**Examples:**
+```yaml
+# Cache providers between runs
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    stage: staging
+    token: ${{ secrets.GITHUB_TOKEN }}
+    cache-providers: true
+```
+
+**Requirements:**
+- Dependencies installed before this step — the SST version is read from
+  `node_modules`
+- The GitHub Actions cache service; where it is unavailable (some self-hosted
+  runners, local runners such as `act`) caching is skipped
+
+**Failure behaviour:**
+
+Every failure is survivable and the operation runs regardless. A missing
+`sst.config.ts`, an SST version that cannot be resolved, an unreachable cache
+service, or an `sst install` that exits non-zero each produce a warning and no
+cache. A failed install is never saved, so a half-installed provider set cannot
+be restored into later runs.
+
+---
+
 ### `truncation-length`
 
 **Description:** Maximum length for computed stage names (stage operation only)  

@@ -93,11 +93,20 @@ jobs:
           # GitHub token for API access and commenting
           token: ${{ secrets.GITHUB_TOKEN }}
           
+          # Dependencies were installed with npm, so run SST through npm too
+          runner: npm
+          
           # Only comment on successful deployments
           comment-mode: on-success
           
           # Fail the workflow if deployment fails
           fail-on-error: true
+          
+          # Reuse the downloaded providers between runs. On a cold runner SST
+          # otherwise regenerates .sst/platform and re-downloads every provider
+          # plugin before it can start. Keyed on the SST version and a hash of
+          # sst.config.ts, so adding a provider installs a fresh set.
+          cache-providers: true
 
       # Report deployment results
       # This step demonstrates how to use the action's outputs

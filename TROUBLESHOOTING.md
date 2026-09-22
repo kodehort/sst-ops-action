@@ -619,17 +619,61 @@ Error: Resource with identifier [xyz] already exists
 
 **Solutions:**
 ```yaml
-# Use specific version for consistent performance
+# Use a specific version for consistent performance
 - uses: kodehort/sst-operations-action@v1.0.0
-
-# Or cache the action
-- uses: actions/cache@v4
-  with:
-    path: ~/.cache/act
-    key: sst-action-cache
 ```
 
-### 2. Slow SST Operations
+The action itself is a single bundled file and downloads quickly. If the delay
+is before SST starts doing work rather than before the action starts, it is the
+provider bootstrap — see [Cold SST bootstrap](#2-cold-sst-bootstrap-on-every-run).
+
+### 2. Cold SST bootstrap on every run
+
+**Symptoms:** Every run spends a minute or more before SST reports any progress;
+logs show providers being downloaded on a workflow that changed nothing.
+
+**Cause:** On a clean runner SST has to generate `.sst/platform`, fetch the
+vendored `pulumi` and `bun` binaries, and download every provider plugin
+declared in `sst.config.ts`. Nothing carries over between runs by default.
+
+**Solution:** Turn on provider caching.
+
+```yaml
+- uses: kodehort/sst-operations-action@v1
+  with:
+    operation: deploy
+    token: ${{ secrets.GITHUB_TOKEN }}
+    cache-providers: true
+```
+
+**If it is not taking effect,** the logs say which case you are in:
+
+| Log line | Meaning |
+|----------|---------|
+| `✅ SST providers restored from cache` | Working — an exact hit, no install needed |
+| `♻️ Partial cache hit` | `sst.config.ts` changed; plugins reused, `sst install` reconciles |
+| `❄️ No provider cache for this key` | First run for this key, or the entry was evicted |
+| `ℹ️ The Actions cache service is unavailable here` | No cache service — common on self-hosted runners and under `act` |
+| `No sst.config.ts in "..."` | Wrong directory — set `working-directory` |
+| `Could not determine the installed SST version` | Install dependencies before this step |
+
+**Every run reports a miss:**
+
+- The key includes a hash of `sst.config.ts`. If that file is generated or
+  templated during the workflow, it differs every run and no entry can ever
+  match. Generate it before the cache step, or commit it.
+- Caches saved on a pull request branch are not visible to other branches.
+  GitHub scopes cache reads to the current branch and its base, so the first
+  run on a new branch is always a miss.
+- The key also includes the runner OS and architecture. A matrix spanning both
+  keeps separate entries, which is correct — the cached binaries are native.
+
+**Stale or broken providers after restore:** change `sst.config.ts` to move to a
+fresh key, or delete the entry under the repository's *Actions → Caches*. A
+failed `sst install` is never saved, so a broken set cannot come from the cache
+itself.
+
+### 3. Slow SST Operations
 
 **Symptoms:** SST deploy/diff/remove takes very long
 
@@ -670,7 +714,7 @@ steps:
       token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 3. Bundle Size Issues
+### 4. Bundle Size Issues
 
 **Symptoms:** Action fails with bundle size errors
 

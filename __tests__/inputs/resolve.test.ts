@@ -16,13 +16,27 @@ import type {
 } from "@/inputs/resolve";
 import { resolveActionInputs } from "@/inputs/resolve";
 
+/**
+ * The `default:` each boolean input declares in action.yml.
+ *
+ * `core.getBooleanInput` reads the *resolved* value, so an input nobody set
+ * still arrives as its action.yml default rather than as blank. This mock used
+ * to answer `true` for every unset boolean, which was only right while
+ * `fail-on-error` was the only one.
+ */
+const BOOLEAN_INPUT_DEFAULTS: Record<string, boolean> = {
+  "fail-on-error": true,
+};
+
 /** Every input unset, as `core.getInput` reports it: an empty string. */
 function withInputs(inputs: Record<string, string>): void {
   vi.spyOn(core, "getInput").mockImplementation(
     (name: string) => inputs[name] ?? ""
   );
   vi.spyOn(core, "getBooleanInput").mockImplementation((name: string) =>
-    inputs[name] === undefined ? true : inputs[name] === "true"
+    inputs[name] === undefined
+      ? (BOOLEAN_INPUT_DEFAULTS[name] ?? false)
+      : inputs[name] === "true"
   );
 }
 
@@ -39,6 +53,38 @@ describe("Resolving action inputs", () => {
   });
 
   describe("defaults", () => {
+    it("treats a blank cache-providers as absent rather than throwing", () => {
+      // `core.getBooleanInput` rejects a blank string, which an input wired to
+      // an unset workflow expression produces.
+      withInputs({
+        "cache-providers": "",
+        operation: "diff",
+        stage: "staging",
+        token: "t",
+      });
+
+      const resolved = resolveActionInputs({
+        computeStage: neverComputes,
+      }) as InfrastructureInputs;
+
+      expect(resolved.cacheProviders).toBe(false);
+    });
+
+    it("reads cache-providers when it is set", () => {
+      withInputs({
+        "cache-providers": "true",
+        operation: "diff",
+        stage: "staging",
+        token: "t",
+      });
+
+      const resolved = resolveActionInputs({
+        computeStage: neverComputes,
+      }) as InfrastructureInputs;
+
+      expect(resolved.cacheProviders).toBe(true);
+    });
+
     it("applies every infrastructure default when nothing is set", () => {
       withInputs({ operation: "diff", stage: "staging", token: "t" });
 
@@ -50,6 +96,7 @@ describe("Resolving action inputs", () => {
       // fires on undefined. If the blank-to-absent normalisation regressed,
       // these would fail as validation errors rather than wrong values.
       expect(resolved).toEqual({
+        cacheProviders: false,
         commentMode: "on-success",
         failOnError: true,
         maxOutputSize: 50_000,
@@ -57,6 +104,7 @@ describe("Resolving action inputs", () => {
         runner: "bun",
         stage: "staging",
         token: "t",
+        workingDirectory: ".",
       });
     });
 
