@@ -11,19 +11,24 @@ import type {
 } from "../types/index.js";
 import {
   isHttpUrl,
+  partitionUrls,
+  type RankedUrl,
+  rankUrls,
   type SSTOutput,
   selectNonUrlOutputs,
-  selectUrls,
 } from "../utils/urls.js";
 
 /**
  * Format configuration for comments and summaries
  */
-interface FormatConfig {
+export interface FormatConfig {
   includeDebugInfo: boolean;
   includeDuration: boolean;
   includeTimestamp: boolean;
+  /** Non-URL outputs shown before the rest collapse into `<details>`. */
+  maxOutputsToShow: number;
   maxResourcesToShow: number;
+  /** Distinct URLs shown before the rest collapse into `<details>`. */
   maxUrlsToShow: number;
 }
 
@@ -34,6 +39,7 @@ const DEFAULT_CONFIG: FormatConfig = {
   includeDebugInfo: false,
   includeDuration: true,
   includeTimestamp: true,
+  maxOutputsToShow: 10,
   maxResourcesToShow: 20,
   maxUrlsToShow: 10,
 };
@@ -44,8 +50,8 @@ const DEFAULT_CONFIG: FormatConfig = {
 export class OperationFormatter {
   private readonly config: FormatConfig;
 
-  constructor(config: FormatConfig = DEFAULT_CONFIG) {
-    this.config = config;
+  constructor(config: Partial<FormatConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
@@ -190,7 +196,7 @@ export class OperationFormatter {
 | App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resources Changed | ${result.resourceChanges || 0} |
-| URLs | ${selectUrls(outputs).length} |
+| URLs | ${rankUrls(outputs).length} |
 | Outputs | ${selectNonUrlOutputs(outputs).length} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
@@ -336,7 +342,7 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
 | App | \`${result.app || "Unknown"}\` |
 | Stage | \`${result.stage}\` |
 | Resource Changes | ${result.resourceChanges || 0} |
-| URLs | ${selectUrls(result.outputs).length} |
+| URLs | ${rankUrls(result.outputs).length} |
 | Outputs | ${selectNonUrlOutputs(result.outputs).length} |
 | Status | ${this.formatStatusBadge(result)} |`;
 
@@ -382,18 +388,27 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
    *
    * A list rather than a table, and labelled with SST's own output key: the
    * key is the app's name for the thing, which no classifier can improve on.
-   * An earlier version of this section guessed `api`/`web`/`function`/`other`
-   * from the key and threw the key away.
+   *
+   * The order and the cut come from `rankUrls`/`partitionUrls`. Showing the
+   * first N in SST's order hid the custom-domain addresses behind raw Lambda
+   * origins and duplicates of the same address under a second key. What is
+   * not shown is collapsed, never dropped.
    */
-  private formatUrlsSection(urls: SSTOutput[]): string {
+  private formatUrlsSection(ranked: RankedUrl[]): string {
+    const { hidden, shown } = partitionUrls(ranked, this.config.maxUrlsToShow);
     let section = "### 🔗 URLs\n";
 
-    for (const url of urls.slice(0, this.config.maxUrlsToShow)) {
-      section += `\n- **${url.key}**: [${url.value}](${url.value})`;
+    if (shown.length > 0) {
+      section += `\n${shown.map(formatUrlItem).join("\n")}`;
     }
 
-    if (urls.length > this.config.maxUrlsToShow) {
-      section += `\n\n*... and ${urls.length - this.config.maxUrlsToShow} more URLs*`;
+    if (hidden.length > 0) {
+      section += `\n\n<details>
+<summary>${hiddenUrlsLabel(hidden)}</summary>
+
+${hidden.map(formatUrlItem).join("\n")}
+
+</details>`;
     }
 
     return section;
@@ -403,27 +418,39 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
    * Format the outputs that are not URLs, as a key/value table.
    *
    * URLs are rendered by `formatUrlsSection` instead, so the two partition
-   * the outputs between them and nothing is listed twice.
+   * the outputs between them and nothing is listed twice. Past
+   * `maxOutputsToShow` the remaining rows collapse into `<details>`.
    */
   private formatOutputsSection(outputs: SSTOutput[]): string {
     // Not "Deploy Outputs": diff reports this block too.
-    let section = "### 📋 Outputs\n\n";
+    const limit = Math.max(0, this.config.maxOutputsToShow);
+    const shown = outputs.slice(0, limit);
+    const hidden = outputs.slice(limit);
+    let section = "### 📋 Outputs";
 
-    const outputsToShow = outputs.slice(0, this.config.maxUrlsToShow);
-
-    section += "| Key | Value |\n|-----|-------|\n";
-    for (const output of outputsToShow) {
-      const formattedValue = this.formatOutputValue(output.value);
-      section += `| ${output.key} | ${formattedValue} |\n`;
+    if (shown.length > 0) {
+      section += `\n\n${this.formatOutputsTable(shown)}`;
     }
 
-    if (outputs.length > this.config.maxUrlsToShow) {
-      section += `\n*... and ${outputs.length - this.config.maxUrlsToShow} more outputs*`;
+    if (hidden.length > 0) {
+      const noun = hidden.length === 1 ? "output" : "outputs";
+      const more = shown.length > 0 ? " more" : "";
+      section += `\n\n<details>
+<summary>${hidden.length}${more} ${noun}</summary>
+
+${this.formatOutputsTable(hidden)}
+
+</details>`;
     }
 
-    // Each row ends in a newline, so without this the section joins to the
-    // next one across a blank line the other sections do not have.
-    return section.trimEnd();
+    return section;
+  }
+
+  private formatOutputsTable(outputs: SSTOutput[]): string {
+    const rows = outputs.map(
+      (output) => `| ${output.key} | ${this.formatOutputValue(output.value)} |`
+    );
+    return ["| Key | Value |", "|-----|-------|", ...rows].join("\n");
   }
 
   /**
@@ -435,7 +462,7 @@ Stage \`${result.stage}\` is not deployed, so no removal was attempted.`;
    */
   private formatOutputSections(outputs: SSTOutput[]): string[] {
     const sections: string[] = [];
-    const urls = selectUrls(outputs);
+    const urls = rankUrls(outputs);
     const rest = selectNonUrlOutputs(outputs);
 
     if (urls.length > 0) {
@@ -626,6 +653,46 @@ No infrastructure changes detected for this operation.`;
         return `${action}`;
     }
   }
+}
+
+/**
+ * One URL as a list item: the chosen key, any other keys that reported the
+ * same address, then the address.
+ *
+ * A wildcard host is not an address anyone can open, so it is a code span
+ * rather than a link that goes nowhere.
+ */
+function formatUrlItem(url: RankedUrl): string {
+  const also =
+    url.aliases.length > 0
+      ? ` (also ${url.aliases.map((alias) => `\`${alias}\``).join(", ")})`
+      : "";
+  const target =
+    url.tier === "wildcard"
+      ? `\`${url.value}\``
+      : `[${url.value}](${url.value})`;
+
+  return `- **${url.key}**${also}: ${target}`;
+}
+
+/** The `<summary>` for the collapsed URLs, saying what is behind it. */
+function hiddenUrlsLabel(hidden: readonly RankedUrl[]): string {
+  const infrastructure = hidden.filter(
+    (url) => url.tier === "infrastructure"
+  ).length;
+  const other = hidden.length - infrastructure;
+  const parts: string[] = [];
+
+  if (other > 0) {
+    parts.push(`${other} more ${other === 1 ? "URL" : "URLs"}`);
+  }
+  if (infrastructure > 0) {
+    parts.push(
+      `${infrastructure} infrastructure ${infrastructure === 1 ? "endpoint" : "endpoints"}`
+    );
+  }
+
+  return parts.join(" and ");
 }
 
 /**

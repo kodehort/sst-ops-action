@@ -22,6 +22,8 @@ export function infrastructureInputs(
     commentMode: "on-success",
     failOnError: true,
     maxOutputSize: 50_000,
+    maxOutputs: 10,
+    maxUrls: 10,
     operation,
     runner: "bun",
     stage: "staging",

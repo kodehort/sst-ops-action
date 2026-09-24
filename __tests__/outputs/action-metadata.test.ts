@@ -23,6 +23,7 @@ import type {
   RemoveResult,
   StageResult,
 } from "../../src/types";
+import { INPUT_DEFAULTS } from "../../src/utils/validation";
 
 /**
  * Read the keys of the `outputs:` block from action.yml.
@@ -277,5 +278,63 @@ describe("Example workflows", () => {
         .map((r) => `${r.file}: steps.${r.stepId}.outputs.${r.key}`),
       "Example workflows read an output the action never emits"
     ).toEqual([]);
+  });
+});
+
+/** Each input in action.yml's `inputs:` block, with its declared default. */
+function declaredInputs(): Map<string, string | undefined> {
+  const lines = readFileSync(join(process.cwd(), "action.yml"), "utf8").split(
+    "\n"
+  );
+  const inputs = new Map<string, string | undefined>();
+  let current: string | undefined;
+
+  for (const line of lines.slice(lines.indexOf("inputs:") + 1)) {
+    if (/^\S/.test(line)) {
+      break;
+    }
+    const name = line.match(/^ {2}([a-z-]+):\s*$/);
+    if (name) {
+      current = name[1] as string;
+      inputs.set(current, undefined);
+    }
+    const fallback = line.match(/^ {4}default: "(.*)"$/);
+    if (fallback && current) {
+      inputs.set(current, fallback[1]);
+    }
+  }
+
+  return inputs;
+}
+
+/** The input names in the README's `## Inputs` table. */
+function readmeInputTable(): string[] {
+  const content = readFileSync(join(process.cwd(), "README.md"), "utf8");
+  const heading = "## Inputs\n";
+  const section = content
+    .slice(content.indexOf(heading) + heading.length)
+    .split(/^## /m)[0] as string;
+
+  return [...section.matchAll(/^\| `([a-z-]+)` \|/gm)].map(
+    (match) => match[1] as string
+  );
+}
+
+describe("Declared action inputs", () => {
+  it("lists every input in the README table", () => {
+    const declared = [...declaredInputs().keys()];
+
+    expect(declared.length).toBeGreaterThan(0);
+    expect(
+      sorted(readmeInputTable()),
+      "README Inputs table vs action.yml"
+    ).toEqual(sorted(declared));
+  });
+
+  it("declares the display limits with the defaults the schema applies", () => {
+    const inputs = declaredInputs();
+
+    expect(inputs.get("max-urls")).toBe(String(INPUT_DEFAULTS.maxUrls));
+    expect(inputs.get("max-outputs")).toBe(String(INPUT_DEFAULTS.maxOutputs));
   });
 });

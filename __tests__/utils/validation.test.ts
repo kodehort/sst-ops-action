@@ -361,4 +361,41 @@ describe("Input Validation", () => {
       });
     });
   });
+
+  describe("display limits (max-urls, max-outputs)", () => {
+    const base = { operation: "deploy", stage: "dev", token: "t" };
+
+    it("defaults both to 10", () => {
+      const result = OperationInputsSchema.parse(base);
+
+      if (result.operation === "deploy") {
+        expect(result.maxUrls).toBe(10);
+        expect(result.maxOutputs).toBe(10);
+      }
+    });
+
+    it("accepts whole numbers from 0 to 1000, as strings or numbers", () => {
+      const result = OperationInputsSchema.parse({
+        ...base,
+        maxOutputs: 1000,
+        maxUrls: " 0 ",
+      });
+
+      if (result.operation === "deploy") {
+        expect(result.maxUrls).toBe(0);
+        expect(result.maxOutputs).toBe(1000);
+      }
+    });
+
+    it.each([
+      ["maxUrls", "-1"],
+      ["maxUrls", "1001"],
+      ["maxOutputs", "2.5"],
+      ["maxOutputs", "lots"],
+    ])("rejects %s = %s", (field, value) => {
+      expect(() =>
+        OperationInputsSchema.parse({ ...base, [field]: value })
+      ).toThrow();
+    });
+  });
 });

@@ -69,6 +69,53 @@ $ bunx --bun astro build
    github_role_arn: arn:aws:iam::196313910340:role/production-GithubActionRole
 `;
 
+/**
+ * A preview deploy of kodehort/scratch (stage \`beautiful-curie-3opo7o\`,
+ * action v0.10.2), trimmed to its header and the final block verbatim.
+ *
+ * Twenty URLs under twenty-three outputs: the same Lambda URL under a
+ * component and an \`*_origin_url\` key, the same custom domain under a
+ * component and a \`*_url\` key, a wildcard router host, and the custom-domain
+ * addresses people click printed last. Shown first-ten in printed order, this
+ * hid \`auth_url\`, \`storybook\`, \`app_url\` and \`docs_url\`.
+ */
+export const SST_DEPLOY_MANY_URLS_OUTPUT = `
+SST 3.17.10  ready!
+
+➜  App:        scratch
+   Stage:      beautiful-curie-3opo7o
+
+~  Deploy
+
+|  Updated     Web sst:aws:Astro → WebServerEuwest2Function aws:lambda:Function (6.1s)
+
+↗  Permalink   https://sst.dev/u/5c0d1e2f
+
+✓  Complete
+   Web: https://beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   Router: https://*.app.staging.kodeapps.co.uk
+   WebApp: https://app-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   Auth: https://7tqd353p5yrelso3jdmeobezwm0iapji.lambda-url.eu-west-2.on.aws/
+   Api: https://iov5bjodjowc6z2lu2z25isuiu0jkvgv.lambda-url.eu-west-2.on.aws/
+   Docs: https://docs-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   Mcp: https://6bc2slo7anlccijor4q5lhnegm0xwmvo.lambda-url.eu-west-2.on.aws/
+   StorybookGate: https://jgqlytzbqdjbfp2fy5mjimrybe0wgbng.lambda-url.eu-west-2.on.aws/
+   ---
+   api_origin_url: https://iov5bjodjowc6z2lu2z25isuiu0jkvgv.lambda-url.eu-west-2.on.aws/
+   auth_origin_url: https://7tqd353p5yrelso3jdmeobezwm0iapji.lambda-url.eu-west-2.on.aws/
+   storybook: https://storybook-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   auth_url: https://auth-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   router_distributionID: E2XX9OWMV0U0E2
+   storybook_gate_origin_url: https://jgqlytzbqdjbfp2fy5mjimrybe0wgbng.lambda-url.eu-west-2.on.aws/
+   upstash_database_id: c4b63a08-d5d2-4e9c-9ad1-e1159d46c8c5
+   app_url: https://app-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   docs_url: https://docs-beautiful-curie-3opo7o.staging.kodeapps.co.uk
+   mcp_origin_url: https://6bc2slo7anlccijor4q5lhnegm0xwmvo.lambda-url.eu-west-2.on.aws/
+   neon_branch_id: br-misty-grass-zariyrdq
+   oidc_arn: arn:aws:iam::194218796960:oidc-provider/token.actions.githubusercontent.com
+   neon_project_id: shiny-snow-57658548
+`;
+
 export const SST_DEPLOY_FAILURE_OUTPUT = `
 SST 3.17.10  ready!
 

@@ -324,6 +324,70 @@ permissions:
 
 ---
 
+### `max-urls`
+
+**Description:** How many URLs the PR comment and step summary list before the rest collapse into a `<details>` block (deploy and diff)  
+**Required:** No  
+**Default:** `10`  
+**Type:** Integer  
+
+The URLs are arranged before they are cut:
+
+1. **One line per address.** An address SST reports under several keys —
+   `Api` and `api_origin_url`, `WebApp` and `app_url` — is listed once, under
+   the most meaningful key (a component name over an output key, anything over
+   an `_origin_url` key), with the rest beside it:
+   ``- **Api** (also `api_origin_url`): …``
+2. **Public URLs first.** Custom-domain and other public addresses are listed
+   ahead of wildcard hosts, which come ahead of infrastructure endpoints:
+   Lambda function URLs (`*.lambda-url.<region>.on.aws`), CloudFront
+   (`*.cloudfront.net`) and `*.amazonaws.com` hosts such as API Gateway, and
+   keys ending `_origin_url`. SST's order is kept within each group.
+3. **Infrastructure collapsed.** Infrastructure endpoints go in the
+   `<details>` block whenever there is anything else to show. An app that
+   reports only infrastructure endpoints lists those instead.
+4. **Then the cap.** At most `max-urls` are listed; the overflow joins the
+   `<details>` block ahead of the infrastructure endpoints.
+
+Nothing is dropped. A host containing `*` is shown as code rather than as a
+link, since it is a pattern and not an address.
+
+**Example:**
+```yaml
+- uses: kodehort/sst-ops-action@v0
+  with:
+    operation: deploy
+    stage: staging
+    token: ${{ secrets.GITHUB_TOKEN }}
+    max-urls: 20
+```
+
+**Validation:**
+- Whole number from `0` to `1000`; `0` collapses every URL
+
+**Notes:**
+- Changes only the comment and summary. The `urls` output always carries
+  every URL, under every key SST printed
+
+---
+
+### `max-outputs`
+
+**Description:** How many non-URL outputs the PR comment and step summary list before the rest collapse into a `<details>` block (deploy and diff)  
+**Required:** No  
+**Default:** `10`  
+**Type:** Integer  
+
+**Validation:**
+- Whole number from `0` to `1000`; `0` collapses every output
+
+**Notes:**
+- Independent of `max-urls`
+- Changes only the comment and summary. The `outputs` output always carries
+  every output
+
+---
+
 ### `working-directory`
 
 **Description:** Directory containing `sst.config.ts` (infrastructure operations only)  
@@ -782,7 +846,8 @@ All outputs are provided as strings (GitHub Actions requirement) and available f
   merely appear in a diff body (such as the runner's own environment
   variables) are never included
 - Keys are SST's own output names, so the same URL can appear under more
-  than one key
+  than one key. The PR comment and summary list such a URL once (see
+  [`max-urls`](#max-urls)); this output keeps every key
 
 ---
 

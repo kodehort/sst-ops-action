@@ -66,6 +66,29 @@ inputs:
         survive
     required: false
     default: "50000"
+  max-urls:
+    description: |
+      How many URLs a PR comment or step summary lists before the rest
+      collapse into a <details> block (deploy and diff):
+      • Default: 10
+      • Range: 0-1000; 0 collapses them all
+      • Counts distinct addresses: one URL reported under several keys is
+        listed once, with the other keys beside it
+      • Public and custom-domain URLs are listed first. Infrastructure
+        endpoints (Lambda function URLs, CloudFront and amazonaws.com hosts,
+        keys ending _origin_url) are collapsed whenever there is anything else
+        to show
+      • Nothing is dropped: whatever is not listed is inside the <details>
+    required: false
+    default: "10"
+  max-outputs:
+    description: |
+      How many non-URL outputs a PR comment or step summary lists before the
+      rest collapse into a <details> block (deploy and diff):
+      • Default: 10
+      • Range: 0-1000; 0 collapses them all
+    required: false
+    default: "10"
   runner:
     description: |
       Package manager/runtime for SST commands (infrastructure operations only):
