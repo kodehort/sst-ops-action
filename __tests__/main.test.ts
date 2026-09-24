@@ -508,7 +508,7 @@ describe("Main Entry Point - Action Execution", () => {
       await run();
 
       expect(core.warning).toHaveBeenCalledWith(
-        "⚠️ Output was truncated due to size limits"
+        "⚠️ Output exceeded max-output-size: kept the start and the end, dropped the middle"
       );
     });
 

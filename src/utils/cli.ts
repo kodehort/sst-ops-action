@@ -5,6 +5,7 @@
 
 import * as exec from "@actions/exec";
 import { DEFAULT_MAX_OUTPUT_SIZE, type SSTOperation } from "../types/index.js";
+import { BoundedCapture } from "./bounded-capture.js";
 
 /**
  * Result of executing a CLI command
@@ -24,7 +25,7 @@ export interface CLIResult {
   stderr: string;
   /** The stdout half of `output`, for diagnostics */
   stdout: string;
-  /** Whether the output was truncated due to size limits */
+  /** Whether the middle of the output was dropped to fit the size limit */
   truncated: boolean;
 }
 
@@ -283,43 +284,14 @@ export class SSTCLIExecutor {
   ): Promise<CLIResult> {
     const startTime = Date.now();
 
-    // One buffer, appended by both listeners in arrival order, so the value
-    // every parser reads is what the process actually wrote. The per-stream
-    // copies are kept for diagnostics and hold exactly what `output` holds,
-    // split by origin — they are not a second, larger capture.
-    let output = "";
-    let stdout = "";
-    let stderr = "";
-    let truncated = false;
-    let exitCode = 0;
-
-    // 0 means no cap, which is a documented value rather than a sentinel the
-    // arithmetic below should ever see: `remaining` would be negative on the
-    // first chunk and every byte would be dropped as "over budget".
-    const unlimited = options.maxOutputSize === 0;
-
+    // One capture, fed by both listeners in arrival order, so the value every
+    // parser reads is what the process actually wrote. Over budget it keeps
+    // the start and the end and drops the middle — see BoundedCapture.
+    const capture = new BoundedCapture(options.maxOutputSize);
     const append = (data: Buffer, stream: "stderr" | "stdout"): void => {
-      const chunk = data.toString();
-      const kept = unlimited
-        ? chunk
-        : capped(chunk, options.maxOutputSize - output.length);
-
-      if (kept === null) {
-        truncated = true;
-        return;
-      }
-
-      if (kept.length < chunk.length) {
-        truncated = true;
-      }
-
-      output += kept;
-      if (stream === "stdout") {
-        stdout += kept;
-      } else {
-        stderr += kept;
-      }
+      capture.push(data.toString(), stream);
     };
+    let exitCode = 0;
 
     try {
       if (!command[0]) {
@@ -362,6 +334,7 @@ export class SSTCLIExecutor {
 
       // Check if it's a timeout error
       if (errorMessage.includes("timeout")) {
+        const { output, stderr, stdout, truncated } = capture.finish();
         return {
           command: command.join(" "),
           duration,
@@ -380,6 +353,7 @@ export class SSTCLIExecutor {
     }
 
     const duration = Date.now() - startTime;
+    const { output, stderr, stdout, truncated } = capture.finish();
 
     return {
       command: command.join(" "),
@@ -395,17 +369,4 @@ export class SSTCLIExecutor {
       truncated,
     };
   }
-}
-
-/**
- * Trim a chunk to the remaining budget.
- *
- * @returns The part that fits, or null when the budget is already spent
- */
-function capped(chunk: string, remaining: number): string | null {
-  if (remaining <= 0) {
-    return null;
-  }
-
-  return chunk.length > remaining ? chunk.slice(0, remaining) : chunk;
 }
