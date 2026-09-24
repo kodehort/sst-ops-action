@@ -142,7 +142,21 @@ describe("executeOperation", () => {
         infrastructureInputs("deploy", { token: "ghp_router_token" })
       );
 
-      expect(GitHubClient).toHaveBeenCalledWith("ghp_router_token");
+      expect(GitHubClient).toHaveBeenCalledWith(
+        "ghp_router_token",
+        expect.anything()
+      );
+    });
+
+    it("passes the display limits to the GitHub client", async () => {
+      await executeOperation(
+        infrastructureInputs("deploy", { maxOutputs: 4, maxUrls: 7 })
+      );
+
+      expect(GitHubClient).toHaveBeenCalledWith(expect.any(String), {
+        maxOutputsToShow: 4,
+        maxUrlsToShow: 7,
+      });
     });
   });
 

@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { OperationFormatter } from "../../src/github/formatters.js";
+import { DeployParser } from "../../src/parsers/deploy-parser.js";
 import { DiffParser } from "../../src/parsers/diff-parser.js";
 import type {
   DeployResult,
   DiffResult,
   RemoveResult,
 } from "../../src/types/index.js";
+import { SST_DEPLOY_MANY_URLS_OUTPUT } from "../fixtures/sst-outputs.js";
 import {
   createMockDeployResource,
   createMockDeployResult,
@@ -320,7 +322,9 @@ $ bunx --bun astro build
       const summary = formatter.formatOperationSummary(deployResult);
 
       expect(summary).toContain("URLs | 15");
-      expect(summary).toContain("... and 5 more URLs");
+      // The overflow is collapsed, not dropped.
+      expect(summary).toContain("<summary>5 more URLs</summary>");
+      expect(summary).toContain("[https://service14.example.com]");
     });
 
     it("should format diff summary correctly", () => {
@@ -545,7 +549,10 @@ $ bunx --bun astro build
 
       const comment = customFormatter.formatOperationComment(deployResult);
 
-      expect(comment).toContain("... and 4 more URLs");
+      expect(comment).toContain("<summary>4 more URLs</summary>");
+      const visible = comment.slice(0, comment.indexOf("<details>"));
+      expect(visible).toContain("**service2**");
+      expect(visible).not.toContain("**service3**");
     });
 
     it("should respect custom maxResourcesToShow configuration", () => {
@@ -763,12 +770,11 @@ $ bunx --bun astro build
         formatter.formatOperationSummary(mixed),
       ]) {
         expect(rendered).toContain("### 🔗 URLs");
+        // One address under two keys is listed once, under the component.
         expect(rendered).toContain(
-          "- **Astro**: [https://kodehort.com](https://kodehort.com)"
+          "- **Astro** (also `www`): [https://kodehort.com](https://kodehort.com)"
         );
-        expect(rendered).toContain(
-          "- **www**: [https://kodehort.com](https://kodehort.com)"
-        );
+        expect(rendered).not.toContain("- **www**");
 
         expect(rendered).toContain("### 📋 Outputs");
         expect(rendered).toContain(
@@ -815,5 +821,144 @@ $ bunx --bun astro build
         );
       }
     });
+  });
+});
+
+describe("URL ranking, against a real deploy with twenty URLs", () => {
+  const formatter = new OperationFormatter();
+  const deploy = new DeployParser().parse(
+    SST_DEPLOY_MANY_URLS_OUTPUT,
+    "beautiful-curie-3opo7o",
+    0,
+    false
+  );
+  // Diff reports the same block, and shares the formatter.
+  const diff = createMockDiffResult({
+    outputs: deploy.outputs,
+    stage: "beautiful-curie-3opo7o",
+  }) as DiffResult;
+
+  const renderings = {
+    "deploy comment": formatter.formatOperationComment(deploy),
+    "deploy summary": formatter.formatOperationSummary(deploy),
+    "diff comment": formatter.formatOperationComment(diff),
+    "diff summary": formatter.formatOperationSummary(diff),
+  };
+
+  /** The URLs section, split at its `<details>`. */
+  function urlSection(rendered: string): { hidden: string; visible: string } {
+    const start = rendered.indexOf("### 🔗 URLs");
+    const end = rendered.indexOf("\n### ", start + 1);
+    const section = rendered.slice(start, end === -1 ? undefined : end);
+    const cut = section.indexOf("<details>");
+
+    return cut === -1
+      ? { hidden: "", visible: section }
+      : { hidden: section.slice(cut), visible: section.slice(0, cut) };
+  }
+
+  describe.each(Object.entries(renderings))("%s", (_name, rendered) => {
+    const { hidden, visible } = urlSection(rendered);
+
+    it("shows every custom-domain address outside <details>", () => {
+      for (const address of [
+        "https://beautiful-curie-3opo7o.staging.kodeapps.co.uk",
+        "https://app-beautiful-curie-3opo7o.staging.kodeapps.co.uk",
+        "https://docs-beautiful-curie-3opo7o.staging.kodeapps.co.uk",
+        "https://auth-beautiful-curie-3opo7o.staging.kodeapps.co.uk",
+        "https://storybook-beautiful-curie-3opo7o.staging.kodeapps.co.uk",
+      ]) {
+        expect(visible).toContain(`[${address}](${address})`);
+      }
+
+      for (const key of ["Web", "WebApp", "Docs", "auth_url", "storybook"]) {
+        expect(visible).toContain(`**${key}**`);
+      }
+      expect(visible).toContain("`app_url`");
+      expect(visible).toContain("`docs_url`");
+    });
+
+    it("lists each Lambda URL once, collapsed, with its origin key alongside", () => {
+      for (const [key, alias, id] of [
+        ["Auth", "auth_origin_url", "7tqd353p5yrelso3jdmeobezwm0iapji"],
+        ["Api", "api_origin_url", "iov5bjodjowc6z2lu2z25isuiu0jkvgv"],
+        ["Mcp", "mcp_origin_url", "6bc2slo7anlccijor4q5lhnegm0xwmvo"],
+        [
+          "StorybookGate",
+          "storybook_gate_origin_url",
+          "jgqlytzbqdjbfp2fy5mjimrybe0wgbng",
+        ],
+      ] as const) {
+        const address = `https://${id}.lambda-url.eu-west-2.on.aws/`;
+        const occurrences = rendered.split(`[${address}](`).length - 1;
+
+        expect(occurrences).toBe(1);
+        expect(visible).not.toContain(id);
+        expect(hidden).toContain(`- **${key}** (also \`${alias}\`)`);
+      }
+      expect(hidden).toContain("<summary>4 infrastructure endpoints</summary>");
+    });
+
+    it("renders the wildcard host as text, not a link", () => {
+      expect(visible).toContain(
+        "- **Router**: `https://*.app.staging.kodeapps.co.uk`"
+      );
+      expect(rendered).not.toContain("](https://*.");
+    });
+
+    it("drops no URL: every key appears somewhere in the section", () => {
+      const section = visible + hidden;
+      for (const output of deploy.outputs) {
+        if (output.value.startsWith("https://")) {
+          expect(section).toContain(output.key);
+        }
+      }
+    });
+  });
+
+  it("counts distinct addresses in the status table", () => {
+    expect(renderings["deploy comment"]).toContain("| URLs | 10 |");
+  });
+
+  it("caps the outputs table with its own limit", () => {
+    const narrow = new OperationFormatter({ maxOutputsToShow: 2 });
+    const comment = narrow.formatOperationComment(deploy);
+
+    expect(comment).toContain("| upstash_database_id |");
+    expect(comment).toContain("<summary>3 more outputs</summary>");
+    // The URL limit is independent of it.
+    expect(urlSection(comment).visible).toContain("**storybook**");
+  });
+
+  it("collapses the overflow of useful URLs ahead of the infrastructure", () => {
+    const narrow = new OperationFormatter({ maxUrlsToShow: 2 });
+    const { hidden, visible } = urlSection(
+      narrow.formatOperationComment(deploy)
+    );
+
+    expect(visible).toContain("**WebApp**");
+    expect(visible).not.toContain("**Docs**");
+    expect(hidden).toContain(
+      "<summary>4 more URLs and 4 infrastructure endpoints</summary>"
+    );
+    expect(hidden.indexOf("**Docs**")).toBeLessThan(hidden.indexOf("**Api**"));
+  });
+
+  it("stays within the comment limit, with <details> closed, however many URLs", () => {
+    const many = {
+      ...deploy,
+      outputs: Array.from({ length: 5000 }, (_, i) => ({
+        key: `Fn${i}`,
+        value: `https://fn${i}.lambda-url.eu-west-2.on.aws/`,
+      })),
+    };
+
+    const comment = formatter.formatOperationComment(many);
+
+    expect(comment.length).toBeLessThanOrEqual(65_536);
+    expect(comment.split("<details>").length).toBe(
+      comment.split("</details>").length
+    );
+    expect(comment).toContain("Comment truncated");
   });
 });

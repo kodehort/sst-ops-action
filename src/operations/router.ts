@@ -40,7 +40,11 @@ export async function executeOperation(
     }
 
     const deps = {
-      createGitHubClient: (token: string) => new GitHubClient(token),
+      createGitHubClient: (token: string) =>
+        new GitHubClient(token, {
+          maxOutputsToShow: inputs.maxOutputs,
+          maxUrlsToShow: inputs.maxUrls,
+        }),
       executor: new SSTCLIExecutor(),
     };
 

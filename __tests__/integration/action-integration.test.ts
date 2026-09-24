@@ -67,6 +67,8 @@ async function stubValidation(
     commentMode: (env["INPUT_COMMENT-MODE"] || "on-success") as any,
     failOnError: env["INPUT_FAIL-ON-ERROR"] !== "false",
     maxOutputSize: Number.parseInt(env["INPUT_MAX-OUTPUT-SIZE"] || "50000", 10),
+    maxOutputs: validationModule.INPUT_DEFAULTS.maxOutputs,
+    maxUrls: validationModule.INPUT_DEFAULTS.maxUrls,
     operation: operation as any,
     runner: "bun" as const,
     stage,

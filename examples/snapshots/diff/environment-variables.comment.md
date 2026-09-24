@@ -6,8 +6,7 @@
 
 ### 🔗 URLs
 
-- **Router**: [https://dev.kodeapps.co.uk](https://dev.kodeapps.co.uk)
-- **Web**: [https://dev.kodeapps.co.uk](https://dev.kodeapps.co.uk)
+- **Router** (also `Web`): [https://dev.kodeapps.co.uk](https://dev.kodeapps.co.uk)
 - **Api**: [https://api.dev.kodeapps.co.uk](https://api.dev.kodeapps.co.uk)
 
 ### 📋 Outputs

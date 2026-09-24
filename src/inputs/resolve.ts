@@ -31,6 +31,10 @@ export interface InfrastructureInputs {
   commentMode: CommentMode;
   failOnError: boolean;
   maxOutputSize: number;
+  /** Non-URL outputs listed in a comment or summary before the rest collapse. */
+  maxOutputs: number;
+  /** Distinct URLs listed in a comment or summary before the rest collapse. */
+  maxUrls: number;
   operation: "deploy" | "diff" | "remove";
   runner: SSTRunner;
   stage: string;
@@ -113,6 +117,8 @@ function readRawInputs(): Record<string, unknown> {
     commentMode: optionalInput("comment-mode"),
     failOnError: core.getBooleanInput("fail-on-error"),
     maxOutputSize: optionalInput("max-output-size"),
+    maxOutputs: optionalInput("max-outputs"),
+    maxUrls: optionalInput("max-urls"),
     operation: core.getInput("operation"),
     prefix: optionalInput("prefix"),
     refs: optionalInput("refs"),
@@ -164,6 +170,8 @@ export function resolveActionInputs({
     commentMode: inputs.commentMode,
     failOnError: inputs.failOnError,
     maxOutputSize: inputs.maxOutputSize,
+    maxOutputs: inputs.maxOutputs,
+    maxUrls: inputs.maxUrls,
     operation: inputs.operation,
     runner: inputs.runner,
     stage: resolveStage({ computeStage, inputs, stageOptions }),

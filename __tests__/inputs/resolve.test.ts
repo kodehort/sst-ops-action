@@ -100,6 +100,8 @@ describe("Resolving action inputs", () => {
         commentMode: "on-success",
         failOnError: true,
         maxOutputSize: 50_000,
+        maxOutputs: 10,
+        maxUrls: 10,
         operation: "diff",
         runner: "bun",
         stage: "staging",
@@ -133,6 +135,8 @@ describe("Resolving action inputs", () => {
         "comment-mode": "always",
         "fail-on-error": "false",
         "max-output-size": "1000",
+        "max-outputs": "0",
+        "max-urls": "25",
         operation: "remove",
         runner: "sst",
         stage: "staging",
@@ -146,6 +150,8 @@ describe("Resolving action inputs", () => {
       expect(resolved.commentMode).toBe("always");
       expect(resolved.failOnError).toBe(false);
       expect(resolved.maxOutputSize).toBe(1000);
+      expect(resolved.maxOutputs).toBe(0);
+      expect(resolved.maxUrls).toBe(25);
       expect(resolved.runner).toBe("sst");
     });
   });

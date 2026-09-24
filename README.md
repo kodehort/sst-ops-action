@@ -51,10 +51,13 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `comment-mode` | PR comment behavior: `always`, `on-success`, `on-failure`, `never` | No | `on-success` |
 | `fail-on-error` | Fail workflow on SST errors | No | `true` |
 | `max-output-size` | Max captured output bytes (0 for unlimited, or 1000-1048576). Over the limit the start and end are kept and the middle dropped | No | `50000` |
+| `max-urls` | URLs listed in the PR comment and step summary before the rest collapse into `<details>` (0-1000). Public URLs come first, each address once; infrastructure endpoints are collapsed | No | `10` |
+| `max-outputs` | Non-URL outputs listed in the PR comment and step summary before the rest collapse into `<details>` (0-1000) | No | `10` |
 | `working-directory` | Directory containing `sst.config.ts` | No | `.` |
 | `cache-providers` | Cache SST providers between runs ([see below](#caching-sst-providers)) | No | `false` |
 | `truncation-length` | Max stage name length (stage op only) | No | `26` |
 | `prefix` | Prefix for numeric stage names (stage op only) | No | `pr-` |
+| `refs` | Refs to compute stage names for, newline- or comma-separated (stage op only) | No | - |
 
 ## Outputs
 

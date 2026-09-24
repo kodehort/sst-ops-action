@@ -5,15 +5,14 @@
 | App | `www-kodehort-com` |
 | Stage | `production` |
 | Resources Changed | 9 |
-| URLs | 2 |
+| URLs | 1 |
 | Outputs | 2 |
 | Status | ![Success](https://img.shields.io/badge/Status-Success-green) |
 | Console Link | [View Deployment](https://sst.dev/u/63c063c9) |
 
 ### 🔗 URLs
 
-- **Astro**: [https://kodehort.com](https://kodehort.com)
-- **www**: [https://kodehort.com](https://kodehort.com)
+- **Astro** (also `www`): [https://kodehort.com](https://kodehort.com)
 
 ### 📋 Outputs
 

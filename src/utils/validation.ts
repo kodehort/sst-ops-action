@@ -30,6 +30,8 @@ export const INPUT_DEFAULTS = {
   cacheProviders: false,
   commentMode: "on-success",
   maxOutputSize: DEFAULT_MAX_OUTPUT_SIZE,
+  maxOutputs: 10,
+  maxUrls: 10,
   prefix: "pr-",
   runner: "bun",
   truncationLength: 26,
@@ -39,6 +41,34 @@ export const INPUT_DEFAULTS = {
 const STAGE_VALIDATION_PATTERN = /^[a-zA-Z0-9-_]+$/;
 const PREFIX_VALIDATION_PATTERN = /^[a-z0-9-]*$/;
 const REFS_SEPARATOR_PATTERN = /[\n,]/;
+
+/** The most a display limit may be set to. */
+const MAX_DISPLAY_LIMIT = 1000;
+
+/**
+ * A count of items shown in a comment before the rest collapse.
+ *
+ * Zero is allowed and collapses everything; nothing is ever dropped, so no
+ * value can hide an item for good.
+ */
+function displayLimit(name: string, fallback: number) {
+  return z
+    .number()
+    .or(
+      z.string().transform((val) => {
+        const parsed = Number(val.trim());
+        if (!Number.isInteger(parsed)) {
+          throw new Error(`${name} must be a whole number`);
+        }
+        return parsed;
+      })
+    )
+    .refine(
+      (val) => Number.isInteger(val) && val >= 0 && val <= MAX_DISPLAY_LIMIT,
+      { message: `${name} must be between 0 and ${MAX_DISPLAY_LIMIT}` }
+    )
+    .default(fallback);
+}
 
 /**
  * Common field schemas used across operations
@@ -69,6 +99,10 @@ const CommonFieldSchemas = {
     )
     .transform((val) => validateMaxOutputSize(val))
     .default(INPUT_DEFAULTS.maxOutputSize),
+  maxOutputs: displayLimit("max-outputs", INPUT_DEFAULTS.maxOutputs),
+
+  maxUrls: displayLimit("max-urls", INPUT_DEFAULTS.maxUrls),
+
   operation: z
     .string()
     .min(1, "Operation is required and cannot be empty")
@@ -165,6 +199,8 @@ const BaseInfrastructureSchema = z.object({
   commentMode: CommonFieldSchemas.commentMode,
   failOnError: CommonFieldSchemas.failOnError,
   maxOutputSize: CommonFieldSchemas.maxOutputSize,
+  maxOutputs: CommonFieldSchemas.maxOutputs,
+  maxUrls: CommonFieldSchemas.maxUrls,
   runner: CommonFieldSchemas.runner,
   token: CommonFieldSchemas.token,
   workingDirectory: CommonFieldSchemas.workingDirectory,
@@ -270,6 +306,8 @@ function filterInputsByOperation(
     commentMode: rawInputs.commentMode,
     failOnError: rawInputs.failOnError,
     maxOutputSize: rawInputs.maxOutputSize,
+    maxOutputs: rawInputs.maxOutputs,
+    maxUrls: rawInputs.maxUrls,
     operation: rawInputs.operation,
     runner: rawInputs.runner,
     stage: rawInputs.stage,

@@ -9,7 +9,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import type { BaseOperationResult, CommentMode } from "../types/index.js";
-import { OperationFormatter } from "./formatters.js";
+import { type FormatConfig, OperationFormatter } from "./formatters.js";
 
 /**
  * Comment creation options
@@ -36,10 +36,10 @@ export class GitHubClient {
    *   names an input the action does not declare, and the second could only be
    *   reached on a path validation had already rejected.
    */
-  constructor(token: string) {
+  constructor(token: string, format: Partial<FormatConfig> = {}) {
     this.octokit = github.getOctokit(token);
     this.context = github.context;
-    this.formatter = new OperationFormatter();
+    this.formatter = new OperationFormatter(format);
   }
 
   /**
