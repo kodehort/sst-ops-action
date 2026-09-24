@@ -50,7 +50,7 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `runner` | Runtime: `bun`, `npm`, `pnpm`, `yarn`, `sst` | No | `bun` |
 | `comment-mode` | PR comment behavior: `always`, `on-success`, `on-failure`, `never` | No | `on-success` |
 | `fail-on-error` | Fail workflow on SST errors | No | `true` |
-| `max-output-size` | Max output bytes before truncation (1000-1000000) | No | `50000` |
+| `max-output-size` | Max captured output bytes (0 for unlimited, or 1000-1048576). Over the limit the start and end are kept and the middle dropped | No | `50000` |
 | `working-directory` | Directory containing `sst.config.ts` | No | `.` |
 | `cache-providers` | Cache SST providers between runs ([see below](#caching-sst-providers)) | No | `false` |
 | `truncation-length` | Max stage name length (stage op only) | No | `26` |
@@ -75,7 +75,7 @@ Unified GitHub Action for SST operations: deploy, diff, remove, and stage comput
 | `error` | Error message when the operation fails; empty on success | All |
 | `completion_status` | `complete`, `partial`, `failed`, or `skipped` (remove only: stage not deployed) | All |
 | `permalink` | SST Console permalink | deploy, diff, remove |
-| `truncated` | Whether output was truncated | All |
+| `truncated` | Whether the middle of the output was dropped to fit `max-output-size` | All |
 | `computed_stage` | Computed stage name | stage |
 | `ref` | Git ref used for computation | stage |
 | `event_name` | GitHub event type | stage |

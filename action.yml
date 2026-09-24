@@ -61,6 +61,9 @@ inputs:
       • Bounds what the action holds in memory, not what it posts: a PR
         comment is capped separately at GitHub's 65,536 character limit,
         with the full output in the workflow summary
+      • Over the limit, keeps the start and the end of the output and drops
+        the middle, so errors, outputs and the permalink SST prints last
+        survive
     required: false
     default: "50000"
   runner:
@@ -149,7 +152,7 @@ outputs:
   permalink:
     description: "SST Console permalink for operation details"
   truncated:
-    description: "Whether the operation output was truncated"
+    description: "Whether the middle of the operation output was dropped to fit max-output-size"
   diff_summary:
     description: "Summary of planned changes (diff only)"
   planned_changes:

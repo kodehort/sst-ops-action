@@ -112,7 +112,9 @@ function logOperationSummary(result: OperationResult): void {
   }
 
   if (result.truncated) {
-    core.warning("⚠️ Output was truncated due to size limits");
+    core.warning(
+      "⚠️ Output exceeded max-output-size: kept the start and the end, dropped the middle"
+    );
   }
 }
 
