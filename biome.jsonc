@@ -50,7 +50,10 @@
             "noForEach": "off"
           },
           "correctness": {
-            "noUndeclaredVariables": "off"
+            "noUndeclaredVariables": "off",
+            // Biome reads the `@tests/*` tsconfig path alias as a scoped npm
+            // package (ultracite 8 enables this rule). It is a local alias.
+            "noUndeclaredDependencies": "off"
           }
         }
       }
